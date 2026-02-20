@@ -48,38 +48,34 @@ const audFormatter = new Intl.NumberFormat("en-AU", {
   maximumFractionDigits: 2,
 });
 
-const eurFormatter = new Intl.NumberFormat("en-AU", {
-  style: "currency",
-  currency: "EUR",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
 export function PriceReveal({ pricing }: Props) {
-  const primaryAud = pricing.market_avg_aud ?? pricing.rrp_aud ?? null;
-  const animated = useCountUp(primaryAud ?? 0, 1500);
+  // Hero price priority: new market → used market → RRP
+  const heroPrice =
+    pricing.market_new_aud ?? pricing.market_used_aud ?? pricing.rrp_aud ?? null;
+  const animated = useCountUp(heroPrice ?? 0, 1500);
 
-  const isMarketPrice = pricing.market_avg_aud !== null;
-  const hasPrice = primaryAud !== null;
-  const showEurFallback = !isMarketPrice && pricing.market_avg_eur !== null;
+  const hasMarketData =
+    pricing.market_new_aud !== null || pricing.market_used_aud !== null;
+  const hasPrice = heroPrice !== null;
 
   return (
     <div
       className="w-full rounded-2xl p-6 text-center"
       style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
     >
+      {/* Label */}
       <p
         className="text-xs font-semibold uppercase tracking-widest mb-3"
         style={{ color: "var(--muted)" }}
       >
-        {isMarketPrice ? "Current Market Value" : "Retail Price (RRP)"}
+        {hasMarketData ? "Current Market Value" : "Retail Price (RRP)"}
       </p>
 
-      {/* Animated price — tabular-nums prevents layout jump as digits change */}
+      {/* Animated hero price — tabular-nums prevents layout jump as digits change */}
       <div
         className="text-6xl font-black tabular-nums leading-none"
         style={{ color: hasPrice ? "var(--accent)" : "var(--muted)" }}
-        aria-label={hasPrice ? audFormatter.format(primaryAud!) : "Price unavailable"}
+        aria-label={hasPrice ? audFormatter.format(heroPrice!) : "Price unavailable"}
       >
         {hasPrice ? audFormatter.format(animated) : "N/A"}
       </div>
@@ -88,21 +84,6 @@ export function PriceReveal({ pricing }: Props) {
       {pricing.exchange_rate_stale && (
         <p className="text-xs mt-2" style={{ color: "#f59e0b" }}>
           Using estimated exchange rate
-        </p>
-      )}
-
-      {/* EUR fallback when no AUD conversion */}
-      {showEurFallback && (
-        <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-          Currency conversion unavailable —{" "}
-          {eurFormatter.format(pricing.market_avg_eur!)} EUR
-        </p>
-      )}
-
-      {/* RRP comparison */}
-      {isMarketPrice && pricing.rrp_aud && (
-        <p className="text-sm mt-3" style={{ color: "var(--muted)" }}>
-          ~{audFormatter.format(pricing.rrp_aud)} RRP (converted from USD)
         </p>
       )}
 
@@ -120,8 +101,76 @@ export function PriceReveal({ pricing }: Props) {
         </div>
       )}
 
+      {/* RRP comparison line */}
+      {hasMarketData && pricing.rrp_aud && (
+        <p className="text-sm mt-3" style={{ color: "var(--muted)" }}>
+          RRP: ~{audFormatter.format(pricing.rrp_aud)} (converted from USD)
+        </p>
+      )}
+
+      {/* New / Used split — only shown when market data exists */}
+      {hasMarketData && (
+        <div className="grid grid-cols-2 gap-3 mt-4 w-full">
+          <div
+            className="rounded-xl p-3 text-center"
+            style={{ background: "var(--surface-2, rgba(255,255,255,0.05))" }}
+          >
+            <p
+              className="text-xs font-semibold uppercase tracking-wider"
+              style={{ color: "var(--muted)" }}
+            >
+              New / Sealed
+            </p>
+            <p
+              className="text-lg font-black tabular-nums mt-1"
+              style={{ color: "var(--foreground)" }}
+            >
+              {pricing.market_new_aud
+                ? audFormatter.format(pricing.market_new_aud)
+                : "N/A"}
+            </p>
+            {pricing.market_new_qty !== null && pricing.market_new_qty > 0 && (
+              <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                {pricing.market_new_qty} sold
+              </p>
+            )}
+          </div>
+          <div
+            className="rounded-xl p-3 text-center"
+            style={{ background: "var(--surface-2, rgba(255,255,255,0.05))" }}
+          >
+            <p
+              className="text-xs font-semibold uppercase tracking-wider"
+              style={{ color: "var(--muted)" }}
+            >
+              Used
+            </p>
+            <p
+              className="text-lg font-black tabular-nums mt-1"
+              style={{ color: "var(--foreground)" }}
+            >
+              {pricing.market_used_aud
+                ? audFormatter.format(pricing.market_used_aud)
+                : "N/A"}
+            </p>
+            {pricing.market_used_qty !== null && pricing.market_used_qty > 0 && (
+              <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                {pricing.market_used_qty} sold
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Source attribution */}
+      {hasMarketData && (
+        <p className="text-xs mt-3" style={{ color: "var(--muted)" }}>
+          Source: BrickLink · 6-month avg · converted from EUR
+        </p>
+      )}
+
       {/* No price at all */}
-      {!hasPrice && !showEurFallback && (
+      {!hasPrice && (
         <p className="text-sm mt-3" style={{ color: "var(--muted)" }}>
           Price data not available for this set
         </p>

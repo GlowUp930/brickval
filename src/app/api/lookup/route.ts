@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getBricksetData } from "@/lib/brickset";
-// TODO: Phase 2 — import { getMarketPrice } from "@/lib/rapidapi";
+import { getMarketPrice } from "@/lib/rapidapi";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
-import type { ComputedPricing, MarketPrice } from "@/types/market";
+import type { ComputedPricing } from "@/types/market";
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
@@ -50,15 +50,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Fetch Brickset + Frankfurter in parallel (RapidAPI market prices: Phase 2)
-  const [setResult, ratesResult] = await Promise.allSettled([
+  // Fetch Brickset, exchange rates, and RapidAPI market prices in parallel
+  const [setResult, ratesResult, marketResult] = await Promise.allSettled([
     getBricksetData(setNumber),
     getExchangeRates(),
+    getMarketPrice(setNumber),
   ]);
 
   const set = setResult.status === "fulfilled" ? setResult.value : null;
-  // Phase 2: replace with getMarketPrice(setNumber) — RapidAPI secondary market
-  const market = null as (MarketPrice | null);
+  const market = marketResult.status === "fulfilled" ? marketResult.value : null;
   const rates = ratesResult.status === "fulfilled" ? ratesResult.value : null;
 
   if (!set) {
@@ -79,32 +79,33 @@ export async function POST(req: NextRequest) {
       ? Math.round(rrpUsd * rates.usd_to_aud * 100) / 100
       : null;
 
-  const marketAvgPrice = market !== null ? market.avg_price : null;
-  const marketMinPrice = market !== null ? market.min_price : null;
-
-  const marketAvgAud =
-    marketAvgPrice && rates
-      ? Math.round(marketAvgPrice * rates.eur_to_aud * 100) / 100
+  const marketNewAud =
+    market?.price_new_eur && rates
+      ? Math.round(market.price_new_eur * rates.eur_to_aud * 100) / 100
       : null;
 
-  const marketMinAud =
-    marketMinPrice && rates
-      ? Math.round(marketMinPrice * rates.eur_to_aud * 100) / 100
+  const marketUsedAud =
+    market?.price_used_eur && rates
+      ? Math.round(market.price_used_eur * rates.eur_to_aud * 100) / 100
       : null;
 
   const gainPct =
-    marketAvgAud && rrpAud && rrpAud > 0
-      ? Math.round(((marketAvgAud - rrpAud) / rrpAud) * 100 * 10) / 10
+    marketNewAud && rrpAud && rrpAud > 0
+      ? Math.round(((marketNewAud - rrpAud) / rrpAud) * 100 * 10) / 10
       : null;
 
   const pricing: ComputedPricing = {
     rrp_usd: rrpUsd,
-    market_avg_eur: marketAvgPrice ?? null,
+    market_avg_eur: market?.price_new_eur ?? null,
     exchange_rate_eur_aud: rates?.eur_to_aud ?? null,
     exchange_rate_usd_aud: rates?.usd_to_aud ?? null,
     rrp_aud: rrpAud,
-    market_avg_aud: marketAvgAud,
-    market_min_aud: marketMinAud,
+    market_avg_aud: marketNewAud,
+    market_min_aud: null,
+    market_new_aud: marketNewAud,
+    market_used_aud: marketUsedAud,
+    market_new_qty: market?.sold_sets_new ?? null,
+    market_used_qty: market?.sold_sets_used ?? null,
     gain_pct: gainPct,
     exchange_rate_stale: rates?.stale ?? true,
   };

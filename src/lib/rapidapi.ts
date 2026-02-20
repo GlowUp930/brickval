@@ -1,22 +1,20 @@
 import { getCached, setCached } from "./cache";
-import type { MarketPrice } from "@/types/market";
+import type { RapidApiSetPrice, MarketPrice } from "@/types/market";
 
-// RapidAPI host for the LEGO Market Prices endpoint.
-// Verify this matches the exact host shown in your RapidAPI dashboard.
-const RAPIDAPI_HOST = "lego-market-prices.p.rapidapi.com";
+// RapidAPI: "LEGO Set Prices Achieved In The Market (Like Bricklink)"
+// This is a bulk dataset API — one call returns ALL LEGO sets.
+// Recommended: cache for 7 days and look up by set_number in memory.
+const RAPIDAPI_HOST =
+  "lego-set-prices-achieved-in-the-market-like-bricklink.p.rapidapi.com";
+const CACHE_KEY = "rapidapi:all";
+const CACHE_TTL_HOURS = 7 * 24; // 7 days
 
 /**
- * Fetches secondary market price data for a LEGO set.
- * Caches per set for 7 days (market prices don't change rapidly).
- *
- * IMPORTANT: Before wiring this to the result page, test the raw
- * response with a real curl and verify the field names match below.
+ * Fetches the full LEGO market price dataset from RapidAPI.
+ * Caches the entire array in Supabase for 7 days.
  */
-export async function getMarketPrice(
-  setNumber: string
-): Promise<MarketPrice | null> {
-  const cacheKey = `rapidapi:market:${setNumber}`;
-  const cached = await getCached<MarketPrice>(cacheKey);
+async function fetchAllSets(): Promise<RapidApiSetPrice[] | null> {
+  const cached = await getCached<RapidApiSetPrice[]>(CACHE_KEY);
   if (cached) return cached;
 
   if (!process.env.RAPIDAPI_KEY) {
@@ -25,38 +23,51 @@ export async function getMarketPrice(
 
   let response: Response;
   try {
-    response = await fetch(
-      `https://${RAPIDAPI_HOST}/sets/${setNumber}/prices`,
-      {
-        headers: {
-          "X-RapidAPI-Key": process.env.RAPIDAPI_KEY,
-          "X-RapidAPI-Host": RAPIDAPI_HOST,
-        },
-        next: { revalidate: 0 },
-      }
-    );
+    response = await fetch(`https://${RAPIDAPI_HOST}/`, {
+      headers: {
+        "X-RapidAPI-Key": process.env.RAPIDAPI_KEY,
+        "X-RapidAPI-Host": RAPIDAPI_HOST,
+      },
+      next: { revalidate: 0 },
+    });
   } catch {
     return null;
   }
 
   if (!response.ok) return null;
 
-  const json = await response.json();
-
-  // Map to internal type — field names may differ from your actual API response.
-  // Inspect the raw JSON and update these mappings if needed.
-  const price: MarketPrice = {
-    avg_price: json.averagePrice ?? json.avg_price ?? null,
-    min_price: json.minPrice ?? json.min_price ?? null,
-    max_price: json.maxPrice ?? json.max_price ?? null,
-    qty_listed: json.quantityListed ?? json.qty_listed ?? null,
-    currency: "EUR",
-  };
-
-  // Only cache if we got useful data
-  if (price.avg_price !== null) {
-    await setCached(cacheKey, price, 7 * 24); // 7 days
+  const data: RapidApiSetPrice[] = await response.json();
+  if (Array.isArray(data) && data.length > 0) {
+    await setCached(CACHE_KEY, data, CACHE_TTL_HOURS);
   }
+  return Array.isArray(data) ? data : null;
+}
 
-  return price;
+/**
+ * Looks up market prices for a single LEGO set number.
+ * Fetches the full dataset (cached) then finds the matching entry.
+ *
+ * @param setNumber - Set number without suffix e.g. "75192" (will try "75192-1" too)
+ */
+export async function getMarketPrice(
+  setNumber: string
+): Promise<MarketPrice | null> {
+  const allSets = await fetchAllSets();
+  if (!allSets) return null;
+
+  // Brickset returns set numbers like "75192" — RapidAPI uses "75192-1"
+  const withSuffix = setNumber.includes("-") ? setNumber : `${setNumber}-1`;
+  const entry = allSets.find(
+    (s) => s.set_number === withSuffix || s.set_number === setNumber
+  );
+  if (!entry) return null;
+
+  return {
+    price_new_eur:
+      entry.price_new === "none" ? null : parseFloat(entry.price_new),
+    price_used_eur:
+      entry.price_used === "none" ? null : parseFloat(entry.price_used),
+    sold_sets_new: entry.sold_sets_new ?? null,
+    sold_sets_used: entry.sold_sets_used ?? null,
+  };
 }
