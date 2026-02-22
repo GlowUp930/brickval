@@ -4,7 +4,6 @@ import { getBricksetData } from "@/lib/brickset";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { getEbayMarketData } from "@/lib/ebay";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
-import { SetDetails } from "@/components/result/SetDetails";
 import { PriceReveal } from "@/components/result/PriceReveal";
 import Link from "next/link";
 import type { ComputedPricing } from "@/types/market";
@@ -135,23 +134,24 @@ export default async function ResultPage({ params }: Props) {
         <div className="w-16" />
       </header>
 
-      {/* Content */}
-      <div className="flex-1 flex flex-col items-center px-5 py-8 max-w-sm mx-auto w-full gap-5">
-        <SetDetails set={set} />
-        <PriceReveal set={set} pricing={pricing} />
+      {/* Content — no outer padding so hero image goes full-bleed */}
+      <div className="flex-1 flex flex-col w-full max-w-sm mx-auto">
+        <PriceReveal set={set} pricing={pricing} setNumber={cleanedSetNumber} />
 
         {/* Scan another CTA */}
-        <Link
-          href="/scan"
-          className="w-full text-center font-bold py-3.5 px-6 rounded-2xl transition-all active:scale-[0.98]"
-          style={{
-            background: "var(--surface)",
-            color: "var(--foreground)",
-            border: "2px solid var(--border)",
-          }}
-        >
-          Scan another set
-        </Link>
+        <div className="px-4 pb-8">
+          <Link
+            href="/scan"
+            className="block w-full text-center font-bold py-3.5 px-6 rounded-2xl transition-all active:scale-[0.98]"
+            style={{
+              background: "var(--surface)",
+              color: "var(--foreground)",
+              border: "2px solid var(--border)",
+            }}
+          >
+            Scan another set
+          </Link>
+        </div>
       </div>
     </main>
   );
