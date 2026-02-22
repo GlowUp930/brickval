@@ -144,8 +144,7 @@ async function fetchBrowseListings(
     `?q=${query}` +
     `&filter=conditionIds%3A%7B${conditionId}%7D%2CbuyingOptions%3A%7BFIXED_PRICE%7D` +
     `&marketplace_id=EBAY_AU` +
-    `&limit=5` +
-    `&sort=price`;
+    `&limit=5`; // default sort = best match / relevance
 
   let res: Response;
   try {
@@ -170,10 +169,13 @@ async function fetchBrowseListings(
   const items: Record<string, unknown>[] = json.itemSummaries ?? [];
 
   return items.map((item) => {
-    const priceAud = parseFloat(
-      (item.price as { value: string; currency: string }).value
-    );
-    const priceUsd = Math.round((priceAud / usdToAud) * 100) / 100;
+    const priceField = item.price as { value: string; currency: string };
+    const rawPrice = parseFloat(priceField.value);
+    // Browse API may return USD (EBAY_US) or AUD (EBAY_AU) depending on result source
+    const priceUsd =
+      priceField.currency === "USD"
+        ? Math.round(rawPrice * 100) / 100
+        : Math.round((rawPrice / usdToAud) * 100) / 100;
     return {
       title: item.title as string,
       price_usd: priceUsd,
