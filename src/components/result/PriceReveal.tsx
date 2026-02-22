@@ -72,6 +72,39 @@ function formatSaleDate(isoDate: string): string {
   }
 }
 
+function formatShortDate(isoDate: string): string {
+  try {
+    return new Date(isoDate).toLocaleDateString("en-AU", {
+      day: "numeric",
+      month: "short",
+    });
+  } catch {
+    return isoDate;
+  }
+}
+
+// ── 30-day price delta (using first vs second half of listings as proxy) ───
+function computePriceDelta(sales: EbaySale[]): {
+  delta: number;
+  pct: number;
+} | null {
+  if (sales.length < 2) return null;
+
+  // Use first half as "older" and second half as "newer"
+  const mid = Math.floor(sales.length / 2);
+  const older = sales.slice(0, mid);
+  const newer = sales.slice(mid);
+
+  const oldAvg = older.reduce((s, x) => s + x.price_usd, 0) / older.length;
+  const newAvg = newer.reduce((s, x) => s + x.price_usd, 0) / newer.length;
+
+  if (oldAvg === 0) return null;
+
+  const delta = newAvg - oldAvg;
+  const pct = (delta / oldAvg) * 100;
+  return { delta, pct };
+}
+
 // ── Retirement pill ────────────────────────────────────────────────────────
 function RetirementPill({ set }: { set: BricksetSet }) {
   const status = getRetirementStatus(set);
@@ -102,43 +135,116 @@ function RetirementPill({ set }: { set: BricksetSet }) {
   );
 }
 
-// ── Price sparkline (pure SVG, no deps) ────────────────────────────────────
+// ── Price sparkline — taller, with axis labels ──────────────────────────────
 function PriceSparkline({ sales }: { sales: EbaySale[] }) {
   if (sales.length < 2) return null;
 
   const prices = sales.map((s) => s.price_usd);
   const min = Math.min(...prices);
   const max = Math.max(...prices);
-  const W = 300;
-  const H = 56;
-  const pad = 8;
 
-  const coords = prices.map((p, i) => ({
-    x: pad + (i / (prices.length - 1)) * (W - pad * 2),
-    y:
-      max === min
-        ? H / 2
-        : pad + ((max - p) / (max - min)) * (H - pad * 2),
-  }));
+  // Canvas dimensions — taller for ~1/3 screen feel on mobile
+  const W = 340;
+  const H = 140;
+  const padLeft = 52;  // room for Y-axis price labels
+  const padRight = 8;
+  const padTop = 12;
+  const padBottom = 28; // room for X-axis date labels
 
+  const toX = (i: number) =>
+    padLeft + (i / (prices.length - 1)) * (W - padLeft - padRight);
+
+  const toY = (p: number) =>
+    max === min
+      ? padTop + (H - padTop - padBottom) / 2
+      : padTop + ((max - p) / (max - min)) * (H - padTop - padBottom);
+
+  const coords = prices.map((p, i) => ({ x: toX(i), y: toY(p) }));
   const linePoints = coords.map((c) => `${c.x},${c.y}`).join(" ");
-  const areaPoints = `${pad},${H} ${linePoints} ${W - pad},${H}`;
+  const areaPoints = `${padLeft},${H - padBottom} ${linePoints} ${W - padRight},${H - padBottom}`;
+
+  // Y-axis: 3 reference lines (min, mid, max)
+  const yLabels = [
+    { price: max, y: toY(max) },
+    { price: (max + min) / 2, y: toY((max + min) / 2) },
+    { price: min, y: toY(min) },
+  ];
+
+  // X-axis: show first and last date
+  const xLabels = [
+    { label: formatShortDate(sales[0].sold_date), x: toX(0) },
+    { label: formatShortDate(sales[sales.length - 1].sold_date), x: toX(sales.length - 1) },
+  ];
 
   return (
     <div className="mx-4 mb-3">
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="w-full"
-        style={{ height: 48 }}
+        style={{ height: 140 }}
         aria-hidden="true"
       >
         <defs>
           <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f5c518" stopOpacity="0.18" />
+            <stop offset="0%" stopColor="#f5c518" stopOpacity="0.22" />
             <stop offset="100%" stopColor="#f5c518" stopOpacity="0" />
           </linearGradient>
         </defs>
+
+        {/* Y-axis grid lines + price labels */}
+        {yLabels.map(({ price, y }, i) => (
+          <g key={i}>
+            <line
+              x1={padLeft}
+              y1={y}
+              x2={W - padRight}
+              y2={y}
+              stroke="rgba(255,255,255,0.06)"
+              strokeWidth="1"
+              strokeDasharray="3 4"
+            />
+            <text
+              x={padLeft - 6}
+              y={y + 4}
+              textAnchor="end"
+              fontSize="9"
+              fill="rgba(255,255,255,0.35)"
+              fontFamily="system-ui, -apple-system, sans-serif"
+            >
+              {usdFormatter.format(price)}
+            </text>
+          </g>
+        ))}
+
+        {/* X-axis baseline */}
+        <line
+          x1={padLeft}
+          y1={H - padBottom}
+          x2={W - padRight}
+          y2={H - padBottom}
+          stroke="rgba(255,255,255,0.08)"
+          strokeWidth="1"
+        />
+
+        {/* X-axis date labels */}
+        {xLabels.map(({ label, x }, i) => (
+          <text
+            key={i}
+            x={x}
+            y={H - padBottom + 14}
+            textAnchor={i === 0 ? "start" : "end"}
+            fontSize="9"
+            fill="rgba(255,255,255,0.35)"
+            fontFamily="system-ui, -apple-system, sans-serif"
+          >
+            {label}
+          </text>
+        ))}
+
+        {/* Area fill */}
         <polygon points={areaPoints} fill="url(#sparkFill)" />
+
+        {/* Price line */}
         <polyline
           points={linePoints}
           fill="none"
@@ -147,8 +253,10 @@ function PriceSparkline({ sales }: { sales: EbaySale[] }) {
           strokeLinecap="round"
           strokeLinejoin="round"
         />
+
+        {/* Data point dots */}
         {coords.map((c, i) => (
-          <circle key={i} cx={c.x} cy={c.y} r="3" fill="#f5c518" />
+          <circle key={i} cx={c.x} cy={c.y} r="2.5" fill="#f5c518" />
         ))}
       </svg>
     </div>
@@ -227,10 +335,18 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
 
   const animated = useCountUp(heroUsd ?? 0);
 
+  // 30-day price delta from active tab's listings
+  const priceDelta = computePriceDelta(activeSales);
+
   const heroLabel =
     tab === "new" ? "Avg Sale Price · New / Sealed" : "Avg Sale Price · Used";
 
-  const imageUrl = set?.image?.imageURL ?? set?.image?.thumbnailURL ?? null;
+  // Build image URL from Brickset CDN pattern directly — no API call needed
+  const setNum = set?.number ?? setNumber;
+  const imageUrl =
+    set?.image?.imageURL ??
+    set?.image?.thumbnailURL ??
+    (setNum ? `https://images.brickset.com/sets/images/${setNum}-1.jpg` : null);
 
   return (
     <div className="w-full flex flex-col">
@@ -241,8 +357,13 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={imageUrl}
-            alt={set?.name ?? "LEGO Set"}
-            className="w-full h-full object-cover"
+            alt={set?.name ?? `LEGO Set ${setNum ?? ""}`}
+            className="w-full h-full object-contain"
+            style={{ background: "var(--surface)" }}
+            onError={(e) => {
+              // If Brickset CDN fails, hide img and show fallback
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
           />
         ) : (
           <div
@@ -263,7 +384,7 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
         {set?.theme && (
           <span
             className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
-            style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+            style={{ background: "var(--accent)", color: "#000" }}
           >
             LEGO {set.theme}
           </span>
@@ -301,6 +422,8 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
         >
           {heroLabel}
         </p>
+
+        {/* Big animated price */}
         <p
           className="text-[64px] font-black leading-none tabular-nums"
           style={{ color: "var(--accent)" }}
@@ -309,27 +432,54 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
           {heroUsd !== null ? usdFormatter.format(animated) : "N/A"}
         </p>
 
-        {pricing.gain_pct !== null && (
-          <span
-            className="inline-block mt-2 text-xs font-bold px-3 py-1 rounded-full"
-            style={{
-              background:
-                pricing.gain_pct >= 0
-                  ? "rgba(34,197,94,0.12)"
-                  : "rgba(239,68,68,0.12)",
-              color: pricing.gain_pct >= 0 ? "var(--green)" : "var(--red)",
-              border: `1px solid ${
-                pricing.gain_pct >= 0
-                  ? "rgba(34,197,94,0.25)"
-                  : "rgba(239,68,68,0.25)"
-              }`,
-            }}
-          >
-            {pricing.gain_pct >= 0 ? "+" : ""}
-            {pricing.gain_pct.toFixed(1)}% vs RRP
-          </span>
+        {/* 30-day trend badge — like the reference screenshot */}
+        {priceDelta !== null && (
+          <div className="flex items-center gap-2 mt-3">
+            <span
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold"
+              style={{
+                background:
+                  priceDelta.delta >= 0
+                    ? "rgba(34,197,94,0.18)"
+                    : "rgba(239,68,68,0.18)",
+                color: priceDelta.delta >= 0 ? "#22c55e" : "#ef4444",
+                border: `1px solid ${
+                  priceDelta.delta >= 0
+                    ? "rgba(34,197,94,0.30)"
+                    : "rgba(239,68,68,0.30)"
+                }`,
+              }}
+            >
+              {/* Trend arrow */}
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 10 10"
+                fill="none"
+                style={{
+                  transform: priceDelta.delta >= 0 ? "rotate(0deg)" : "rotate(180deg)",
+                }}
+              >
+                <path
+                  d="M1 7 L5 2 L9 7"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              {priceDelta.delta >= 0 ? "+" : ""}
+              {usdFormatter.format(Math.abs(priceDelta.delta))}
+              {" "}({priceDelta.pct >= 0 ? "+" : ""}
+              {priceDelta.pct.toFixed(1)}%)
+            </span>
+            <span className="text-xs" style={{ color: "var(--muted)" }}>
+              trend across listings
+            </span>
+          </div>
         )}
 
+        {/* RRP reference */}
         {pricing.rrp_usd && (
           <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
             RRP: ~{usdFormatter.format(pricing.rrp_usd)}
@@ -350,7 +500,7 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
               className="flex-1 py-2 rounded-lg text-sm font-bold transition-all"
               style={{
                 background: tab === t ? "var(--accent)" : "transparent",
-                color: tab === t ? "var(--accent-fg)" : "var(--muted)",
+                color: tab === t ? "#000" : "var(--muted)",
               }}
             >
               {t === "new" ? "New / Sealed" : "Used"}
@@ -365,7 +515,7 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
           className="text-[10px] font-semibold uppercase tracking-widest"
           style={{ color: "var(--muted)" }}
         >
-          {tab === "new" ? "New / Sealed" : "Used"}
+          Recent Transactions
         </span>
         {activeAvg !== null && (
           <span className="text-[10px] font-semibold" style={{ color: "var(--muted)" }}>
@@ -374,7 +524,7 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
         )}
       </div>
 
-      {/* ── 6. Sparkline ── */}
+      {/* ── 6. Sparkline (taller, with axis labels) ── */}
       <PriceSparkline sales={activeSales} />
 
       {/* ── 7. Flat listing rows ── */}
