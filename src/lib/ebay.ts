@@ -193,7 +193,8 @@ export async function getEbayMarketData(
 ): Promise<EbayMarketData> {
   const cacheKey = `ebay:${setNumber}`;
   const cached = await getCached<EbayMarketData>(cacheKey);
-  if (cached) return cached;
+  // Only use cache if it has actual data — ignore stale empty-array entries
+  if (cached && (cached.new_sales.length > 0 || cached.used_sales.length > 0)) return cached;
 
   const [newSales, usedSales] = await Promise.all([
     fetchSoldListings(setNumber, "new", usdToAud),
