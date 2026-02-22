@@ -3,7 +3,7 @@ import type { BricksetSet } from "@/types/brickset";
 import { getRetirementStatus } from "@/types/brickset";
 
 interface Props {
-  set: BricksetSet;
+  set: BricksetSet | null;
 }
 
 const RETIREMENT_BADGE = {
@@ -25,6 +25,8 @@ const RETIREMENT_BADGE = {
 } as const;
 
 export function SetDetails({ set }: Props) {
+  if (!set) return null;
+
   const status = getRetirementStatus(set);
   const badge = RETIREMENT_BADGE[status];
 

@@ -5,7 +5,7 @@ import type { BricksetSet } from "@/types/brickset";
 import type { ComputedPricing, EbaySale } from "@/types/market";
 
 interface Props {
-  set: BricksetSet;
+  set: BricksetSet | null;
   pricing: ComputedPricing;
 }
 
@@ -220,15 +220,15 @@ export function PriceReveal({ set, pricing }: Props) {
       </div>
 
       {/* ── 2. LEGO set image ── */}
-      {set.image?.imageURL && (
+      {set?.image?.imageURL && (
         <div
           className="w-full rounded-2xl overflow-hidden"
           style={{ border: "1px solid var(--border)" }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={set.image.imageURL}
-            alt={set.name}
+            src={set!.image!.imageURL}
+            alt={set!.name}
             className="w-full object-contain"
             style={{ maxHeight: "220px", background: "var(--surface)" }}
           />

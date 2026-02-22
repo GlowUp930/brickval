@@ -2,7 +2,6 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getBricksetData } from "@/lib/brickset";
 import { getExchangeRates } from "@/lib/frankfurter";
-import { getMarketPrice } from "@/lib/rapidapi";
 import { getEbayMarketData } from "@/lib/ebay";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { SetDetails } from "@/components/result/SetDetails";
@@ -39,33 +38,29 @@ export default async function ResultPage({ params }: Props) {
     redirect("/upgrade");
   }
 
-  // Fetch all data in parallel
-  const [setResult, ratesResult, marketResult] = await Promise.allSettled([
-    getBricksetData(cleanedSetNumber),
-    getExchangeRates(),
-    getMarketPrice(cleanedSetNumber),
+  // Fetch exchange rates first (fast — Supabase-cached)
+  const rates = await getExchangeRates().catch(() => null);
+  const usdToAud = rates?.usd_to_aud ?? 1.55;
+
+  // Fetch eBay + Brickset in parallel — Brickset is best-effort only
+  const [ebayData, set] = await Promise.all([
+    getEbayMarketData(cleanedSetNumber, usdToAud).catch(() => ({
+      new_sales: [],
+      used_sales: [],
+    })),
+    getBricksetData(cleanedSetNumber).catch(() => null),
   ]);
 
-  const set = setResult.status === "fulfilled" ? setResult.value : null;
-  const market = marketResult.status === "fulfilled" ? marketResult.value : null;
-  const rates = ratesResult.status === "fulfilled" ? ratesResult.value : null;
-
-  if (!set) {
+  // eBay is the primary source — gate on it, not Brickset
+  if (ebayData.new_sales.length === 0 && ebayData.used_sales.length === 0) {
     return (
       <ErrorScreen
-        message={`We don't have data for set #${cleanedSetNumber}. Double-check the number and try again.`}
+        message={`No eBay listings found for set #${cleanedSetNumber}. Double-check the number and try again.`}
         backLabel="Try another set"
         backHref="/scan"
       />
     );
   }
-
-  // Fetch eBay data — needs usd_to_aud for AUD→USD conversion
-  const usdToAud = rates?.usd_to_aud ?? 1.55;
-  const ebayData = await getEbayMarketData(cleanedSetNumber, usdToAud).catch(() => ({
-    new_sales: [],
-    used_sales: [],
-  }));
 
   // Compute eBay averages (USD) for hero price
   const ebayNewAvgUsd =
@@ -85,24 +80,13 @@ export default async function ResultPage({ params }: Props) {
         ) / 100
       : null;
 
-  // Compute legacy AUD prices (kept as fallback)
-  const rrpUsd = set.LEGOCom?.US?.retailPrice ?? null;
+  // Brickset data is optional — only used for RRP + gain %
+  const rrpUsd = set?.LEGOCom?.US?.retailPrice ?? null;
   const rrpAud =
     rrpUsd && rates
       ? Math.round(rrpUsd * rates.usd_to_aud * 100) / 100
       : null;
 
-  const marketNewAud =
-    market?.price_new_eur && rates
-      ? Math.round(market.price_new_eur * rates.eur_to_aud * 100) / 100
-      : null;
-
-  const marketUsedAud =
-    market?.price_used_eur && rates
-      ? Math.round(market.price_used_eur * rates.eur_to_aud * 100) / 100
-      : null;
-
-  // Gain % uses eBay USD avg vs RRP USD — most accurate comparison
   const gainPct =
     ebayNewAvgUsd && rrpUsd && rrpUsd > 0
       ? Math.round(((ebayNewAvgUsd - rrpUsd) / rrpUsd) * 100 * 10) / 10
@@ -110,16 +94,16 @@ export default async function ResultPage({ params }: Props) {
 
   const pricing: ComputedPricing = {
     rrp_usd: rrpUsd,
-    market_avg_eur: market?.price_new_eur ?? null,
+    market_avg_eur: null,
     exchange_rate_eur_aud: rates?.eur_to_aud ?? null,
     exchange_rate_usd_aud: rates?.usd_to_aud ?? null,
     rrp_aud: rrpAud,
-    market_avg_aud: marketNewAud,
+    market_avg_aud: null,
     market_min_aud: null,
-    market_new_aud: marketNewAud,
-    market_used_aud: marketUsedAud,
-    market_new_qty: market?.sold_sets_new ?? null,
-    market_used_qty: market?.sold_sets_used ?? null,
+    market_new_aud: null,
+    market_used_aud: null,
+    market_new_qty: null,
+    market_used_qty: null,
     gain_pct: gainPct,
     exchange_rate_stale: rates?.stale ?? true,
     ebay_new_sales: ebayData.new_sales,
