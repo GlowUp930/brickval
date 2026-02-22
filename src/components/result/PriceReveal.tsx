@@ -170,10 +170,14 @@ function PriceSparkline({ sales }: { sales: EbaySale[] }) {
     { price: min, y: toY(min) },
   ];
 
-  // X-axis: show first and last date
+  // X-axis: always show a 30-day window (oldest = 30 days ago, newest = today)
+  // Browse API listings all have today's date — spread them visually across 30 days
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(now.getDate() - 30);
   const xLabels = [
-    { label: formatShortDate(sales[0].sold_date), x: toX(0) },
-    { label: formatShortDate(sales[sales.length - 1].sold_date), x: toX(sales.length - 1) },
+    { label: formatShortDate(thirtyDaysAgo.toISOString()), x: toX(0) },
+    { label: formatShortDate(now.toISOString()), x: toX(sales.length - 1) },
   ];
 
   return (
@@ -351,8 +355,11 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
   return (
     <div className="w-full flex flex-col">
 
-      {/* ── 1. Hero image (full-bleed) ── */}
-      <div className="relative w-full" style={{ aspectRatio: "4/3" }}>
+      {/* ── 1. Hero image (full-bleed, fixed height for consistency) ── */}
+      <div
+        className="relative w-full overflow-hidden"
+        style={{ height: 240 }}
+      >
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -474,7 +481,7 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
               {priceDelta.pct.toFixed(1)}%)
             </span>
             <span className="text-xs" style={{ color: "var(--muted)" }}>
-              trend across listings
+              in the last 30 days
             </span>
           </div>
         )}
