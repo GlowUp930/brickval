@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getBricksetData } from "@/lib/brickset";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { getMarketPrice } from "@/lib/rapidapi";
+import { getEbayMarketData } from "@/lib/ebay";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { SetDetails } from "@/components/result/SetDetails";
 import { PriceReveal } from "@/components/result/PriceReveal";
@@ -59,7 +60,32 @@ export default async function ResultPage({ params }: Props) {
     );
   }
 
-  // Compute AUD prices
+  // Fetch eBay data — needs usd_to_aud for AUD→USD conversion
+  const usdToAud = rates?.usd_to_aud ?? 1.55;
+  const ebayData = await getEbayMarketData(cleanedSetNumber, usdToAud).catch(() => ({
+    new_sales: [],
+    used_sales: [],
+  }));
+
+  // Compute eBay averages (USD) for hero price
+  const ebayNewAvgUsd =
+    ebayData.new_sales.length > 0
+      ? Math.round(
+          (ebayData.new_sales.reduce((s, x) => s + x.price_usd, 0) /
+            ebayData.new_sales.length) *
+            100
+        ) / 100
+      : null;
+  const ebayUsedAvgUsd =
+    ebayData.used_sales.length > 0
+      ? Math.round(
+          (ebayData.used_sales.reduce((s, x) => s + x.price_usd, 0) /
+            ebayData.used_sales.length) *
+            100
+        ) / 100
+      : null;
+
+  // Compute legacy AUD prices (kept as fallback)
   const rrpUsd = set.LEGOCom?.US?.retailPrice ?? null;
   const rrpAud =
     rrpUsd && rates
@@ -76,9 +102,10 @@ export default async function ResultPage({ params }: Props) {
       ? Math.round(market.price_used_eur * rates.eur_to_aud * 100) / 100
       : null;
 
+  // Gain % uses eBay USD avg vs RRP USD — most accurate comparison
   const gainPct =
-    marketNewAud && rrpAud && rrpAud > 0
-      ? Math.round(((marketNewAud - rrpAud) / rrpAud) * 100 * 10) / 10
+    ebayNewAvgUsd && rrpUsd && rrpUsd > 0
+      ? Math.round(((ebayNewAvgUsd - rrpUsd) / rrpUsd) * 100 * 10) / 10
       : null;
 
   const pricing: ComputedPricing = {
@@ -95,6 +122,10 @@ export default async function ResultPage({ params }: Props) {
     market_used_qty: market?.sold_sets_used ?? null,
     gain_pct: gainPct,
     exchange_rate_stale: rates?.stale ?? true,
+    ebay_new_sales: ebayData.new_sales,
+    ebay_used_sales: ebayData.used_sales,
+    ebay_new_avg_usd: ebayNewAvgUsd,
+    ebay_used_avg_usd: ebayUsedAvgUsd,
   };
 
   return (
@@ -123,7 +154,7 @@ export default async function ResultPage({ params }: Props) {
       {/* Content */}
       <div className="flex-1 flex flex-col items-center px-5 py-8 max-w-sm mx-auto w-full gap-5">
         <SetDetails set={set} />
-        <PriceReveal pricing={pricing} />
+        <PriceReveal set={set} pricing={pricing} />
 
         {/* Scan another CTA */}
         <Link
