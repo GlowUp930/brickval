@@ -136,7 +136,13 @@ function RetirementPill({ set }: { set: BricksetSet }) {
 }
 
 // ── Price sparkline — taller, with axis labels ──────────────────────────────
-function PriceSparkline({ sales }: { sales: EbaySale[] }) {
+function PriceSparkline({
+  sales,
+  dataSource,
+}: {
+  sales: EbaySale[];
+  dataSource: "sold" | "listing";
+}) {
   if (sales.length < 2) return null;
 
   const prices = sales.map((s) => s.price_usd);
@@ -170,15 +176,24 @@ function PriceSparkline({ sales }: { sales: EbaySale[] }) {
     { price: min, y: toY(min) },
   ];
 
-  // X-axis: always show a 30-day window (oldest = 30 days ago, newest = today)
-  // Browse API listings all have today's date — spread them visually across 30 days
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now);
-  thirtyDaysAgo.setDate(now.getDate() - 30);
-  const xLabels = [
-    { label: formatShortDate(thirtyDaysAgo.toISOString()), x: toX(0) },
-    { label: formatShortDate(now.toISOString()), x: toX(sales.length - 1) },
-  ];
+  // X-axis dates: use real sold dates when available, synthetic 30-day window for listings
+  let xLabels: { label: string; x: number }[];
+  if (dataSource === "sold") {
+    // Real sold dates — show first and last actual dates
+    xLabels = [
+      { label: formatShortDate(sales[sales.length - 1].sold_date), x: toX(0) },
+      { label: formatShortDate(sales[0].sold_date), x: toX(sales.length - 1) },
+    ];
+  } else {
+    // Active listings — spread across a synthetic 30-day window
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(now.getDate() - 30);
+    xLabels = [
+      { label: formatShortDate(thirtyDaysAgo.toISOString()), x: toX(0) },
+      { label: formatShortDate(now.toISOString()), x: toX(sales.length - 1) },
+    ];
+  }
 
   return (
     <div className="mx-4 mb-3">
@@ -342,8 +357,10 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
   // 30-day price delta from active tab's listings
   const priceDelta = computePriceDelta(activeSales);
 
-  const heroLabel =
-    tab === "new" ? "Avg Sale Price · New / Sealed" : "Avg Sale Price · Used";
+  const isSoldData = pricing.data_source === "sold";
+  const heroLabel = isSoldData
+    ? (tab === "new" ? "Avg Sold Price · New / Sealed" : "Avg Sold Price · Used")
+    : (tab === "new" ? "Avg Listing Price · New / Sealed" : "Avg Listing Price · Used");
 
   // Build image URL from Brickset CDN pattern directly — no API call needed
   const setNum = set?.number ?? setNumber;
@@ -516,13 +533,30 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
         </div>
       )}
 
-      {/* ── 5. Section header ── */}
+      {/* ── 5. Listing fallback banner ── */}
+      {!isSoldData && (
+        <div
+          className="mx-4 mb-4 rounded-xl px-4 py-3 flex items-start gap-2.5"
+          style={{
+            background: "rgba(245,197,24,0.08)",
+            border: "1px solid rgba(245,197,24,0.20)",
+          }}
+        >
+          <span className="text-sm leading-none mt-0.5">⚠️</span>
+          <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
+            No recent sold transactions found for this set. Prices shown are
+            current listing prices, not confirmed sale prices.
+          </p>
+        </div>
+      )}
+
+      {/* ── 6. Section header ── */}
       <div className="mx-4 mb-2 flex justify-between items-center px-0.5">
         <span
           className="text-[10px] font-semibold uppercase tracking-widest"
           style={{ color: "var(--muted)" }}
         >
-          Recent Transactions
+          {isSoldData ? "Recent Transactions" : "Active Listings"}
         </span>
         {activeAvg !== null && (
           <span className="text-[10px] font-semibold" style={{ color: "var(--muted)" }}>
@@ -531,10 +565,10 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
         )}
       </div>
 
-      {/* ── 6. Sparkline (taller, with axis labels) ── */}
-      <PriceSparkline sales={activeSales} />
+      {/* ── 7. Sparkline (taller, with axis labels) ── */}
+      <PriceSparkline sales={activeSales} dataSource={pricing.data_source} />
 
-      {/* ── 7. Flat listing rows ── */}
+      {/* ── 8. Flat listing rows ── */}
       <div
         className="mx-4 mb-5 rounded-2xl overflow-hidden"
         style={{ border: "1px solid var(--border)" }}
@@ -549,12 +583,14 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
         ))}
       </div>
 
-      {/* ── 8. Attribution ── */}
+      {/* ── 9. Attribution ── */}
       <p
         className="text-center text-[11px] pb-8 pt-1 px-4"
         style={{ color: "var(--muted)" }}
       >
-        Source: eBay Australia · active listings · USD
+        {isSoldData
+          ? "Source: eBay Global · sold prices · USD"
+          : "Source: eBay · listing prices · USD"}
       </p>
     </div>
   );

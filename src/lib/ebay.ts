@@ -1,210 +1,379 @@
 import { getCached, setCached } from "./cache";
+import type { ExchangeRates } from "./frankfurter";
 
 export interface EbaySale {
   title: string;
-  price_usd: number; // converted from eBay AU's AUD price
-  sold_date: string; // ISO date string
+  price_usd: number; // always stored in USD
+  sold_date: string; // ISO date — real date for sold, today for active listings
   condition: string; // "New / Sealed" | "Used"
   item_url: string;
+  marketplace?: string; // e.g. "EBAY_US", "EBAY_AU", "EBAY_GB", "EBAY_DE"
 }
 
 export interface EbayMarketData {
   new_sales: EbaySale[];
   used_sales: EbaySale[];
+  data_source: "sold" | "listing";
 }
 
-const CACHE_TTL_HOURS = 24; // refresh eBay data every 24 hours
+const CACHE_TTL_HOURS = 24;
+const MIN_RESULTS_FOR_30_DAYS = 3;
 
-// --- OAuth token (cached in memory per server instance, refreshed when expired) ---
-let tokenCache: { token: string; expires: number } | null = null;
+// Marketplaces to search, ordered by trading volume for LEGO
+const MARKETPLACES = ["EBAY_US", "EBAY_AU", "EBAY_GB", "EBAY_DE"] as const;
+type MarketplaceId = (typeof MARKETPLACES)[number];
 
-async function getAccessToken(): Promise<string> {
-  if (tokenCache && Date.now() < tokenCache.expires - 60_000) {
-    return tokenCache.token;
-  }
+// Currency for each marketplace
+const MARKETPLACE_CURRENCY: Record<MarketplaceId, string> = {
+  EBAY_US: "USD",
+  EBAY_AU: "AUD",
+  EBAY_GB: "GBP",
+  EBAY_DE: "EUR",
+};
 
+// ── OAuth tokens ────────────────────────────────────────────────────────────
+
+// General scope token (Browse API)
+let browseTokenCache: { token: string; expires: number } | null = null;
+
+// Marketplace Insights scope token
+let insightsTokenCache: { token: string; expires: number } | null = null;
+let insightsScopeAvailable: boolean | null = null; // null = untested
+
+function getCredentials() {
   const appId = process.env.EBAY_APP_ID;
   const certId = process.env.EBAY_CERT_ID;
   if (!appId || !certId) {
     throw new Error("[ebay] Missing env vars: EBAY_APP_ID or EBAY_CERT_ID");
   }
+  return Buffer.from(`${appId}:${certId}`).toString("base64");
+}
 
-  const credentials = Buffer.from(`${appId}:${certId}`).toString("base64");
-
+async function fetchToken(scope: string): Promise<{ token: string; expiresIn: number }> {
+  const credentials = getCredentials();
   const res = await fetch("https://api.ebay.com/identity/v1/oauth2/token", {
     method: "POST",
     headers: {
       Authorization: `Basic ${credentials}`,
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: "grant_type=client_credentials&scope=https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope",
+    body: `grant_type=client_credentials&scope=${encodeURIComponent(scope)}`,
     next: { revalidate: 0 },
   });
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`[ebay] Token fetch failed: ${res.status} ${text}`);
+    throw new Error(`[ebay] Token fetch failed (${res.status}): ${text}`);
   }
 
   const json = await res.json();
-  tokenCache = {
-    token: json.access_token,
-    expires: Date.now() + json.expires_in * 1000,
-  };
-  return tokenCache.token;
+  return { token: json.access_token, expiresIn: json.expires_in };
 }
 
-// --- Fetch sold listings for one condition ---
-type Condition = "new" | "used";
+async function getBrowseToken(): Promise<string> {
+  if (browseTokenCache && Date.now() < browseTokenCache.expires - 60_000) {
+    return browseTokenCache.token;
+  }
+  const { token, expiresIn } = await fetchToken("https://api.ebay.com/oauth/api_scope");
+  browseTokenCache = { token, expires: Date.now() + expiresIn * 1000 };
+  return token;
+}
 
-async function fetchSoldListings(
-  setNumber: string,
-  condition: Condition,
-  usdToAud: number // exchange rate to convert AUD → USD
-): Promise<EbaySale[]> {
-  let token: string;
-  try {
-    token = await getAccessToken();
-  } catch (err) {
-    console.warn("[ebay] Could not get access token:", err);
-    return [];
+async function getInsightsToken(): Promise<string | null> {
+  // If we already know insights scope is denied, skip
+  if (insightsScopeAvailable === false) return null;
+
+  if (insightsTokenCache && Date.now() < insightsTokenCache.expires - 60_000) {
+    return insightsTokenCache.token;
   }
 
-  // conditionIds: 1000 = New, 3000 = Used
+  try {
+    const { token, expiresIn } = await fetchToken(
+      "https://api.ebay.com/oauth/api_scope/buy.marketplace.insights"
+    );
+    insightsTokenCache = { token, expires: Date.now() + expiresIn * 1000 };
+    insightsScopeAvailable = true;
+    return token;
+  } catch {
+    // Scope denied — remember so we don't retry every request
+    console.warn("[ebay] Marketplace Insights scope denied, using Browse API fallback");
+    insightsScopeAvailable = false;
+    return null;
+  }
+}
+
+// ── Currency conversion ─────────────────────────────────────────────────────
+
+function convertToUsd(
+  rawPrice: number,
+  currency: string,
+  rates: ExchangeRates
+): number {
+  let usd: number;
+  switch (currency) {
+    case "USD":
+      usd = rawPrice;
+      break;
+    case "AUD":
+      usd = rawPrice * rates.aud_to_usd;
+      break;
+    case "GBP":
+      usd = rawPrice * rates.gbp_to_usd;
+      break;
+    case "EUR":
+      usd = rawPrice * rates.eur_to_usd;
+      break;
+    default:
+      // Unknown currency — assume USD
+      usd = rawPrice;
+  }
+  return Math.round(usd * 100) / 100;
+}
+
+// ── Marketplace Insights API (real sold data) ───────────────────────────────
+
+type Condition = "new" | "used";
+
+async function fetchInsightsSales(
+  setNumber: string,
+  condition: Condition,
+  marketplace: MarketplaceId,
+  token: string,
+  rates: ExchangeRates
+): Promise<EbaySale[]> {
   const conditionId = condition === "new" ? "1000" : "3000";
   const query = encodeURIComponent(`LEGO ${setNumber}`);
 
-  // Try Marketplace Insights API first (true sold listings)
   const url =
     `https://api.ebay.com/buy/marketplace-insights/v1/item_sales/search` +
     `?q=${query}` +
     `&filter=conditionIds%3A%7B${conditionId}%7D%2CbuyingOptions%3A%7BFIXED_PRICE%7D` +
-    `&marketplace_id=EBAY_AU` +
-    `&limit=5` +
+    `&limit=20` +
     `&sort=soldDate`;
 
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      next: { revalidate: 0 },
-    });
-  } catch (err) {
-    console.warn("[ebay] Fetch error:", err);
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "X-EBAY-C-MARKETPLACE-ID": marketplace,
+    },
+    next: { revalidate: 0 },
+  });
+
+  // 403/404/405 means no access to Insights for this marketplace
+  if (res.status === 403 || res.status === 404 || res.status === 405) {
     return [];
   }
 
-  // If Marketplace Insights is restricted (403/404/405), fall back to Browse API
-  if (res.status === 403 || res.status === 404 || res.status === 405) {
-    console.warn(
-      `[ebay] Marketplace Insights returned ${res.status}, falling back to Browse API`
-    );
-    return fetchBrowseListings(setNumber, condition, usdToAud, token);
-  }
-
   if (!res.ok) {
-    console.warn(`[ebay] Marketplace Insights returned ${res.status}`);
+    console.warn(`[ebay] Insights ${marketplace} returned ${res.status}`);
     return [];
   }
 
   const json = await res.json();
   const items: Record<string, unknown>[] = json.itemSales ?? [];
+  const currency = MARKETPLACE_CURRENCY[marketplace];
 
   return items.map((item) => {
-    const priceAud = parseFloat(
+    const priceRaw = parseFloat(
       (item.price as { value: string; currency: string }).value
     );
-    const priceUsd = Math.round((priceAud / usdToAud) * 100) / 100;
     return {
       title: item.title as string,
-      price_usd: priceUsd,
+      price_usd: convertToUsd(priceRaw, currency, rates),
       sold_date: item.soldDate as string,
       condition: condition === "new" ? "New / Sealed" : "Used",
       item_url: item.itemHref as string,
+      marketplace,
     };
   });
 }
 
-// --- Fallback: Browse API (active listings, not sold) ---
+/**
+ * Fetch sold listings across multiple marketplaces.
+ * Returns merged, deduplicated, date-filtered results.
+ */
+async function fetchGlobalSoldListings(
+  setNumber: string,
+  condition: Condition,
+  token: string,
+  rates: ExchangeRates
+): Promise<EbaySale[]> {
+  // Query all marketplaces in parallel
+  const results = await Promise.allSettled(
+    MARKETPLACES.map((mp) =>
+      fetchInsightsSales(setNumber, condition, mp, token, rates)
+    )
+  );
+
+  // Merge all successful results
+  const allSales: EbaySale[] = [];
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      allSales.push(...result.value);
+    }
+  }
+
+  // Deduplicate by item_url (same item can appear in cross-border results)
+  const seen = new Set<string>();
+  const unique = allSales.filter((sale) => {
+    if (seen.has(sale.item_url)) return false;
+    seen.add(sale.item_url);
+    return true;
+  });
+
+  // Sort by sold_date descending (most recent first)
+  unique.sort(
+    (a, b) => new Date(b.sold_date).getTime() - new Date(a.sold_date).getTime()
+  );
+
+  // Filter to last 30 days first
+  const now = Date.now();
+  const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+  const sixtyDaysAgo = now - 60 * 24 * 60 * 60 * 1000;
+
+  const last30 = unique.filter(
+    (s) => new Date(s.sold_date).getTime() >= thirtyDaysAgo
+  );
+
+  // If 30-day window has enough results, use it; otherwise expand to 60 days
+  if (last30.length >= MIN_RESULTS_FOR_30_DAYS) {
+    return last30;
+  }
+
+  const last60 = unique.filter(
+    (s) => new Date(s.sold_date).getTime() >= sixtyDaysAgo
+  );
+  return last60;
+}
+
+// ── Browse API fallback (active listings) ───────────────────────────────────
+
 async function fetchBrowseListings(
   setNumber: string,
   condition: Condition,
-  usdToAud: number,
+  rates: ExchangeRates,
   token: string
 ): Promise<EbaySale[]> {
-  // conditionIds: 1000 = New, 3000 = Used
   const conditionId = condition === "new" ? "1000" : "3000";
   const query = encodeURIComponent(`LEGO ${setNumber}`);
 
-  const url =
-    `https://api.ebay.com/buy/browse/v1/item_summary/search` +
-    `?q=${query}` +
-    `&filter=conditionIds%3A%7B${conditionId}%7D%2CbuyingOptions%3A%7BFIXED_PRICE%7D` +
-    `&marketplace_id=EBAY_AU` +
-    `&limit=5`; // default sort = best match / relevance
+  // Search across major marketplaces for better coverage
+  const marketplacesToTry: MarketplaceId[] = ["EBAY_US", "EBAY_AU"];
 
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      next: { revalidate: 0 },
-    });
-  } catch (err) {
-    console.warn("[ebay] Browse API fetch error:", err);
-    return [];
+  const allSales: EbaySale[] = [];
+
+  for (const marketplace of marketplacesToTry) {
+    const url =
+      `https://api.ebay.com/buy/browse/v1/item_summary/search` +
+      `?q=${query}` +
+      `&filter=conditionIds%3A%7B${conditionId}%7D%2CbuyingOptions%3A%7BFIXED_PRICE%7D` +
+      `&limit=5`;
+
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "X-EBAY-C-MARKETPLACE-ID": marketplace,
+        },
+        next: { revalidate: 0 },
+      });
+
+      if (!res.ok) continue;
+
+      const json = await res.json();
+      const items: Record<string, unknown>[] = json.itemSummaries ?? [];
+
+      for (const item of items) {
+        const priceField = item.price as { value: string; currency: string };
+        const rawPrice = parseFloat(priceField.value);
+        const priceUsd = convertToUsd(rawPrice, priceField.currency, rates);
+
+        allSales.push({
+          title: item.title as string,
+          price_usd: priceUsd,
+          sold_date: new Date().toISOString(),
+          condition: condition === "new" ? "New / Sealed" : "Used",
+          item_url: (item.itemWebUrl as string) ?? "",
+          marketplace,
+        });
+      }
+
+      // If we got enough from the first marketplace, stop
+      if (allSales.length >= 5) break;
+    } catch {
+      continue;
+    }
   }
 
-  if (!res.ok) {
-    console.warn(`[ebay] Browse API returned ${res.status}`);
-    return [];
-  }
-
-  const json = await res.json();
-  const items: Record<string, unknown>[] = json.itemSummaries ?? [];
-
-  return items.map((item) => {
-    const priceField = item.price as { value: string; currency: string };
-    const rawPrice = parseFloat(priceField.value);
-    // Browse API may return USD (EBAY_US) or AUD (EBAY_AU) depending on result source
-    const priceUsd =
-      priceField.currency === "USD"
-        ? Math.round(rawPrice * 100) / 100
-        : Math.round((rawPrice / usdToAud) * 100) / 100;
-    return {
-      title: item.title as string,
-      price_usd: priceUsd,
-      sold_date: new Date().toISOString(), // Browse API has no sold date — use today
-      condition: condition === "new" ? "New / Sealed" : "Used",
-      item_url: (item.itemWebUrl as string) ?? "",
-    };
-  });
+  // Deduplicate by URL and return max 10
+  const seen = new Set<string>();
+  return allSales
+    .filter((s) => {
+      if (seen.has(s.item_url)) return false;
+      seen.add(s.item_url);
+      return true;
+    })
+    .slice(0, 10);
 }
 
-// --- Public API ---
+// ── Public API ──────────────────────────────────────────────────────────────
+
 export async function getEbayMarketData(
   setNumber: string,
-  usdToAud: number // from getExchangeRates(), fallback 1.55
+  rates: ExchangeRates
 ): Promise<EbayMarketData> {
-  const cacheKey = `ebay:${setNumber}`;
+  const cacheKey = `ebay-v2:${setNumber}`;
   const cached = await getCached<EbayMarketData>(cacheKey);
-  // Only use cache if it has actual data — ignore stale empty-array entries
-  if (cached && (cached.new_sales.length > 0 || cached.used_sales.length > 0)) return cached;
+  if (
+    cached &&
+    (cached.new_sales.length > 0 || cached.used_sales.length > 0)
+  ) {
+    return cached;
+  }
 
-  const [newSales, usedSales] = await Promise.all([
-    fetchSoldListings(setNumber, "new", usdToAud),
-    fetchSoldListings(setNumber, "used", usdToAud),
+  // Try Marketplace Insights first (real sold prices)
+  const insightsToken = await getInsightsToken();
+
+  if (insightsToken) {
+    const [newSold, usedSold] = await Promise.all([
+      fetchGlobalSoldListings(setNumber, "new", insightsToken, rates),
+      fetchGlobalSoldListings(setNumber, "used", insightsToken, rates),
+    ]);
+
+    if (newSold.length > 0 || usedSold.length > 0) {
+      const result: EbayMarketData = {
+        new_sales: newSold,
+        used_sales: usedSold,
+        data_source: "sold",
+      };
+      await setCached(cacheKey, result, CACHE_TTL_HOURS);
+      return result;
+    }
+  }
+
+  // Fallback to Browse API (active listings)
+  let browseToken: string;
+  try {
+    browseToken = await getBrowseToken();
+  } catch (err) {
+    console.warn("[ebay] Could not get browse token:", err);
+    return { new_sales: [], used_sales: [], data_source: "listing" };
+  }
+
+  const [newListings, usedListings] = await Promise.all([
+    fetchBrowseListings(setNumber, "new", rates, browseToken),
+    fetchBrowseListings(setNumber, "used", rates, browseToken),
   ]);
 
-  const result: EbayMarketData = { new_sales: newSales, used_sales: usedSales };
+  const result: EbayMarketData = {
+    new_sales: newListings,
+    used_sales: usedListings,
+    data_source: "listing",
+  };
 
-  // Only cache if we got something useful
-  if (newSales.length > 0 || usedSales.length > 0) {
+  if (newListings.length > 0 || usedListings.length > 0) {
     await setCached(cacheKey, result, CACHE_TTL_HOURS);
   }
 

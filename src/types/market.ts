@@ -20,16 +20,18 @@ export interface MarketPrice {
 // A single eBay sold (or active) listing
 export interface EbaySale {
   title: string;
-  price_usd: number; // converted from eBay AU AUD price using usd_to_aud rate
-  sold_date: string; // ISO date string (today's date for Browse API active listing fallback)
+  price_usd: number; // always stored in USD
+  sold_date: string; // ISO date string — real date for sold, today for active listings
   condition: string; // "New / Sealed" | "Used"
   item_url: string;
+  marketplace?: string; // e.g. "EBAY_US", "EBAY_AU", "EBAY_GB", "EBAY_DE"
 }
 
 // eBay market data for a set (new + used sales)
 export interface EbayMarketData {
   new_sales: EbaySale[];
   used_sales: EbaySale[];
+  data_source: "sold" | "listing"; // "sold" = real transactions, "listing" = active asking prices
 }
 
 export interface ComputedPricing {
@@ -54,4 +56,5 @@ export interface ComputedPricing {
   ebay_used_sales: EbaySale[];
   ebay_new_avg_usd: number | null; // avg of shown new sales → hero price
   ebay_used_avg_usd: number | null; // avg of shown used sales
+  data_source: "sold" | "listing"; // "sold" = real transactions, "listing" = active asking prices
 }

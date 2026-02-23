@@ -39,13 +39,23 @@ export default async function ResultPage({ params }: Props) {
 
   // Fetch exchange rates first (fast — Supabase-cached)
   const rates = await getExchangeRates().catch(() => null);
-  const usdToAud = rates?.usd_to_aud ?? 1.55;
+
+  // Build a rates object with fallbacks for eBay multi-marketplace conversion
+  const ratesWithFallbacks = {
+    eur_to_aud: rates?.eur_to_aud ?? 1.65,
+    usd_to_aud: rates?.usd_to_aud ?? 1.55,
+    gbp_to_usd: rates?.gbp_to_usd ?? 1.27,
+    eur_to_usd: rates?.eur_to_usd ?? 1.08,
+    aud_to_usd: rates?.aud_to_usd ?? 0.645,
+    stale: rates?.stale ?? true,
+  };
 
   // Fetch eBay + Brickset in parallel — Brickset is best-effort only
   const [ebayData, set] = await Promise.all([
-    getEbayMarketData(cleanedSetNumber, usdToAud).catch(() => ({
-      new_sales: [],
-      used_sales: [],
+    getEbayMarketData(cleanedSetNumber, ratesWithFallbacks).catch(() => ({
+      new_sales: [] as import("@/types/market").EbaySale[],
+      used_sales: [] as import("@/types/market").EbaySale[],
+      data_source: "listing" as const,
     })),
     getBricksetData(cleanedSetNumber).catch(() => null),
   ]);
@@ -109,6 +119,7 @@ export default async function ResultPage({ params }: Props) {
     ebay_used_sales: ebayData.used_sales,
     ebay_new_avg_usd: ebayNewAvgUsd,
     ebay_used_avg_usd: ebayUsedAvgUsd,
+    data_source: ebayData.data_source,
   };
 
   return (

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getBricksetData } from "@/lib/brickset";
-import { getMarketPrice } from "@/lib/rapidapi";
 import { getEbayMarketData } from "@/lib/ebay";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
-import type { ComputedPricing } from "@/types/market";
+import type { ComputedPricing, EbaySale } from "@/types/market";
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
@@ -51,18 +50,33 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Fetch Brickset, exchange rates, and RapidAPI market prices in parallel
-  const [setResult, ratesResult, marketResult] = await Promise.allSettled([
-    getBricksetData(setNumber),
+  // Fetch exchange rates + Brickset in parallel
+  const [ratesResult, setResult] = await Promise.allSettled([
     getExchangeRates(),
-    getMarketPrice(setNumber),
+    getBricksetData(setNumber),
   ]);
 
   const set = setResult.status === "fulfilled" ? setResult.value : null;
-  const market = marketResult.status === "fulfilled" ? marketResult.value : null;
   const rates = ratesResult.status === "fulfilled" ? ratesResult.value : null;
 
-  if (!set) {
+  // Build rates object with fallbacks
+  const ratesWithFallbacks = {
+    eur_to_aud: rates?.eur_to_aud ?? 1.65,
+    usd_to_aud: rates?.usd_to_aud ?? 1.55,
+    gbp_to_usd: rates?.gbp_to_usd ?? 1.27,
+    eur_to_usd: rates?.eur_to_usd ?? 1.08,
+    aud_to_usd: rates?.aud_to_usd ?? 0.645,
+    stale: rates?.stale ?? true,
+  };
+
+  // Fetch eBay data with full rates object
+  const ebayData = await getEbayMarketData(setNumber, ratesWithFallbacks).catch(() => ({
+    new_sales: [] as EbaySale[],
+    used_sales: [] as EbaySale[],
+    data_source: "listing" as const,
+  }));
+
+  if (!set && ebayData.new_sales.length === 0 && ebayData.used_sales.length === 0) {
     return NextResponse.json(
       {
         error: "not_found",
@@ -72,13 +86,6 @@ export async function POST(req: NextRequest) {
       { status: 404 }
     );
   }
-
-  // Fetch eBay data — needs usd_to_aud for AUD→USD conversion
-  const usdToAud = rates?.usd_to_aud ?? 1.55;
-  const ebayData = await getEbayMarketData(setNumber, usdToAud).catch(() => ({
-    new_sales: [],
-    used_sales: [],
-  }));
 
   // Compute eBay averages (USD) for hero price
   const ebayNewAvgUsd =
@@ -98,24 +105,12 @@ export async function POST(req: NextRequest) {
         ) / 100
       : null;
 
-  // Compute legacy AUD prices (kept as fallback)
-  const rrpUsd = set.LEGOCom?.US?.retailPrice ?? null;
+  const rrpUsd = set?.LEGOCom?.US?.retailPrice ?? null;
   const rrpAud =
     rrpUsd && rates
       ? Math.round(rrpUsd * rates.usd_to_aud * 100) / 100
       : null;
 
-  const marketNewAud =
-    market?.price_new_eur && rates
-      ? Math.round(market.price_new_eur * rates.eur_to_aud * 100) / 100
-      : null;
-
-  const marketUsedAud =
-    market?.price_used_eur && rates
-      ? Math.round(market.price_used_eur * rates.eur_to_aud * 100) / 100
-      : null;
-
-  // Gain % uses eBay USD avg vs RRP USD
   const gainPct =
     ebayNewAvgUsd && rrpUsd && rrpUsd > 0
       ? Math.round(((ebayNewAvgUsd - rrpUsd) / rrpUsd) * 100 * 10) / 10
@@ -123,27 +118,27 @@ export async function POST(req: NextRequest) {
 
   const pricing: ComputedPricing = {
     rrp_usd: rrpUsd,
-    market_avg_eur: market?.price_new_eur ?? null,
+    market_avg_eur: null,
     exchange_rate_eur_aud: rates?.eur_to_aud ?? null,
     exchange_rate_usd_aud: rates?.usd_to_aud ?? null,
     rrp_aud: rrpAud,
-    market_avg_aud: marketNewAud,
+    market_avg_aud: null,
     market_min_aud: null,
-    market_new_aud: marketNewAud,
-    market_used_aud: marketUsedAud,
-    market_new_qty: market?.sold_sets_new ?? null,
-    market_used_qty: market?.sold_sets_used ?? null,
+    market_new_aud: null,
+    market_used_aud: null,
+    market_new_qty: null,
+    market_used_qty: null,
     gain_pct: gainPct,
     exchange_rate_stale: rates?.stale ?? true,
     ebay_new_sales: ebayData.new_sales,
     ebay_used_sales: ebayData.used_sales,
     ebay_new_avg_usd: ebayNewAvgUsd,
     ebay_used_avg_usd: ebayUsedAvgUsd,
+    data_source: ebayData.data_source,
   };
 
   return NextResponse.json({
     set,
-    market,
     pricing,
     scansUsed: gate.scansUsed,
     isPro: gate.isPro,
