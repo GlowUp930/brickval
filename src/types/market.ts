@@ -17,6 +17,14 @@ export interface MarketPrice {
   sold_sets_used: number | null;
 }
 
+// A single BrickLink sold transaction or active store listing row
+export interface BrickLinkDetail {
+  price_usd: number;
+  quantity: number;
+  date?: string;    // date_ordered — present on sold, absent on stock
+  country?: string; // seller_country_code
+}
+
 // A single eBay sold (or active) listing
 export interface EbaySale {
   title: string;
@@ -57,7 +65,7 @@ export interface ComputedPricing {
   ebay_new_avg_usd: number | null; // avg of shown new sales → hero price
   ebay_used_avg_usd: number | null; // avg of shown used sales
   data_source: "sold" | "listing"; // "sold" = real transactions, "listing" = active asking prices
-  // BrickLink price guide data (last 6 months sold on BrickLink)
+  // BrickLink sold price guide (last 6 months sold on BrickLink)
   bricklink_new_avg_usd: number | null;
   bricklink_new_min_usd: number | null;
   bricklink_new_max_usd: number | null;
@@ -66,4 +74,14 @@ export interface ComputedPricing {
   bricklink_used_min_usd: number | null;
   bricklink_used_max_usd: number | null;
   bricklink_used_qty: number | null;
+  // BrickLink current stock (active BrickLink store listings)
+  bricklink_stock_new_avg_usd: number | null;
+  bricklink_stock_new_qty: number | null;
+  bricklink_stock_used_avg_usd: number | null;
+  bricklink_stock_used_qty: number | null;
+  // BrickLink individual row data for display
+  bricklink_sold_new_details: BrickLinkDetail[];
+  bricklink_sold_used_details: BrickLinkDetail[];
+  bricklink_stock_new_details: BrickLinkDetail[];
+  bricklink_stock_used_details: BrickLinkDetail[];
 }

@@ -113,7 +113,18 @@ export async function POST(req: NextRequest) {
         ) / 100
       : null;
 
-  // Extract BrickLink price guide stats (last 6 months sold)
+  // Helper: map BrickLink price_detail array to BrickLinkDetail[]
+  type RawDetail = { unit_price: string; quantity: number; date_ordered?: string; seller_country_code?: string };
+  function toBlDetails(details: RawDetail[] | undefined) {
+    return (details ?? []).map((d) => ({
+      price_usd: parseFloat(d.unit_price) || 0,
+      quantity: d.quantity,
+      date: d.date_ordered,
+      country: d.seller_country_code,
+    }));
+  }
+
+  // Extract BrickLink sold price guide stats (last 6 months)
   const blNewAvg = brickLinkData?.sold_new
     ? parseFloat(brickLinkData.sold_new.avg_price) || null
     : null;
@@ -136,14 +147,30 @@ export async function POST(req: NextRequest) {
     : null;
   const blUsedQty = brickLinkData?.sold_used?.unit_quantity ?? null;
 
+  // Extract BrickLink stock (active store listings)
+  const blStockNewAvg = brickLinkData?.stock_new
+    ? parseFloat(brickLinkData.stock_new.avg_price) || null
+    : null;
+  const blStockNewQty = brickLinkData?.stock_new?.unit_quantity ?? null;
+  const blStockUsedAvg = brickLinkData?.stock_used
+    ? parseFloat(brickLinkData.stock_used.avg_price) || null
+    : null;
+  const blStockUsedQty = brickLinkData?.stock_used?.unit_quantity ?? null;
+
+  // Extract individual BrickLink row data
+  const blSoldNewDetails = toBlDetails(brickLinkData?.sold_new?.price_detail);
+  const blSoldUsedDetails = toBlDetails(brickLinkData?.sold_used?.price_detail);
+  const blStockNewDetails = toBlDetails(brickLinkData?.stock_new?.price_detail);
+  const blStockUsedDetails = toBlDetails(brickLinkData?.stock_used?.price_detail);
+
   const rrpUsd = set?.LEGOCom?.US?.retailPrice ?? null;
   const rrpAud =
     rrpUsd && rates
       ? Math.round(rrpUsd * rates.usd_to_aud * 100) / 100
       : null;
 
-  // Use eBay avg as primary hero price; fall back to BrickLink avg
-  const heroNewAvgUsd = ebayNewAvgUsd ?? blNewAvg;
+  // BrickLink sold is PRIMARY hero price; fall back to eBay sold, then BrickLink stock
+  const heroNewAvgUsd = blNewAvg ?? ebayNewAvgUsd ?? blStockNewAvg;
 
   const gainPct =
     heroNewAvgUsd && rrpUsd && rrpUsd > 0
@@ -169,7 +196,7 @@ export async function POST(req: NextRequest) {
     ebay_new_avg_usd: ebayNewAvgUsd,
     ebay_used_avg_usd: ebayUsedAvgUsd,
     data_source: ebayData.data_source,
-    // BrickLink price guide (last 6 months sold)
+    // BrickLink sold price guide (last 6 months)
     bricklink_new_avg_usd: blNewAvg,
     bricklink_new_min_usd: blNewMin,
     bricklink_new_max_usd: blNewMax,
@@ -178,6 +205,16 @@ export async function POST(req: NextRequest) {
     bricklink_used_min_usd: blUsedMin,
     bricklink_used_max_usd: blUsedMax,
     bricklink_used_qty: blUsedQty,
+    // BrickLink stock (active listings)
+    bricklink_stock_new_avg_usd: blStockNewAvg,
+    bricklink_stock_new_qty: blStockNewQty,
+    bricklink_stock_used_avg_usd: blStockUsedAvg,
+    bricklink_stock_used_qty: blStockUsedQty,
+    // BrickLink row details
+    bricklink_sold_new_details: blSoldNewDetails,
+    bricklink_sold_used_details: blSoldUsedDetails,
+    bricklink_stock_new_details: blStockNewDetails,
+    bricklink_stock_used_details: blStockUsedDetails,
   };
 
   return NextResponse.json({
