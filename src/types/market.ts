@@ -57,4 +57,13 @@ export interface ComputedPricing {
   ebay_new_avg_usd: number | null; // avg of shown new sales → hero price
   ebay_used_avg_usd: number | null; // avg of shown used sales
   data_source: "sold" | "listing"; // "sold" = real transactions, "listing" = active asking prices
+  // BrickLink price guide data (last 6 months sold on BrickLink)
+  bricklink_new_avg_usd: number | null;
+  bricklink_new_min_usd: number | null;
+  bricklink_new_max_usd: number | null;
+  bricklink_new_qty: number | null;
+  bricklink_used_avg_usd: number | null;
+  bricklink_used_min_usd: number | null;
+  bricklink_used_max_usd: number | null;
+  bricklink_used_qty: number | null;
 }

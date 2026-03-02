@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getBricksetData } from "@/lib/brickset";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { getEbayMarketData } from "@/lib/ebay";
+import { getBrickLinkMarketData } from "@/lib/bricklink";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { PriceReveal } from "@/components/result/PriceReveal";
 import Link from "next/link";
@@ -50,21 +51,23 @@ export default async function ResultPage({ params }: Props) {
     stale: rates?.stale ?? true,
   };
 
-  // Fetch eBay + Brickset in parallel — Brickset is best-effort only
-  const [ebayData, set] = await Promise.all([
+  // Fetch eBay + Brickset + BrickLink in parallel
+  const [ebayData, set, brickLinkData] = await Promise.all([
     getEbayMarketData(cleanedSetNumber, ratesWithFallbacks).catch(() => ({
       new_sales: [] as import("@/types/market").EbaySale[],
       used_sales: [] as import("@/types/market").EbaySale[],
       data_source: "listing" as const,
     })),
     getBricksetData(cleanedSetNumber).catch(() => null),
+    getBrickLinkMarketData(cleanedSetNumber).catch(() => null),
   ]);
 
-  // eBay is the primary source — gate on it, not Brickset
-  if (ebayData.new_sales.length === 0 && ebayData.used_sales.length === 0) {
+  // Gate on having ANY data (eBay OR BrickLink)
+  const hasBrickLink = brickLinkData?.sold_new || brickLinkData?.sold_used;
+  if (ebayData.new_sales.length === 0 && ebayData.used_sales.length === 0 && !hasBrickLink) {
     return (
       <ErrorScreen
-        message={`No eBay listings found for set #${cleanedSetNumber}. Double-check the number and try again.`}
+        message={`No listings found for set #${cleanedSetNumber}. Double-check the number and try again.`}
         backLabel="Try another set"
         backHref="/scan"
       />
@@ -89,6 +92,29 @@ export default async function ResultPage({ params }: Props) {
         ) / 100
       : null;
 
+  // Extract BrickLink price guide stats (last 6 months sold)
+  const blNewAvg = brickLinkData?.sold_new
+    ? parseFloat(brickLinkData.sold_new.avg_price) || null
+    : null;
+  const blNewMin = brickLinkData?.sold_new
+    ? parseFloat(brickLinkData.sold_new.min_price) || null
+    : null;
+  const blNewMax = brickLinkData?.sold_new
+    ? parseFloat(brickLinkData.sold_new.max_price) || null
+    : null;
+  const blNewQty = brickLinkData?.sold_new?.unit_quantity ?? null;
+
+  const blUsedAvg = brickLinkData?.sold_used
+    ? parseFloat(brickLinkData.sold_used.avg_price) || null
+    : null;
+  const blUsedMin = brickLinkData?.sold_used
+    ? parseFloat(brickLinkData.sold_used.min_price) || null
+    : null;
+  const blUsedMax = brickLinkData?.sold_used
+    ? parseFloat(brickLinkData.sold_used.max_price) || null
+    : null;
+  const blUsedQty = brickLinkData?.sold_used?.unit_quantity ?? null;
+
   // Brickset data is optional — only used for RRP + gain %
   const rrpUsd = set?.LEGOCom?.US?.retailPrice ?? null;
   const rrpAud =
@@ -96,9 +122,12 @@ export default async function ResultPage({ params }: Props) {
       ? Math.round(rrpUsd * rates.usd_to_aud * 100) / 100
       : null;
 
+  // Use eBay sold avg as primary; fall back to BrickLink avg
+  const heroNewAvgUsd = ebayNewAvgUsd ?? blNewAvg;
+
   const gainPct =
-    ebayNewAvgUsd && rrpUsd && rrpUsd > 0
-      ? Math.round(((ebayNewAvgUsd - rrpUsd) / rrpUsd) * 100 * 10) / 10
+    heroNewAvgUsd && rrpUsd && rrpUsd > 0
+      ? Math.round(((heroNewAvgUsd - rrpUsd) / rrpUsd) * 100 * 10) / 10
       : null;
 
   const pricing: ComputedPricing = {
@@ -120,6 +149,15 @@ export default async function ResultPage({ params }: Props) {
     ebay_new_avg_usd: ebayNewAvgUsd,
     ebay_used_avg_usd: ebayUsedAvgUsd,
     data_source: ebayData.data_source,
+    // BrickLink price guide (last 6 months sold)
+    bricklink_new_avg_usd: blNewAvg,
+    bricklink_new_min_usd: blNewMin,
+    bricklink_new_max_usd: blNewMax,
+    bricklink_new_qty: blNewQty,
+    bricklink_used_avg_usd: blUsedAvg,
+    bricklink_used_min_usd: blUsedMin,
+    bricklink_used_max_usd: blUsedMax,
+    bricklink_used_qty: blUsedQty,
   };
 
   return (

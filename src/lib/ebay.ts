@@ -18,6 +18,15 @@ export interface EbayMarketData {
 
 const CACHE_TTL_HOURS = 24;
 const MIN_RESULTS_FOR_30_DAYS = 3;
+const MAX_RETRIES = 2;
+const RETRYABLE_STATUSES = new Set([500, 502, 503, 504]);
+
+// Sandbox vs Production toggle
+const IS_SANDBOX = process.env.EBAY_SANDBOX === "true";
+const API_BASE = IS_SANDBOX ? "https://api.sandbox.ebay.com" : "https://api.ebay.com";
+
+// EPN affiliate tracking
+const EPN_CAMPAIGN_ID = process.env.EPN_CAMPAIGN_ID ?? "";
 
 // Marketplaces to search, ordered by trading volume for LEGO
 const MARKETPLACES = ["EBAY_US", "EBAY_AU", "EBAY_GB", "EBAY_DE"] as const;
@@ -41,25 +50,70 @@ let insightsTokenCache: { token: string; expires: number } | null = null;
 let insightsScopeAvailable: boolean | null = null; // null = untested
 
 function getCredentials() {
-  const appId = process.env.EBAY_APP_ID;
-  const certId = process.env.EBAY_CERT_ID;
+  const appId = IS_SANDBOX
+    ? process.env.EBAY_SANDBOX_APP_ID
+    : process.env.EBAY_APP_ID;
+  const certId = IS_SANDBOX
+    ? process.env.EBAY_SANDBOX_CERT_ID
+    : process.env.EBAY_CERT_ID;
   if (!appId || !certId) {
-    throw new Error("[ebay] Missing env vars: EBAY_APP_ID or EBAY_CERT_ID");
+    const env = IS_SANDBOX ? "EBAY_SANDBOX_APP_ID/EBAY_SANDBOX_CERT_ID" : "EBAY_APP_ID/EBAY_CERT_ID";
+    throw new Error(`[ebay] Missing env vars: ${env}`);
   }
   return Buffer.from(`${appId}:${certId}`).toString("base64");
 }
 
+// ── Retry helper (max 2 retries for infrastructure errors) ──────────────────
+
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = MAX_RETRIES
+): Promise<Response> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      // Only retry on infrastructure errors (5xx)
+      if (RETRYABLE_STATUSES.has(res.status) && attempt < retries) {
+        console.warn(`[ebay] ${res.status} on attempt ${attempt + 1}, retrying...`);
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < retries) {
+        console.warn(`[ebay] Network error on attempt ${attempt + 1}, retrying...`);
+        continue;
+      }
+    }
+  }
+  throw lastError ?? new Error("[ebay] fetchWithRetry exhausted retries");
+}
+
+// ── EPN affiliate header ────────────────────────────────────────────────────
+
+function getEpnHeaders(): Record<string, string> {
+  if (!EPN_CAMPAIGN_ID) return {};
+  return {
+    "X-EBAY-C-ENDUSERCTX": `affiliateCampaignId=${EPN_CAMPAIGN_ID}`,
+  };
+}
+
 async function fetchToken(scope: string): Promise<{ token: string; expiresIn: number }> {
   const credentials = getCredentials();
-  const res = await fetch("https://api.ebay.com/identity/v1/oauth2/token", {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${credentials}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: `grant_type=client_credentials&scope=${encodeURIComponent(scope)}`,
-    next: { revalidate: 0 },
-  });
+  const res = await fetchWithRetry(
+    `${API_BASE}/identity/v1/oauth2/token`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${credentials}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: `grant_type=client_credentials&scope=${encodeURIComponent(scope)}`,
+      next: { revalidate: 0 },
+    } as RequestInit
+  );
 
   if (!res.ok) {
     const text = await res.text();
@@ -145,20 +199,21 @@ async function fetchInsightsSales(
   const query = encodeURIComponent(`LEGO ${setNumber}`);
 
   const url =
-    `https://api.ebay.com/buy/marketplace-insights/v1/item_sales/search` +
+    `${API_BASE}/buy/marketplace-insights/v1/item_sales/search` +
     `?q=${query}` +
     `&filter=conditionIds%3A%7B${conditionId}%7D%2CbuyingOptions%3A%7BFIXED_PRICE%7D` +
     `&limit=20` +
     `&sort=soldDate`;
 
-  const res = await fetch(url, {
+  const res = await fetchWithRetry(url, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
       "X-EBAY-C-MARKETPLACE-ID": marketplace,
+      ...getEpnHeaders(),
     },
     next: { revalidate: 0 },
-  });
+  } as RequestInit);
 
   // 403/404/405 means no access to Insights for this marketplace
   if (res.status === 403 || res.status === 404 || res.status === 405) {
@@ -265,20 +320,21 @@ async function fetchBrowseListings(
 
   for (const marketplace of marketplacesToTry) {
     const url =
-      `https://api.ebay.com/buy/browse/v1/item_summary/search` +
+      `${API_BASE}/buy/browse/v1/item_summary/search` +
       `?q=${query}` +
       `&filter=conditionIds%3A%7B${conditionId}%7D%2CbuyingOptions%3A%7BFIXED_PRICE%7D` +
       `&limit=5`;
 
     try {
-      const res = await fetch(url, {
+      const res = await fetchWithRetry(url, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
           "X-EBAY-C-MARKETPLACE-ID": marketplace,
+          ...getEpnHeaders(),
         },
         next: { revalidate: 0 },
-      });
+      } as RequestInit);
 
       if (!res.ok) continue;
 

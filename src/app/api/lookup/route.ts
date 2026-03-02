@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getBricksetData } from "@/lib/brickset";
 import { getEbayMarketData } from "@/lib/ebay";
+import { getBrickLinkMarketData } from "@/lib/bricklink";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
 import type { ComputedPricing, EbaySale } from "@/types/market";
@@ -69,14 +70,21 @@ export async function POST(req: NextRequest) {
     stale: rates?.stale ?? true,
   };
 
-  // Fetch eBay data with full rates object
-  const ebayData = await getEbayMarketData(setNumber, ratesWithFallbacks).catch(() => ({
-    new_sales: [] as EbaySale[],
-    used_sales: [] as EbaySale[],
-    data_source: "listing" as const,
-  }));
+  // Fetch eBay + BrickLink data in parallel
+  const [ebayData, brickLinkData] = await Promise.all([
+    getEbayMarketData(setNumber, ratesWithFallbacks).catch(() => ({
+      new_sales: [] as EbaySale[],
+      used_sales: [] as EbaySale[],
+      data_source: "listing" as const,
+    })),
+    getBrickLinkMarketData(setNumber).catch((err) => {
+      console.warn("[lookup] BrickLink fetch failed:", err);
+      return null;
+    }),
+  ]);
 
-  if (!set && ebayData.new_sales.length === 0 && ebayData.used_sales.length === 0) {
+  const hasBrickLink = brickLinkData?.sold_new || brickLinkData?.sold_used;
+  if (!set && ebayData.new_sales.length === 0 && ebayData.used_sales.length === 0 && !hasBrickLink) {
     return NextResponse.json(
       {
         error: "not_found",
@@ -105,15 +113,41 @@ export async function POST(req: NextRequest) {
         ) / 100
       : null;
 
+  // Extract BrickLink price guide stats (last 6 months sold)
+  const blNewAvg = brickLinkData?.sold_new
+    ? parseFloat(brickLinkData.sold_new.avg_price) || null
+    : null;
+  const blNewMin = brickLinkData?.sold_new
+    ? parseFloat(brickLinkData.sold_new.min_price) || null
+    : null;
+  const blNewMax = brickLinkData?.sold_new
+    ? parseFloat(brickLinkData.sold_new.max_price) || null
+    : null;
+  const blNewQty = brickLinkData?.sold_new?.unit_quantity ?? null;
+
+  const blUsedAvg = brickLinkData?.sold_used
+    ? parseFloat(brickLinkData.sold_used.avg_price) || null
+    : null;
+  const blUsedMin = brickLinkData?.sold_used
+    ? parseFloat(brickLinkData.sold_used.min_price) || null
+    : null;
+  const blUsedMax = brickLinkData?.sold_used
+    ? parseFloat(brickLinkData.sold_used.max_price) || null
+    : null;
+  const blUsedQty = brickLinkData?.sold_used?.unit_quantity ?? null;
+
   const rrpUsd = set?.LEGOCom?.US?.retailPrice ?? null;
   const rrpAud =
     rrpUsd && rates
       ? Math.round(rrpUsd * rates.usd_to_aud * 100) / 100
       : null;
 
+  // Use eBay avg as primary hero price; fall back to BrickLink avg
+  const heroNewAvgUsd = ebayNewAvgUsd ?? blNewAvg;
+
   const gainPct =
-    ebayNewAvgUsd && rrpUsd && rrpUsd > 0
-      ? Math.round(((ebayNewAvgUsd - rrpUsd) / rrpUsd) * 100 * 10) / 10
+    heroNewAvgUsd && rrpUsd && rrpUsd > 0
+      ? Math.round(((heroNewAvgUsd - rrpUsd) / rrpUsd) * 100 * 10) / 10
       : null;
 
   const pricing: ComputedPricing = {
@@ -135,6 +169,15 @@ export async function POST(req: NextRequest) {
     ebay_new_avg_usd: ebayNewAvgUsd,
     ebay_used_avg_usd: ebayUsedAvgUsd,
     data_source: ebayData.data_source,
+    // BrickLink price guide (last 6 months sold)
+    bricklink_new_avg_usd: blNewAvg,
+    bricklink_new_min_usd: blNewMin,
+    bricklink_new_max_usd: blNewMax,
+    bricklink_new_qty: blNewQty,
+    bricklink_used_avg_usd: blUsedAvg,
+    bricklink_used_min_usd: blUsedMin,
+    bricklink_used_max_usd: blUsedMax,
+    bricklink_used_qty: blUsedQty,
   };
 
   return NextResponse.json({

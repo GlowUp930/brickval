@@ -347,20 +347,40 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
     tab === "new" ? pricing.ebay_new_avg_usd : pricing.ebay_used_avg_usd;
   const dotColor = tab === "new" ? "var(--accent)" : "var(--muted)";
 
+  // BrickLink sold data available?
+  const hasBrickLinkNew = pricing.bricklink_new_avg_usd !== null;
+  const hasBrickLinkUsed = pricing.bricklink_used_avg_usd !== null;
+  const hasBrickLink = hasBrickLinkNew || hasBrickLinkUsed;
+
+  const isEbaySoldData = pricing.data_source === "sold";
+
+  // Hero price: prefer eBay sold → BrickLink sold → eBay listing
   const heroUsd =
     tab === "new"
-      ? (pricing.ebay_new_avg_usd ?? pricing.ebay_used_avg_usd)
-      : (pricing.ebay_used_avg_usd ?? pricing.ebay_new_avg_usd);
+      ? (pricing.ebay_new_avg_usd ?? pricing.bricklink_new_avg_usd ?? pricing.ebay_used_avg_usd ?? pricing.bricklink_used_avg_usd)
+      : (pricing.ebay_used_avg_usd ?? pricing.bricklink_used_avg_usd ?? pricing.ebay_new_avg_usd ?? pricing.bricklink_new_avg_usd);
+
+  // Determine if the hero price comes from sold data (eBay or BrickLink)
+  const heroFromEbaySold =
+    tab === "new" ? (isEbaySoldData && pricing.ebay_new_avg_usd !== null) : (isEbaySoldData && pricing.ebay_used_avg_usd !== null);
+  const heroFromBrickLink =
+    !heroFromEbaySold && (tab === "new" ? hasBrickLinkNew : hasBrickLinkUsed);
+  const heroIsSoldData = heroFromEbaySold || heroFromBrickLink;
 
   const animated = useCountUp(heroUsd ?? 0);
 
   // 30-day price delta from active tab's listings
   const priceDelta = computePriceDelta(activeSales);
 
-  const isSoldData = pricing.data_source === "sold";
-  const heroLabel = isSoldData
-    ? (tab === "new" ? "Avg Sold Price · New / Sealed" : "Avg Sold Price · Used")
-    : (tab === "new" ? "Avg Listing Price · New / Sealed" : "Avg Listing Price · Used");
+  // Label reflects the actual data source
+  let heroLabel: string;
+  if (heroFromEbaySold) {
+    heroLabel = tab === "new" ? "Avg Sold Price · New / Sealed" : "Avg Sold Price · Used";
+  } else if (heroFromBrickLink) {
+    heroLabel = tab === "new" ? "BrickLink Avg Sold · New / Sealed" : "BrickLink Avg Sold · Used";
+  } else {
+    heroLabel = tab === "new" ? "Avg Listing Price · New / Sealed" : "Avg Listing Price · Used";
+  }
 
   // Build image URL from Brickset CDN pattern directly — no API call needed
   const setNum = set?.number ?? setNumber;
@@ -533,8 +553,25 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
         </div>
       )}
 
-      {/* ── 5. Listing fallback banner ── */}
-      {!isSoldData && (
+      {/* ── 5. Data source banner ── */}
+      {!isEbaySoldData && hasBrickLink && (
+        <div
+          className="mx-4 mb-4 rounded-xl px-4 py-3 flex items-start gap-2.5"
+          style={{
+            background: "rgba(34,197,94,0.08)",
+            border: "1px solid rgba(34,197,94,0.20)",
+          }}
+        >
+          <span className="text-sm leading-none mt-0.5">✅</span>
+          <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
+            Sold price from BrickLink (last 6 months).
+            {pricing.bricklink_new_qty !== null && tab === "new" && ` Based on ${pricing.bricklink_new_qty} sales.`}
+            {pricing.bricklink_used_qty !== null && tab === "used" && ` Based on ${pricing.bricklink_used_qty} sales.`}
+            {" "}eBay listings shown below for reference.
+          </p>
+        </div>
+      )}
+      {!isEbaySoldData && !hasBrickLink && (
         <div
           className="mx-4 mb-4 rounded-xl px-4 py-3 flex items-start gap-2.5"
           style={{
@@ -556,7 +593,7 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
           className="text-[10px] font-semibold uppercase tracking-widest"
           style={{ color: "var(--muted)" }}
         >
-          {isSoldData ? "Recent Transactions" : "Active Listings"}
+          {heroIsSoldData ? "Recent Transactions" : "Active Listings"}
         </span>
         {activeAvg !== null && (
           <span className="text-[10px] font-semibold" style={{ color: "var(--muted)" }}>
@@ -588,9 +625,11 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
         className="text-center text-[11px] pb-8 pt-1 px-4"
         style={{ color: "var(--muted)" }}
       >
-        {isSoldData
+        {isEbaySoldData
           ? "Source: eBay Global · sold prices · USD"
-          : "Source: eBay · listing prices · USD"}
+          : hasBrickLink
+            ? "Source: BrickLink (sold) + eBay (listings) · USD"
+            : "Source: eBay · listing prices · USD"}
       </p>
     </div>
   );
