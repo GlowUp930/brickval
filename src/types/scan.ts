@@ -3,8 +3,7 @@ export interface IdentifyResponse {
 }
 
 export interface LookupResponse {
-  set: import("./brickset").BricksetSet;
-  market: import("./market").MarketPrice | null;
+  setInfo: import("./market").SetInfo | null;
   pricing: import("./market").ComputedPricing;
   scansUsed: number;
   isPro: boolean;

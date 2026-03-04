@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { getBricksetData } from "@/lib/brickset";
 import { getEbayMarketData } from "@/lib/ebay";
 import { getBrickLinkMarketData } from "@/lib/bricklink";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
-import type { ComputedPricing, EbaySale } from "@/types/market";
+import type { ComputedPricing, EbaySale, SetInfo } from "@/types/market";
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
@@ -51,16 +50,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Fetch exchange rates + Brickset in parallel
-  const [ratesResult, setResult] = await Promise.allSettled([
-    getExchangeRates(),
-    getBricksetData(setNumber),
-  ]);
+  // Fetch exchange rates first (fast — Supabase-cached)
+  const rates = await getExchangeRates().catch(() => null);
 
-  const set = setResult.status === "fulfilled" ? setResult.value : null;
-  const rates = ratesResult.status === "fulfilled" ? ratesResult.value : null;
-
-  // Build rates object with fallbacks
   const ratesWithFallbacks = {
     eur_to_aud: rates?.eur_to_aud ?? 1.65,
     usd_to_aud: rates?.usd_to_aud ?? 1.55,
@@ -84,7 +76,7 @@ export async function POST(req: NextRequest) {
   ]);
 
   const hasBrickLink = brickLinkData?.sold_new || brickLinkData?.sold_used;
-  if (!set && ebayData.new_sales.length === 0 && ebayData.used_sales.length === 0 && !hasBrickLink) {
+  if (ebayData.new_sales.length === 0 && ebayData.used_sales.length === 0 && !hasBrickLink) {
     return NextResponse.json(
       {
         error: "not_found",
@@ -94,6 +86,20 @@ export async function POST(req: NextRequest) {
       { status: 404 }
     );
   }
+
+  // Build SetInfo from BrickLink item data (replaces Brickset)
+  const blItem = brickLinkData?.item ?? null;
+  const setInfo: SetInfo | null = blItem
+    ? {
+        name: blItem.name,
+        image_url: blItem.image_url
+          ? (blItem.image_url.startsWith("//") ? `https:${blItem.image_url}` : blItem.image_url)
+          : null,
+        year_released: blItem.year_released ?? null,
+        is_obsolete: blItem.is_obsolete ?? false,
+        set_number: blItem.no ?? setNumber,
+      }
+    : null;
 
   // Compute eBay averages (USD) for hero price
   const ebayNewAvgUsd =
@@ -163,33 +169,12 @@ export async function POST(req: NextRequest) {
   const blStockNewDetails = toBlDetails(brickLinkData?.stock_new?.price_detail);
   const blStockUsedDetails = toBlDetails(brickLinkData?.stock_used?.price_detail);
 
-  const rrpUsd = set?.LEGOCom?.US?.retailPrice ?? null;
-  const rrpAud =
-    rrpUsd && rates
-      ? Math.round(rrpUsd * rates.usd_to_aud * 100) / 100
-      : null;
-
   // BrickLink sold is PRIMARY hero price; fall back to eBay sold, then BrickLink stock
   const heroNewAvgUsd = blNewAvg ?? ebayNewAvgUsd ?? blStockNewAvg;
 
-  const gainPct =
-    heroNewAvgUsd && rrpUsd && rrpUsd > 0
-      ? Math.round(((heroNewAvgUsd - rrpUsd) / rrpUsd) * 100 * 10) / 10
-      : null;
-
   const pricing: ComputedPricing = {
-    rrp_usd: rrpUsd,
-    market_avg_eur: null,
-    exchange_rate_eur_aud: rates?.eur_to_aud ?? null,
-    exchange_rate_usd_aud: rates?.usd_to_aud ?? null,
-    rrp_aud: rrpAud,
-    market_avg_aud: null,
-    market_min_aud: null,
-    market_new_aud: null,
-    market_used_aud: null,
-    market_new_qty: null,
-    market_used_qty: null,
-    gain_pct: gainPct,
+    rrp_usd: null, // No Brickset — RRP not available. Future: Supabase RRP table.
+    gain_pct: null,
     exchange_rate_stale: rates?.stale ?? true,
     ebay_new_sales: ebayData.new_sales,
     ebay_used_sales: ebayData.used_sales,
@@ -218,7 +203,7 @@ export async function POST(req: NextRequest) {
   };
 
   return NextResponse.json({
-    set,
+    setInfo,
     pricing,
     scansUsed: gate.scansUsed,
     isPro: gate.isPro,

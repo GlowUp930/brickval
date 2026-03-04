@@ -1,13 +1,12 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getBricksetData } from "@/lib/brickset";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { getEbayMarketData } from "@/lib/ebay";
 import { getBrickLinkMarketData } from "@/lib/bricklink";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { PriceReveal } from "@/components/result/PriceReveal";
 import Link from "next/link";
-import type { ComputedPricing } from "@/types/market";
+import type { ComputedPricing, SetInfo } from "@/types/market";
 
 interface Props {
   params: Promise<{ setNumber: string }>;
@@ -51,14 +50,13 @@ export default async function ResultPage({ params }: Props) {
     stale: rates?.stale ?? true,
   };
 
-  // Fetch eBay + Brickset + BrickLink in parallel
-  const [ebayData, set, brickLinkData] = await Promise.all([
+  // Fetch eBay + BrickLink in parallel
+  const [ebayData, brickLinkData] = await Promise.all([
     getEbayMarketData(cleanedSetNumber, ratesWithFallbacks).catch(() => ({
       new_sales: [] as import("@/types/market").EbaySale[],
       used_sales: [] as import("@/types/market").EbaySale[],
       data_source: "listing" as const,
     })),
-    getBricksetData(cleanedSetNumber).catch(() => null),
     getBrickLinkMarketData(cleanedSetNumber).catch(() => null),
   ]);
 
@@ -73,6 +71,20 @@ export default async function ResultPage({ params }: Props) {
       />
     );
   }
+
+  // Build SetInfo from BrickLink item data (replaces Brickset)
+  const blItem = brickLinkData?.item ?? null;
+  const setInfo: SetInfo | null = blItem
+    ? {
+        name: blItem.name,
+        image_url: blItem.image_url
+          ? (blItem.image_url.startsWith("//") ? `https:${blItem.image_url}` : blItem.image_url)
+          : null,
+        year_released: blItem.year_released ?? null,
+        is_obsolete: blItem.is_obsolete ?? false,
+        set_number: blItem.no ?? cleanedSetNumber,
+      }
+    : null;
 
   // Compute eBay averages (USD) for hero price
   const ebayNewAvgUsd =
@@ -142,34 +154,9 @@ export default async function ResultPage({ params }: Props) {
   const blStockNewDetails = toBlDetails(brickLinkData?.stock_new?.price_detail);
   const blStockUsedDetails = toBlDetails(brickLinkData?.stock_used?.price_detail);
 
-  // Brickset data is optional — only used for RRP + gain %
-  const rrpUsd = set?.LEGOCom?.US?.retailPrice ?? null;
-  const rrpAud =
-    rrpUsd && rates
-      ? Math.round(rrpUsd * rates.usd_to_aud * 100) / 100
-      : null;
-
-  // BrickLink sold is PRIMARY hero price; fall back to eBay sold, then BrickLink stock
-  const heroNewAvgUsd = blNewAvg ?? ebayNewAvgUsd ?? blStockNewAvg;
-
-  const gainPct =
-    heroNewAvgUsd && rrpUsd && rrpUsd > 0
-      ? Math.round(((heroNewAvgUsd - rrpUsd) / rrpUsd) * 100 * 10) / 10
-      : null;
-
   const pricing: ComputedPricing = {
-    rrp_usd: rrpUsd,
-    market_avg_eur: null,
-    exchange_rate_eur_aud: rates?.eur_to_aud ?? null,
-    exchange_rate_usd_aud: rates?.usd_to_aud ?? null,
-    rrp_aud: rrpAud,
-    market_avg_aud: null,
-    market_min_aud: null,
-    market_new_aud: null,
-    market_used_aud: null,
-    market_new_qty: null,
-    market_used_qty: null,
-    gain_pct: gainPct,
+    rrp_usd: null, // No Brickset — RRP not available. Future: Supabase RRP table.
+    gain_pct: null,
     exchange_rate_stale: rates?.stale ?? true,
     ebay_new_sales: ebayData.new_sales,
     ebay_used_sales: ebayData.used_sales,
@@ -222,7 +209,7 @@ export default async function ResultPage({ params }: Props) {
 
       {/* Content — no outer padding so hero image goes full-bleed */}
       <div className="flex-1 flex flex-col w-full max-w-sm mx-auto">
-        <PriceReveal set={set} pricing={pricing} setNumber={cleanedSetNumber} />
+        <PriceReveal setInfo={setInfo} pricing={pricing} setNumber={cleanedSetNumber} />
 
         {/* Scan another CTA */}
         <div className="px-4 pb-8">

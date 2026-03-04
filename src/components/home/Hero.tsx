@@ -100,7 +100,7 @@ export function Hero() {
 
       {/* Footer */}
       <footer className="border-t px-6 py-4 text-center" style={{ borderColor: "var(--border)" }}>
-        <p className="text-xs" style={{ color: "var(--muted)" }}>© 2026 BrickVal · Prices sourced from Brickset</p>
+        <p className="text-xs" style={{ color: "var(--muted)" }}>© 2026 BrickVal · Prices sourced from BrickLink + eBay</p>
       </footer>
     </main>
   );

@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "images.brickset.com",
+        hostname: "img.bricklink.com",
       },
     ],
   },

@@ -1,22 +1,3 @@
-// Raw shape returned by the RapidAPI bulk dataset
-export interface RapidApiSetPrice {
-  set_number: string;
-  set_name: string;
-  set_year: number;
-  price_new: string; // EUR string, or "none"
-  sold_sets_new: number;
-  price_used: string; // EUR string, or "none"
-  sold_sets_used: number;
-}
-
-// Parsed/normalised market price for a single set
-export interface MarketPrice {
-  price_new_eur: number | null;
-  price_used_eur: number | null;
-  sold_sets_new: number | null;
-  sold_sets_used: number | null;
-}
-
 // A single BrickLink sold transaction or active store listing row
 export interface BrickLinkDetail {
   price_usd: number;
@@ -42,29 +23,26 @@ export interface EbayMarketData {
   data_source: "sold" | "listing"; // "sold" = real transactions, "listing" = active asking prices
 }
 
+// Set metadata derived from BrickLink item API (replaces Brickset)
+export interface SetInfo {
+  name: string;
+  image_url: string | null;
+  year_released: number | null;
+  is_obsolete: boolean;
+  set_number: string;
+}
+
 export interface ComputedPricing {
-  // Source values
+  // RRP — currently null (was from Brickset). Kept for future Supabase-based RRP table.
   rrp_usd: number | null;
-  market_avg_eur: number | null;
-  exchange_rate_eur_aud: number | null;
-  exchange_rate_usd_aud: number | null;
-  // Converted to AUD (legacy RapidAPI fields — kept for compatibility)
-  rrp_aud: number | null;
-  market_avg_aud: number | null;
-  market_min_aud: number | null;
-  market_new_aud: number | null;
-  market_used_aud: number | null;
-  market_new_qty: number | null;
-  market_used_qty: number | null;
-  // Derived
-  gain_pct: number | null; // ((ebay_new_avg_usd - rrp_usd) / rrp_usd) * 100
+  gain_pct: number | null;
   exchange_rate_stale: boolean;
-  // eBay sold listings (primary market data source)
+  // eBay sold listings
   ebay_new_sales: EbaySale[];
   ebay_used_sales: EbaySale[];
-  ebay_new_avg_usd: number | null; // avg of shown new sales → hero price
-  ebay_used_avg_usd: number | null; // avg of shown used sales
-  data_source: "sold" | "listing"; // "sold" = real transactions, "listing" = active asking prices
+  ebay_new_avg_usd: number | null;
+  ebay_used_avg_usd: number | null;
+  data_source: "sold" | "listing";
   // BrickLink sold price guide (last 6 months sold on BrickLink)
   bricklink_new_avg_usd: number | null;
   bricklink_new_min_usd: number | null;

@@ -7,11 +7,31 @@ This is a Lean MVP. Build only what is in the plan. No extras, no abstractions.
 ## Tech Stack
 - Next.js 16 (App Router), Tailwind CSS v4, TypeScript
 - Claude Sonnet Vision API for set identification
-- eBay API for secondary market pricing (ACTIVE — connected now)
-- BrickLink API for secondary market pricing (PLANNED — integrate after eBay)
-- Frankfurter API for EUR→USD rates (24hr Supabase cache)
+- BrickLink API — PRIMARY market data source (ACTIVE — OAuth 1.0, sold + stock prices + item metadata)
+- eBay API — FALLBACK market data source (ACTIVE — OAuth 2.0, sold + listing prices, 4 markets: US/AU/GB/DE)
+- Facebook Marketplace — PLANNED future data source
+- Frankfurter API for currency rates (24hr Supabase cache)
 - Clerk for auth, Stripe for payments ($12.99 USD/month)
 - Supabase: 2 tables only — users and api_cache
+
+## Data Sources
+**We use BrickLink and eBay only. No other data sources.**
+- Set metadata (name, image, year, retirement status) comes from BrickLink item API
+- Market pricing comes from BrickLink price guides (sold + stock) and eBay (sold + listing)
+- RRP is not currently available (was previously from Brickset, now removed). Future: Supabase-based RRP table.
+
+### Data Source Priority (per condition: new / used)
+Hero price uses this waterfall:
+  1. BrickLink sold avg (last 6 months of transactions)
+  2. eBay sold avg (last 30–60 days, across US/AU/GB/DE)
+  3. BrickLink stock avg (active store listings)
+  4. eBay listing avg (Browse API fallback)
+
+Display order: BrickLink sold rows → BrickLink stock rows → eBay rows (only when no BrickLink data)
+
+### Planned Future Integrations
+- Facebook Marketplace (transaction data)
+- Additional platforms TBD
 
 ## Required Environment Variables
 - BRICKVAL_ANTHROPIC_API_KEY  ← named to avoid clash with Claude Code shell env
@@ -47,6 +67,12 @@ Parse the JSON response. If set_number is null or parsing fails → show the
 
 Model: claude-sonnet-4-5, max_tokens: 64, base64 image source.
 
+## Price Formula
+All prices stored and displayed in USD.
+hero_price_usd = BrickLink sold avg ?? eBay sold avg ?? BrickLink stock avg
+RRP and gain% not currently shown (no data source for RRP after Brickset removal).
+Future: Add RRP via Supabase table for popular sets, then gain_pct = ((hero_price_usd - rrp_usd) / rrp_usd) * 100.
+
 ## Non-negotiable rules
 - Build ONLY what is in the current task. Nothing extra.
 - No helper functions, utilities, or abstractions for one-time operations.
@@ -60,30 +86,23 @@ Model: claude-sonnet-4-5, max_tokens: 64, base64 image source.
 - Stripe webhook MUST update is_pro in Supabase on every subscription lifecycle event:
   customer.subscription.updated, customer.subscription.deleted, invoice.payment_failed.
 - Every external API call must be cached in Supabase before going live.
-  Run DELETE FROM api_cache WHERE expires_at < now() before every cache write.
+- NEVER run DELETE inside setCached() — cache cleanup runs via Vercel Cron only (/api/cron/cache-cleanup).
 - Mobile-first. Every screen tested at 390px width.
 - Every API call must have a clear user-facing error state. No silent failures.
 - After each task, explain what you built and what comes next.
 - Never start the next task without confirmation.
-
-## Price Formula
-market_usd = avg_price_eur * eur_to_usd
-gain_pct  = ((market_usd - rrp_usd) / rrp_usd) * 100
-Show "RRP: ~$X" with tilde to indicate approximation.
 
 ## Error states to handle
 - Claude Vision can't identify the set → "We couldn't find a set number in this photo.
   Try a clearer shot of the box or enter the set number manually."
 - Set not found → "We don't have data for this set number.
   Double-check the number and try again."
-- No market pricing available → Show set info + USD RRP but note
+- No market pricing available → Show set number + note
   "Market price not available for this set."
 - Non-LEGO photo uploaded → "This doesn't look like a LEGO set.
   Try uploading a photo of a LEGO box."
 - API rate limit / failure → "Something went wrong. Please try again in a moment."
-- Exchange rate fetch fails → Show EUR price with note
-  "Currency conversion unavailable — showing EUR price."
-- Retirement status unknown → Show "Status unknown" badge, not "Active."
+- Exchange rate fetch fails → Show USD price only, omit currency note.
 
 ## The wow moment
 The price reveal animation is the core emotional beat of the product.
@@ -96,16 +115,28 @@ This is not optional — it is in the success criteria.
 - eBay API: OAuth active (Browse API working). EPN partner. Awaiting Marketplace Insights scope via Application Growth Check.
   Falls back to Browse API (active listings) until approved. EPN tracking + sandbox toggle + retry logic implemented.
   Set EBAY_SANDBOX=true to demo in sandbox for eBay review.
-- BrickLink API: ✅ ACTIVE — OAuth 1.0 connected, price guide (sold + stock) + item info working.
-  Returns avg/min/max/qty for new and used conditions in USD. Cache key: `bricklink:{setNumber}`, 24hr TTL.
-  Falls back gracefully if API is down — eBay data still works independently.
+- BrickLink API: ACTIVE — OAuth 1.0 connected. Returns sold + stock price guides (avg/min/max/qty) for
+  new and used conditions in USD. Includes individual price_detail[] rows with dates and seller country.
+  Item API provides set name, image, year, and retirement status (is_obsolete).
+  Cache key: `bricklink:{setNumber}`, 24hr TTL. Falls back gracefully — eBay still works if BrickLink is down.
+
+## Known Architecture TODOs
+- Extract shared pricing logic from route.ts + page.tsx into `src/lib/compute-pricing.ts` (currently duplicated)
+- Extend BrickLink cache TTL from 24h to 7 days (set metadata + sold data rarely changes)
+- Add Vercel Cron job at /api/cron/cache-cleanup to handle expired row cleanup (currently runs on every write — bug)
+- Store eBay OAuth tokens in Supabase cache instead of process memory (lost on every cold start)
+- Add RRP data via Supabase table for popular sets (to restore gain% display)
 
 ## Key File Locations
-- `src/lib/ebay.ts` — eBay API integration (active)
-- `src/lib/bricklink.ts` — BrickLink API integration (active — OAuth 1.0, price guide + item info)
-- `src/lib/scan-gate.ts` — paywall/scan limit logic (stubbed, returns allowed: true)
-- `src/app/api/` — all Route Handlers (server-side API calls only)
-- `CLAUDE.md` — this file, at `/Users/holamchan/brickval/CLAUDE.md`
+- `src/lib/bricklink.ts` — BrickLink API (PRIMARY — OAuth 1.0, price guides + item metadata)
+- `src/lib/ebay.ts` — eBay API (FALLBACK — OAuth 2.0, sold + listing prices, 4 marketplaces)
+- `src/lib/frankfurter.ts` — Exchange rates (free, cached 24h)
+- `src/lib/cache.ts` — Supabase-backed cache (getCached / setCached)
+- `src/lib/scan-gate.ts` — Paywall/scan limit logic (stubbed, returns allowed: true)
+- `src/types/market.ts` — ComputedPricing + SetInfo + BrickLinkDetail + EbaySale
+- `src/app/api/lookup/route.ts` — Main data aggregation endpoint
+- `src/app/result/[setNumber]/page.tsx` — SSR result page (duplicates pricing logic from route.ts)
+- `src/components/result/PriceReveal.tsx` — Main result display component (uses SetInfo for metadata)
 
 ## Dev Commands
 - npm run dev — start development server (http://localhost:3000)

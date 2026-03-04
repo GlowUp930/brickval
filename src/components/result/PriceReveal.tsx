@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { BricksetSet } from "@/types/brickset";
-import { getRetirementStatus } from "@/types/brickset";
-import type { BrickLinkDetail, ComputedPricing, EbaySale } from "@/types/market";
+import type { BrickLinkDetail, ComputedPricing, EbaySale, SetInfo } from "@/types/market";
 
 interface Props {
-  set: BricksetSet | null;
+  setInfo: SetInfo | null;
   pricing: ComputedPricing;
   setNumber?: string;
 }
@@ -79,11 +77,9 @@ function computePriceDelta(sales: EbaySale[]): { delta: number; pct: number } | 
   return { delta: newAvg - oldAvg, pct: ((newAvg - oldAvg) / oldAvg) * 100 };
 }
 
-// ── Retirement pill ──────────────────────────────────────────────────────────
-function RetirementPill({ set }: { set: BricksetSet }) {
-  const status = getRetirementStatus(set);
-  if (status === "unknown") return null;
-  const styles = status === "retired"
+// ── Retirement pill (from BrickLink is_obsolete) ─────────────────────────────
+function RetirementPill({ isObsolete }: { isObsolete: boolean }) {
+  const styles = isObsolete
     ? { bg: "rgba(239,68,68,0.10)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.25)", label: "Retired" }
     : { bg: "rgba(34,197,94,0.10)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)", label: "Available" };
   return (
@@ -200,7 +196,7 @@ function BrickLinkRow({ detail, type, isLast }: { detail: BrickLinkDetail; type:
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function PriceReveal({ set, pricing, setNumber }: Props) {
+export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
   // ── Determine data availability ──────────────────────────────────────────
   const hasBLSoldNew  = pricing.bricklink_sold_new_details.length > 0;
   const hasBLSoldUsed = pricing.bricklink_sold_used_details.length > 0;
@@ -287,12 +283,9 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
     sectionLabel = "Active eBay Listings";
   }
 
-  // ── Image ─────────────────────────────────────────────────────────────────
-  const setNum = set?.number ?? setNumber;
-  const imageUrl =
-    set?.image?.imageURL ??
-    set?.image?.thumbnailURL ??
-    (setNum ? `https://images.brickset.com/sets/images/${setNum}-1.jpg` : null);
+  // ── Image — from BrickLink item ───────────────────────────────────────────
+  const imageUrl = setInfo?.image_url ?? null;
+  const displayName = setInfo?.name ?? (setNumber ? `Set #${setNumber}` : "LEGO Set");
 
   return (
     <div className="w-full flex flex-col">
@@ -301,7 +294,7 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
       <div className="relative w-full overflow-hidden" style={{ height: 240 }}>
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt={set?.name ?? `LEGO Set ${setNum ?? ""}`}
+          <img src={imageUrl} alt={displayName}
             className="w-full h-full object-contain"
             style={{ background: "var(--surface)" }}
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
@@ -313,24 +306,20 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
         )}
         <div className="absolute inset-x-0 bottom-0 h-28 pointer-events-none"
           style={{ background: "linear-gradient(to bottom, transparent, var(--background))" }} />
-        {set?.theme && (
-          <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
-            style={{ background: "var(--accent)", color: "#000" }}>
-            LEGO {set.theme}
-          </span>
-        )}
       </div>
 
       {/* ── 2. Identity block ── */}
       <div className="px-4 pt-1 pb-5 flex flex-col gap-1.5">
         <h1 className="text-[30px] font-black leading-tight" style={{ color: "var(--foreground)" }}>
-          {set?.name ?? (setNumber ? `Set #${setNumber}` : "LEGO Set")}
+          {displayName}
         </h1>
         <p className="text-sm" style={{ color: "var(--muted)" }}>
-          {[set?.number && `#${set.number}`, set?.pieces && `${set.pieces.toLocaleString()} pcs`, set?.year && String(set.year)]
-            .filter(Boolean).join(" · ")}
+          {[
+            setInfo?.set_number && `#${setInfo.set_number.replace(/-\d+$/, "")}`,
+            setInfo?.year_released && String(setInfo.year_released),
+          ].filter(Boolean).join(" · ")}
         </p>
-        {set && <RetirementPill set={set} />}
+        {setInfo && <RetirementPill isObsolete={setInfo.is_obsolete} />}
       </div>
 
       {/* ── 3. Hero price card ── */}
