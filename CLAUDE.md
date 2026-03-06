@@ -121,9 +121,7 @@ This is not optional — it is in the success criteria.
   Cache key: `bricklink:{setNumber}`, 24hr TTL. Falls back gracefully — eBay still works if BrickLink is down.
 
 ## Known Architecture TODOs
-- Extract shared pricing logic from route.ts + page.tsx into `src/lib/compute-pricing.ts` (currently duplicated)
 - Extend BrickLink cache TTL from 24h to 7 days (set metadata + sold data rarely changes)
-- Add Vercel Cron job at /api/cron/cache-cleanup to handle expired row cleanup (currently runs on every write — bug)
 - Store eBay OAuth tokens in Supabase cache instead of process memory (lost on every cold start)
 - Add RRP data via Supabase table for popular sets (to restore gain% display)
 
@@ -131,11 +129,12 @@ This is not optional — it is in the success criteria.
 - `src/lib/bricklink.ts` — BrickLink API (PRIMARY — OAuth 1.0, price guides + item metadata)
 - `src/lib/ebay.ts` — eBay API (FALLBACK — OAuth 2.0, sold + listing prices, 4 marketplaces)
 - `src/lib/frankfurter.ts` — Exchange rates (free, cached 24h)
+- `src/lib/compute-pricing.ts` — Shared pricing computation (SetInfo + ComputedPricing assembly)
 - `src/lib/cache.ts` — Supabase-backed cache (getCached / setCached)
 - `src/lib/scan-gate.ts` — Paywall/scan limit logic (stubbed, returns allowed: true)
 - `src/types/market.ts` — ComputedPricing + SetInfo + BrickLinkDetail + EbaySale
-- `src/app/api/lookup/route.ts` — Main data aggregation endpoint
-- `src/app/result/[setNumber]/page.tsx` — SSR result page (duplicates pricing logic from route.ts)
+- `src/app/api/lookup/route.ts` — Main data aggregation endpoint (uses compute-pricing.ts)
+- `src/app/result/[setNumber]/page.tsx` — SSR result page (uses compute-pricing.ts)
 - `src/components/result/PriceReveal.tsx` — Main result display component (uses SetInfo for metadata)
 
 ## Dev Commands
