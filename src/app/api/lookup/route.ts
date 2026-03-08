@@ -63,27 +63,38 @@ export async function POST(req: NextRequest) {
     stale: rates?.stale ?? true,
   };
 
-  // Fetch eBay + BrickLink data in parallel
+  // Fetch eBay + BrickLink data in parallel — track whether failures occurred
+  let ebayFailed = false;
+  let brickLinkFailed = false;
+
   const [ebayData, brickLinkData] = await Promise.all([
-    getEbayMarketData(setNumber, ratesWithFallbacks).catch(() => ({
-      new_sales: [] as EbaySale[],
-      used_sales: [] as EbaySale[],
-      data_source: "listing" as const,
-    })),
+    getEbayMarketData(setNumber, ratesWithFallbacks).catch(() => {
+      ebayFailed = true;
+      return { new_sales: [] as EbaySale[], used_sales: [] as EbaySale[], data_source: "listing" as const };
+    }),
     getBrickLinkMarketData(setNumber).catch((err) => {
+      brickLinkFailed = true;
       console.warn("[lookup] BrickLink fetch failed:", err);
       return null;
     }),
   ]);
 
-  const hasBrickLink = brickLinkData?.sold_new || brickLinkData?.sold_used;
-  if (ebayData.new_sales.length === 0 && ebayData.used_sales.length === 0 && !hasBrickLink) {
+  // Check for ANY data — including stock listings (not just sold)
+  const hasBrickLink = brickLinkData?.sold_new || brickLinkData?.sold_used
+    || brickLinkData?.stock_new || brickLinkData?.stock_used;
+  const hasEbay = ebayData.new_sales.length > 0 || ebayData.used_sales.length > 0;
+
+  if (!hasEbay && !hasBrickLink) {
+    // Both providers failed → retryable error, not "bad set number"
+    if (ebayFailed && brickLinkFailed) {
+      return NextResponse.json(
+        { error: "upstream", message: "Something went wrong. Please try again in a moment." },
+        { status: 502 }
+      );
+    }
+    // Providers succeeded but returned no data → genuinely not found
     return NextResponse.json(
-      {
-        error: "not_found",
-        message:
-          "We don't have data for this set number. Double-check the number and try again.",
-      },
+      { error: "not_found", message: "We don't have data for this set number. Double-check the number and try again." },
       { status: 404 }
     );
   }

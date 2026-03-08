@@ -50,19 +50,36 @@ export default async function ResultPage({ params }: Props) {
     stale: rates?.stale ?? true,
   };
 
-  // Fetch eBay + BrickLink in parallel
+  // Fetch eBay + BrickLink in parallel — track whether failures occurred
+  let ebayFailed = false;
+  let brickLinkFailed = false;
+
   const [ebayData, brickLinkData] = await Promise.all([
-    getEbayMarketData(cleanedSetNumber, ratesWithFallbacks).catch(() => ({
-      new_sales: [] as import("@/types/market").EbaySale[],
-      used_sales: [] as import("@/types/market").EbaySale[],
-      data_source: "listing" as const,
-    })),
-    getBrickLinkMarketData(cleanedSetNumber).catch(() => null),
+    getEbayMarketData(cleanedSetNumber, ratesWithFallbacks).catch(() => {
+      ebayFailed = true;
+      return { new_sales: [] as import("@/types/market").EbaySale[], used_sales: [] as import("@/types/market").EbaySale[], data_source: "listing" as const };
+    }),
+    getBrickLinkMarketData(cleanedSetNumber).catch(() => {
+      brickLinkFailed = true;
+      return null;
+    }),
   ]);
 
-  // Gate on having ANY data (eBay OR BrickLink)
-  const hasBrickLink = brickLinkData?.sold_new || brickLinkData?.sold_used;
-  if (ebayData.new_sales.length === 0 && ebayData.used_sales.length === 0 && !hasBrickLink) {
+  // Check for ANY data — including stock listings (not just sold)
+  const hasBrickLink = brickLinkData?.sold_new || brickLinkData?.sold_used
+    || brickLinkData?.stock_new || brickLinkData?.stock_used;
+  const hasEbay = ebayData.new_sales.length > 0 || ebayData.used_sales.length > 0;
+
+  if (!hasEbay && !hasBrickLink) {
+    if (ebayFailed && brickLinkFailed) {
+      return (
+        <ErrorScreen
+          message="Something went wrong. Please try again in a moment."
+          backLabel="Try again"
+          backHref="/scan"
+        />
+      );
+    }
     return (
       <ErrorScreen
         message={`No listings found for set #${cleanedSetNumber}. Double-check the number and try again.`}

@@ -221,6 +221,11 @@ This is not optional — it is in the success criteria.
 - next.config.ts remotePatterns: img.bricklink.com (not images.brickset.com).
 - Hero price NEVER crosses conditions — "New" tab only shows new data, "Used" tab only shows used data.
 - Stripe webhook reads clerk_user_id from subscription metadata first, then falls back to customer metadata.
+- "Has data" check includes BrickLink stock (not just sold) — stock-only sets are valid results.
+- API outages (both providers failed) show retryable error, not "bad set number".
+- Trend badge: array is newest-first, so slice(0,mid)=newer, slice(mid)=older. Don't swap again.
+- All product copy uses USD. No AUD references. No RRP mentions until data source exists.
+- Upgrade page uses dark theme (CSS variables), not light (bg-gray-50).
 
 ## Known Gotchas
 - BrickLink `image_url` starts with `//` not `https://` — handled in compute-pricing.ts.
@@ -229,17 +234,13 @@ This is not optional — it is in the success criteria.
 - `EbaySale` type is needed in route.ts catch block for `[] as EbaySale[]` type assertion.
 
 ## Outstanding TODOs (in priority order)
-1. Include BrickLink stock data in "has data" check — stock-only sets are currently rejected as "not found" (P1)
-2. Separate API outages from "set not found" — both currently show same error message (P1)
-3. Fix scan counting: page refresh consumes a scan — gate should fire once per scan flow, not per render (P1 — before paywall)
-4. Add free-user provisioning: increment_scan RPC returns denied if no users row exists (P1 — before paywall)
-5. Add per-user rate limit on `/api/identify` to prevent Claude Vision abuse (P1)
-6. Fix trend badge math: older/newer halves are swapped due to newest-first sort (P2)
-7. Update product copy: Hero says "AUD", upgrade page says "AUD/month" + mentions RRP, upgrade page uses light theme (P2)
-8. Store eBay OAuth tokens in Supabase cache instead of process memory (P2 — low urgency)
-9. Add RRP data via Supabase table for popular sets (P2 — restores gain% display)
-10. Wire up scan-gate.ts to actual Stripe subscription status (Phase 2 — paywall)
-11. Remove unused npm packages: lucide-react, framer-motion, clsx (P2 — minor cleanup)
+1. Fix scan counting: page refresh consumes a scan — gate should fire once per scan flow, not per render (P1 — before paywall)
+2. Add free-user provisioning: increment_scan RPC returns denied if no users row exists (P1 — before paywall)
+3. Add per-user rate limit on `/api/identify` to prevent Claude Vision abuse (P1)
+4. Store eBay OAuth tokens in Supabase cache instead of process memory (P2 — low urgency)
+5. Add RRP data via Supabase table for popular sets (P2 — restores gain% display)
+6. Wire up scan-gate.ts to actual Stripe subscription status (Phase 2 — paywall)
+7. Remove unused npm packages: lucide-react, framer-motion, clsx (P2 — minor cleanup)
 
 ## Dev Commands
 - npm run dev — start development server (http://localhost:3000)

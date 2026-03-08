@@ -40,7 +40,7 @@ export function Hero() {
 
         {/* Sub */}
         <p className="text-lg leading-relaxed max-w-sm" style={{ color: "var(--muted)" }}>
-          Scan the box with your phone. Get the AUD retail price and retirement status in seconds.
+          Scan the box with your phone. Get the current market value and retirement status in seconds.
         </p>
 
         {/* CTA */}

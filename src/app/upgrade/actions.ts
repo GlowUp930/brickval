@@ -4,8 +4,8 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { stripe } from "@/lib/stripe";
 
-// Set this to your actual Stripe Price ID for $12.99 AUD/month
-// Create it in: Stripe Dashboard → Products → Add product → $12.99 AUD recurring
+// Set this to your actual Stripe Price ID for $12.99 USD/month
+// Create it in: Stripe Dashboard → Products → Add product → $12.99 USD recurring
 const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID ?? "";
 
 export async function createCheckoutSession() {

@@ -66,11 +66,12 @@ function blDetailsToEbaySales(details: BrickLinkDetail[]): EbaySale[] {
 }
 
 // ── 30-day price delta ───────────────────────────────────────────────────────
+// Sales are sorted newest-first, so slice(0, mid) = newer half, slice(mid) = older half.
 function computePriceDelta(sales: EbaySale[]): { delta: number; pct: number } | null {
   if (sales.length < 2) return null;
   const mid = Math.floor(sales.length / 2);
-  const older = sales.slice(0, mid);
-  const newer = sales.slice(mid);
+  const newer = sales.slice(0, mid);   // first half = most recent (array is newest-first)
+  const older = sales.slice(mid);      // second half = oldest
   const oldAvg = older.reduce((s, x) => s + x.price_usd, 0) / older.length;
   const newAvg = newer.reduce((s, x) => s + x.price_usd, 0) / newer.length;
   if (oldAvg === 0) return null;
