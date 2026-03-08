@@ -6,15 +6,24 @@ import type Stripe from "stripe";
 // In App Router, use req.text() to get the raw body for Stripe signature verification.
 // Do NOT use req.json() — it will break the signature check.
 
-async function setProStatus(customerId: string, isPro: boolean) {
-  // The Stripe customer must have clerk_user_id in metadata (set at checkout creation)
-  const customer = await stripe.customers.retrieve(customerId);
-  if (customer.deleted) {
-    console.error(`[webhook] Customer ${customerId} is deleted`);
-    return;
+/**
+ * Resolve clerk_user_id and update Pro status.
+ * Tries subscription metadata first (set at checkout), then customer metadata as fallback.
+ */
+async function setProStatus(customerId: string, isPro: boolean, subscriptionMetadata?: Stripe.Metadata | null) {
+  // 1. Try subscription metadata first (checkout sets clerk_user_id here)
+  let userId = subscriptionMetadata?.clerk_user_id;
+
+  // 2. Fall back to customer metadata
+  if (!userId) {
+    const customer = await stripe.customers.retrieve(customerId);
+    if (customer.deleted) {
+      console.error(`[webhook] Customer ${customerId} is deleted`);
+      return;
+    }
+    userId = (customer as Stripe.Customer).metadata?.clerk_user_id;
   }
 
-  const userId = (customer as Stripe.Customer).metadata?.clerk_user_id;
   if (!userId) {
     console.error(
       `[webhook] No clerk_user_id in metadata for customer ${customerId}`
@@ -75,7 +84,8 @@ export async function POST(req: NextRequest) {
           const status =
             "status" in sub ? sub.status : "active";
           const isPro = status === "active" || status === "trialing";
-          await setProStatus(customerId, isPro);
+          const subMeta = "metadata" in sub ? sub.metadata : null;
+          await setProStatus(customerId, isPro, subMeta);
         }
         break;
       }
@@ -83,7 +93,7 @@ export async function POST(req: NextRequest) {
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
         const isPro = sub.status === "active" || sub.status === "trialing";
-        await setProStatus(sub.customer as string, isPro);
+        await setProStatus(sub.customer as string, isPro, sub.metadata);
         break;
       }
 
@@ -95,7 +105,8 @@ export async function POST(req: NextRequest) {
         const customerId =
           "customer" in obj ? (obj.customer as string) : "";
         if (customerId) {
-          await setProStatus(customerId, false);
+          const subMeta = "metadata" in obj ? obj.metadata : null;
+          await setProStatus(customerId, false, subMeta);
         }
         break;
       }

@@ -29,8 +29,8 @@ export async function createCheckoutSession() {
     payment_method_types: ["card"],
     currency: "aud",
     ...(email ? { customer_email: email } : {}),
-    // clerk_user_id in metadata links the Stripe customer to our Supabase user row
-    // The webhook reads this to update is_pro
+    // clerk_user_id set on session + subscription so webhook can resolve the BrickVal user.
+    // Webhook reads subscription metadata first (always available for subscription events).
     metadata: {
       clerk_user_id: userId,
     },

@@ -232,10 +232,10 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
     ? pricing.bricklink_stock_new_details
     : pricing.bricklink_stock_used_details;
 
-  // ── Hero price — BrickLink sold → eBay sold → BrickLink stock → eBay listing
+  // ── Hero price — BrickLink sold → eBay → BrickLink stock (same condition only)
   const heroUsd = tab === "new"
-    ? (pricing.bricklink_new_avg_usd  ?? pricing.ebay_new_avg_usd  ?? pricing.bricklink_stock_new_avg_usd  ?? pricing.ebay_used_avg_usd  ?? pricing.bricklink_stock_used_avg_usd)
-    : (pricing.bricklink_used_avg_usd ?? pricing.ebay_used_avg_usd ?? pricing.bricklink_stock_used_avg_usd ?? pricing.ebay_new_avg_usd  ?? pricing.bricklink_stock_new_avg_usd);
+    ? (pricing.bricklink_new_avg_usd  ?? pricing.ebay_new_avg_usd  ?? pricing.bricklink_stock_new_avg_usd)
+    : (pricing.bricklink_used_avg_usd ?? pricing.ebay_used_avg_usd ?? pricing.bricklink_stock_used_avg_usd);
 
   const heroFromBLSold = tab === "new"
     ? pricing.bricklink_new_avg_usd  !== null

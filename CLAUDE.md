@@ -219,6 +219,8 @@ This is not optional — it is in the success criteria.
 - eBay OAuth token in-memory storage is acceptable for now (re-auth adds ~200ms on cold start, no cost).
 - No piece count, theme badge, or RRP/gain% currently shown (data gaps from Brickset removal).
 - next.config.ts remotePatterns: img.bricklink.com (not images.brickset.com).
+- Hero price NEVER crosses conditions — "New" tab only shows new data, "Used" tab only shows used data.
+- Stripe webhook reads clerk_user_id from subscription metadata first, then falls back to customer metadata.
 
 ## Known Gotchas
 - BrickLink `image_url` starts with `//` not `https://` — handled in compute-pricing.ts.
@@ -227,11 +229,17 @@ This is not optional — it is in the success criteria.
 - `EbaySale` type is needed in route.ts catch block for `[] as EbaySale[]` type assertion.
 
 ## Outstanding TODOs (in priority order)
-1. Store eBay OAuth tokens in Supabase cache instead of process memory (P1 — low urgency)
-2. Add per-user rate limit on `/api/identify` to prevent abuse (P1 — no rate limiting currently)
-3. Add RRP data via Supabase table for popular sets (P2 — restores gain% display)
-4. Wire up scan-gate.ts to actual Stripe subscription status (Phase 2 — paywall)
-5. Remove unused npm packages: lucide-react, framer-motion, clsx (P2 — minor cleanup)
+1. Include BrickLink stock data in "has data" check — stock-only sets are currently rejected as "not found" (P1)
+2. Separate API outages from "set not found" — both currently show same error message (P1)
+3. Fix scan counting: page refresh consumes a scan — gate should fire once per scan flow, not per render (P1 — before paywall)
+4. Add free-user provisioning: increment_scan RPC returns denied if no users row exists (P1 — before paywall)
+5. Add per-user rate limit on `/api/identify` to prevent Claude Vision abuse (P1)
+6. Fix trend badge math: older/newer halves are swapped due to newest-first sort (P2)
+7. Update product copy: Hero says "AUD", upgrade page says "AUD/month" + mentions RRP, upgrade page uses light theme (P2)
+8. Store eBay OAuth tokens in Supabase cache instead of process memory (P2 — low urgency)
+9. Add RRP data via Supabase table for popular sets (P2 — restores gain% display)
+10. Wire up scan-gate.ts to actual Stripe subscription status (Phase 2 — paywall)
+11. Remove unused npm packages: lucide-react, framer-motion, clsx (P2 — minor cleanup)
 
 ## Dev Commands
 - npm run dev — start development server (http://localhost:3000)
