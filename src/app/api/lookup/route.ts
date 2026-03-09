@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getEbayMarketData } from "@/lib/ebay";
-import { getBrickLinkMarketData } from "@/lib/bricklink";
+import { getBrickLinkMarketData, getMinifigMarketData } from "@/lib/bricklink";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { computePricing } from "@/lib/compute-pricing";
-import type { EbaySale } from "@/types/market";
+import type { EbaySale, MinifigInfo, MinifigPricing } from "@/types/market";
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
@@ -13,13 +13,91 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { setNumber?: string };
+  let body: { setNumber?: string; mode?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
+  const mode = body.mode ?? "set";
+
+  // ── Minifig mode ──────────────────────────────────────────────────────────
+  if (mode === "minifig") {
+    const figNumber = body.setNumber?.trim().replace(/[^a-z0-9]/gi, "");
+    if (!figNumber || figNumber.length < 3) {
+      return NextResponse.json({ error: "Invalid figure number" }, { status: 400 });
+    }
+
+    let gate;
+    try {
+      gate = await checkAndIncrementScan(userId);
+    } catch (err) {
+      console.error("[lookup/minifig] Scan gate error:", err);
+      return NextResponse.json(
+        { error: "internal", message: "Something went wrong. Please try again." },
+        { status: 500 }
+      );
+    }
+
+    if (!gate.allowed) {
+      return NextResponse.json(
+        {
+          error: "paywall",
+          message: "You've used all 5 free scans. Upgrade to BrickVal Pro to continue.",
+          scansUsed: gate.scansUsed,
+        },
+        { status: 402 }
+      );
+    }
+
+    const minifigData = await getMinifigMarketData(figNumber).catch(() => null);
+
+    if (!minifigData?.item && !minifigData?.sold_used && !minifigData?.stock_used) {
+      return NextResponse.json(
+        { error: "not_found", message: "We don't have data for this minifigure. Check the ID and try again." },
+        { status: 404 }
+      );
+    }
+
+    const item = minifigData.item;
+    const figInfo: MinifigInfo = {
+      name: item?.name ?? figNumber,
+      image_url: item?.image_url ?? null,
+      fig_number: figNumber,
+      year_released: item?.year_released ?? null,
+    };
+
+    const sold = minifigData.sold_used;
+    const stock = minifigData.stock_used;
+
+    const soldDetails = (sold?.price_detail ?? []).map((d) => ({
+      price_usd: parseFloat(d.unit_price),
+      quantity: d.quantity,
+      date: d.date_ordered,
+      country: d.seller_country_code,
+    }));
+    const stockDetails = (stock?.price_detail ?? []).map((d) => ({
+      price_usd: parseFloat(d.unit_price),
+      quantity: d.quantity,
+      country: d.seller_country_code,
+    }));
+
+    const pricing: MinifigPricing = {
+      used_sold_avg_usd: sold?.qty_avg_price ? parseFloat(sold.qty_avg_price) : null,
+      used_sold_min_usd: sold?.min_price ? parseFloat(sold.min_price) : null,
+      used_sold_max_usd: sold?.max_price ? parseFloat(sold.max_price) : null,
+      used_sold_qty: sold?.unit_quantity ?? null,
+      used_stock_avg_usd: stock?.qty_avg_price ? parseFloat(stock.qty_avg_price) : null,
+      used_stock_qty: stock?.unit_quantity ?? null,
+      sold_details: soldDetails,
+      stock_details: stockDetails,
+    };
+
+    return NextResponse.json({ figInfo, pricing, scansUsed: gate.scansUsed, isPro: gate.isPro });
+  }
+
+  // ── Set mode ──────────────────────────────────────────────────────────────
   const setNumber = body.setNumber?.trim().replace(/[^0-9]/g, "");
   if (!setNumber || setNumber.length < 4) {
     return NextResponse.json(

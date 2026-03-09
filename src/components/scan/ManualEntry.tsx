@@ -21,6 +21,9 @@ export function ManualEntry() {
 
   return (
     <form onSubmit={handleSubmit} className="w-full flex flex-col gap-3">
+      <p className="text-xs" style={{ color: "var(--muted)" }}>
+        Have an assembled set? The set number is on the first or last page of the instruction booklet.
+      </p>
       <div className="flex gap-3">
       <input
         type="text"
