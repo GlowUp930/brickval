@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 
 export default function ScanPage() {
   const [showManual, setShowManual] = useState(false);
+  const [mode, setMode] = useState<"set" | "minifig">("set");
 
   return (
     <main className="min-h-screen flex flex-col" style={{ background: "var(--background)" }}>
@@ -40,11 +41,41 @@ export default function ScanPage() {
           className="text-center"
         >
           <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--foreground)" }}>
-            Scan a Set
+            {mode === "set" ? "Scan a Set" : "Scan a Minifig"}
           </h1>
           <p className="text-sm" style={{ color: "var(--muted)" }}>
-            Take a photo of the box or enter the set number manually.
+            {mode === "set"
+              ? "Take a photo of the box or enter the set number manually."
+              : "Take a photo of your LEGO minifigure to get its current market value."}
           </p>
+        </motion.div>
+
+        {/* Mode toggle */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="flex w-full rounded-xl p-1 gap-1"
+          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+        >
+          <button
+            onClick={() => setMode("set")}
+            className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
+            style={mode === "set"
+              ? { background: "var(--accent)", color: "var(--accent-fg)" }
+              : { color: "var(--muted)" }}
+          >
+            Set
+          </button>
+          <button
+            onClick={() => setMode("minifig")}
+            className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
+            style={mode === "minifig"
+              ? { background: "var(--accent)", color: "var(--accent-fg)" }
+              : { color: "var(--muted)" }}
+          >
+            Minifigure
+          </button>
         </motion.div>
 
         {/* Upload card */}
@@ -55,30 +86,33 @@ export default function ScanPage() {
           className="w-full rounded-3xl p-6 flex flex-col gap-4"
           style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
         >
-          <ImageUploader onManualEntry={() => setShowManual(true)} />
+          <ImageUploader mode={mode} onManualEntry={() => setShowManual(true)} />
         </motion.div>
 
-        {/* Divider */}
-        <div className="flex items-center gap-4 w-full">
-          <hr className="flex-1" style={{ borderColor: "var(--border)" }} />
-          <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>or enter manually</span>
-          <hr className="flex-1" style={{ borderColor: "var(--border)" }} />
-        </div>
+        {/* Divider + Manual entry — only shown for set mode */}
+        {mode === "set" && (
+          <>
+            <div className="flex items-center gap-4 w-full">
+              <hr className="flex-1" style={{ borderColor: "var(--border)" }} />
+              <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>or enter manually</span>
+              <hr className="flex-1" style={{ borderColor: "var(--border)" }} />
+            </div>
 
-        {/* Manual entry */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="w-full"
-        >
-          <ManualEntry />
-        </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="w-full"
+            >
+              <ManualEntry />
+            </motion.div>
 
-        {showManual && (
-          <p className="text-xs text-center -mt-4" style={{ color: "var(--muted)" }}>
-            Can&apos;t find a number in the photo? Type it above.
-          </p>
+            {showManual && (
+              <p className="text-xs text-center -mt-4" style={{ color: "var(--muted)" }}>
+                Can&apos;t find a number in the photo? Type it above.
+              </p>
+            )}
+          </>
         )}
       </div>
     </main>

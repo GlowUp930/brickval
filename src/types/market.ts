@@ -32,6 +32,26 @@ export interface SetInfo {
   set_number: string;
 }
 
+// Minifigure info (from BrickLink MINIFIG item API)
+export interface MinifigInfo {
+  name: string;
+  image_url: string | null;
+  fig_number: string;
+  year_released: number | null;
+}
+
+// Minifigure pricing (used condition only — minifigs are priced loose)
+export interface MinifigPricing {
+  used_sold_avg_usd: number | null;
+  used_sold_min_usd: number | null;
+  used_sold_max_usd: number | null;
+  used_sold_qty: number | null;
+  used_stock_avg_usd: number | null;
+  used_stock_qty: number | null;
+  sold_details: BrickLinkDetail[];
+  stock_details: BrickLinkDetail[];
+}
+
 export interface ComputedPricing {
   // RRP — currently null (was from Brickset). Kept for future Supabase-based RRP table.
   rrp_usd: number | null;

@@ -35,9 +35,9 @@ async function compressImage(file: File): Promise<Blob> {
   });
 }
 
-interface Props { onManualEntry: () => void; }
+interface Props { mode: "set" | "minifig"; onManualEntry: () => void; }
 
-export function ImageUploader({ onManualEntry }: Props) {
+export function ImageUploader({ mode, onManualEntry }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,16 +56,25 @@ export function ImageUploader({ onManualEntry }: Props) {
 
     let data: { set_number: string | null; error?: string; message?: string };
     try {
-      const res = await fetch("/api/identify", { method: "POST", body: formData });
+      const res = await fetch(`/api/identify?mode=${mode}`, { method: "POST", body: formData });
       data = await res.json();
       if (!res.ok) { setError(data.message ?? "Something went wrong. Please try again."); setIsLoading(false); return; }
     } catch { setError("Network error. Check your connection and try again."); setIsLoading(false); return; }
 
     if (!data.set_number) {
-      setError("Couldn't find a set number. Try a clearer photo or enter it below.");
-      onManualEntry(); setIsLoading(false); return;
+      if (mode === "minifig") {
+        setError("Couldn't identify this minifigure. Try a clearer photo with a plain background.");
+      } else {
+        setError("Couldn't find a set number. Try a clearer photo or enter it below.");
+        onManualEntry();
+      }
+      setIsLoading(false); return;
     }
-    router.push(`/result/${data.set_number}`);
+    if (mode === "minifig") {
+      router.push(`/result/minifig/${data.set_number}`);
+    } else {
+      router.push(`/result/${data.set_number}`);
+    }
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -105,10 +114,12 @@ export function ImageUploader({ onManualEntry }: Props) {
         </div>
         <div className="text-center">
           <p className="font-semibold" style={{ color: "var(--foreground)" }}>
-            Upload a photo
+            {mode === "minifig" ? "Photo of your minifigure" : "Upload a photo"}
           </p>
           <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
-            Drag & drop or tap to take a photo
+            {mode === "minifig"
+              ? "Clear photo on a plain background works best"
+              : "Drag & drop or tap to take a photo"}
           </p>
         </div>
       </div>

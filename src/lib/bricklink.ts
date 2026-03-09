@@ -49,6 +49,13 @@ export interface BrickLinkMarketData {
   item: BrickLinkItem | null;
 }
 
+/** Minifigure market data — used condition only (minifigs are priced loose/used) */
+export interface MinifigMarketData {
+  sold_used: BrickLinkPriceGuide | null;
+  stock_used: BrickLinkPriceGuide | null;
+  item: BrickLinkItem | null;
+}
+
 // ── Config ───────────────────────────────────────────────────────────────────
 
 const API_BASE = "https://api.bricklink.com/api/store/v1";
@@ -205,6 +212,51 @@ async function fetchItem(setNo: string): Promise<BrickLinkItem | null> {
 }
 
 // ── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * Fetch price guide for a LEGO minifigure.
+ * BrickLink minifig IDs use alphanumeric codes (e.g. "sw0001", "col001").
+ */
+async function fetchMinifigPriceGuide(
+  figNo: string,
+  guideType: "sold" | "stock"
+): Promise<BrickLinkPriceGuide | null> {
+  const path =
+    `/items/MINIFIG/${figNo}/price` +
+    `?guide_type=${guideType}` +
+    `&new_or_used=U` +
+    `&currency_code=USD`;
+
+  return brickLinkFetch<BrickLinkPriceGuide>(path);
+}
+
+async function fetchMinifigItem(figNo: string): Promise<BrickLinkItem | null> {
+  return brickLinkFetch<BrickLinkItem>(`/items/MINIFIG/${figNo}`);
+}
+
+/**
+ * Get BrickLink market data for a LEGO minifigure.
+ * Returns used sold + used stock prices and item info.
+ * Cached under "bricklink-minifig:{figNo}" for 24 hours.
+ */
+export async function getMinifigMarketData(figNo: string): Promise<MinifigMarketData> {
+  const cacheKey = `bricklink-minifig:${figNo}`;
+  const cached = await getCached<MinifigMarketData>(cacheKey);
+  if (cached) return cached;
+
+  const [soldUsed, stockUsed, item] = await Promise.all([
+    fetchMinifigPriceGuide(figNo, "sold"),
+    fetchMinifigPriceGuide(figNo, "stock"),
+    fetchMinifigItem(figNo),
+  ]);
+
+  const result: MinifigMarketData = { sold_used: soldUsed, stock_used: stockUsed, item };
+
+  if (soldUsed || stockUsed || item) {
+    await setCached(cacheKey, result, CACHE_TTL_HOURS);
+  }
+  return result;
+}
 
 /**
  * Get full BrickLink market data for a LEGO set.

@@ -4,6 +4,8 @@ import { anthropic } from "@/lib/anthropic";
 
 const VISION_PROMPT = `Look at this LEGO box image. Find the LEGO set number — it is typically a 4–6 digit number printed on the front lower-right corner, back panel, or near the barcode. Return ONLY valid JSON: {"set_number": "75192"} or {"set_number": null} if you cannot find a set number with confidence. Do not guess. Do not include hyphens or suffixes.`;
 
+const BRICKOGNIZE_URL = "https://api.brickognize.com/predict/";
+
 const ACCEPTED_MEDIA_TYPES = [
   "image/jpeg",
   "image/png",
@@ -17,12 +19,60 @@ function isAcceptedMediaType(type: string): type is AcceptedMediaType {
   return ACCEPTED_MEDIA_TYPES.includes(type as AcceptedMediaType);
 }
 
+// ── Minifig identification via Brickognize ────────────────────────────────────
+
+async function identifyMinifig(imageFile: File): Promise<string | null> {
+  const brickognizeForm = new FormData();
+  brickognizeForm.append("query_image", imageFile, "image.jpg");
+
+  let res: Response;
+  try {
+    res = await fetch(BRICKOGNIZE_URL, {
+      method: "POST",
+      headers: { accept: "application/json" },
+      body: brickognizeForm,
+    });
+  } catch (err) {
+    console.error("[identify] Brickognize network error:", err);
+    return null;
+  }
+
+  if (!res.ok) {
+    console.warn("[identify] Brickognize returned", res.status);
+    return null;
+  }
+
+  let data: { items?: { external_id?: string; score?: number; name?: string }[] };
+  try {
+    data = await res.json();
+  } catch {
+    return null;
+  }
+
+  // Filter to high-confidence results (>= 0.70) and take the top hit
+  const topItem = (data.items ?? [])
+    .filter((i) => (i.score ?? 0) >= 0.70)
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0];
+
+  if (!topItem?.external_id) return null;
+
+  // Validate: BrickLink minifig IDs are alphanumeric, 4–12 chars (e.g. "sw0001", "col001")
+  const figId = topItem.external_id.trim();
+  if (figId.length < 3 || figId.length > 16 || !/^[a-z0-9]+$/i.test(figId)) return null;
+
+  return figId;
+}
+
+// ── Main handler ──────────────────────────────────────────────────────────────
+
 export async function POST(req: NextRequest) {
   // Auth check
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const mode = req.nextUrl.searchParams.get("mode") ?? "set";
 
   let formData: FormData;
   try {
@@ -50,6 +100,17 @@ export async function POST(req: NextRequest) {
       { status: 415 }
     );
   }
+
+  // ── Minifig mode: use Brickognize ─────────────────────────────────────────
+  if (mode === "minifig") {
+    const figId = await identifyMinifig(imageFile);
+    if (!figId) {
+      return NextResponse.json({ set_number: null });
+    }
+    return NextResponse.json({ set_number: figId });
+  }
+
+  // ── Set mode: use Claude Vision ───────────────────────────────────────────
 
   // Convert to base64 for Claude Vision
   const arrayBuffer = await imageFile.arrayBuffer();
@@ -106,7 +167,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ set_number: null });
   }
 
-  // Validate the set number format (4–6 digits)
+  // Validate the set number format (4–8 digits)
   if (parsed.set_number) {
     const cleaned = parsed.set_number.replace(/[^0-9]/g, "");
     if (cleaned.length < 4 || cleaned.length > 8) {
