@@ -45,3 +45,21 @@
   ::-webkit-scrollbar-track { background: var(--background); }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 }
+
+@layer utilities {
+  .glow-accent {
+    box-shadow: 0 0 40px -10px rgba(245,197,24,0.5), 0 0 80px -20px rgba(245,197,24,0.25);
+  }
+  .glow-accent-sm {
+    box-shadow: 0 0 20px -5px rgba(245,197,24,0.4);
+  }
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(42,42,50,0.5) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(42,42,50,0.5) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+  .bg-radial-fade {
+    background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(245,197,24,0.06), rgba(245,197,24,0.03), transparent);
+  }
+}

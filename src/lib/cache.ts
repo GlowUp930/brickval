@@ -18,8 +18,7 @@ export async function getCached<T>(key: string): Promise<T | null> {
 
 /**
  * Write to the api_cache table.
- * Expired row cleanup is handled by a Vercel Cron job (/api/cron/cache-cleanup),
- * NOT here — doing it on every write causes N concurrent full-table scans under load.
+ * Cleans up expired rows before writing.
  * @param ttlHours Time-to-live in hours. Defaults to 24.
  */
 export async function setCached<T>(
@@ -27,9 +26,12 @@ export async function setCached<T>(
   value: T,
   ttlHours = 24
 ): Promise<void> {
+  const now = new Date().toISOString();
   const expiresAt = new Date(
     Date.now() + ttlHours * 60 * 60 * 1000
   ).toISOString();
+
+  await supabase.from("api_cache").delete().lt("expires_at", now);
 
   await supabase.from("api_cache").upsert({
     cache_key: key,
