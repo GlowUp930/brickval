@@ -201,40 +201,46 @@ export default async function ResultPage({ params }: Props) {
     <main className="min-h-screen flex flex-col" style={{ background: "var(--background)" }}>
       {/* Header */}
       <header
-        className="flex items-center justify-between px-5 py-4 border-b"
-        style={{ borderColor: "var(--border)" }}
+        className="sticky top-0 z-50 flex items-center justify-between px-5 py-4 border-b backdrop-blur-xl"
+        style={{ borderColor: "var(--border)", background: "rgba(13,13,15,0.8)" }}
       >
         <Link
           href="/scan"
-          className="flex items-center gap-1.5 text-sm font-semibold transition-colors"
-          style={{ color: "var(--muted)" }}
+          className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
+          style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--muted)" }}
         >
-          ← Back
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
         </Link>
         <div className="flex items-center gap-2">
-          <span className="text-xl">🧱</span>
-          <span className="text-base font-black tracking-tight" style={{ color: "var(--foreground)" }}>
+          <div
+            className="w-6 h-6 rounded-md flex items-center justify-center"
+            style={{ background: "var(--accent)" }}
+          >
+            <span className="font-bold text-[10px]" style={{ color: "var(--accent-fg)" }}>B</span>
+          </div>
+          <span className="text-sm font-bold tracking-tight" style={{ color: "var(--foreground)" }}>
             BrickVal
           </span>
         </div>
-        <div className="w-16" />
+        <div className="w-9" />
       </header>
 
       {/* Content — no outer padding so hero image goes full-bleed */}
-      <div className="flex-1 flex flex-col w-full max-w-sm mx-auto">
+      <div className="flex-1 flex flex-col w-full max-w-md mx-auto">
         <PriceReveal set={set} pricing={pricing} setNumber={cleanedSetNumber} />
 
         {/* Scan another CTA */}
-        <div className="px-4 pb-8">
+        <div className="px-5 pb-8">
           <Link
             href="/scan"
-            className="block w-full text-center font-bold py-3.5 px-6 rounded-2xl transition-all active:scale-[0.98]"
-            style={{
-              background: "var(--surface)",
-              color: "var(--foreground)",
-              border: "2px solid var(--border)",
-            }}
+            className="flex items-center justify-center gap-2 w-full text-center font-bold py-3.5 px-6 rounded-2xl transition-all active:scale-[0.98] glow-accent-sm"
+            style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
           >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+            </svg>
             Scan another set
           </Link>
         </div>

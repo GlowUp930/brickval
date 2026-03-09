@@ -21,36 +21,32 @@ export function ManualEntry() {
 
   return (
     <form onSubmit={handleSubmit} className="w-full flex flex-col gap-3">
-      <label htmlFor="set-number" className="text-sm font-semibold" style={{ color: "var(--muted)" }}>
-        Set number
-      </label>
-      <div className="flex gap-2">
-        <input
-          id="set-number"
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          placeholder="e.g. 75192"
-          value={value}
-          onChange={(e) => { setValue(e.target.value.replace(/[^0-9]/g, "")); setError(null); }}
-          maxLength={8}
-          className="flex-1 rounded-xl px-4 py-3 text-lg focus:outline-none transition-colors"
-          style={{
-            background: "var(--surface)",
-            color: "var(--foreground)",
-            border: "2px solid var(--border)",
-          }}
-          onFocus={(e) => e.target.style.borderColor = "var(--accent)"}
-          onBlur={(e) => e.target.style.borderColor = "var(--border)"}
-        />
-        <button
-          type="submit"
-          disabled={value.trim().length < 4}
-          className="font-bold px-6 py-3 rounded-xl transition-all active:scale-95 disabled:opacity-40"
-          style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "2px solid var(--border)" }}
-        >
-          Go
-        </button>
+      <div className="flex gap-3">
+      <input
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        placeholder="e.g. 42151"
+        value={value}
+        onChange={(e) => { setValue(e.target.value.replace(/[^0-9]/g, "")); setError(null); }}
+        maxLength={8}
+        className="flex-1 px-4 py-3 rounded-xl text-sm font-medium focus:outline-none transition-all"
+        style={{
+          background: "var(--surface)",
+          color: "var(--foreground)",
+          border: "1px solid var(--border)",
+        }}
+        onFocus={(e) => { e.target.style.borderColor = "var(--accent)"; e.target.style.boxShadow = "0 0 0 2px rgba(245,197,24,0.15)"; }}
+        onBlur={(e) => { e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }}
+      />
+      <button
+        type="submit"
+        disabled={value.trim().length < 4}
+        className="px-6 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+        style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+      >
+        Look up
+      </button>
       </div>
       {error && <p className="text-sm" style={{ color: "var(--red)" }}>{error}</p>}
     </form>

@@ -79,21 +79,6 @@ function computePriceDelta(sales: EbaySale[]): { delta: number; pct: number } | 
   return { delta: newAvg - oldAvg, pct: ((newAvg - oldAvg) / oldAvg) * 100 };
 }
 
-// ── Retirement pill ──────────────────────────────────────────────────────────
-function RetirementPill({ set }: { set: BricksetSet }) {
-  const status = getRetirementStatus(set);
-  if (status === "unknown") return null;
-  const styles = status === "retired"
-    ? { bg: "rgba(239,68,68,0.10)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.25)", label: "Retired" }
-    : { bg: "rgba(34,197,94,0.10)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)", label: "Available" };
-  return (
-    <span className="self-start text-xs font-semibold px-3 py-1 rounded-full"
-      style={{ background: styles.bg, color: styles.color, border: styles.border }}>
-      {styles.label}
-    </span>
-  );
-}
-
 // ── Sparkline ────────────────────────────────────────────────────────────────
 function PriceSparkline({ sales, dataSource }: { sales: EbaySale[]; dataSource: "sold" | "listing" }) {
   if (sales.length < 2) return null;
@@ -248,7 +233,6 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
     ? pricing.bricklink_stock_new_avg_usd  !== null
     : pricing.bricklink_stock_used_avg_usd !== null);
   const heroFromEbaySold = !heroFromBLSold && !heroFromBLStock && pricing.data_source === "sold";
-  const heroIsSoldData   = heroFromBLSold || heroFromEbaySold;
 
   // Average shown in section header
   const activeAvg = tab === "new"
@@ -298,21 +282,29 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
     <div className="w-full flex flex-col">
 
       {/* ── 1. Hero image ── */}
-      <div className="relative w-full overflow-hidden" style={{ height: 240 }}>
+      <div className="relative w-full overflow-hidden" style={{ height: 260 }}>
+        {imageUrl && (
+          <>
+            {/* Blurred background */}
+            <div
+              className="absolute inset-0 scale-150 blur-3xl opacity-20"
+              style={{ backgroundImage: `url(${imageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }}
+            />
+          </>
+        )}
         {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt={set?.name ?? `LEGO Set ${setNum ?? ""}`}
-            className="w-full h-full object-contain"
-            style={{ background: "var(--surface)" }}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
+          <div className="relative flex items-center justify-center py-8 px-6 h-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imageUrl} alt={set?.name ?? `LEGO Set ${setNum ?? ""}`}
+              className="max-h-56 object-contain drop-shadow-2xl"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          </div>
         ) : (
           <div className="w-full h-full flex items-center justify-center" style={{ background: "var(--surface)" }}>
             <span className="text-6xl">🧱</span>
           </div>
         )}
-        <div className="absolute inset-x-0 bottom-0 h-28 pointer-events-none"
-          style={{ background: "linear-gradient(to bottom, transparent, var(--background))" }} />
         {set?.theme && (
           <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
             style={{ background: "var(--accent)", color: "#000" }}>
@@ -322,65 +314,90 @@ export function PriceReveal({ set, pricing, setNumber }: Props) {
       </div>
 
       {/* ── 2. Identity block ── */}
-      <div className="px-4 pt-1 pb-5 flex flex-col gap-1.5">
-        <h1 className="text-[30px] font-black leading-tight" style={{ color: "var(--foreground)" }}>
-          {set?.name ?? (setNumber ? `Set #${setNumber}` : "LEGO Set")}
+      <div className="px-5 pt-2 pb-5 text-center">
+        <h1 className="text-xl font-bold leading-tight" style={{ color: "var(--foreground)" }}>
+          🧱 {set?.name ?? (setNumber ? `Set #${setNumber}` : "LEGO Set")}
         </h1>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
+        <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
           {[set?.number && `#${set.number}`, set?.pieces && `${set.pieces.toLocaleString()} pcs`, set?.year && String(set.year)]
             .filter(Boolean).join(" · ")}
+          {set && (() => {
+            const status = getRetirementStatus(set);
+            if (status === "unknown") return null;
+            const isRetired = status === "retired";
+            return (
+              <span className="ml-2 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                style={{
+                  background: isRetired ? "rgba(239,68,68,0.10)" : "rgba(34,197,94,0.10)",
+                  color: isRetired ? "#ef4444" : "#22c55e",
+                }}>
+                {isRetired ? "Retired" : "Available"}
+              </span>
+            );
+          })()}
         </p>
-        {set && <RetirementPill set={set} />}
       </div>
 
       {/* ── 3. Hero price card ── */}
-      <div className="mx-4 mb-5 rounded-2xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--muted)" }}>
-          {heroLabel}
-        </p>
-        <p className="text-[64px] font-black leading-none tabular-nums" style={{ color: "var(--accent)" }}
-          aria-label={heroUsd !== null ? usdFormatter.format(heroUsd) : "N/A"}>
-          {heroUsd !== null ? usdFormatter.format(animated) : "N/A"}
-        </p>
-
-        {priceDelta !== null && (
-          <div className="flex items-center gap-2 mt-3">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold"
-              style={{
-                background: priceDelta.delta >= 0 ? "rgba(34,197,94,0.18)" : "rgba(239,68,68,0.18)",
-                color: priceDelta.delta >= 0 ? "#22c55e" : "#ef4444",
-                border: `1px solid ${priceDelta.delta >= 0 ? "rgba(34,197,94,0.30)" : "rgba(239,68,68,0.30)"}`,
-              }}>
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
-                style={{ transform: priceDelta.delta >= 0 ? "rotate(0deg)" : "rotate(180deg)" }}>
-                <path d="M1 7 L5 2 L9 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              {priceDelta.delta >= 0 ? "+" : ""}{usdFormatter.format(Math.abs(priceDelta.delta))}
-              {" "}({priceDelta.pct >= 0 ? "+" : ""}{priceDelta.pct.toFixed(1)}%)
-            </span>
-            <span className="text-xs" style={{ color: "var(--muted)" }}>in the last 30 days</span>
+      <div className="mx-5 mb-5 rounded-3xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+        {/* Condition tabs */}
+        {hasNew && hasUsed && (
+          <div className="flex" style={{ borderBottom: "1px solid var(--border)" }}>
+            {(["new", "used"] as const).map((t) => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`flex-1 py-3 text-xs font-bold uppercase tracking-widest transition-all ${
+                  tab === t ? "" : ""
+                }`}
+                style={{
+                  background: tab === t ? "rgba(245,197,24,0.08)" : "transparent",
+                  color: tab === t ? "var(--accent)" : "var(--muted)",
+                  borderBottom: tab === t ? "2px solid var(--accent)" : "2px solid transparent",
+                }}>
+                {t === "new" ? "New / Sealed" : "Used"}
+              </button>
+            ))}
           </div>
         )}
 
-        {pricing.rrp_usd && (
-          <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
-            RRP: ~{usdFormatter.format(pricing.rrp_usd)}
+        {/* Price display */}
+        <div className="relative p-6 pb-4 text-center"
+          style={{ background: "linear-gradient(to bottom, rgba(245,197,24,0.04), transparent)" }}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>
+            {heroLabel}
           </p>
-        )}
-      </div>
-
-      {/* ── 4. New / Used toggle ── */}
-      {hasNew && hasUsed && (
-        <div className="mx-4 mb-4 flex rounded-xl p-1 gap-1" style={{ background: "var(--surface-2)" }}>
-          {(["new", "used"] as const).map((t) => (
-            <button key={t} onClick={() => setTab(t)}
-              className="flex-1 py-2 rounded-lg text-sm font-bold transition-all"
-              style={{ background: tab === t ? "var(--accent)" : "transparent", color: tab === t ? "#000" : "var(--muted)" }}>
-              {t === "new" ? "New / Sealed" : "Used"}
-            </button>
-          ))}
+          <p className="text-5xl font-bold leading-none tabular-nums" style={{ color: "var(--foreground)" }}
+            aria-label={heroUsd !== null ? usdFormatter.format(heroUsd) : "N/A"}>
+            {heroUsd !== null ? usdFormatter.format(animated) : "N/A"}
+          </p>
+          <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>USD median price</p>
         </div>
-      )}
+
+        {/* Trend + RRP row */}
+        <div className="px-6 pb-5 flex flex-col gap-3" style={{ borderTop: "1px solid var(--border)" }}>
+          <div className="pt-4 flex items-center justify-center gap-3">
+            {priceDelta !== null && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold"
+                style={{
+                  background: priceDelta.delta >= 0 ? "rgba(34,197,94,0.18)" : "rgba(239,68,68,0.18)",
+                  color: priceDelta.delta >= 0 ? "#22c55e" : "#ef4444",
+                  border: `1px solid ${priceDelta.delta >= 0 ? "rgba(34,197,94,0.30)" : "rgba(239,68,68,0.30)"}`,
+                }}>
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+                  style={{ transform: priceDelta.delta >= 0 ? "rotate(0deg)" : "rotate(180deg)" }}>
+                  <path d="M1 7 L5 2 L9 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {priceDelta.delta >= 0 ? "+" : ""}{usdFormatter.format(Math.abs(priceDelta.delta))}
+                {" "}({priceDelta.pct >= 0 ? "+" : ""}{priceDelta.pct.toFixed(1)}%)
+              </span>
+            )}
+            {pricing.rrp_usd && (
+              <span className="text-xs" style={{ color: "var(--muted)" }}>
+                RRP: ~{usdFormatter.format(pricing.rrp_usd)}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* ── 5. Data source banner ── */}
       {hasBrickLink && (

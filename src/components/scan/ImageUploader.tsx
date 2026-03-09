@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Camera, Upload } from "lucide-react";
 
 const MAX_PIXELS = 1_150_000;
 
@@ -41,6 +42,7 @@ export function ImageUploader({ onManualEntry }: Props) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
   const router = useRouter();
 
   async function handleFile(file: File) {
@@ -72,33 +74,79 @@ export function ImageUploader({ onManualEntry }: Props) {
     e.target.value = "";
   }
 
-  return (
-    <div className="flex flex-col gap-3 w-full">
-      <button
-        onClick={() => cameraInputRef.current?.click()}
-        disabled={isLoading}
-        className="w-full font-black py-4 px-6 rounded-2xl text-lg transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
-        style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
-      >
-        {isLoading ? (
-          <>
-            <svg className="animate-spin w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            Scanning…
-          </>
-        ) : <>📷 Take Photo</>}
-      </button>
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
+  }
 
-      <button
-        onClick={() => fileInputRef.current?.click()}
-        disabled={isLoading}
-        className="w-full font-semibold py-4 px-6 rounded-2xl text-lg border-2 transition-all active:scale-[0.98] disabled:opacity-50"
-        style={{ background: "transparent", color: "var(--foreground)", borderColor: "var(--border)" }}
+  return (
+    <div className="flex flex-col gap-4 w-full">
+      {/* Drop zone */}
+      <div
+        className={`w-full rounded-2xl p-6 flex flex-col items-center gap-4 transition-all cursor-pointer ${
+          dragActive ? "glow-accent-sm" : ""
+        }`}
+        style={{
+          background: "var(--surface-2)",
+          border: dragActive ? "1px solid var(--accent)" : "1px solid var(--border)",
+        }}
+        onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+        onDragLeave={() => setDragActive(false)}
+        onDrop={handleDrop}
+        onClick={() => !isLoading && fileInputRef.current?.click()}
       >
-        Upload Photo
-      </button>
+        <div
+          className="w-20 h-20 rounded-2xl flex items-center justify-center"
+          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+        >
+          <Camera className="w-8 h-8" style={{ color: "var(--muted)" }} />
+        </div>
+        <div className="text-center">
+          <p className="font-semibold" style={{ color: "var(--foreground)" }}>
+            Upload a photo
+          </p>
+          <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
+            Drag & drop or tap to take a photo
+          </p>
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex gap-3">
+        <button
+          onClick={() => cameraInputRef.current?.click()}
+          disabled={isLoading}
+          className="flex-1 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+          style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+        >
+          {isLoading ? (
+            <>
+              <svg className="animate-spin w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Scanning…
+            </>
+          ) : (
+            <>
+              <Camera className="w-4 h-4" />
+              Take Photo
+            </>
+          )}
+        </button>
+
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isLoading}
+          className="flex-1 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+          style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}
+        >
+          <Upload className="w-4 h-4" />
+          Choose file
+        </button>
+      </div>
 
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleChange} />
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />
