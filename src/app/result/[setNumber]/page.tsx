@@ -51,19 +51,17 @@ export default async function ResultPage({ params }: Props) {
   };
 
   // Fetch eBay + BrickLink in parallel — track whether failures occurred
-  let ebayFailed = false;
-  let brickLinkFailed = false;
-
-  const [ebayData, brickLinkData] = await Promise.all([
-    getEbayMarketData(cleanedSetNumber, ratesWithFallbacks).catch(() => {
-      ebayFailed = true;
-      return { new_sales: [] as import("@/types/market").EbaySale[], used_sales: [] as import("@/types/market").EbaySale[], data_source: "listing" as const };
-    }),
-    getBrickLinkMarketData(cleanedSetNumber).catch(() => {
-      brickLinkFailed = true;
-      return null;
-    }),
+  const [ebayResult, brickLinkResult] = await Promise.allSettled([
+    getEbayMarketData(cleanedSetNumber, ratesWithFallbacks),
+    getBrickLinkMarketData(cleanedSetNumber),
   ]);
+
+  const ebayFailed = ebayResult.status === "rejected";
+  const brickLinkFailed = brickLinkResult.status === "rejected";
+  const ebayData = ebayFailed
+    ? { new_sales: [] as import("@/types/market").EbaySale[], used_sales: [] as import("@/types/market").EbaySale[], data_source: "listing" as const }
+    : ebayResult.value;
+  const brickLinkData = brickLinkFailed ? null : brickLinkResult.value;
 
   // Check for ANY data — including stock listings (not just sold)
   const hasBrickLink = brickLinkData?.sold_new || brickLinkData?.sold_used
