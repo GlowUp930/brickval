@@ -6,15 +6,20 @@ This is a Lean MVP. Build only what is in the plan. No extras, no abstractions.
 
 ## Tech Stack
 - Next.js 16 (App Router), React 19, Tailwind CSS v4, TypeScript 5
-- Claude Sonnet Vision API for set identification
+- Claude Sonnet Vision API for LEGO set identification (box photo → set number)
+- Brickognize API for minifigure identification (photo → BrickLink fig ID, ≥0.70 confidence)
 - eBay API for secondary market pricing (ACTIVE — Browse API + Marketplace Insights)
 - BrickLink API for secondary market pricing (ACTIVE — OAuth 1.0, primary price source)
-- Brickset API v3 for set metadata, RRP, retirement status
+  - Also used for minifig pricing (used sold + stock)
 - Frankfurter API for EUR→USD rates (24hr Supabase cache)
 - Clerk for auth, Stripe for payments ($12.99 USD/month)
 - Supabase: 2 tables only — users and api_cache
 - Vercel Analytics (enabled in root layout)
 - framer-motion (installed, available for animation)
+
+**NOTE: Brickset API has been REMOVED from the active flow.** Set metadata (name, image,
+year_released, is_obsolete) now comes from the BrickLink item API. RRP is no longer fetched
+— `rrp_usd` is always `null` and `gain_pct` is always `null` in ComputedPricing.
 
 ## Codebase Structure
 
@@ -22,44 +27,56 @@ This is a Lean MVP. Build only what is in the plan. No extras, no abstractions.
 src/
 ├── app/
 │   ├── api/
-│   │   ├── identify/route.ts     # POST — Claude Vision set number extraction
-│   │   ├── lookup/route.ts       # POST — market data aggregation (BrickLink + eBay + Brickset)
-│   │   └── webhook/route.ts      # POST — Stripe subscription lifecycle events
-│   ├── result/[setNumber]/
-│   │   ├── page.tsx              # Server component — fetch + compute + render result
-│   │   └── error.tsx             # Error boundary for result page
-│   ├── scan/page.tsx             # Scanner UI (image upload + manual entry)
-│   ├── upgrade/page.tsx          # Pro upgrade / paywall page
-│   ├── layout.tsx                # Root layout with ClerkProvider + Vercel Analytics
-│   ├── globals.css               # Tailwind v4 @theme + CSS variables (dark mode)
-│   └── page.tsx                  # Homepage — renders <Hero />
-├── components/
-│   ├── home/Hero.tsx             # Landing page hero (CTA → /scan)
+│   │   ├── identify/route.ts          # POST — Claude Vision (set) or Brickognize (minifig)
+│   │   │                              #   ?mode=set (default) | ?mode=minifig
+│   │   ├── lookup/route.ts            # POST — market data aggregation
+│   │   │                              #   body: { setNumber, mode: "set" | "minifig" }
+│   │   └── webhook/route.ts           # POST — Stripe subscription lifecycle events
 │   ├── result/
-│   │   ├── PriceReveal.tsx       # Animated price count-up + market data display
-│   │   └── SetDetails.tsx        # Set info (name, theme, pieces, retirement badge)
+│   │   ├── [setNumber]/
+│   │   │   ├── page.tsx               # Server component — set result page
+│   │   │   └── error.tsx              # Error boundary
+│   │   └── minifig/[figNumber]/
+│   │       └── page.tsx               # Client component — minifig result page (animated)
+│   ├── scan/page.tsx                  # Scanner UI — Set/Minifig mode toggle + upload
+│   ├── upgrade/
+│   │   ├── page.tsx                   # Pro upgrade / paywall page
+│   │   └── actions.ts                 # Server actions for upgrade flow
+│   ├── layout.tsx                     # Root layout with ClerkProvider + Vercel Analytics
+│   ├── globals.css                    # Tailwind v4 @theme + CSS variables (dark mode)
+│   └── page.tsx                       # Homepage — renders <Hero />
+├── components/
+│   ├── home/
+│   │   ├── Hero.tsx                   # Landing page hero (CTA → /scan)
+│   │   └── PricingSection.tsx         # Pricing UI (hidden — Phase 2)
+│   ├── result/
+│   │   └── PriceReveal.tsx            # Animated price count-up + market data display
 │   └── scan/
-│       ├── ImageUploader.tsx     # Camera + file upload, canvas compression to <1.15MP
-│       └── ManualEntry.tsx       # Set number text input → /result/[setNumber]
+│       ├── ImageUploader.tsx          # Camera + file upload, canvas compression to <1.15MP
+│       │                              #   accepts mode prop: "set" | "minifig"
+│       └── ManualEntry.tsx            # Set number text input → /result/[setNumber]
 ├── lib/
-│   ├── anthropic.ts              # Claude SDK lazy singleton (BRICKVAL_ANTHROPIC_API_KEY)
-│   ├── bricklink.ts              # BrickLink OAuth 1.0 — price guide (sold + stock) + item info
-│   ├── brickset.ts               # Brickset API v3 — set metadata, RRP, retirement status
-│   ├── cache.ts                  # Supabase api_cache read/write helpers (TTL-based)
-│   ├── ebay.ts                   # eBay OAuth 2.0 — Browse API + Marketplace Insights
-│   ├── frankfurter.ts            # Frankfurter currency API (EUR/USD/AUD/GBP)
-│   ├── rapidapi.ts               # RapidAPI bulk LEGO dataset (legacy — not active in flow)
-│   ├── scan-gate.ts              # Paywall/scan-limit logic (STUBBED — returns allowed: true)
-│   ├── stripe.ts                 # Stripe SDK lazy singleton
-│   └── supabase.ts               # Supabase service-role client lazy singleton
+│   ├── anthropic.ts                   # Claude SDK lazy singleton (BRICKVAL_ANTHROPIC_API_KEY)
+│   ├── bricklink.ts                   # BrickLink OAuth 1.0 — set + minifig price guides
+│   │                                  #   getBrickLinkMarketData(setNumber)
+│   │                                  #   getMinifigMarketData(figNo)
+│   ├── cache.ts                       # Supabase api_cache getCached() / setCached()
+│   ├── compute-pricing.ts             # Shared set pricing logic (used by SSR result page)
+│   ├── ebay.ts                        # eBay OAuth 2.0 — Browse API + Marketplace Insights
+│   ├── frankfurter.ts                 # Frankfurter currency API (EUR/USD/AUD/GBP)
+│   ├── rapidapi.ts                    # RapidAPI bulk LEGO dataset (legacy — not active)
+│   ├── scan-gate.ts                   # Paywall/scan-limit logic (STUBBED — returns allowed: true)
+│   ├── stripe.ts                      # Stripe SDK lazy singleton
+│   └── supabase.ts                    # Supabase service-role client lazy singleton
 ├── types/
-│   ├── brickset.ts               # BricksetSet interface + getRetirementStatus()
-│   ├── market.ts                 # ComputedPricing, EbaySale, BrickLinkDetail, EbayMarketData
-│   └── scan.ts                   # IdentifyResponse, LookupResponse, LookupErrorResponse
-└── proxy.ts                      # (internal — not used directly by routes)
+│   ├── market.ts                      # All market types: ComputedPricing, SetInfo,
+│   │                                  #   MinifigInfo, MinifigPricing, EbaySale,
+│   │                                  #   BrickLinkDetail, EbayMarketData
+│   └── scan.ts                        # IdentifyResponse, LookupResponse, LookupErrorResponse
+└── proxy.ts                           # (internal — not used directly by routes)
 
 supabase/
-└── schema.sql                    # Table definitions + increment_scan() RPC
+└── schema.sql                         # Table definitions + increment_scan() RPC
 ```
 
 ## Required Environment Variables
@@ -151,8 +168,9 @@ Show "RRP: ~$X" with tilde to indicate approximation.
 rrp_aud = rrp_usd * usd_to_aud (from Frankfurter, 24hr cache)
 
 ## ComputedPricing key fields (src/types/market.ts)
-- `rrp_usd`, `rrp_aud` — from Brickset US retailPrice
-- `gain_pct` — based on BrickLink sold new avg vs RRP
+- `rrp_usd` — always null (Brickset removed; kept for future RRP table)
+- `gain_pct` — always null (no RRP → can't compute gain)
+- `exchange_rate_stale` — true if Frankfurter was down and fallback rates were used
 - `ebay_new_avg_usd`, `ebay_used_avg_usd` — eBay averages (USD)
 - `bricklink_new_avg_usd/min/max/qty` — BrickLink sold new (last 6 months)
 - `bricklink_used_avg_usd/min/max/qty` — BrickLink sold used
@@ -161,7 +179,19 @@ rrp_aud = rrp_usd * usd_to_aud (from Frankfurter, 24hr cache)
 - `bricklink_sold_new/used_details[]` — individual transaction rows
 - `bricklink_stock_new/used_details[]` — individual listing rows
 - `data_source: "sold" | "listing"` — "sold" = real transactions, "listing" = asking prices
-- `exchange_rate_stale` — true if Frankfurter was down and fallback rates were used
+
+## SetInfo key fields (src/types/market.ts)
+Replaces Brickset — sourced from BrickLink item API:
+- `name`, `image_url`, `year_released`, `is_obsolete`, `set_number`
+
+## MinifigInfo + MinifigPricing (src/types/market.ts)
+MinifigInfo (from BrickLink MINIFIG item API):
+- `name`, `image_url`, `fig_number`, `year_released`
+
+MinifigPricing (used condition only — minifigs priced loose):
+- `used_sold_avg_usd/min/max/qty` — BrickLink sold used (last 6 months)
+- `used_stock_avg_usd/qty` — BrickLink active used listings
+- `sold_details[]`, `stock_details[]` — individual rows (BrickLinkDetail)
 
 ## Database Schema (supabase/schema.sql)
 
@@ -190,8 +220,8 @@ The `increment_scan(p_user_id, p_free_limit)` RPC:
 - If user row does not exist → returns `{ allowed: false, scans_used: 0, is_pro: false }`
 
 ## Cache Key Conventions
-- Brickset set data: `brickset:{setNumber}` — 24hr TTL
-- BrickLink market data: `bricklink:{setNumber}` — 24hr TTL
+- BrickLink set market data: `bricklink:{setNumber}` — 24hr TTL
+- BrickLink minifig market data: `bricklink-minifig:{figNo}` — 24hr TTL
 - eBay market data: `ebay:{setNumber}` — 24hr TTL
 - Exchange rates: `fx:EUR-USD-AUD` — 24hr TTL
 - RapidAPI bulk dataset: `rapidapi:all` — 7-day TTL (legacy)
@@ -199,17 +229,17 @@ The `increment_scan(p_user_id, p_free_limit)` RPC:
 ## Error states to handle
 - Claude Vision can't identify the set → "We couldn't find a set number in this photo.
   Try a clearer shot of the box or enter the set number manually."
+- Brickognize can't identify minifig (score < 0.70 or no result) → set_number: null →
+  same error flow as set mode — offer retry.
 - Set not found → "We don't have data for this set number.
   Double-check the number and try again."
-- No market pricing available → Show set info + USD RRP but note
+- Minifig not found → "We don't have data for this minifigure. Check the ID and try again."
+- No market pricing available → Show set info but note
   "Market price not available for this set."
-- Non-LEGO photo uploaded → "This doesn't look like a LEGO set.
-  Try uploading a photo of a LEGO box."
 - API rate limit / failure → "Something went wrong. Please try again in a moment."
-- Exchange rate fetch fails → Show EUR price with note
-  "Currency conversion unavailable — showing EUR price."
-- Retirement status unknown → Show "Status unknown" badge, not "Active."
-- Paywall hit → 402 response: "You've used all 5 free scans. Upgrade to BrickVal Pro."
+- Exchange rate fetch fails → uses hardcoded fallback rates, exchange_rate_stale = true.
+- Paywall hit → 402 response → redirect to /upgrade.
+  "You've used all 5 free scans. Upgrade to BrickVal Pro to continue."
 
 ## The wow moment
 The price reveal animation is the core emotional beat of the product.
@@ -227,13 +257,20 @@ This is not optional — it is in the success criteria.
   EPN tracking + sandbox toggle + retry logic implemented.
   Set EBAY_SANDBOX=true to demo in sandbox for eBay review.
 - BrickLink API: ✅ ACTIVE — OAuth 1.0 connected.
-  Price guide (sold last 6 months + active stock) for new + used conditions in USD.
-  Item info (name, pieces, image) also fetched. Cache key: `bricklink:{setNumber}`, 24hr TTL.
+  Sets: price guide (sold last 6 months + active stock), new + used, USD.
+  Minifigs: price guide (sold + stock), used condition only, USD.
+  Item info (name, image, year_released, is_obsolete) for both sets and minifigs.
+  Cache keys: `bricklink:{setNumber}` and `bricklink-minifig:{figNo}`, 24hr TTL.
   Handles "-1" set number suffix variant automatically.
   Falls back gracefully if API is down — eBay data still works independently.
-- Brickset API: ✅ ACTIVE — provides RRP (US/UK/CA/DE), theme, pieces, minifigs,
-  retirement status, set images. Appends "-1" suffix for Brickset format.
-  Free tier limit: 100 requests/day.
+- Brickognize API: ✅ ACTIVE — visual minifig recognition.
+  POST multipart image → returns ranked items with confidence scores.
+  Threshold: ≥ 0.70. Returns BrickLink MINIFIG ID (e.g. "sw0001").
+  No API key required (public endpoint). No caching — image inference only.
+  Endpoint: https://api.brickognize.com/predict/
+- Brickset API: ❌ REMOVED from active flow. File `src/lib/brickset.ts` deleted.
+  Set metadata now sourced entirely from BrickLink item API.
+  RRP is not currently fetched — `rrp_usd` and `gain_pct` are always null.
 - Frankfurter API: ✅ ACTIVE — ECB-sourced rates, 24hr cache, hardcoded fallbacks.
 - RapidAPI bulk dataset: LEGACY — integrated but not active in current lookup flow.
   Replaced by eBay + BrickLink as primary data sources.
@@ -242,8 +279,8 @@ This is not optional — it is in the success criteria.
 
 ## Key File Locations
 - `src/lib/ebay.ts` — eBay OAuth 2.0, Browse API + Marketplace Insights, multi-marketplace
-- `src/lib/bricklink.ts` — BrickLink OAuth 1.0, price guide (sold + stock), item info
-- `src/lib/brickset.ts` — Brickset API v3, set metadata + RRP + retirement
+- `src/lib/bricklink.ts` — BrickLink OAuth 1.0, set + minifig price guides + item info
+- `src/lib/compute-pricing.ts` — shared set pricing logic (computePricing())
 - `src/lib/frankfurter.ts` — Frankfurter currency conversion (EUR/USD/AUD/GBP)
 - `src/lib/scan-gate.ts` — paywall/scan limit logic (stubbed, returns allowed: true)
 - `src/lib/cache.ts` — Supabase api_cache getCached() / setCached() helpers
@@ -251,12 +288,13 @@ This is not optional — it is in the success criteria.
 - `src/lib/supabase.ts` — Supabase service-role client singleton (lazy, server-only)
 - `src/lib/stripe.ts` — Stripe SDK singleton (lazy, server-only)
 - `src/lib/rapidapi.ts` — RapidAPI bulk dataset (legacy, not in active flow)
-- `src/app/api/identify/route.ts` — Claude Vision POST endpoint
-- `src/app/api/lookup/route.ts` — market data aggregation POST endpoint
+- `src/app/api/identify/route.ts` — identify endpoint (?mode=set uses Claude Vision, ?mode=minifig uses Brickognize)
+- `src/app/api/lookup/route.ts` — market data aggregation (set + minifig modes)
 - `src/app/api/webhook/route.ts` — Stripe webhook POST endpoint
-- `src/app/result/[setNumber]/page.tsx` — server-rendered result page
-- `src/components/result/PriceReveal.tsx` — price reveal animation
-- `src/types/market.ts` — ComputedPricing and all market data types
+- `src/app/result/[setNumber]/page.tsx` — server-rendered set result page
+- `src/app/result/minifig/[figNumber]/page.tsx` — client-rendered minifig result page
+- `src/components/result/PriceReveal.tsx` — price reveal animation (sets)
+- `src/types/market.ts` — all types: ComputedPricing, SetInfo, MinifigInfo, MinifigPricing, etc.
 - `supabase/schema.sql` — table definitions + increment_scan() RPC
 - `CLAUDE.md` — this file, at `/home/user/brickval/CLAUDE.md`
 
