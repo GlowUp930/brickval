@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 export default function ScanPage() {
   const [showManual, setShowManual] = useState(false);
   const [mode, setMode] = useState<"set" | "minifig">("set");
+  const authEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
   return (
     <main className="min-h-screen flex flex-col" style={{ background: "var(--background)" }}>
@@ -28,89 +29,123 @@ export default function ScanPage() {
           </div>
           <span className="font-bold tracking-tight" style={{ color: "var(--foreground)" }}>BrickVal</span>
         </Link>
-        <UserButton />
+        {authEnabled ? (
+          <UserButton />
+        ) : (
+          <span className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--muted)" }}>
+            Preview
+          </span>
+        )}
       </header>
 
       {/* Content */}
       <div className="flex-1 flex flex-col items-center justify-center px-5 py-10 max-w-sm mx-auto w-full gap-8">
-
-        {/* Title */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center"
-        >
-          <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--foreground)" }}>
-            {mode === "set" ? "Scan a Set" : "Scan a Minifig"}
-          </h1>
-          <p className="text-sm" style={{ color: "var(--muted)" }}>
-            {mode === "set"
-              ? "Take a photo of the box or enter the set number manually."
-              : "Take a photo of your LEGO minifigure to get its current market value."}
-          </p>
-        </motion.div>
-
-        {/* Mode toggle */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="flex w-full rounded-xl p-1 gap-1"
-          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-        >
-          <button
-            onClick={() => setMode("set")}
-            className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
-            style={mode === "set"
-              ? { background: "var(--accent)", color: "var(--accent-fg)" }
-              : { color: "var(--muted)" }}
+        {!authEnabled ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full rounded-3xl p-6 flex flex-col gap-4 text-center"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
           >
-            Set
-          </button>
-          <button
-            onClick={() => setMode("minifig")}
-            className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
-            style={mode === "minifig"
-              ? { background: "var(--accent)", color: "var(--accent-fg)" }
-              : { color: "var(--muted)" }}
-          >
-            Minifigure
-          </button>
-        </motion.div>
-
-        {/* Upload card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="w-full rounded-3xl p-6 flex flex-col gap-4"
-          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-        >
-          <ImageUploader mode={mode} onManualEntry={() => setShowManual(true)} />
-        </motion.div>
-
-        {/* Divider + Manual entry — only shown for set mode */}
-        {mode === "set" && (
+            <h1 className="text-2xl font-bold" style={{ color: "var(--foreground)" }}>
+              Preview build
+            </h1>
+            <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
+              Sign-in keys are not configured in this environment yet, so scanning is disabled here.
+            </p>
+            <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
+              Add the Clerk preview environment variables to test the full scan flow.
+            </p>
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center rounded-2xl px-5 py-3 font-semibold"
+              style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+            >
+              Back to home
+            </Link>
+          </motion.div>
+        ) : (
           <>
-            <div className="flex items-center gap-4 w-full">
-              <hr className="flex-1" style={{ borderColor: "var(--border)" }} />
-              <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>or enter manually</span>
-              <hr className="flex-1" style={{ borderColor: "var(--border)" }} />
-            </div>
 
+            {/* Title */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="w-full"
+              className="text-center"
             >
-              <ManualEntry />
+              <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--foreground)" }}>
+                {mode === "set" ? "Scan a Set" : "Scan a Minifig"}
+              </h1>
+              <p className="text-sm" style={{ color: "var(--muted)" }}>
+                {mode === "set"
+                  ? "Take a photo of the box or enter the set number manually."
+                  : "Take a photo of your LEGO minifigure to get its current market value."}
+              </p>
             </motion.div>
 
-            {showManual && (
-              <p className="text-xs text-center -mt-4" style={{ color: "var(--muted)" }}>
-                Can&apos;t find a number in the photo? Type it above.
-              </p>
+            {/* Mode toggle */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+              className="flex w-full rounded-xl p-1 gap-1"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            >
+              <button
+                onClick={() => setMode("set")}
+                className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
+                style={mode === "set"
+                  ? { background: "var(--accent)", color: "var(--accent-fg)" }
+                  : { color: "var(--muted)" }}
+              >
+                Set
+              </button>
+              <button
+                onClick={() => setMode("minifig")}
+                className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
+                style={mode === "minifig"
+                  ? { background: "var(--accent)", color: "var(--accent-fg)" }
+                  : { color: "var(--muted)" }}
+              >
+                Minifigure
+              </button>
+            </motion.div>
+
+            {/* Upload card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="w-full rounded-3xl p-6 flex flex-col gap-4"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            >
+              <ImageUploader mode={mode} onManualEntry={() => setShowManual(true)} />
+            </motion.div>
+
+            {/* Divider + Manual entry — only shown for set mode */}
+            {mode === "set" && (
+              <>
+                <div className="flex items-center gap-4 w-full">
+                  <hr className="flex-1" style={{ borderColor: "var(--border)" }} />
+                  <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>or enter manually</span>
+                  <hr className="flex-1" style={{ borderColor: "var(--border)" }} />
+                </div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="w-full"
+                >
+                  <ManualEntry />
+                </motion.div>
+
+                {showManual && (
+                  <p className="text-xs text-center -mt-4" style={{ color: "var(--muted)" }}>
+                    Can&apos;t find a number in the photo? Type it above.
+                  </p>
+                )}
+              </>
             )}
           </>
         )}

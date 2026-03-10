@@ -12,6 +12,7 @@ export interface ScanGateResult {
 export async function checkAndIncrementScan(
   _userId: string
 ): Promise<ScanGateResult> {
+  void _userId;
   return {
     allowed: true,
     scansUsed: 0,
