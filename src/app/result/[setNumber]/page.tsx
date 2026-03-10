@@ -69,10 +69,14 @@ export default async function ResultPage({ params }: Props) {
   const hasEbay = ebayData.new_sales.length > 0 || ebayData.used_sales.length > 0;
 
   if (!hasEbay && !hasBrickLink) {
-    if (ebayFailed && brickLinkFailed) {
+    if (ebayFailed || brickLinkFailed) {
       return (
         <ErrorScreen
-          message="Something went wrong. Please try again in a moment."
+          message={ebayFailed && brickLinkFailed
+            ? "Both BrickLink and eBay are temporarily unavailable. Please try again in a moment."
+            : ebayFailed
+              ? "eBay is temporarily unavailable and BrickLink returned no data for this set. Please try again in a moment."
+              : "BrickLink is temporarily unavailable and eBay returned no data for this set. Please try again in a moment."}
           backLabel="Try again"
           backHref="/scan"
         />
@@ -127,7 +131,7 @@ export default async function ResultPage({ params }: Props) {
 
       {/* Content — no outer padding so hero image goes full-bleed */}
       <div className="flex-1 flex flex-col w-full max-w-md mx-auto">
-        <PriceReveal setInfo={setInfo} pricing={pricing} setNumber={cleanedSetNumber} />
+        <PriceReveal setInfo={setInfo} pricing={pricing} setNumber={cleanedSetNumber} ebayFailed={ebayFailed} brickLinkFailed={brickLinkFailed} />
 
         {/* Scan another CTA */}
         <div className="px-5 pb-8">

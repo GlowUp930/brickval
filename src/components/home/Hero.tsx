@@ -119,7 +119,7 @@ export function Hero() {
             </div>
             <div className="w-px h-4" style={{ background: "var(--border)" }} />
             <div className="flex items-center gap-1.5 text-sm">
-              <span>🇦🇺</span><span>AUD prices</span>
+              <span>💵</span><span>USD prices</span>
             </div>
           </motion.div>
         </div>

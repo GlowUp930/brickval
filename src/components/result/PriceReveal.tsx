@@ -7,6 +7,8 @@ interface Props {
   setInfo: SetInfo | null;
   pricing: ComputedPricing;
   setNumber?: string;
+  ebayFailed?: boolean;
+  brickLinkFailed?: boolean;
 }
 
 // ── Animated count-up hook ──────────────────────────────────────────────────
@@ -198,7 +200,7 @@ function BrickLinkRow({ detail, type, isLast }: { detail: BrickLinkDetail; type:
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
+export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLinkFailed }: Props) {
   // ── Determine data availability ──────────────────────────────────────────
   const hasBLSoldNew  = pricing.bricklink_sold_new_details.length > 0;
   const hasBLSoldUsed = pricing.bricklink_sold_used_details.length > 0;
@@ -365,7 +367,6 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
             aria-label={heroUsd !== null ? usdFormatter.format(heroUsd) : "N/A"}>
             {heroUsd !== null ? usdFormatter.format(animated) : "N/A"}
           </p>
-          <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>USD median price</p>
         </div>
 
         {/* Trend + RRP row */}
@@ -395,27 +396,40 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
         </div>
       </div>
 
-      {/* ── 5. Data source banner ── */}
-      {hasBrickLink && (
+      {/* ── 5. Data source + outage banners ── */}
+      {(brickLinkFailed || ebayFailed) && (
+        <div className="mx-4 mb-4 rounded-xl px-4 py-3 flex items-start gap-2.5"
+          style={{ background: "rgba(245,197,24,0.08)", border: "1px solid rgba(245,197,24,0.20)" }}>
+          <span className="text-sm leading-none mt-0.5">⚠️</span>
+          <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
+            {brickLinkFailed && ebayFailed
+              ? "Both BrickLink and eBay are temporarily unavailable. Prices may be incomplete — try again in a moment."
+              : brickLinkFailed
+                ? "BrickLink is temporarily unavailable. Showing eBay data only. Try again in a moment for full results."
+                : "eBay is temporarily unavailable. Showing BrickLink data only. Try again in a moment for full results."}
+          </p>
+        </div>
+      )}
+      {hasBrickLink && !brickLinkFailed && (
         <div className="mx-4 mb-4 rounded-xl px-4 py-3 flex items-start gap-2.5"
           style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.20)" }}>
           <span className="text-sm leading-none mt-0.5">✅</span>
           <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
             {heroFromBLSold
-              ? `Sold price from BrickLink (last 6 months).${heroSaleQty ? ` Based on ${heroSaleQty} sales.` : ""}`
+              ? `Avg sold price from BrickLink (last 6 months).${heroSaleQty ? ` Based on ${heroSaleQty} sales.` : ""}`
               : heroFromBLStock
-                ? `No recent BrickLink sold data. Showing current BrickLink listing prices.${heroSaleQty ? ` ${heroSaleQty} listings.` : ""}`
-                : "BrickLink data available below for reference."}
-            {" "}eBay listings shown below.
+                ? `No recent BrickLink sold data — showing current listing prices.${heroSaleQty ? ` ${heroSaleQty} active listings.` : ""}`
+                : "BrickLink data shown below."}
+            {!ebayFailed && " eBay comparison below."}
           </p>
         </div>
       )}
-      {!hasBrickLink && pricing.data_source !== "sold" && (
+      {!hasBrickLink && !brickLinkFailed && pricing.data_source !== "sold" && (
         <div className="mx-4 mb-4 rounded-xl px-4 py-3 flex items-start gap-2.5"
           style={{ background: "rgba(245,197,24,0.08)", border: "1px solid rgba(245,197,24,0.20)" }}>
           <span className="text-sm leading-none mt-0.5">⚠️</span>
           <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
-            No recent sold transactions found. Prices shown are current eBay listing prices.
+            No recent sold transactions found. Prices shown are current eBay listing prices (asking prices, not confirmed sales).
           </p>
         </div>
       )}
@@ -476,29 +490,39 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
         </>
       )}
 
-      {/* ── 8. eBay listings — shown when NO BrickLink data at all ── */}
-      {!hasBLSold && !hasBLStock && (
-        <>
-          <div className="mx-4 mb-2 flex justify-between items-center px-0.5">
-            <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
-              {pricing.data_source === "sold" ? "Recent Transactions" : "Active eBay Listings"}
-            </span>
-            {activeAvg !== null && (
-              <span className="text-[10px] font-semibold" style={{ color: "var(--muted)" }}>
-                avg {usdFormatter.format(activeAvg)}
+      {/* ── 8. eBay listings — always shown when eBay data exists for this tab ── */}
+      {(tab === "new" ? pricing.ebay_new_sales : pricing.ebay_used_sales).length > 0 && (() => {
+        const ebaySales = tab === "new" ? pricing.ebay_new_sales : pricing.ebay_used_sales;
+        const ebayAvg = tab === "new" ? pricing.ebay_new_avg_usd : pricing.ebay_used_avg_usd;
+        const ebayLabel = hasBrickLink
+          ? (pricing.data_source === "sold" ? "eBay Sold (comparison)" : "eBay Listings (comparison)")
+          : (pricing.data_source === "sold" ? "Recent Transactions" : "Active eBay Listings");
+        return (
+          <>
+            <div className="mx-4 mb-2 flex justify-between items-center px-0.5">
+              <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
+                {ebayLabel}
               </span>
+              {ebayAvg !== null && (
+                <span className="text-[10px] font-semibold" style={{ color: "var(--muted)" }}>
+                  avg {usdFormatter.format(ebayAvg)}
+                </span>
+              )}
+            </div>
+
+            {/* Only show sparkline if no BrickLink data (avoids double chart) */}
+            {!hasBrickLink && (
+              <PriceSparkline sales={ebaySales} dataSource={pricing.data_source} />
             )}
-          </div>
 
-          <PriceSparkline sales={activeTransactions} dataSource={pricing.data_source} />
-
-          <div className="mx-4 mb-5 rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-            {activeTransactions.map((sale, i) => (
-              <EbaySaleRow key={i} sale={sale} dotColor={dotColor} isLast={i === activeTransactions.length - 1} />
-            ))}
-          </div>
-        </>
-      )}
+            <div className="mx-4 mb-5 rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+              {ebaySales.map((sale, i) => (
+                <EbaySaleRow key={i} sale={sale} dotColor={dotColor} isLast={i === ebaySales.length - 1} />
+              ))}
+            </div>
+          </>
+        );
+      })()}
 
       {/* ── 9. Attribution ── */}
       <p className="text-center text-[11px] pb-8 pt-1 px-4" style={{ color: "var(--muted)" }}>
