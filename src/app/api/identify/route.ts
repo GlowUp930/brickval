@@ -21,7 +21,7 @@ function isAcceptedMediaType(type: string): type is AcceptedMediaType {
 
 // ── Minifig identification via Brickognize ────────────────────────────────────
 
-// Return the top Brickognize candidate (minifig only), no aggressive score cutoff
+// Return the top Brickognize candidate; prefer minifig types but fallback to any
 async function identifyMinifig(imageFile: File): Promise<string | null> {
   const brickognizeForm = new FormData();
   brickognizeForm.append("query_image", imageFile, "image.jpg");
@@ -50,14 +50,14 @@ async function identifyMinifig(imageFile: File): Promise<string | null> {
     return null;
   }
 
-  // Keep only minifig candidates (Brickognize may return type "fig" or "minifig").
-  const candidates = (data.items ?? [])
-    .filter((i) => {
-      const t = (i.type ?? "").toLowerCase();
-      return t === "fig" || t === "minifig";
-    })
-    .map((i) => ({ id: i.id ?? i.external_id, score: i.score ?? 0 }))
-    .filter((c) => Boolean(c.id))
+  const items = (data.items ?? []).map((i) => ({
+    id: i.id ?? i.external_id,
+    type: (i.type ?? "").toLowerCase(),
+    score: i.score ?? 0,
+  })).filter((c) => Boolean(c.id));
+
+  const preferred = items.filter((c) => c.type === "fig" || c.type === "minifig");
+  const candidates = (preferred.length ? preferred : items)
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
   const candidateId = candidates[0]?.id;
