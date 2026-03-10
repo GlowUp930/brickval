@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BrickVal Cost Model</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0f0f0f; color: #e0e0e0; margin: 0; padding: 24px; }
+  h1 { font-size: 1.2rem; color: #fff; margin-bottom: 4px; }
+  p { font-size: 0.8rem; color: #888; margin-bottom: 24px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 20px; }
+  .card h2 { font-size: 0.85rem; color: #aaa; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 0.05em; }
+  .assumptions { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+  .assumptions h2 { font-size: 0.85rem; color: #aaa; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.05em; }
+  .row { display: flex; gap: 32px; flex-wrap: wrap; }
+  .col { flex: 1; min-width: 200px; }
+  .col h3 { font-size: 0.75rem; color: #666; margin: 0 0 8px 0; }
+  .item { display: flex; justify-content: space-between; font-size: 0.78rem; padding: 3px 0; border-bottom: 1px solid #222; }
+  .item span:last-child { color: #f0c060; }
+  canvas { max-height: 260px; }
+</style>
+</head>
+<body>
+
+<h1>BrickVal — Unit Economics & Cost Model</h1>
+<p>All figures in USD/month. Based on Claude Haiku pricing + typical infra costs.</p>
+
+<div class="assumptions">
+  <h2>Assumptions</h2>
+  <div class="row">
+    <div class="col">
+      <h3>Fixed Costs / Month</h3>
+      <div class="item"><span>Vercel Pro</span><span>$20</span></div>
+      <div class="item"><span>Supabase Pro</span><span>$25</span></div>
+      <div class="item"><span>Clerk (free ≤10k MAU)</span><span>$0</span></div>
+      <div class="item"><span>Misc / domain</span><span>$5</span></div>
+      <div class="item" style="font-weight:600"><span>Total fixed</span><span>$50</span></div>
+    </div>
+    <div class="col">
+      <h3>Variable Cost / User / Month</h3>
+      <div class="item"><span>Claude Haiku (50 scans)</span><span>$0.07</span></div>
+      <div class="item"><span>Supabase bandwidth</span><span>$0.01</span></div>
+      <div class="item"><span>Stripe fee (2.9%+$0.30)</span><span>$0.59</span></div>
+      <div class="item" style="font-weight:600"><span>Total variable</span><span>$0.67</span></div>
+    </div>
+    <div class="col">
+      <h3>Revenue / User / Month</h3>
+      <div class="item"><span>Monthly plan</span><span>$9.99</span></div>
+      <div class="item"><span>Annual plan / 12</span><span>$6.67</span></div>
+      <div class="item"><span>Early bird lifetime / 24mo</span><span>$1.25</span></div>
+      <div class="item" style="font-weight:600"><span>Contribution margin</span><span>$9.32</span></div>
+    </div>
+    <div class="col">
+      <h3>Break-even</h3>
+      <div class="item"><span>Users to cover fixed costs</span><span>~6</span></div>
+      <div class="item"><span>Monthly revenue at 100 users</span><span>$999</span></div>
+      <div class="item"><span>Monthly profit at 100 users</span><span>~$882</span></div>
+      <div class="item"><span>Margin at 100 users</span><span>~88%</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>Monthly Costs vs Revenue</h2>
+    <canvas id="costRevenue"></canvas>
+  </div>
+  <div class="card">
+    <h2>Monthly Profit</h2>
+    <canvas id="profit"></canvas>
+  </div>
+  <div class="card">
+    <h2>Cost per User Breakdown (at scale)</h2>
+    <canvas id="breakdown"></canvas>
+  </div>
+  <div class="card">
+    <h2>Gross Margin %</h2>
+    <canvas id="margin"></canvas>
+  </div>
+</div>
+
+<script>
+const users = [0,5,10,20,30,50,75,100,150,200,300,500,750,1000];
+
+const FIXED = 50;
+const VAR = 0.67;       // per user (excl Stripe, included below)
+const PRICE = 9.99;
+
+function totalCost(u) { return FIXED + u * VAR; }
+function totalRevenue(u) { return u * PRICE; }
+function profit(u) { return totalRevenue(u) - totalCost(u); }
+function margin(u) { return u === 0 ? 0 : Math.max(0, profit(u) / totalRevenue(u) * 100); }
+
+const gridColor = '#2a2a2a';
+const tickColor = '#666';
+const defaults = {
+  responsive: true,
+  plugins: { legend: { labels: { color: '#aaa', font: { size: 11 } } } },
+  scales: {
+    x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 } } },
+    y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 } } }
+  }
+};
+
+// Chart 1: Cost vs Revenue
+new Chart(document.getElementById('costRevenue'), {
+  type: 'line',
+  data: {
+    labels: users,
+    datasets: [
+      {
+        label: 'Revenue ($)',
+        data: users.map(totalRevenue),
+        borderColor: '#4ade80',
+        backgroundColor: 'rgba(74,222,128,0.08)',
+        tension: 0.3, fill: true, pointRadius: 3
+      },
+      {
+        label: 'Total Cost ($)',
+        data: users.map(totalCost),
+        borderColor: '#f87171',
+        backgroundColor: 'rgba(248,113,113,0.08)',
+        tension: 0.3, fill: true, pointRadius: 3
+      }
+    ]
+  },
+  options: {
+    ...defaults,
+    scales: {
+      ...defaults.scales,
+      x: { ...defaults.scales.x, title: { display: true, text: 'Paying Users', color: '#666', font: { size: 10 } } },
+      y: { ...defaults.scales.y, title: { display: true, text: '$/month', color: '#666', font: { size: 10 } },
+           ticks: { ...defaults.scales.y.ticks, callback: v => '$' + v } }
+    }
+  }
+});
+
+// Chart 2: Profit
+new Chart(document.getElementById('profit'), {
+  type: 'bar',
+  data: {
+    labels: users,
+    datasets: [{
+      label: 'Monthly Profit ($)',
+      data: users.map(profit),
+      backgroundColor: users.map(u => profit(u) >= 0 ? 'rgba(74,222,128,0.7)' : 'rgba(248,113,113,0.7)'),
+      borderRadius: 4
+    }]
+  },
+  options: {
+    ...defaults,
+    scales: {
+      ...defaults.scales,
+      x: { ...defaults.scales.x, title: { display: true, text: 'Paying Users', color: '#666', font: { size: 10 } } },
+      y: { ...defaults.scales.y, title: { display: true, text: '$/month', color: '#666', font: { size: 10 } },
+           ticks: { ...defaults.scales.y.ticks, callback: v => '$' + v } }
+    }
+  }
+});
+
+// Chart 3: Cost breakdown stacked at selected user counts
+const sampleUsers = [10, 25, 50, 100, 200, 500];
+new Chart(document.getElementById('breakdown'), {
+  type: 'bar',
+  data: {
+    labels: sampleUsers.map(u => u + ' users'),
+    datasets: [
+      {
+        label: 'Fixed ($50)',
+        data: sampleUsers.map(() => 50),
+        backgroundColor: 'rgba(99,102,241,0.8)',
+        borderRadius: 4
+      },
+      {
+        label: 'Claude Haiku',
+        data: sampleUsers.map(u => +(u * 0.07).toFixed(2)),
+        backgroundColor: 'rgba(251,146,60,0.8)',
+        borderRadius: 4
+      },
+      {
+        label: 'Stripe Fees',
+        data: sampleUsers.map(u => +(u * 0.59).toFixed(2)),
+        backgroundColor: 'rgba(248,113,113,0.8)',
+        borderRadius: 4
+      }
+    ]
+  },
+  options: {
+    ...defaults,
+    plugins: { ...defaults.plugins, legend: { ...defaults.plugins.legend } },
+    scales: {
+      ...defaults.scales,
+      x: { stacked: true, ...defaults.scales.x },
+      y: { stacked: true, ...defaults.scales.y,
+           ticks: { ...defaults.scales.y.ticks, callback: v => '$' + v } }
+    }
+  }
+});
+
+// Chart 4: Margin %
+new Chart(document.getElementById('margin'), {
+  type: 'line',
+  data: {
+    labels: users.filter(u => u > 0),
+    datasets: [{
+      label: 'Gross Margin %',
+      data: users.filter(u => u > 0).map(margin),
+      borderColor: '#a78bfa',
+      backgroundColor: 'rgba(167,139,250,0.1)',
+      tension: 0.4, fill: true, pointRadius: 3
+    }]
+  },
+  options: {
+    ...defaults,
+    scales: {
+      ...defaults.scales,
+      x: { ...defaults.scales.x, title: { display: true, text: 'Paying Users', color: '#666', font: { size: 10 } } },
+      y: { ...defaults.scales.y, min: 0, max: 100,
+           title: { display: true, text: 'Margin %', color: '#666', font: { size: 10 } },
+           ticks: { ...defaults.scales.y.ticks, callback: v => v + '%' } }
+    }
+  }
+});
+</script>
+</body>
+</html>
