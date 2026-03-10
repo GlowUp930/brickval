@@ -17,7 +17,13 @@ function useCountUp(target: number, durationMs = 900): number {
 
   useEffect(() => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    if (target === 0) { setValue(0); prevTarget.current = 0; return; }
+    if (target === 0) {
+      prevTarget.current = 0;
+      rafRef.current = requestAnimationFrame(() => {
+        setValue(0);
+      });
+      return () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current); };
+    }
     const start = performance.now();
     const from = prevTarget.current;
     function tick(now: number) {

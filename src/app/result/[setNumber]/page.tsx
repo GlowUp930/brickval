@@ -50,20 +50,23 @@ export default async function ResultPage({ params }: Props) {
     stale: rates?.stale ?? true,
   };
 
-  // Fetch eBay + BrickLink in parallel — track whether failures occurred
-  let ebayFailed = false;
-  let brickLinkFailed = false;
-
-  const [ebayData, brickLinkData] = await Promise.all([
-    getEbayMarketData(cleanedSetNumber, ratesWithFallbacks).catch(() => {
-      ebayFailed = true;
-      return { new_sales: [] as import("@/types/market").EbaySale[], used_sales: [] as import("@/types/market").EbaySale[], data_source: "listing" as const };
-    }),
-    getBrickLinkMarketData(cleanedSetNumber).catch(() => {
-      brickLinkFailed = true;
-      return null;
-    }),
+  const [ebayResult, brickLinkResult] = await Promise.all([
+    getEbayMarketData(cleanedSetNumber, ratesWithFallbacks)
+      .then((data) => ({ data, failed: false }))
+      .catch(() => ({
+        data: {
+          new_sales: [] as import("@/types/market").EbaySale[],
+          used_sales: [] as import("@/types/market").EbaySale[],
+          data_source: "listing" as const,
+        },
+        failed: true,
+      })),
+    getBrickLinkMarketData(cleanedSetNumber)
+      .then((data) => ({ data, failed: false }))
+      .catch(() => ({ data: null, failed: true })),
   ]);
+  const { data: ebayData, failed: ebayFailed } = ebayResult;
+  const { data: brickLinkData, failed: brickLinkFailed } = brickLinkResult;
 
   // Check for ANY data — including stock listings (not just sold)
   const hasBrickLink = brickLinkData?.sold_new || brickLinkData?.sold_used

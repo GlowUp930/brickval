@@ -42,22 +42,25 @@ async function identifyMinifig(imageFile: File): Promise<string | null> {
     return null;
   }
 
-  let data: { items?: { external_id?: string; score?: number; name?: string }[] };
+  let data: { items?: { id?: string; external_id?: string; score?: number; name?: string; type?: string }[] };
   try {
     data = await res.json();
   } catch {
     return null;
   }
 
-  // Filter to high-confidence results (>= 0.70) and take the top hit
+  // Brickognize returns `id` for the recognized BrickLink minifig code.
+  // Keep `external_id` as a fallback in case their response shape changes.
   const topItem = (data.items ?? [])
+    .filter((i) => i.type === "fig")
     .filter((i) => (i.score ?? 0) >= 0.70)
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0];
 
-  if (!topItem?.external_id) return null;
+  const candidateId = topItem?.id ?? topItem?.external_id;
+  if (!candidateId) return null;
 
   // Validate: BrickLink minifig IDs are alphanumeric, 4–12 chars (e.g. "sw0001", "col001")
-  const figId = topItem.external_id.trim();
+  const figId = candidateId.trim();
   if (figId.length < 3 || figId.length > 16 || !/^[a-z0-9]+$/i.test(figId)) return null;
 
   return figId;
