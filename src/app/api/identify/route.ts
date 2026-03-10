@@ -63,8 +63,8 @@ async function identifyMinifig(imageFile: File): Promise<string | null> {
   const candidateId = candidates[0]?.id;
   if (!candidateId) return null;
 
-  // Validate: BrickLink minifig IDs are alphanumeric, 4–12 chars (e.g. "sw0001", "col001")
-  const figId = candidateId.trim();
+  // Normalize: BrickLink IDs are lowercase alphanumerics (e.g. "sw0001", "col001")
+  const figId = candidateId.trim().toLowerCase();
   if (figId.length < 3 || figId.length > 16 || !/^[a-z0-9]+$/i.test(figId)) return null;
 
   return figId;
