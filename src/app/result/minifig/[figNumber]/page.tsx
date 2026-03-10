@@ -51,6 +51,7 @@ export default function MinifigResultPage() {
   const [pricing, setPricing] = useState<MinifigPricing | null>(null);
   const [error, setError] = useState<string | null>(figNumber ? null : "Invalid figure number.");
   const [loading, setLoading] = useState<boolean>(!!figNumber);
+  const [tab, setTab] = useState<"used" | "new">("used");
 
   useEffect(() => {
     if (!figNumber) return;
@@ -137,21 +138,43 @@ export default function MinifigResultPage() {
               style={{ background: "var(--surface-2)" }}
             />
           )}
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>
-              Minifigure · {figInfo?.fig_number ?? figNumber}
-            </p>
-            <h1 className="text-xl font-bold leading-tight" style={{ color: "var(--foreground)" }}>
-              {figInfo?.name ?? figNumber}
-            </h1>
-            {figInfo?.year_released && (
-              <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Released {figInfo.year_released}</p>
-            )}
-          </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>
+            Minifigure · {figInfo?.fig_number ?? figNumber}
+          </p>
+          <h1 className="text-xl font-bold leading-tight" style={{ color: "var(--foreground)" }}>
+            {figInfo?.name ?? figNumber}
+          </h1>
+          {figInfo?.year_released && (
+            <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Released {figInfo.year_released}</p>
+          )}
+        </div>
+      </div>
+
+        {/* Condition tabs */}
+        <div className="flex w-full gap-2">
+          <button
+            onClick={() => setTab("used")}
+            className="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
+            style={tab === "used"
+              ? { background: "var(--accent)", color: "var(--accent-fg)" }
+              : { background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
+          >
+            Used
+          </button>
+          <button
+            onClick={() => setTab("new")}
+            className="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
+            style={tab === "new"
+              ? { background: "var(--accent)", color: "var(--accent-fg)" }
+              : { background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
+          >
+            New
+          </button>
         </div>
 
         {/* Hero price */}
-        {heroPrice > 0 && (
+        {tab === "used" && heroPrice > 0 && (
           <div className="rounded-3xl p-6 flex flex-col items-center gap-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
             <p className="text-xs font-medium uppercase tracking-widest" style={{ color: "var(--muted)" }}>
               {pricing?.used_sold_avg_usd ? "Avg sold price (used)" : "Avg asking price (used)"}
@@ -165,8 +188,19 @@ export default function MinifigResultPage() {
           </div>
         )}
 
+        {tab === "new" && (
+          <div className="rounded-3xl p-6 flex flex-col items-center gap-2 text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+            <p className="text-xs font-medium uppercase tracking-widest" style={{ color: "var(--muted)" }}>
+              New / Sealed pricing
+            </p>
+            <p className="text-sm" style={{ color: "var(--muted)" }}>
+              BrickLink doesn’t publish new/sealed pricing for most minifigs. We’ll surface it here as soon as a reliable source is available.
+            </p>
+          </div>
+        )}
+
         {/* Price breakdown */}
-        {pricing && (
+        {tab === "used" && pricing && (
           <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
             <div className="px-4 py-3 border-b" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
               <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>BrickLink Used Pricing</p>
@@ -201,10 +235,10 @@ export default function MinifigResultPage() {
         )}
 
         {/* Recent sold transactions */}
-        {pricing && pricing.sold_details.length > 0 && (
+        {tab === "used" && pricing && pricing.sold_details.length > 0 && (
           <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
             <div className="px-4 py-3 border-b" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Recent BrickLink Sales</p>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Recent BrickLink Sales (Used)</p>
             </div>
             <div className="divide-y" style={{ background: "var(--surface-2)" }}>
               {pricing.sold_details.slice(0, 8).map((d: BrickLinkDetail, i: number) => (
