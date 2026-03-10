@@ -48,8 +48,16 @@ export interface MinifigPricing {
   used_sold_qty: number | null;
   used_stock_avg_usd: number | null;
   used_stock_qty: number | null;
+  new_sold_avg_usd: number | null;
+  new_sold_min_usd: number | null;
+  new_sold_max_usd: number | null;
+  new_sold_qty: number | null;
+  new_stock_avg_usd: number | null;
+  new_stock_qty: number | null;
   sold_details: BrickLinkDetail[];
   stock_details: BrickLinkDetail[];
+  sold_new_details: BrickLinkDetail[];
+  stock_new_details: BrickLinkDetail[];
 }
 
 export interface ComputedPricing {
