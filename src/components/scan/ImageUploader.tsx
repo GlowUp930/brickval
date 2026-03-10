@@ -37,6 +37,7 @@ async function compressImage(file: File, maxPixels: number): Promise<Blob> {
 }
 
 interface Props { mode: "set" | "minifig"; onManualEntry: () => void; }
+type Candidate = { id: string; score?: number };
 
 export function ImageUploader({ mode, onManualEntry }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -44,11 +45,12 @@ export function ImageUploader({ mode, onManualEntry }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [candidateOptions, setCandidateOptions] = useState<Candidate[]>([]);
   const router = useRouter();
 
-async function handleFile(file: File) {
-  setIsLoading(true); setError(null);
-  let compressed: Blob;
+  async function handleFile(file: File) {
+    setIsLoading(true); setError(null); setCandidateOptions([]);
+    let compressed: Blob;
   try {
     const targetPixels = mode === "minifig" ? MAX_PIXELS_MINIFIG : MAX_PIXELS_SET;
     compressed = await compressImage(file, targetPixels);
@@ -58,7 +60,7 @@ async function handleFile(file: File) {
     const formData = new FormData();
     formData.append("image", compressed, "scan.jpg");
 
-    let data: { set_number: string | null; error?: string; message?: string };
+    let data: { set_number: string | null; candidates?: Candidate[]; error?: string; message?: string };
     try {
       const res = await fetch(`/api/identify?mode=${mode}`, { method: "POST", body: formData });
       data = await res.json();
@@ -66,7 +68,9 @@ async function handleFile(file: File) {
     } catch { setError("Network error. Check your connection and try again."); setIsLoading(false); return; }
 
     if (!data.set_number) {
-      if (mode === "minifig") {
+      if (mode === "minifig" && (data.candidates?.length ?? 0) > 0) {
+        setCandidateOptions((data.candidates ?? []).slice(0, 3));
+      } else if (mode === "minifig") {
         setError("Couldn't identify this minifigure. Try a clearer photo with a plain background.");
       } else {
         setError("Couldn't find a set number. Try a clearer photo or enter it below.");
@@ -92,6 +96,11 @@ async function handleFile(file: File) {
     setDragActive(false);
     const file = e.dataTransfer.files?.[0];
     if (file) handleFile(file);
+  }
+
+  function handleCandidateSelect(id: string) {
+    setIsLoading(false);
+    router.push(`/result/minifig/${id}`);
   }
 
   return (
@@ -167,6 +176,26 @@ async function handleFile(file: File) {
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />
 
       {error && <p className="text-sm text-center mt-1" style={{ color: "var(--red)" }}>{error}</p>}
+
+      {candidateOptions.length > 0 && (
+        <div className="mt-2 w-full rounded-xl p-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+          <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>
+            We found possible matches. Pick the right minifigure:
+          </p>
+          <div className="flex flex-col gap-2">
+            {candidateOptions.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => handleCandidateSelect(c.id)}
+                className="w-full text-sm font-semibold px-4 py-2 rounded-lg text-left transition-all active:scale-[0.98]"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+              >
+                {c.id} {typeof c.score === "number" ? `(score ${(c.score * 100).toFixed(0)}%)` : ""}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

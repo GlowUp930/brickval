@@ -14,6 +14,7 @@ const ACCEPTED_MEDIA_TYPES = [
 ] as const;
 
 type AcceptedMediaType = (typeof ACCEPTED_MEDIA_TYPES)[number];
+type Candidate = { id: string; score: number };
 
 function isAcceptedMediaType(type: string): type is AcceptedMediaType {
   return ACCEPTED_MEDIA_TYPES.includes(type as AcceptedMediaType);
@@ -22,7 +23,7 @@ function isAcceptedMediaType(type: string): type is AcceptedMediaType {
 // ── Minifig identification via Brickognize ────────────────────────────────────
 
 // Return the top Brickognize candidate; prefer minifig types but fallback to any
-async function identifyMinifig(imageFile: File): Promise<string | null> {
+async function identifyMinifig(imageFile: File): Promise<{ best: string | null; candidates: Candidate[] }> {
   const brickognizeForm = new FormData();
   brickognizeForm.append("query_image", imageFile, "image.jpg");
 
@@ -35,19 +36,19 @@ async function identifyMinifig(imageFile: File): Promise<string | null> {
     });
   } catch (err) {
     console.error("[identify] Brickognize network error:", err);
-    return null;
+    return { best: null, candidates: [] };
   }
 
   if (!res.ok) {
     console.warn("[identify] Brickognize returned", res.status);
-    return null;
+    return { best: null, candidates: [] };
   }
 
   let data: { items?: { id?: string; external_id?: string; score?: number; name?: string; type?: string }[] };
   try {
     data = await res.json();
   } catch {
-    return null;
+    return { best: null, candidates: [] };
   }
 
   const items = (data.items ?? []).map((i) => ({
@@ -58,16 +59,11 @@ async function identifyMinifig(imageFile: File): Promise<string | null> {
 
   const preferred = items.filter((c) => c.type === "fig" || c.type === "minifig");
   const candidates = (preferred.length ? preferred : items)
-    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+    .map((c) => ({ id: c.id!.trim().toLowerCase(), score: c.score }))
+    .filter((c) => c.id.length >= 3 && c.id.length <= 16 && /^[a-z0-9]+$/.test(c.id));
 
-  const candidateId = candidates[0]?.id;
-  if (!candidateId) return null;
-
-  // Normalize: BrickLink IDs are lowercase alphanumerics (e.g. "sw0001", "col001")
-  const figId = candidateId.trim().toLowerCase();
-  if (figId.length < 3 || figId.length > 16 || !/^[a-z0-9]+$/i.test(figId)) return null;
-
-  return figId;
+  return { best: candidates[0]?.id ?? null, candidates };
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
@@ -110,11 +106,11 @@ export async function POST(req: NextRequest) {
 
   // ── Minifig mode: use Brickognize ─────────────────────────────────────────
   if (mode === "minifig") {
-    const figId = await identifyMinifig(imageFile);
-    if (!figId) {
-      return NextResponse.json({ set_number: null });
+    const { best, candidates } = await identifyMinifig(imageFile);
+    if (!best) {
+      return NextResponse.json({ set_number: null, candidates });
     }
-    return NextResponse.json({ set_number: figId });
+    return NextResponse.json({ set_number: best, candidates });
   }
 
   // ── Set mode: use Claude Vision ───────────────────────────────────────────
