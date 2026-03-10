@@ -316,16 +316,15 @@ async function fetchBrowseListings(
   // Search across major marketplaces for better coverage
   const marketplacesToTry: MarketplaceId[] = ["EBAY_US", "EBAY_AU"];
 
-  const allSales: EbaySale[] = [];
+  // Fetch all marketplaces in parallel
+  const results = await Promise.allSettled(
+    marketplacesToTry.map(async (marketplace) => {
+      const url =
+        `${API_BASE}/buy/browse/v1/item_summary/search` +
+        `?q=${query}` +
+        `&filter=conditionIds%3A%7B${conditionId}%7D%2CbuyingOptions%3A%7BFIXED_PRICE%7D` +
+        `&limit=5`;
 
-  for (const marketplace of marketplacesToTry) {
-    const url =
-      `${API_BASE}/buy/browse/v1/item_summary/search` +
-      `?q=${query}` +
-      `&filter=conditionIds%3A%7B${conditionId}%7D%2CbuyingOptions%3A%7BFIXED_PRICE%7D` +
-      `&limit=5`;
-
-    try {
       const res = await fetchWithRetry(url, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -336,32 +335,28 @@ async function fetchBrowseListings(
         next: { revalidate: 0 },
       } as RequestInit);
 
-      if (!res.ok) continue;
+      if (!res.ok) return [] as EbaySale[];
 
       const json = await res.json();
       const items: Record<string, unknown>[] = json.itemSummaries ?? [];
 
-      for (const item of items) {
+      return items.map((item) => {
         const priceField = item.price as { value: string; currency: string };
-        const rawPrice = parseFloat(priceField.value);
-        const priceUsd = convertToUsd(rawPrice, priceField.currency, rates);
-
-        allSales.push({
+        return {
           title: item.title as string,
-          price_usd: priceUsd,
+          price_usd: convertToUsd(parseFloat(priceField.value), priceField.currency, rates),
           sold_date: new Date().toISOString(),
           condition: condition === "new" ? "New / Sealed" : "Used",
           item_url: (item.itemWebUrl as string) ?? "",
           marketplace,
-        });
-      }
+        } as EbaySale;
+      });
+    })
+  );
 
-      // If we got enough from the first marketplace, stop
-      if (allSales.length >= 5) break;
-    } catch {
-      continue;
-    }
-  }
+  const allSales: EbaySale[] = results.flatMap((r) =>
+    r.status === "fulfilled" ? r.value : []
+  );
 
   // Deduplicate by URL and return max 10
   const seen = new Set<string>();

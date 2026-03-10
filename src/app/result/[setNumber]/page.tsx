@@ -37,31 +37,33 @@ export default async function ResultPage({ params }: Props) {
     redirect("/upgrade");
   }
 
-  // Fetch exchange rates first (fast — Supabase-cached)
-  const rates = await getExchangeRates().catch(() => null);
-
-  // Build a rates object with fallbacks for eBay multi-marketplace conversion
-  const ratesWithFallbacks = {
-    eur_to_aud: rates?.eur_to_aud ?? 1.65,
-    usd_to_aud: rates?.usd_to_aud ?? 1.55,
-    gbp_to_usd: rates?.gbp_to_usd ?? 1.27,
-    eur_to_usd: rates?.eur_to_usd ?? 1.08,
-    aud_to_usd: rates?.aud_to_usd ?? 0.645,
-    stale: rates?.stale ?? true,
-  };
-
-  // Fetch eBay + BrickLink in parallel — track whether failures occurred
-  const [ebayResult, brickLinkResult] = await Promise.allSettled([
-    getEbayMarketData(cleanedSetNumber, ratesWithFallbacks),
+  // Fetch exchange rates and BrickLink in parallel — BrickLink returns USD natively
+  const [rates, brickLinkResult] = await Promise.allSettled([
+    getExchangeRates(),
     getBrickLinkMarketData(cleanedSetNumber),
   ]);
 
+  const ratesValue = rates.status === "fulfilled" ? rates.value : null;
+  const ratesWithFallbacks = {
+    eur_to_aud: ratesValue?.eur_to_aud ?? 1.65,
+    usd_to_aud: ratesValue?.usd_to_aud ?? 1.55,
+    gbp_to_usd: ratesValue?.gbp_to_usd ?? 1.27,
+    eur_to_usd: ratesValue?.eur_to_usd ?? 1.08,
+    aud_to_usd: ratesValue?.aud_to_usd ?? 0.645,
+    stale: ratesValue?.stale ?? true,
+  };
+
+  // eBay needs rates for multi-currency conversion, starts after rates resolve
+  const ebayResult = await getEbayMarketData(cleanedSetNumber, ratesWithFallbacks)
+    .then((v) => ({ status: "fulfilled" as const, value: v }))
+    .catch(() => ({ status: "rejected" as const, reason: null }));
+
   const ebayFailed = ebayResult.status === "rejected";
   const brickLinkFailed = brickLinkResult.status === "rejected";
-  const ebayData = ebayFailed
-    ? { new_sales: [] as import("@/types/market").EbaySale[], used_sales: [] as import("@/types/market").EbaySale[], data_source: "listing" as const }
-    : ebayResult.value;
-  const brickLinkData = brickLinkFailed ? null : brickLinkResult.value;
+  const ebayData = ebayResult.status === "fulfilled"
+    ? ebayResult.value
+    : { new_sales: [] as import("@/types/market").EbaySale[], used_sales: [] as import("@/types/market").EbaySale[], data_source: "listing" as const };
+  const brickLinkData = brickLinkResult.status === "fulfilled" ? brickLinkResult.value : null;
 
   // Check for ANY data — including stock listings (not just sold)
   const hasBrickLink = brickLinkData?.sold_new || brickLinkData?.sold_used
@@ -96,7 +98,7 @@ export default async function ResultPage({ params }: Props) {
     ebayData,
     brickLinkData,
     cleanedSetNumber,
-    rates?.stale ?? true
+    ratesValue?.stale ?? true
   );
 
   return (

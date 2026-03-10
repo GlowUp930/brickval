@@ -31,7 +31,8 @@ export async function setCached<T>(
     Date.now() + ttlHours * 60 * 60 * 1000
   ).toISOString();
 
-  await supabase.from("api_cache").delete().lt("expires_at", now);
+  // Fire-and-forget: don't block the write on cleanup
+  supabase.from("api_cache").delete().lt("expires_at", now).then(() => {/* noop */});
 
   await supabase.from("api_cache").upsert({
     cache_key: key,
