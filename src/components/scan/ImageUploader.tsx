@@ -4,9 +4,18 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Upload } from "lucide-react";
 
-const MAX_PIXELS = 1_150_000;
+const MAX_PIXELS_SET = 1_150_000;
+const MAX_PIXELS_MINIFIG = 3_000_000;
 
-async function compressImage(file: File): Promise<Blob> {
+async function compressImage(file: File, mode: "set" | "minifig"): Promise<Blob> {
+  // Minifig mode: if the file is already small enough, send original to preserve detail
+  if (mode === "minifig" && file.size <= 4 * 1024 * 1024) {
+    return file;
+  }
+
+  const maxPixels = mode === "minifig" ? MAX_PIXELS_MINIFIG : MAX_PIXELS_SET;
+  const quality = mode === "minifig" ? 0.92 : 0.85;
+
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -15,8 +24,8 @@ async function compressImage(file: File): Promise<Blob> {
       const { width, height } = img;
       const currentPixels = width * height;
       let targetWidth = width, targetHeight = height;
-      if (currentPixels > MAX_PIXELS) {
-        const ratio = Math.sqrt(MAX_PIXELS / currentPixels);
+      if (currentPixels > maxPixels) {
+        const ratio = Math.sqrt(maxPixels / currentPixels);
         targetWidth = Math.round(width * ratio);
         targetHeight = Math.round(height * ratio);
       }
@@ -27,7 +36,7 @@ async function compressImage(file: File): Promise<Blob> {
       ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
       canvas.toBlob(
         (blob) => blob ? resolve(blob) : reject(new Error("Compression failed")),
-        "image/jpeg", 0.85
+        "image/jpeg", quality
       );
     };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Failed to load image")); };
@@ -48,7 +57,7 @@ export function ImageUploader({ mode, onManualEntry }: Props) {
   async function handleFile(file: File) {
     setIsLoading(true); setError(null);
     let compressed: Blob;
-    try { compressed = await compressImage(file); }
+    try { compressed = await compressImage(file, mode); }
     catch { setError("Could not process this image. Try a different photo."); setIsLoading(false); return; }
 
     const formData = new FormData();

@@ -229,7 +229,7 @@ The `increment_scan(p_user_id, p_free_limit)` RPC:
 ## Error states to handle
 - Claude Vision can't identify the set → "We couldn't find a set number in this photo.
   Try a clearer shot of the box or enter the set number manually."
-- Brickognize can't identify minifig (score < 0.70 or no result) → set_number: null →
+- Brickognize can't identify minifig (score < 0.50 or no result) → set_number: null →
   same error flow as set mode — offer retry.
 - Set not found → "We don't have data for this set number.
   Double-check the number and try again."
@@ -265,7 +265,7 @@ This is not optional — it is in the success criteria.
   Falls back gracefully if API is down — eBay data still works independently.
 - Brickognize API: ✅ ACTIVE — visual minifig recognition.
   POST multipart image → returns ranked items with confidence scores.
-  Threshold: ≥ 0.70. Returns BrickLink MINIFIG ID (e.g. "sw0001").
+  Threshold: ≥ 0.50. Returns BrickLink MINIFIG ID (e.g. "sw0001").
   No API key required (public endpoint). No caching — image inference only.
   Endpoint: https://api.brickognize.com/predict/
 - Brickset API: ❌ REMOVED from active flow. File `src/lib/brickset.ts` deleted.
