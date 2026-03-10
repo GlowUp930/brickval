@@ -21,6 +21,7 @@ function isAcceptedMediaType(type: string): type is AcceptedMediaType {
 
 // ── Minifig identification via Brickognize ────────────────────────────────────
 
+// Return the top Brickognize candidate (minifig only), no aggressive score cutoff
 async function identifyMinifig(imageFile: File): Promise<string | null> {
   const brickognizeForm = new FormData();
   brickognizeForm.append("query_image", imageFile, "image.jpg");
@@ -49,14 +50,17 @@ async function identifyMinifig(imageFile: File): Promise<string | null> {
     return null;
   }
 
-  // Brickognize returns `id` for the recognized BrickLink minifig code.
-  // Keep `external_id` as a fallback in case their response shape changes.
-  const topItem = (data.items ?? [])
-    .filter((i) => i.type === "fig")
-    .filter((i) => (i.score ?? 0) >= 0.70)
-    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0];
+  // Keep only minifig candidates (Brickognize may return type "fig" or "minifig").
+  const candidates = (data.items ?? [])
+    .filter((i) => {
+      const t = (i.type ?? "").toLowerCase();
+      return t === "fig" || t === "minifig";
+    })
+    .map((i) => ({ id: i.id ?? i.external_id, score: i.score ?? 0 }))
+    .filter((c) => Boolean(c.id))
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
-  const candidateId = topItem?.id ?? topItem?.external_id;
+  const candidateId = candidates[0]?.id;
   if (!candidateId) return null;
 
   // Validate: BrickLink minifig IDs are alphanumeric, 4–12 chars (e.g. "sw0001", "col001")

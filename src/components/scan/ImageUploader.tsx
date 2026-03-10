@@ -4,9 +4,10 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Upload } from "lucide-react";
 
-const MAX_PIXELS = 1_150_000;
+const MAX_PIXELS_SET = 1_150_000;          // ~1.1 MP is fine for box OCR
+const MAX_PIXELS_MINIFIG = 3_500_000;      // keep more detail for tiny prints
 
-async function compressImage(file: File): Promise<Blob> {
+async function compressImage(file: File, maxPixels: number): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -15,8 +16,8 @@ async function compressImage(file: File): Promise<Blob> {
       const { width, height } = img;
       const currentPixels = width * height;
       let targetWidth = width, targetHeight = height;
-      if (currentPixels > MAX_PIXELS) {
-        const ratio = Math.sqrt(MAX_PIXELS / currentPixels);
+      if (currentPixels > maxPixels) {
+        const ratio = Math.sqrt(maxPixels / currentPixels);
         targetWidth = Math.round(width * ratio);
         targetHeight = Math.round(height * ratio);
       }
@@ -45,11 +46,14 @@ export function ImageUploader({ mode, onManualEntry }: Props) {
   const [dragActive, setDragActive] = useState(false);
   const router = useRouter();
 
-  async function handleFile(file: File) {
-    setIsLoading(true); setError(null);
-    let compressed: Blob;
-    try { compressed = await compressImage(file); }
-    catch { setError("Could not process this image. Try a different photo."); setIsLoading(false); return; }
+async function handleFile(file: File) {
+  setIsLoading(true); setError(null);
+  let compressed: Blob;
+  try {
+    const targetPixels = mode === "minifig" ? MAX_PIXELS_MINIFIG : MAX_PIXELS_SET;
+    compressed = await compressImage(file, targetPixels);
+  }
+  catch { setError("Could not process this image. Try a different photo."); setIsLoading(false); return; }
 
     const formData = new FormData();
     formData.append("image", compressed, "scan.jpg");
