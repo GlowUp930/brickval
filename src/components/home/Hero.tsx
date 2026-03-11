@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { joinWaitlist } from "@/app/waitlist-action";
+import { joinWaitlist, createLifetimeCheckout } from "@/app/waitlist-action";
 
 const steps = [
   { icon: "📷", title: "Take a photo", desc: "Point your camera at any LEGO box" },
@@ -31,6 +31,7 @@ function StudRow() {
 }
 
 export function Hero() {
+  const [activeTab, setActiveTab] = useState<"notify" | "lifetime">("notify");
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "duplicate" | "error">("idle");
 
@@ -324,90 +325,191 @@ export function Hero() {
                 🧱 Early Access
               </div>
 
-              {/* Headline */}
-              <div className="flex flex-col gap-2">
-                <h2 className="text-3xl font-black tracking-tight" style={{ color: "var(--foreground)" }}>
-                  Be first when Pro lands.
-                </h2>
-                <p className="text-base leading-relaxed" style={{ color: "var(--muted)" }}>
-                  Get notified the moment BrickVal Pro goes live —<br className="hidden sm:block" />
-                  with priority access and early-bird pricing.
-                </p>
+              {/* Tabs */}
+              <div
+                className="flex w-full rounded-xl p-1 gap-1"
+                style={{ background: "var(--surface)" }}
+              >
+                <button
+                  onClick={() => setActiveTab("notify")}
+                  className="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all"
+                  style={{
+                    background: activeTab === "notify" ? "var(--accent)" : "transparent",
+                    color: activeTab === "notify" ? "var(--accent-fg)" : "var(--muted)",
+                  }}
+                >
+                  Notify Me
+                </button>
+                <button
+                  onClick={() => setActiveTab("lifetime")}
+                  className="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all"
+                  style={{
+                    background: activeTab === "lifetime" ? "var(--accent)" : "transparent",
+                    color: activeTab === "lifetime" ? "var(--accent-fg)" : "var(--muted)",
+                  }}
+                >
+                  Lifetime Deal
+                </button>
               </div>
 
-              {/* Form / Status */}
-              <div className="w-full">
-                <AnimatePresence mode="wait">
-                  {status === "success" ? (
-                    <motion.div
-                      key="success"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.4 }}
-                      className="py-4 px-6 rounded-2xl text-center font-bold"
-                      style={{ background: "rgba(34,197,94,0.12)", color: "var(--green)", border: "1px solid rgba(34,197,94,0.3)" }}
+              <AnimatePresence mode="wait">
+                {activeTab === "notify" ? (
+                  <motion.div
+                    key="notify"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.25 }}
+                    className="w-full flex flex-col items-center gap-6"
+                  >
+                    {/* Headline */}
+                    <div className="flex flex-col gap-2">
+                      <h2 className="text-3xl font-black tracking-tight" style={{ color: "var(--foreground)" }}>
+                        Be first when Pro lands.
+                      </h2>
+                      <p className="text-base leading-relaxed" style={{ color: "var(--muted)" }}>
+                        Get notified the moment BrickVal Pro goes live —<br className="hidden sm:block" />
+                        with priority access and early-bird pricing.
+                      </p>
+                    </div>
+
+                    {/* Form / Status */}
+                    <div className="w-full">
+                      <AnimatePresence mode="wait">
+                        {status === "success" ? (
+                          <motion.div
+                            key="success"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.4 }}
+                            className="py-4 px-6 rounded-2xl text-center font-bold"
+                            style={{ background: "rgba(34,197,94,0.12)", color: "var(--green)", border: "1px solid rgba(34,197,94,0.3)" }}
+                          >
+                            You&apos;re locked in! We&apos;ll be in touch. 🎉
+                          </motion.div>
+                        ) : status === "duplicate" ? (
+                          <motion.div
+                            key="duplicate"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.4 }}
+                            className="py-4 px-6 rounded-2xl text-center font-bold"
+                            style={{ background: "rgba(245,197,24,0.1)", color: "var(--accent)", border: "1px solid rgba(245,197,24,0.3)" }}
+                          >
+                            You&apos;re already on the list! 🧱
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            key="form"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="flex flex-col sm:flex-row gap-3"
+                          >
+                            <input
+                              type="email"
+                              value={email}
+                              onChange={e => setEmail(e.target.value)}
+                              onKeyDown={e => e.key === "Enter" && handleWaitlist()}
+                              placeholder="your@email.com"
+                              className="flex-1 px-5 py-3.5 rounded-xl text-base outline-none transition-all"
+                              style={{
+                                background: "var(--surface)",
+                                color: "var(--foreground)",
+                                border: "1px solid var(--border)",
+                              }}
+                              onFocus={e => (e.currentTarget.style.borderColor = "var(--accent)")}
+                              onBlur={e => (e.currentTarget.style.borderColor = "var(--border)")}
+                            />
+                            <button
+                              onClick={handleWaitlist}
+                              disabled={status === "loading"}
+                              className="px-7 py-3.5 rounded-xl font-black text-base transition-all active:scale-95 disabled:opacity-60"
+                              style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+                            >
+                              {status === "loading" ? "Snapping…" : "Snap in →"}
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                      {status === "error" && (
+                        <p className="mt-3 text-sm text-center" style={{ color: "var(--red)" }}>
+                          Something went wrong. Try again.
+                        </p>
+                      )}
+                    </div>
+
+                    <p className="text-xs" style={{ color: "var(--muted)" }}>
+                      🔒 No spam · Unsubscribe anytime
+                    </p>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="lifetime"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.25 }}
+                    className="w-full flex flex-col items-center gap-6"
+                  >
+                    {/* Headline */}
+                    <div className="flex flex-col gap-2">
+                      <h2 className="text-3xl font-black tracking-tight" style={{ color: "var(--foreground)" }}>
+                        Lifetime Access
+                      </h2>
+                      <p className="text-base leading-relaxed" style={{ color: "var(--muted)" }}>
+                        One-time payment. Unlimited scans forever.<br className="hidden sm:block" />
+                        No subscription, ever.
+                      </p>
+                    </div>
+
+                    {/* Price */}
+                    <div
+                      className="w-full rounded-2xl py-5 px-6"
+                      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
                     >
-                      You&apos;re locked in! We&apos;ll be in touch. 🎉
-                    </motion.div>
-                  ) : status === "duplicate" ? (
-                    <motion.div
-                      key="duplicate"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.4 }}
-                      className="py-4 px-6 rounded-2xl text-center font-bold"
-                      style={{ background: "rgba(245,197,24,0.1)", color: "var(--accent)", border: "1px solid rgba(245,197,24,0.3)" }}
-                    >
-                      You&apos;re already on the list! 🧱
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="form"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="flex flex-col sm:flex-row gap-3"
-                    >
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
-                        onKeyDown={e => e.key === "Enter" && handleWaitlist()}
-                        placeholder="your@email.com"
-                        className="flex-1 px-5 py-3.5 rounded-xl text-base outline-none transition-all"
-                        style={{
-                          background: "var(--surface)",
-                          color: "var(--foreground)",
-                          border: "1px solid var(--border)",
-                        }}
-                        onFocus={e => (e.currentTarget.style.borderColor = "var(--accent)")}
-                        onBlur={e => (e.currentTarget.style.borderColor = "var(--border)")}
-                      />
+                      <p className="text-4xl font-black" style={{ color: "var(--foreground)" }}>
+                        $29.99
+                        <span className="text-base font-normal ml-2" style={{ color: "var(--muted)" }}>
+                          one-time
+                        </span>
+                      </p>
+                    </div>
+
+                    {/* Features */}
+                    <ul className="w-full text-sm text-left flex flex-col gap-3" style={{ color: "var(--muted)" }}>
+                      {[
+                        "Unlimited LEGO set scans",
+                        "Minifigure scanning",
+                        "BrickLink + eBay price comparison",
+                        "All future features included",
+                      ].map(f => (
+                        <li key={f} className="flex items-center gap-2.5">
+                          <span style={{ color: "var(--accent)" }}>✓</span>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* CTA */}
+                    <form action={createLifetimeCheckout} className="w-full">
                       <button
-                        onClick={handleWaitlist}
-                        disabled={status === "loading"}
-                        className="px-7 py-3.5 rounded-xl font-black text-base transition-all active:scale-95 disabled:opacity-60"
+                        type="submit"
+                        className="w-full font-black py-4 px-6 rounded-2xl text-lg transition-all active:scale-[0.98]"
                         style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
                       >
-                        {status === "loading" ? "Snapping…" : "Snap in →"}
+                        Get Lifetime Access →
                       </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    </form>
 
-                {status === "error" && (
-                  <p className="mt-3 text-sm text-center" style={{ color: "var(--red)" }}>
-                    Something went wrong. Try again.
-                  </p>
+                    <p className="text-xs" style={{ color: "var(--muted)" }}>
+                      🔒 Billed once at launch · No recurring charges
+                    </p>
+                  </motion.div>
                 )}
-              </div>
-
-              {/* Fine print */}
-              <p className="text-xs" style={{ color: "var(--muted)" }}>
-                🔒 No spam · Unsubscribe anytime
-              </p>
+              </AnimatePresence>
             </div>
 
             {/* Bottom stud row */}
