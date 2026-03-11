@@ -51,6 +51,7 @@ export default function MinifigResultPage() {
   const [pricing, setPricing] = useState<MinifigPricing | null>(null);
   const [error, setError] = useState<string | null>(figNumber ? null : "Invalid figure number.");
   const [loading, setLoading] = useState<boolean>(!!figNumber);
+  const [tab, setTab] = useState<"used" | "new">("used");
 
   useEffect(() => {
     if (!figNumber) return;
@@ -71,7 +72,9 @@ export default function MinifigResultPage() {
       .finally(() => setLoading(false));
   }, [figNumber, router]);
 
-  const heroPrice = pricing?.used_sold_avg_usd ?? pricing?.used_stock_avg_usd ?? 0;
+  const heroPrice = tab === "used"
+    ? (pricing?.used_sold_avg_usd ?? pricing?.used_stock_avg_usd ?? 0)
+    : (pricing?.new_sold_avg_usd ?? pricing?.new_stock_avg_usd ?? 0);
 
   if (loading) {
     return (
@@ -137,21 +140,43 @@ export default function MinifigResultPage() {
               style={{ background: "var(--surface-2)" }}
             />
           )}
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>
-              Minifigure · {figInfo?.fig_number ?? figNumber}
-            </p>
-            <h1 className="text-xl font-bold leading-tight" style={{ color: "var(--foreground)" }}>
-              {figInfo?.name ?? figNumber}
-            </h1>
-            {figInfo?.year_released && (
-              <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Released {figInfo.year_released}</p>
-            )}
-          </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>
+            Minifigure · {figInfo?.fig_number ?? figNumber}
+          </p>
+          <h1 className="text-xl font-bold leading-tight" style={{ color: "var(--foreground)" }}>
+            {figInfo?.name ?? figNumber}
+          </h1>
+          {figInfo?.year_released && (
+            <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Released {figInfo.year_released}</p>
+          )}
+        </div>
+      </div>
+
+        {/* Condition tabs */}
+        <div className="flex w-full gap-2">
+          <button
+            onClick={() => setTab("used")}
+            className="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
+            style={tab === "used"
+              ? { background: "var(--accent)", color: "var(--accent-fg)" }
+              : { background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
+          >
+            Used
+          </button>
+          <button
+            onClick={() => setTab("new")}
+            className="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
+            style={tab === "new"
+              ? { background: "var(--accent)", color: "var(--accent-fg)" }
+              : { background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
+          >
+            New
+          </button>
         </div>
 
         {/* Hero price */}
-        {heroPrice > 0 && (
+        {tab === "used" && heroPrice > 0 && (
           <div className="rounded-3xl p-6 flex flex-col items-center gap-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
             <p className="text-xs font-medium uppercase tracking-widest" style={{ color: "var(--muted)" }}>
               {pricing?.used_sold_avg_usd ? "Avg sold price (used)" : "Avg asking price (used)"}
@@ -165,8 +190,30 @@ export default function MinifigResultPage() {
           </div>
         )}
 
+        {tab === "new" && (
+          <div className="rounded-3xl p-6 flex flex-col items-center gap-2 text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+            <p className="text-xs font-medium uppercase tracking-widest" style={{ color: "var(--muted)" }}>
+              {pricing?.new_sold_avg_usd || pricing?.new_stock_avg_usd ? "Avg price (new / sealed)" : "New / Sealed pricing"}
+            </p>
+            {pricing?.new_sold_avg_usd || pricing?.new_stock_avg_usd ? (
+              <>
+                <HeroPrice amount={heroPrice} />
+                {pricing?.new_sold_qty && (
+                  <p className="text-xs" style={{ color: "var(--muted)" }}>
+                    Based on {pricing.new_sold_qty} {pricing.new_sold_qty === 1 ? "sale" : "sales"} on BrickLink
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm" style={{ color: "var(--muted)" }}>
+                BrickLink new/sealed minifig data is limited. We’ll show it here when available for this fig.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Price breakdown */}
-        {pricing && (
+        {tab === "used" && pricing && (
           <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
             <div className="px-4 py-3 border-b" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
               <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>BrickLink Used Pricing</p>
@@ -201,16 +248,71 @@ export default function MinifigResultPage() {
         )}
 
         {/* Recent sold transactions */}
-        {pricing && pricing.sold_details.length > 0 && (
+        {tab === "used" && pricing && pricing.sold_details.length > 0 && (
           <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
             <div className="px-4 py-3 border-b" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Recent BrickLink Sales</p>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Recent BrickLink Sales (Used)</p>
             </div>
             <div className="divide-y" style={{ background: "var(--surface-2)" }}>
               {pricing.sold_details.slice(0, 8).map((d: BrickLinkDetail, i: number) => (
                 <div key={i} className="flex justify-between items-center px-4 py-3">
                   <div>
                     <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Used · {d.quantity} pc</span>
+                    {d.date && <span className="text-xs ml-2" style={{ color: "var(--muted)" }}>{new Date(d.date).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}</span>}
+                  </div>
+                  <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{usdDecimal.format(d.price_usd)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* New pricing breakdown */}
+        {tab === "new" && pricing && (pricing.new_sold_avg_usd !== null || pricing.new_stock_avg_usd !== null) && (
+          <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+            <div className="px-4 py-3 border-b" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>BrickLink New / Sealed Pricing</p>
+            </div>
+            <div className="divide-y" style={{ background: "var(--surface-2)" }}>
+              {pricing.new_sold_avg_usd !== null && (
+                <div className="flex justify-between items-center px-4 py-3">
+                  <span className="text-sm" style={{ color: "var(--foreground)" }}>Sold avg (last 6mo)</span>
+                  <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{usdDecimal.format(pricing.new_sold_avg_usd)}</span>
+                </div>
+              )}
+              {pricing.new_sold_min_usd !== null && pricing.new_sold_max_usd !== null && (
+                <div className="flex justify-between items-center px-4 py-3">
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>Range</span>
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>{usdDecimal.format(pricing.new_sold_min_usd)} – {usdDecimal.format(pricing.new_sold_max_usd)}</span>
+                </div>
+              )}
+              {pricing.new_stock_avg_usd !== null && (
+                <div className="flex justify-between items-center px-4 py-3">
+                  <span className="text-sm" style={{ color: "var(--foreground)" }}>Active listings avg</span>
+                  <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{usdDecimal.format(pricing.new_stock_avg_usd)}</span>
+                </div>
+              )}
+              {pricing.new_stock_qty !== null && (
+                <div className="flex justify-between items-center px-4 py-3">
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>Active listings</span>
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>{pricing.new_stock_qty} listings</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* New transactions */}
+        {tab === "new" && pricing && pricing.sold_new_details.length > 0 && (
+          <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+            <div className="px-4 py-3 border-b" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Recent BrickLink Sales (New)</p>
+            </div>
+            <div className="divide-y" style={{ background: "var(--surface-2)" }}>
+              {pricing.sold_new_details.slice(0, 8).map((d: BrickLinkDetail, i: number) => (
+                <div key={i} className="flex justify-between items-center px-4 py-3">
+                  <div>
+                    <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>New · {d.quantity} pc</span>
                     {d.date && <span className="text-xs ml-2" style={{ color: "var(--muted)" }}>{new Date(d.date).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}</span>}
                   </div>
                   <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{usdDecimal.format(d.price_usd)}</span>

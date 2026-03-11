@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
 
     const minifigData = await getMinifigMarketData(figNumber).catch(() => null);
 
-    if (!minifigData?.item && !minifigData?.sold_used && !minifigData?.stock_used) {
+    if (!minifigData?.item && !minifigData?.sold_used && !minifigData?.stock_used && !minifigData?.sold_new && !minifigData?.stock_new) {
       return NextResponse.json(
         { error: "not_found", message: "We don't have data for this minifigure. Check the ID and try again." },
         { status: 404 }
@@ -68,30 +68,52 @@ export async function POST(req: NextRequest) {
       year_released: item?.year_released ?? null,
     };
 
-    const sold = minifigData.sold_used;
-    const stock = minifigData.stock_used;
+    const soldUsed = minifigData.sold_used;
+    const stockUsed = minifigData.stock_used;
+    const soldNew = minifigData.sold_new;
+    const stockNew = minifigData.stock_new;
 
-    const soldDetails = (sold?.price_detail ?? []).map((d) => ({
+    const soldDetails = (soldUsed?.price_detail ?? []).map((d) => ({
       price_usd: parseFloat(d.unit_price),
       quantity: d.quantity,
       date: d.date_ordered,
       country: d.seller_country_code,
     }));
-    const stockDetails = (stock?.price_detail ?? []).map((d) => ({
+    const stockDetails = (stockUsed?.price_detail ?? []).map((d) => ({
+      price_usd: parseFloat(d.unit_price),
+      quantity: d.quantity,
+      country: d.seller_country_code,
+    }));
+
+    const soldNewDetails = (soldNew?.price_detail ?? []).map((d) => ({
+      price_usd: parseFloat(d.unit_price),
+      quantity: d.quantity,
+      date: d.date_ordered,
+      country: d.seller_country_code,
+    }));
+    const stockNewDetails = (stockNew?.price_detail ?? []).map((d) => ({
       price_usd: parseFloat(d.unit_price),
       quantity: d.quantity,
       country: d.seller_country_code,
     }));
 
     const pricing: MinifigPricing = {
-      used_sold_avg_usd: sold?.qty_avg_price ? parseFloat(sold.qty_avg_price) : null,
-      used_sold_min_usd: sold?.min_price ? parseFloat(sold.min_price) : null,
-      used_sold_max_usd: sold?.max_price ? parseFloat(sold.max_price) : null,
-      used_sold_qty: sold?.unit_quantity ?? null,
-      used_stock_avg_usd: stock?.qty_avg_price ? parseFloat(stock.qty_avg_price) : null,
-      used_stock_qty: stock?.unit_quantity ?? null,
+      used_sold_avg_usd: soldUsed?.qty_avg_price ? parseFloat(soldUsed.qty_avg_price) : null,
+      used_sold_min_usd: soldUsed?.min_price ? parseFloat(soldUsed.min_price) : null,
+      used_sold_max_usd: soldUsed?.max_price ? parseFloat(soldUsed.max_price) : null,
+      used_sold_qty: soldUsed?.unit_quantity ?? null,
+      used_stock_avg_usd: stockUsed?.qty_avg_price ? parseFloat(stockUsed.qty_avg_price) : null,
+      used_stock_qty: stockUsed?.unit_quantity ?? null,
+      new_sold_avg_usd: soldNew?.qty_avg_price ? parseFloat(soldNew.qty_avg_price) : null,
+      new_sold_min_usd: soldNew?.min_price ? parseFloat(soldNew.min_price) : null,
+      new_sold_max_usd: soldNew?.max_price ? parseFloat(soldNew.max_price) : null,
+      new_sold_qty: soldNew?.unit_quantity ?? null,
+      new_stock_avg_usd: stockNew?.qty_avg_price ? parseFloat(stockNew.qty_avg_price) : null,
+      new_stock_qty: stockNew?.unit_quantity ?? null,
       sold_details: soldDetails,
       stock_details: stockDetails,
+      sold_new_details: soldNewDetails,
+      stock_new_details: stockNewDetails,
     };
 
     return NextResponse.json({ figInfo, pricing, scansUsed: gate.scansUsed, isPro: gate.isPro });

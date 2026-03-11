@@ -4,9 +4,14 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Upload } from "lucide-react";
 
-const MAX_PIXELS = 1_150_000;
+const MAX_PIXELS_SET = 1_150_000;          // ~1.1 MP is fine for box OCR
+const MAX_PIXELS_MINIFIG = 3_000_000;      // keep detail for prints
 
-async function compressImage(file: File): Promise<Blob> {
+async function compressImage(file: File, mode: "set" | "minifig", maxPixels: number): Promise<Blob> {
+  // For minifigs, if the file is small enough already, send it untouched to preserve detail
+  if (mode === "minifig" && file.size <= 4 * 1024 * 1024) {
+    return file;
+  }
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -15,8 +20,8 @@ async function compressImage(file: File): Promise<Blob> {
       const { width, height } = img;
       const currentPixels = width * height;
       let targetWidth = width, targetHeight = height;
-      if (currentPixels > MAX_PIXELS) {
-        const ratio = Math.sqrt(MAX_PIXELS / currentPixels);
+      if (currentPixels > maxPixels) {
+        const ratio = Math.sqrt(maxPixels / currentPixels);
         targetWidth = Math.round(width * ratio);
         targetHeight = Math.round(height * ratio);
       }
@@ -27,7 +32,7 @@ async function compressImage(file: File): Promise<Blob> {
       ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
       canvas.toBlob(
         (blob) => blob ? resolve(blob) : reject(new Error("Compression failed")),
-        "image/jpeg", 0.85
+        "image/jpeg", mode === "minifig" ? 0.92 : 0.85
       );
     };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Failed to load image")); };
@@ -36,6 +41,7 @@ async function compressImage(file: File): Promise<Blob> {
 }
 
 interface Props { mode: "set" | "minifig"; onManualEntry: () => void; }
+type Candidate = { id: string; score?: number };
 
 export function ImageUploader({ mode, onManualEntry }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -43,18 +49,22 @@ export function ImageUploader({ mode, onManualEntry }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [candidateOptions, setCandidateOptions] = useState<Candidate[]>([]);
   const router = useRouter();
 
   async function handleFile(file: File) {
-    setIsLoading(true); setError(null);
+    setIsLoading(true); setError(null); setCandidateOptions([]);
     let compressed: Blob;
-    try { compressed = await compressImage(file); }
-    catch { setError("Could not process this image. Try a different photo."); setIsLoading(false); return; }
+    try {
+      const targetPixels = mode === "minifig" ? MAX_PIXELS_MINIFIG : MAX_PIXELS_SET;
+      compressed = await compressImage(file, mode, targetPixels);
+    }
+  catch { setError("Could not process this image. Try a different photo."); setIsLoading(false); return; }
 
     const formData = new FormData();
     formData.append("image", compressed, "scan.jpg");
 
-    let data: { set_number: string | null; error?: string; message?: string };
+    let data: { set_number: string | null; candidates?: Candidate[]; error?: string; message?: string };
     try {
       const res = await fetch(`/api/identify?mode=${mode}`, { method: "POST", body: formData });
       data = await res.json();
@@ -62,7 +72,9 @@ export function ImageUploader({ mode, onManualEntry }: Props) {
     } catch { setError("Network error. Check your connection and try again."); setIsLoading(false); return; }
 
     if (!data.set_number) {
-      if (mode === "minifig") {
+      if (mode === "minifig" && (data.candidates?.length ?? 0) > 0) {
+        setCandidateOptions((data.candidates ?? []).slice(0, 3));
+      } else if (mode === "minifig") {
         setError("Couldn't identify this minifigure. Try a clearer photo with a plain background.");
       } else {
         setError("Couldn't find a set number. Try a clearer photo or enter it below.");
@@ -88,6 +100,11 @@ export function ImageUploader({ mode, onManualEntry }: Props) {
     setDragActive(false);
     const file = e.dataTransfer.files?.[0];
     if (file) handleFile(file);
+  }
+
+  function handleCandidateSelect(id: string) {
+    setIsLoading(false);
+    router.push(`/result/minifig/${id}`);
   }
 
   return (
@@ -163,6 +180,26 @@ export function ImageUploader({ mode, onManualEntry }: Props) {
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />
 
       {error && <p className="text-sm text-center mt-1" style={{ color: "var(--red)" }}>{error}</p>}
+
+      {candidateOptions.length > 0 && (
+        <div className="mt-2 w-full rounded-xl p-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+          <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>
+            We found possible matches. Pick the right minifigure:
+          </p>
+          <div className="flex flex-col gap-2">
+            {candidateOptions.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => handleCandidateSelect(c.id)}
+                className="w-full text-sm font-semibold px-4 py-2 rounded-lg text-left transition-all active:scale-[0.98]"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+              >
+                {c.id} {typeof c.score === "number" ? `(score ${(c.score * 100).toFixed(0)}%)` : ""}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

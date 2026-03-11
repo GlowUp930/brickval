@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { anthropic } from "@/lib/anthropic";
 
+const MIN_SCORE = 0.50; // minimum Brickognize confidence we trust when a preferred type exists
+
 const VISION_PROMPT = `Look at this LEGO box image. Find the LEGO set number — it is typically a 4–6 digit number printed on the front lower-right corner, back panel, or near the barcode. Return ONLY valid JSON: {"set_number": "75192"} or {"set_number": null} if you cannot find a set number with confidence. Do not guess. Do not include hyphens or suffixes.`;
 
 const BRICKOGNIZE_URL = "https://api.brickognize.com/predict/";
@@ -14,6 +16,7 @@ const ACCEPTED_MEDIA_TYPES = [
 ] as const;
 
 type AcceptedMediaType = (typeof ACCEPTED_MEDIA_TYPES)[number];
+type Candidate = { id: string; score: number };
 
 function isAcceptedMediaType(type: string): type is AcceptedMediaType {
   return ACCEPTED_MEDIA_TYPES.includes(type as AcceptedMediaType);
@@ -21,7 +24,8 @@ function isAcceptedMediaType(type: string): type is AcceptedMediaType {
 
 // ── Minifig identification via Brickognize ────────────────────────────────────
 
-async function identifyMinifig(imageFile: File): Promise<string | null> {
+// Return the top Brickognize candidate; prefer minifig types but fallback to any
+async function identifyMinifig(imageFile: File): Promise<{ best: string | null; candidates: Candidate[] }> {
   const brickognizeForm = new FormData();
   brickognizeForm.append("query_image", imageFile, "image.jpg");
 
@@ -34,36 +38,36 @@ async function identifyMinifig(imageFile: File): Promise<string | null> {
     });
   } catch (err) {
     console.error("[identify] Brickognize network error:", err);
-    return null;
+    return { best: null, candidates: [] };
   }
 
   if (!res.ok) {
     console.warn("[identify] Brickognize returned", res.status);
-    return null;
+    return { best: null, candidates: [] };
   }
 
   let data: { items?: { id?: string; external_id?: string; score?: number; name?: string; type?: string }[] };
   try {
     data = await res.json();
   } catch {
-    return null;
+    return { best: null, candidates: [] };
   }
 
-  // Brickognize returns `id` for the recognized BrickLink minifig code.
-  // Keep `external_id` as a fallback in case their response shape changes.
-  const topItem = (data.items ?? [])
-    .filter((i) => i.type === "fig")
-    .filter((i) => (i.score ?? 0) >= 0.70)
-    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0];
+  const items = (data.items ?? []).map((i) => ({
+    id: i.id ?? i.external_id,
+    type: (i.type ?? "").toLowerCase(),
+    score: i.score ?? 0,
+  })).filter((c) => Boolean(c.id));
 
-  const candidateId = topItem?.id ?? topItem?.external_id;
-  if (!candidateId) return null;
+  const preferred = items.filter((c) => c.type === "fig" || c.type === "minifig");
+  const pool = preferred.length ? preferred : items;
+  const candidates = pool
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+    .map((c) => ({ id: c.id!.trim().toLowerCase(), score: c.score }))
+    .filter((c) => c.id.length >= 3 && c.id.length <= 16 && /^[a-z0-9]+$/.test(c.id))
+    .filter((c) => preferred.length ? c.score >= MIN_SCORE : true);
 
-  // Validate: BrickLink minifig IDs are alphanumeric, 4–12 chars (e.g. "sw0001", "col001")
-  const figId = candidateId.trim();
-  if (figId.length < 3 || figId.length > 16 || !/^[a-z0-9]+$/i.test(figId)) return null;
-
-  return figId;
+  return { best: candidates[0]?.id ?? null, candidates };
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
@@ -106,11 +110,11 @@ export async function POST(req: NextRequest) {
 
   // ── Minifig mode: use Brickognize ─────────────────────────────────────────
   if (mode === "minifig") {
-    const figId = await identifyMinifig(imageFile);
-    if (!figId) {
-      return NextResponse.json({ set_number: null });
+    const { best, candidates } = await identifyMinifig(imageFile);
+    if (!best) {
+      return NextResponse.json({ set_number: null, candidates });
     }
-    return NextResponse.json({ set_number: figId });
+    return NextResponse.json({ set_number: best, candidates });
   }
 
   // ── Set mode: use Claude Vision ───────────────────────────────────────────

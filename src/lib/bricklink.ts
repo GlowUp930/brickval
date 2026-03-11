@@ -53,6 +53,8 @@ export interface BrickLinkMarketData {
 export interface MinifigMarketData {
   sold_used: BrickLinkPriceGuide | null;
   stock_used: BrickLinkPriceGuide | null;
+  sold_new: BrickLinkPriceGuide | null;
+  stock_new: BrickLinkPriceGuide | null;
   item: BrickLinkItem | null;
 }
 
@@ -219,12 +221,13 @@ async function fetchItem(setNo: string): Promise<BrickLinkItem | null> {
  */
 async function fetchMinifigPriceGuide(
   figNo: string,
-  guideType: "sold" | "stock"
+  guideType: "sold" | "stock",
+  newOrUsed: "N" | "U"
 ): Promise<BrickLinkPriceGuide | null> {
   const path =
     `/items/MINIFIG/${figNo}/price` +
     `?guide_type=${guideType}` +
-    `&new_or_used=U` +
+    `&new_or_used=${newOrUsed}` +
     `&currency_code=USD`;
 
   return brickLinkFetch<BrickLinkPriceGuide>(path);
@@ -244,15 +247,17 @@ export async function getMinifigMarketData(figNo: string): Promise<MinifigMarket
   const cached = await getCached<MinifigMarketData>(cacheKey);
   if (cached) return cached;
 
-  const [soldUsed, stockUsed, item] = await Promise.all([
-    fetchMinifigPriceGuide(figNo, "sold"),
-    fetchMinifigPriceGuide(figNo, "stock"),
+  const [soldUsed, stockUsed, soldNew, stockNew, item] = await Promise.all([
+    fetchMinifigPriceGuide(figNo, "sold", "U"),
+    fetchMinifigPriceGuide(figNo, "stock", "U"),
+    fetchMinifigPriceGuide(figNo, "sold", "N"),
+    fetchMinifigPriceGuide(figNo, "stock", "N"),
     fetchMinifigItem(figNo),
   ]);
 
-  const result: MinifigMarketData = { sold_used: soldUsed, stock_used: stockUsed, item };
+  const result: MinifigMarketData = { sold_used: soldUsed, stock_used: stockUsed, sold_new: soldNew, stock_new: stockNew, item };
 
-  if (soldUsed || stockUsed || item) {
+  if (soldUsed || stockUsed || soldNew || stockNew || item) {
     await setCached(cacheKey, result, CACHE_TTL_HOURS);
   }
   return result;
