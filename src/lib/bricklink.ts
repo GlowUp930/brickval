@@ -49,9 +49,11 @@ export interface BrickLinkMarketData {
   item: BrickLinkItem | null;
 }
 
-/** Minifigure market data — used condition only (minifigs are priced loose/used) */
+/** Minifigure market data — new + used conditions */
 export interface MinifigMarketData {
+  sold_new: BrickLinkPriceGuide | null;
   sold_used: BrickLinkPriceGuide | null;
+  stock_new: BrickLinkPriceGuide | null;
   stock_used: BrickLinkPriceGuide | null;
   item: BrickLinkItem | null;
 }
@@ -219,12 +221,13 @@ async function fetchItem(setNo: string): Promise<BrickLinkItem | null> {
  */
 async function fetchMinifigPriceGuide(
   figNo: string,
-  guideType: "sold" | "stock"
+  guideType: "sold" | "stock",
+  newOrUsed: "N" | "U"
 ): Promise<BrickLinkPriceGuide | null> {
   const path =
     `/items/MINIFIG/${figNo}/price` +
     `?guide_type=${guideType}` +
-    `&new_or_used=U` +
+    `&new_or_used=${newOrUsed}` +
     `&currency_code=USD`;
 
   return brickLinkFetch<BrickLinkPriceGuide>(path);
@@ -244,15 +247,17 @@ export async function getMinifigMarketData(figNo: string): Promise<MinifigMarket
   const cached = await getCached<MinifigMarketData>(cacheKey);
   if (cached) return cached;
 
-  const [soldUsed, stockUsed, item] = await Promise.all([
-    fetchMinifigPriceGuide(figNo, "sold"),
-    fetchMinifigPriceGuide(figNo, "stock"),
+  const [soldNew, soldUsed, stockNew, stockUsed, item] = await Promise.all([
+    fetchMinifigPriceGuide(figNo, "sold", "N"),
+    fetchMinifigPriceGuide(figNo, "sold", "U"),
+    fetchMinifigPriceGuide(figNo, "stock", "N"),
+    fetchMinifigPriceGuide(figNo, "stock", "U"),
     fetchMinifigItem(figNo),
   ]);
 
-  const result: MinifigMarketData = { sold_used: soldUsed, stock_used: stockUsed, item };
+  const result: MinifigMarketData = { sold_new: soldNew, sold_used: soldUsed, stock_new: stockNew, stock_used: stockUsed, item };
 
-  if (soldUsed || stockUsed || item) {
+  if (soldNew || soldUsed || stockNew || stockUsed || item) {
     await setCached(cacheKey, result, CACHE_TTL_HOURS);
   }
   return result;

@@ -71,7 +71,8 @@ export default function MinifigResultPage() {
       .finally(() => setLoading(false));
   }, [figNumber, router]);
 
-  const heroPrice = pricing?.used_sold_avg_usd ?? pricing?.used_stock_avg_usd ?? 0;
+  const heroPrice = pricing?.used_sold_avg_usd ?? pricing?.new_sold_avg_usd ?? pricing?.used_stock_avg_usd ?? pricing?.new_stock_avg_usd ?? 0;
+  const heroIsNew = !pricing?.used_sold_avg_usd && !!pricing?.new_sold_avg_usd;
 
   if (loading) {
     return (
@@ -154,22 +155,29 @@ export default function MinifigResultPage() {
         {heroPrice > 0 && (
           <div className="rounded-3xl p-6 flex flex-col items-center gap-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
             <p className="text-xs font-medium uppercase tracking-widest" style={{ color: "var(--muted)" }}>
-              {pricing?.used_sold_avg_usd ? "Avg sold price (used)" : "Avg asking price (used)"}
+              {heroIsNew
+                ? (pricing?.new_sold_avg_usd ? "Avg sold price (new)" : "Avg asking price (new)")
+                : (pricing?.used_sold_avg_usd ? "Avg sold price (used)" : "Avg asking price (used)")}
             </p>
             <HeroPrice amount={heroPrice} />
-            {pricing?.used_sold_qty && (
+            {!heroIsNew && pricing?.used_sold_qty && (
               <p className="text-xs" style={{ color: "var(--muted)" }}>
                 Based on {pricing.used_sold_qty} {pricing.used_sold_qty === 1 ? "sale" : "sales"} on BrickLink
+              </p>
+            )}
+            {heroIsNew && pricing?.new_sold_qty && (
+              <p className="text-xs" style={{ color: "var(--muted)" }}>
+                Based on {pricing.new_sold_qty} {pricing.new_sold_qty === 1 ? "sale" : "sales"} on BrickLink
               </p>
             )}
           </div>
         )}
 
-        {/* Price breakdown */}
-        {pricing && (
+        {/* Used pricing */}
+        {pricing && (pricing.used_sold_avg_usd !== null || pricing.used_stock_avg_usd !== null) && (
           <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
             <div className="px-4 py-3 border-b" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>BrickLink Used Pricing</p>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>BrickLink · Used (Loose)</p>
             </div>
             <div className="divide-y" style={{ background: "var(--surface-2)" }}>
               {pricing.used_sold_avg_usd !== null && (
@@ -200,17 +208,72 @@ export default function MinifigResultPage() {
           </div>
         )}
 
-        {/* Recent sold transactions */}
-        {pricing && pricing.sold_details.length > 0 && (
+        {/* New pricing */}
+        {pricing && (pricing.new_sold_avg_usd !== null || pricing.new_stock_avg_usd !== null) && (
           <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
             <div className="px-4 py-3 border-b" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Recent BrickLink Sales</p>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>BrickLink · New (Sealed/Carded)</p>
             </div>
             <div className="divide-y" style={{ background: "var(--surface-2)" }}>
-              {pricing.sold_details.slice(0, 8).map((d: BrickLinkDetail, i: number) => (
+              {pricing.new_sold_avg_usd !== null && (
+                <div className="flex justify-between items-center px-4 py-3">
+                  <span className="text-sm" style={{ color: "var(--foreground)" }}>Sold avg (last 6mo)</span>
+                  <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{usdDecimal.format(pricing.new_sold_avg_usd)}</span>
+                </div>
+              )}
+              {pricing.new_sold_min_usd !== null && pricing.new_sold_max_usd !== null && (
+                <div className="flex justify-between items-center px-4 py-3">
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>Range</span>
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>{usdDecimal.format(pricing.new_sold_min_usd)} – {usdDecimal.format(pricing.new_sold_max_usd)}</span>
+                </div>
+              )}
+              {pricing.new_stock_avg_usd !== null && (
+                <div className="flex justify-between items-center px-4 py-3">
+                  <span className="text-sm" style={{ color: "var(--foreground)" }}>Active listings avg</span>
+                  <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{usdDecimal.format(pricing.new_stock_avg_usd)}</span>
+                </div>
+              )}
+              {pricing.new_stock_qty !== null && (
+                <div className="flex justify-between items-center px-4 py-3">
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>Active listings</span>
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>{pricing.new_stock_qty} listings</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Recent used sold transactions */}
+        {pricing && pricing.used_sold_details.length > 0 && (
+          <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+            <div className="px-4 py-3 border-b" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Recent BrickLink Sales · Used</p>
+            </div>
+            <div className="divide-y" style={{ background: "var(--surface-2)" }}>
+              {pricing.used_sold_details.slice(0, 8).map((d: BrickLinkDetail, i: number) => (
                 <div key={i} className="flex justify-between items-center px-4 py-3">
                   <div>
                     <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Used · {d.quantity} pc</span>
+                    {d.date && <span className="text-xs ml-2" style={{ color: "var(--muted)" }}>{new Date(d.date).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}</span>}
+                  </div>
+                  <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{usdDecimal.format(d.price_usd)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Recent new sold transactions */}
+        {pricing && pricing.new_sold_details.length > 0 && (
+          <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+            <div className="px-4 py-3 border-b" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Recent BrickLink Sales · New</p>
+            </div>
+            <div className="divide-y" style={{ background: "var(--surface-2)" }}>
+              {pricing.new_sold_details.slice(0, 8).map((d: BrickLinkDetail, i: number) => (
+                <div key={i} className="flex justify-between items-center px-4 py-3">
+                  <div>
+                    <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>New · {d.quantity} pc</span>
                     {d.date && <span className="text-xs ml-2" style={{ color: "var(--muted)" }}>{new Date(d.date).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}</span>}
                   </div>
                   <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{usdDecimal.format(d.price_usd)}</span>

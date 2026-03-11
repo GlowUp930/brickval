@@ -40,16 +40,26 @@ export interface MinifigInfo {
   year_released: number | null;
 }
 
-// Minifigure pricing (used condition only — minifigs are priced loose)
+// Minifigure pricing — new + used conditions
 export interface MinifigPricing {
+  // Used condition (loose)
   used_sold_avg_usd: number | null;
   used_sold_min_usd: number | null;
   used_sold_max_usd: number | null;
   used_sold_qty: number | null;
   used_stock_avg_usd: number | null;
   used_stock_qty: number | null;
-  sold_details: BrickLinkDetail[];
-  stock_details: BrickLinkDetail[];
+  used_sold_details: BrickLinkDetail[];
+  used_stock_details: BrickLinkDetail[];
+  // New condition (sealed/carded)
+  new_sold_avg_usd: number | null;
+  new_sold_min_usd: number | null;
+  new_sold_max_usd: number | null;
+  new_sold_qty: number | null;
+  new_stock_avg_usd: number | null;
+  new_stock_qty: number | null;
+  new_sold_details: BrickLinkDetail[];
+  new_stock_details: BrickLinkDetail[];
 }
 
 export interface ComputedPricing {
