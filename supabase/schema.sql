@@ -22,6 +22,13 @@ CREATE TABLE IF NOT EXISTS api_cache (
 -- Index for efficient TTL cleanup queries
 CREATE INDEX IF NOT EXISTS api_cache_expires_at_idx ON api_cache (expires_at);
 
+CREATE TABLE IF NOT EXISTS waitlist (
+  email      text PRIMARY KEY,
+  created_at timestamp DEFAULT now() NOT NULL
+);
+
+ALTER TABLE waitlist ENABLE ROW LEVEL SECURITY;
+
 -- ============================================================
 -- ROW LEVEL SECURITY
 -- ============================================================
