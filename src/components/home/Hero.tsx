@@ -365,10 +365,10 @@ export function Hero() {
                     {/* Headline */}
                     <div className="flex flex-col gap-2">
                       <h2 className="text-3xl font-black tracking-tight" style={{ color: "var(--foreground)" }}>
-                        Be first when Pro lands.
+                        Be First To Know
                       </h2>
                       <p className="text-base leading-relaxed" style={{ color: "var(--muted)" }}>
-                        Get notified the moment BrickVal Pro goes live —<br className="hidden sm:block" />
+                        Get notified the moment BrickVal goes live —
                         with priority access and early-bird pricing.
                       </p>
                     </div>
