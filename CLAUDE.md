@@ -12,7 +12,7 @@ This is a Lean MVP. Build only what is in the plan. No extras, no abstractions.
 - BrickLink API for secondary market pricing (ACTIVE — OAuth 1.0, primary price source)
   - Also used for minifig pricing (used sold + stock)
 - Frankfurter API for EUR→USD rates (24hr Supabase cache)
-- Clerk for auth, Stripe for payments ($12.99 USD/month)
+- Clerk for auth, Stripe for payments ($12.99 USD/month subscription + $29.99 lifetime one-time)
 - Supabase: 2 tables only — users and api_cache
 - Vercel Analytics (enabled in root layout)
 - framer-motion (installed, available for animation)
@@ -42,12 +42,16 @@ src/
 │   ├── upgrade/
 │   │   ├── page.tsx                   # Pro upgrade / paywall page
 │   │   └── actions.ts                 # Server actions for upgrade flow
+│   ├── waitlist-action.ts             # joinWaitlist() + createLifetimeCheckout() server actions
 │   ├── layout.tsx                     # Root layout with ClerkProvider + Vercel Analytics
 │   ├── globals.css                    # Tailwind v4 @theme + CSS variables (dark mode)
 │   └── page.tsx                       # Homepage — renders <Hero />
 ├── components/
 │   ├── home/
 │   │   ├── Hero.tsx                   # Landing page hero (CTA → /scan)
+│   │   │                              #   Waitlist card has two tabs:
+│   │   │                              #     "Notify Me" — email waitlist
+│   │   │                              #     "Lifetime Deal" — $29.99 one-time Stripe checkout
 │   │   └── PricingSection.tsx         # Pricing UI (hidden — Phase 2)
 │   ├── result/
 │   │   └── PriceReveal.tsx            # Animated price count-up + market data display
@@ -108,6 +112,7 @@ CLERK_SECRET_KEY
 STRIPE_SECRET_KEY
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 STRIPE_WEBHOOK_SECRET
+STRIPE_LIFETIME_PRICE_ID           ← one-time $29.99 Stripe Price ID (mode: payment)
 
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL
@@ -275,13 +280,18 @@ This is not optional — it is in the success criteria.
 - RapidAPI bulk dataset: LEGACY — integrated but not active in current lookup flow.
   Replaced by eBay + BrickLink as primary data sources.
 - Stripe: webhook handler active, Stripe SDK singleton in place.
-  Pricing UI on homepage is hidden (Phase 2).
+  Subscription pricing ($12.99/month) UI on homepage is hidden (Phase 2).
+  Lifetime deal ($29.99 one-time) is live on homepage waitlist card — "Lifetime Deal" tab.
+  Requires STRIPE_LIFETIME_PRICE_ID env var (Stripe Product → one-time, $29.99 USD).
+  On successful checkout → redirects to /?lifetime=success.
+  Webhook does NOT yet mark lifetime buyers in DB — Phase 2 task.
 
 ## Key File Locations
 - `src/lib/ebay.ts` — eBay OAuth 2.0, Browse API + Marketplace Insights, multi-marketplace
 - `src/lib/bricklink.ts` — BrickLink OAuth 1.0, set + minifig price guides + item info
 - `src/lib/compute-pricing.ts` — shared set pricing logic (computePricing())
 - `src/lib/frankfurter.ts` — Frankfurter currency conversion (EUR/USD/AUD/GBP)
+- `src/app/waitlist-action.ts` — joinWaitlist() email capture + createLifetimeCheckout() Stripe one-time checkout
 - `src/lib/scan-gate.ts` — paywall/scan limit logic (stubbed, returns allowed: true)
 - `src/lib/cache.ts` — Supabase api_cache getCached() / setCached() helpers
 - `src/lib/anthropic.ts` — Claude SDK singleton (lazy, server-only)
