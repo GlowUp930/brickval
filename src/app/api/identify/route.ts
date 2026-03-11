@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { anthropic } from "@/lib/anthropic";
 
+const MIN_SCORE = 0.50; // minimum Brickognize confidence we trust when a preferred type exists
+
 const VISION_PROMPT = `Look at this LEGO box image. Find the LEGO set number — it is typically a 4–6 digit number printed on the front lower-right corner, back panel, or near the barcode. Return ONLY valid JSON: {"set_number": "75192"} or {"set_number": null} if you cannot find a set number with confidence. Do not guess. Do not include hyphens or suffixes.`;
 
 const BRICKOGNIZE_URL = "https://api.brickognize.com/predict/";
@@ -58,10 +60,12 @@ async function identifyMinifig(imageFile: File): Promise<{ best: string | null; 
   })).filter((c) => Boolean(c.id));
 
   const preferred = items.filter((c) => c.type === "fig" || c.type === "minifig");
-  const candidates = (preferred.length ? preferred : items)
+  const pool = preferred.length ? preferred : items;
+  const candidates = pool
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
     .map((c) => ({ id: c.id!.trim().toLowerCase(), score: c.score }))
-    .filter((c) => c.id.length >= 3 && c.id.length <= 16 && /^[a-z0-9]+$/.test(c.id));
+    .filter((c) => c.id.length >= 3 && c.id.length <= 16 && /^[a-z0-9]+$/.test(c.id))
+    .filter((c) => preferred.length ? c.score >= MIN_SCORE : true);
 
   return { best: candidates[0]?.id ?? null, candidates };
 }
