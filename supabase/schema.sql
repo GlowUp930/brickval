@@ -22,12 +22,19 @@ CREATE TABLE IF NOT EXISTS api_cache (
 -- Index for efficient TTL cleanup queries
 CREATE INDEX IF NOT EXISTS api_cache_expires_at_idx ON api_cache (expires_at);
 
+CREATE TABLE IF NOT EXISTS waitlist (
+  id         bigserial PRIMARY KEY,
+  email      text NOT NULL UNIQUE,
+  created_at timestamp DEFAULT now() NOT NULL
+);
+
 -- ============================================================
 -- ROW LEVEL SECURITY
 -- ============================================================
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_cache ENABLE ROW LEVEL SECURITY;
+ALTER TABLE waitlist ENABLE ROW LEVEL SECURITY;
 
 -- Service role key bypasses RLS — no public policies needed.
 -- All server-side code uses SUPABASE_SERVICE_ROLE_KEY.
