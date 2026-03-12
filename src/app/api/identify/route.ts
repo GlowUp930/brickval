@@ -49,9 +49,9 @@ async function identifyMinifig(imageFile: File): Promise<string | null> {
     return null;
   }
 
-  // Filter to high-confidence results (>= 0.70) and take the top hit
+  // Filter to results with reasonable confidence (>= 0.50) and take the top hit
   const topItem = (data.items ?? [])
-    .filter((i) => (i.score ?? 0) >= 0.70)
+    .filter((i) => (i.score ?? 0) >= 0.50)
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0];
 
   if (!topItem?.external_id) return null;
