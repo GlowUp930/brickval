@@ -8,7 +8,13 @@ export interface ScanGateResult {
 }
 
 export async function checkAndIncrementScan(userId: string): Promise<ScanGateResult> {
-  const supabase = getSupabase();
+  let supabase;
+  try {
+    supabase = getSupabase();
+  } catch {
+    console.warn("[scan-gate] Supabase not configured — allowing scan");
+    return { allowed: true, scansUsed: 0, isPro: false, paywallHit: false };
+  }
 
   // Ensure user row exists — increment_scan returns allowed:false if no row found
   await supabase
@@ -19,7 +25,10 @@ export async function checkAndIncrementScan(userId: string): Promise<ScanGateRes
     p_user_id: userId,
     p_free_limit: 5,
   });
-  if (error) throw new Error(`scan-gate rpc failed: ${error.message}`);
+  if (error) {
+    console.error("[scan-gate] rpc failed, allowing scan:", error.message);
+    return { allowed: true, scansUsed: 0, isPro: false, paywallHit: false };
+  }
 
   const { allowed, scans_used, is_pro } = data as {
     allowed: boolean;
