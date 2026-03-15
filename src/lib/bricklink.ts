@@ -258,11 +258,18 @@ function figIdVariants(figNo: string): string[] {
  * Tries ID variants (e.g. sh0047 → sh047) if the primary ID returns no data.
  */
 export async function getMinifigMarketData(figNo: string): Promise<MinifigMarketData> {
-  for (const id of figIdVariants(figNo)) {
+  const variants = figIdVariants(figNo);
+  console.log(`[bricklink] getMinifigMarketData figNo=${figNo} variants=${JSON.stringify(variants)}`);
+
+  for (const id of variants) {
     const cacheKey = `bricklink-minifig:${id}`;
     const cached = await getCached<MinifigMarketData>(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      console.log(`[bricklink] cache hit for ${id}`);
+      return cached;
+    }
 
+    console.log(`[bricklink] calling BrickLink API for MINIFIG/${id}`);
     const [soldUsed, stockUsed, soldNew, stockNew, item] = await Promise.all([
       fetchMinifigPriceGuide(id, "sold", "U"),
       fetchMinifigPriceGuide(id, "stock", "U"),
@@ -271,13 +278,17 @@ export async function getMinifigMarketData(figNo: string): Promise<MinifigMarket
       fetchMinifigItem(id),
     ]);
 
+    console.log(`[bricklink] results for ${id}: soldUsed=${!!soldUsed} stockUsed=${!!stockUsed} soldNew=${!!soldNew} stockNew=${!!stockNew} item=${!!item}`);
+
     if (soldUsed || stockUsed || soldNew || stockNew || item) {
       const result: MinifigMarketData = { sold_used: soldUsed, stock_used: stockUsed, sold_new: soldNew, stock_new: stockNew, item };
       await setCached(cacheKey, result, CACHE_TTL_HOURS);
+      console.log(`[bricklink] cached result under ${cacheKey}`);
       return result;
     }
   }
 
+  console.log(`[bricklink] no data found for any variant of ${figNo}`);
   return { sold_used: null, stock_used: null, sold_new: null, stock_new: null, item: null };
 }
 
