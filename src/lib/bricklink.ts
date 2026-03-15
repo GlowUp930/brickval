@@ -238,29 +238,47 @@ async function fetchMinifigItem(figNo: string): Promise<BrickLinkItem | null> {
 }
 
 /**
+ * Build ID variants to try against BrickLink.
+ * Brickognize may pad numeric parts differently (e.g. sh0047 vs sh047).
+ * Returns [original, stripped-one-zero] if stripping is applicable.
+ */
+function figIdVariants(figNo: string): string[] {
+  const match = figNo.match(/^([a-z]+)(0\d+)$/);
+  if (match) {
+    const stripped = match[1] + match[2].slice(1); // remove one leading zero
+    if (stripped !== figNo) return [figNo, stripped];
+  }
+  return [figNo];
+}
+
+/**
  * Get BrickLink market data for a LEGO minifigure.
  * Returns used sold + used stock prices and item info.
  * Cached under "bricklink-minifig:{figNo}" for 24 hours.
+ * Tries ID variants (e.g. sh0047 → sh047) if the primary ID returns no data.
  */
 export async function getMinifigMarketData(figNo: string): Promise<MinifigMarketData> {
-  const cacheKey = `bricklink-minifig:${figNo}`;
-  const cached = await getCached<MinifigMarketData>(cacheKey);
-  if (cached) return cached;
+  for (const id of figIdVariants(figNo)) {
+    const cacheKey = `bricklink-minifig:${id}`;
+    const cached = await getCached<MinifigMarketData>(cacheKey);
+    if (cached) return cached;
 
-  const [soldUsed, stockUsed, soldNew, stockNew, item] = await Promise.all([
-    fetchMinifigPriceGuide(figNo, "sold", "U"),
-    fetchMinifigPriceGuide(figNo, "stock", "U"),
-    fetchMinifigPriceGuide(figNo, "sold", "N"),
-    fetchMinifigPriceGuide(figNo, "stock", "N"),
-    fetchMinifigItem(figNo),
-  ]);
+    const [soldUsed, stockUsed, soldNew, stockNew, item] = await Promise.all([
+      fetchMinifigPriceGuide(id, "sold", "U"),
+      fetchMinifigPriceGuide(id, "stock", "U"),
+      fetchMinifigPriceGuide(id, "sold", "N"),
+      fetchMinifigPriceGuide(id, "stock", "N"),
+      fetchMinifigItem(id),
+    ]);
 
-  const result: MinifigMarketData = { sold_used: soldUsed, stock_used: stockUsed, sold_new: soldNew, stock_new: stockNew, item };
-
-  if (soldUsed || stockUsed || soldNew || stockNew || item) {
-    await setCached(cacheKey, result, CACHE_TTL_HOURS);
+    if (soldUsed || stockUsed || soldNew || stockNew || item) {
+      const result: MinifigMarketData = { sold_used: soldUsed, stock_used: stockUsed, sold_new: soldNew, stock_new: stockNew, item };
+      await setCached(cacheKey, result, CACHE_TTL_HOURS);
+      return result;
+    }
   }
-  return result;
+
+  return { sold_used: null, stock_used: null, sold_new: null, stock_new: null, item: null };
 }
 
 /**
