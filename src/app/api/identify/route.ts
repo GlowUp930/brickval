@@ -54,7 +54,7 @@ async function identifyMinifig(imageFile: File): Promise<{ best: string | null; 
   }
 
   const items = (data.items ?? []).map((i) => ({
-    id: i.external_id ?? i.id,
+    id: i.id ?? i.external_id,
     type: (i.type ?? "").toLowerCase(),
     score: i.score ?? 0,
   })).filter((c) => Boolean(c.id));
