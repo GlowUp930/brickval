@@ -91,6 +91,8 @@ CLERK_SECRET_KEY
 STRIPE_SECRET_KEY
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 STRIPE_WEBHOOK_SECRET
+STRIPE_PRICE_ID                     ← monthly subscription price ID (Stripe Dashboard → Products)
+STRIPE_LIFETIME_PRICE_ID            ← one-time lifetime deal price ID (Stripe Dashboard → Products)
 
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL
