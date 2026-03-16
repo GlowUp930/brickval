@@ -130,8 +130,16 @@ If "something went wrong" is reported:
 2. `src/app/api/lookup/route.ts` — Added log to the upstream error branch naming the set number and indicating credential/network failure.
 3. `src/app/result/[setNumber]/error.tsx` — Replaced hardcoded gray Tailwind classes with CSS variable styles matching the app dark theme.
 
-**Root cause (most likely) — later confirmed:** `BRICKVAL_ANTHROPIC_API_KEY` not configured; user confirmed key was set. Deeper investigation identified the **true root cause**: `src/middleware.ts` was completely missing from the project.
+**Root cause (most likely) — first investigated:** `BRICKVAL_ANTHROPIC_API_KEY` not configured; user confirmed key was set.
 
-Clerk v6 (`@clerk/nextjs` ^6.x) explicitly requires `clerkMiddleware()` in middleware for `auth()` to work in route handlers (documented in types: _"Requires `clerkMiddleware()` to be configured"_). Without it, `auth()` always returns `{ userId: null }`. Both `/api/identify` and `/api/lookup` then respond `401 { error: "Unauthorized" }` — with no `message` field — so the client fallback `data.message ?? "Something went wrong"` fired on every single scan attempt.
+**Second investigation:** Incorrectly created `src/middleware.ts` — but `src/proxy.ts` was already the Clerk middleware (mislabeled in CLAUDE.md as "internal"). Next.js 16 treats both filenames as middleware; having both caused a deploy error:
+```
+Both middleware file "./src/src/middleware.ts" and proxy file "./src/src/proxy.ts" are detected.
+```
+`src/middleware.ts` was removed to fix the build. `src/proxy.ts` is the correct Clerk middleware and was working all along.
 
-**Resolution:** Created `src/middleware.ts` with `clerkMiddleware()` and the standard Next.js App Router matcher. This makes the Clerk session available to all route handlers. No other changes needed — each route already has its own `if (!userId)` guard.
+**Actual root cause — still under investigation.** The "something went wrong" error with a working API key and working Clerk middleware (`proxy.ts`) most likely comes from one of:
+- The model ID `claude-sonnet-4-5` in `src/app/api/identify/route.ts:130` may be deprecated. The current Sonnet model is `claude-sonnet-4-6`. If the API key is valid but the model is unavailable, every identify call would fail.
+- eBay or BrickLink API credentials missing/expired on Vercel, causing the lookup upstream error for certain flows.
+
+**Check server logs for:** `[identify] Claude Vision API error: <message>` to confirm the model issue.
