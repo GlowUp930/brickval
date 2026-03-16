@@ -130,6 +130,8 @@ If "something went wrong" is reported:
 2. `src/app/api/lookup/route.ts` — Added log to the upstream error branch naming the set number and indicating credential/network failure.
 3. `src/app/result/[setNumber]/error.tsx` — Replaced hardcoded gray Tailwind classes with CSS variable styles matching the app dark theme.
 
-**Root cause (most likely):** `BRICKVAL_ANTHROPIC_API_KEY` not configured in the deployment environment, causing every image-scan attempt to fail at the Claude Vision call. Verify this by checking Vercel/hosting env vars and looking for the log line `[identify] BRICKVAL_ANTHROPIC_API_KEY is not set`.
+**Root cause (most likely) — later confirmed:** `BRICKVAL_ANTHROPIC_API_KEY` not configured; user confirmed key was set. Deeper investigation identified the **true root cause**: `src/middleware.ts` was completely missing from the project.
 
-**Resolution:** Ensure all required env vars from `CLAUDE.md` are set in the deployment environment. After setting, redeploy. The scan flow does not retry automatically — user must re-upload.
+Clerk v6 (`@clerk/nextjs` ^6.x) explicitly requires `clerkMiddleware()` in middleware for `auth()` to work in route handlers (documented in types: _"Requires `clerkMiddleware()` to be configured"_). Without it, `auth()` always returns `{ userId: null }`. Both `/api/identify` and `/api/lookup` then respond `401 { error: "Unauthorized" }` — with no `message` field — so the client fallback `data.message ?? "Something went wrong"` fired on every single scan attempt.
+
+**Resolution:** Created `src/middleware.ts` with `clerkMiddleware()` and the standard Next.js App Router matcher. This makes the Clerk session available to all route handlers. No other changes needed — each route already has its own `if (!userId)` guard.
