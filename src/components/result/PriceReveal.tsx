@@ -276,16 +276,6 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
     ? (pricing.bricklink_new_qty ?? pricing.bricklink_stock_new_qty)
     : (pricing.bricklink_used_qty ?? pricing.bricklink_stock_used_qty);
 
-  // ── Section header label ──────────────────────────────────────────────────
-  let sectionLabel: string;
-  if (hasBLSold) {
-    sectionLabel = "BrickLink Sold Transactions";
-  } else if (pricing.data_source === "sold") {
-    sectionLabel = "Recent Transactions";
-  } else {
-    sectionLabel = "Active eBay Listings";
-  }
-
   // ── Image — from BrickLink item ───────────────────────────────────────────
   const imageUrl = setInfo?.image_url ?? null;
   const displayName = setInfo?.name ?? (setNumber ? `Set #${setNumber}` : "LEGO Set");
@@ -367,6 +357,29 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
             aria-label={heroUsd !== null ? usdFormatter.format(heroUsd) : "N/A"}>
             {heroUsd !== null ? usdFormatter.format(animated) : "N/A"}
           </p>
+          {/* Trust signal — right under the number */}
+          {heroFromBLSold && heroSaleQty ? (
+            <p className="text-xs mt-2 font-medium" style={{ color: "var(--muted)" }}>
+              Based on {heroSaleQty} real sales · last 6 months
+            </p>
+          ) : heroFromBLStock && heroSaleQty ? (
+            <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
+              {heroSaleQty} active listings · asking prices
+            </p>
+          ) : (
+            <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>USD</p>
+          )}
+          {/* Price range */}
+          {tab === "new" && pricing.bricklink_new_min_usd !== null && pricing.bricklink_new_max_usd !== null && (
+            <p className="text-[11px] mt-1" style={{ color: "var(--muted)" }}>
+              Range: {usdFormatter.format(pricing.bricklink_new_min_usd)} – {usdFormatter.format(pricing.bricklink_new_max_usd)}
+            </p>
+          )}
+          {tab === "used" && pricing.bricklink_used_min_usd !== null && pricing.bricklink_used_max_usd !== null && (
+            <p className="text-[11px] mt-1" style={{ color: "var(--muted)" }}>
+              Range: {usdFormatter.format(pricing.bricklink_used_min_usd)} – {usdFormatter.format(pricing.bricklink_used_max_usd)}
+            </p>
+          )}
         </div>
 
         {/* Trend + RRP row */}
@@ -385,6 +398,16 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
                 </svg>
                 {priceDelta.delta >= 0 ? "+" : ""}{usdFormatter.format(Math.abs(priceDelta.delta))}
                 {" "}({priceDelta.pct >= 0 ? "+" : ""}{priceDelta.pct.toFixed(1)}%)
+              </span>
+            )}
+            {pricing.gain_pct !== null && (
+              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold"
+                style={{
+                  background: pricing.gain_pct >= 0 ? "rgba(34,197,94,0.18)" : "rgba(239,68,68,0.18)",
+                  color: pricing.gain_pct >= 0 ? "#22c55e" : "#ef4444",
+                  border: `1px solid ${pricing.gain_pct >= 0 ? "rgba(34,197,94,0.30)" : "rgba(239,68,68,0.30)"}`,
+                }}>
+                {pricing.gain_pct >= 0 ? "+" : ""}{pricing.gain_pct.toFixed(0)}% vs retail
               </span>
             )}
             {pricing.rrp_usd && (
@@ -410,20 +433,6 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
           </p>
         </div>
       )}
-      {hasBrickLink && !brickLinkFailed && (
-        <div className="mx-4 mb-4 rounded-xl px-4 py-3 flex items-start gap-2.5"
-          style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.20)" }}>
-          <span className="text-sm leading-none mt-0.5">✅</span>
-          <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
-            {heroFromBLSold
-              ? `Avg sold price from BrickLink (last 6 months).${heroSaleQty ? ` Based on ${heroSaleQty} sales.` : ""}`
-              : heroFromBLStock
-                ? `No recent BrickLink sold data — showing current listing prices.${heroSaleQty ? ` ${heroSaleQty} active listings.` : ""}`
-                : "BrickLink data shown below."}
-            {!ebayFailed && " eBay comparison below."}
-          </p>
-        </div>
-      )}
       {!hasBrickLink && !brickLinkFailed && pricing.data_source !== "sold" && (
         <div className="mx-4 mb-4 rounded-xl px-4 py-3 flex items-start gap-2.5"
           style={{ background: "rgba(245,197,24,0.08)", border: "1px solid rgba(245,197,24,0.20)" }}>
@@ -438,9 +447,12 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
       {hasBLSold && (
         <>
           <div className="mx-4 mb-2 flex justify-between items-center px-0.5">
-            <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
-              {sectionLabel}
-            </span>
+            <div>
+              <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
+                What buyers paid
+              </span>
+              <span className="ml-2 text-[10px]" style={{ color: "var(--muted)" }}>BrickLink · last 6 months</span>
+            </div>
             {activeAvg !== null && (
               <span className="text-[10px] font-semibold" style={{ color: "var(--muted)" }}>
                 avg {usdFormatter.format(activeAvg)}
@@ -465,9 +477,12 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
       {hasBLStock && activeStockDetails.length > 0 && (
         <>
           <div className="mx-4 mb-2 flex justify-between items-center px-0.5">
-            <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
-              BrickLink Current Listings
-            </span>
+            <div>
+              <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
+                What sellers are asking
+              </span>
+              <span className="ml-2 text-[10px]" style={{ color: "var(--muted)" }}>BrickLink · live listings</span>
+            </div>
             {(tab === "new" ? pricing.bricklink_stock_new_avg_usd : pricing.bricklink_stock_used_avg_usd) !== null && (
               <span className="text-[10px] font-semibold" style={{ color: "var(--muted)" }}>
                 avg {usdFormatter.format(
@@ -494,15 +509,19 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
       {(tab === "new" ? pricing.ebay_new_sales : pricing.ebay_used_sales).length > 0 && (() => {
         const ebaySales = tab === "new" ? pricing.ebay_new_sales : pricing.ebay_used_sales;
         const ebayAvg = tab === "new" ? pricing.ebay_new_avg_usd : pricing.ebay_used_avg_usd;
-        const ebayLabel = hasBrickLink
-          ? (pricing.data_source === "sold" ? "eBay Sold (comparison)" : "eBay Listings (comparison)")
-          : (pricing.data_source === "sold" ? "Recent Transactions" : "Active eBay Listings");
+        const ebayLabel = pricing.data_source === "sold" ? "What buyers paid" : "What sellers are asking";
+        const ebaySubLabel = hasBrickLink
+          ? (pricing.data_source === "sold" ? "eBay · sold · comparison" : "eBay · live listings · comparison")
+          : (pricing.data_source === "sold" ? "eBay · sold" : "eBay · live listings");
         return (
           <>
             <div className="mx-4 mb-2 flex justify-between items-center px-0.5">
-              <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
-                {ebayLabel}
-              </span>
+              <div>
+                <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
+                  {ebayLabel}
+                </span>
+                <span className="ml-2 text-[10px]" style={{ color: "var(--muted)" }}>{ebaySubLabel}</span>
+              </div>
               {ebayAvg !== null && (
                 <span className="text-[10px] font-semibold" style={{ color: "var(--muted)" }}>
                   avg {usdFormatter.format(ebayAvg)}
