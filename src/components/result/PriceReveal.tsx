@@ -7,8 +7,6 @@ interface Props {
   setInfo: SetInfo | null;
   pricing: ComputedPricing;
   setNumber?: string;
-  ebayFailed?: boolean;
-  brickLinkFailed?: boolean;
 }
 
 // ── Animated count-up hook ──────────────────────────────────────────────────
@@ -19,7 +17,13 @@ function useCountUp(target: number, durationMs = 900): number {
 
   useEffect(() => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    if (target === 0) { prevTarget.current = 0; rafRef.current = requestAnimationFrame(() => setValue(0)); return; }
+    if (target === 0) {
+      prevTarget.current = 0;
+      rafRef.current = requestAnimationFrame(() => {
+        setValue(0);
+      });
+      return () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current); };
+    }
     const start = performance.now();
     const from = prevTarget.current;
     function tick(now: number) {
@@ -78,6 +82,30 @@ function computePriceDelta(sales: EbaySale[]): { delta: number; pct: number } | 
   const newAvg = newer.reduce((s, x) => s + x.price_usd, 0) / newer.length;
   if (oldAvg === 0) return null;
   return { delta: newAvg - oldAvg, pct: ((newAvg - oldAvg) / oldAvg) * 100 };
+}
+
+// ── Deal score ───────────────────────────────────────────────────────────────
+function computeDealScore(
+  pricing: ComputedPricing,
+  isObsolete: boolean
+): { label: string; emoji: string; color: string; bg: string; border: string } | null {
+  const gainPct = pricing.gain_pct;
+  if (gainPct === null) return null;
+  if (isObsolete && gainPct > 30)
+    return { label: "Retired & Appreciating", emoji: "💎", color: "#a78bfa", bg: "rgba(167,139,250,0.12)", border: "rgba(167,139,250,0.28)" };
+  if (gainPct > 15)
+    return { label: "Hot Market", emoji: "🔥", color: "#f97316", bg: "rgba(249,115,22,0.12)", border: "rgba(249,115,22,0.28)" };
+  if (gainPct >= -10)
+    return { label: "Fair Value", emoji: "✅", color: "#22c55e", bg: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.28)" };
+  return { label: "Below RRP", emoji: "📉", color: "#ef4444", bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.28)" };
+}
+
+// ── Liquidity signal ─────────────────────────────────────────────────────────
+function getLiquiditySignal(qty: number | null): { label: string; color: string } | null {
+  if (!qty) return null;
+  if (qty >= 15) return { label: "High liquidity", color: "#22c55e" };
+  if (qty >= 5)  return { label: "Med liquidity",  color: "#f5c518" };
+  return { label: "Low liquidity", color: "#f97316" };
 }
 
 // ── Retirement pill (from BrickLink is_obsolete) ─────────────────────────────
@@ -200,7 +228,7 @@ function BrickLinkRow({ detail, type, isLast }: { detail: BrickLinkDetail; type:
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLinkFailed }: Props) {
+export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
   // ── Determine data availability ──────────────────────────────────────────
   const hasBLSoldNew  = pricing.bricklink_sold_new_details.length > 0;
   const hasBLSoldUsed = pricing.bricklink_sold_used_details.length > 0;
@@ -217,6 +245,7 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
   const hasUsed = pricing.ebay_used_sales.length > 0 || hasBLSoldUsed || pricing.bricklink_used_avg_usd !== null || pricing.bricklink_stock_used_avg_usd !== null;
 
   const [tab, setTab] = useState<"new" | "used">(hasNew ? "new" : "used");
+  const [shareState, setShareState] = useState<"idle" | "copied">("idle");
 
   // ── Convert BrickLink sold details for sparkline ──────────────────────────
   const blSoldNewSales  = blDetailsToEbaySales(pricing.bricklink_sold_new_details);
@@ -280,6 +309,56 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
   const imageUrl = setInfo?.image_url ?? null;
   const displayName = setInfo?.name ?? (setNumber ? `Set #${setNumber}` : "LEGO Set");
 
+  // ── Deal score + liquidity ────────────────────────────────────────────────
+  const dealScore = computeDealScore(pricing, setInfo?.is_obsolete ?? false);
+  const liquiditySignal = getLiquiditySignal(heroSaleQty);
+
+  // ── Platform spread — BL sold vs eBay vs BL stock ────────────────────────
+  const spreadSoldAvg  = tab === "new" ? pricing.bricklink_new_avg_usd       : pricing.bricklink_used_avg_usd;
+  const spreadEbayAvg  = tab === "new" ? pricing.ebay_new_avg_usd             : pricing.ebay_used_avg_usd;
+  const spreadStockAvg = tab === "new" ? pricing.bricklink_stock_new_avg_usd  : pricing.bricklink_stock_used_avg_usd;
+  const showPlatformSpread = spreadSoldAvg !== null || spreadEbayAvg !== null || spreadStockAvg !== null;
+
+  // ── Sold vs asking gap ────────────────────────────────────────────────────
+  let askingGap: { pct: number; delta: number } | null = null;
+  if (spreadSoldAvg !== null && spreadStockAvg !== null && spreadSoldAvg > 0) {
+    const pct = ((spreadStockAvg - spreadSoldAvg) / spreadSoldAvg) * 100;
+    askingGap = { pct, delta: spreadStockAvg - spreadSoldAvg };
+  }
+
+  // ── Share handler ─────────────────────────────────────────────────────────
+  async function handleShare() {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    const text = heroUsd !== null
+      ? `${displayName} — ${usdFormatter.format(heroUsd)} market value`
+      : displayName;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: "BrickVal", text, url });
+        return;
+      } catch {
+        // user cancelled or API unsupported — fall through to clipboard
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(`${text} ${url}`);
+      setShareState("copied");
+      setTimeout(() => setShareState("idle"), 2000);
+    } catch { /* silent — clipboard not available */ }
+  }
+
+  // ── Deep links ────────────────────────────────────────────────────────────
+  const rawSetNumber = setNumber ?? setInfo?.set_number?.replace(/-\d+$/, "") ?? "";
+  const bricklinkUrl = rawSetNumber
+    ? `https://www.bricklink.com/v2/catalog/catalogitem.page?S=${rawSetNumber}-1#T=P`
+    : null;
+  const ebayUrl = rawSetNumber
+    ? `https://www.ebay.com/sch/i.html?_nkw=LEGO+${encodeURIComponent(rawSetNumber)}&LH_Sold=1&LH_Complete=1`
+    : null;
+
+  // suppress unused var warning — hasBrickLink is used for type narrowing above
+  void hasBrickLink;
+
   return (
     <div className="w-full flex flex-col">
 
@@ -313,8 +392,30 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
       </div>
 
       {/* ── 2. Identity block ── */}
-      <div className="px-5 pt-2 pb-5 text-center flex flex-col items-center gap-1.5">
-        <h1 className="text-xl font-bold leading-tight" style={{ color: "var(--foreground)" }}>
+      <div className="px-5 pt-2 pb-5 flex flex-col items-center gap-1.5">
+        {/* Share button — top right */}
+        <div className="w-full flex justify-end mb-1">
+          <button
+            onClick={handleShare}
+            aria-label="Share"
+            className="p-2 rounded-full transition-opacity active:opacity-60"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)" }}
+          >
+            {shareState === "copied" ? (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3 8l3.5 3.5L13 4.5" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <circle cx="12" cy="3" r="1.8" stroke="currentColor" strokeWidth="1.4" />
+                <circle cx="4" cy="8" r="1.8" stroke="currentColor" strokeWidth="1.4" />
+                <circle cx="12" cy="13" r="1.8" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M5.7 7.1l4.7-2.8M5.7 8.9l4.7 2.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+            )}
+          </button>
+        </div>
+        <h1 className="text-xl font-bold leading-tight text-center" style={{ color: "var(--foreground)" }}>
           🧱 {displayName}
         </h1>
         <p className="text-xs" style={{ color: "var(--muted)" }}>
@@ -323,7 +424,15 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
             setInfo?.year_released && String(setInfo.year_released),
           ].filter(Boolean).join(" · ")}
         </p>
-        {setInfo && <RetirementPill isObsolete={setInfo.is_obsolete} />}
+        <div className="flex items-center gap-2 flex-wrap justify-center">
+          {setInfo && <RetirementPill isObsolete={setInfo.is_obsolete} />}
+          {dealScore && (
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+              style={{ background: dealScore.bg, color: dealScore.color, border: `1px solid ${dealScore.border}` }}>
+              {dealScore.emoji} {dealScore.label}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ── 3. Hero price card ── */}
@@ -333,9 +442,7 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
           <div className="flex" style={{ borderBottom: "1px solid var(--border)" }}>
             {(["new", "used"] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)}
-                className={`flex-1 py-3 text-xs font-bold uppercase tracking-widest transition-all ${
-                  tab === t ? "" : ""
-                }`}
+                className="flex-1 py-3 text-xs font-bold uppercase tracking-widest transition-all"
                 style={{
                   background: tab === t ? "rgba(245,197,24,0.08)" : "transparent",
                   color: tab === t ? "var(--accent)" : "var(--muted)",
@@ -357,11 +464,23 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
             aria-label={heroUsd !== null ? usdFormatter.format(heroUsd) : "N/A"}>
             {heroUsd !== null ? usdFormatter.format(animated) : "N/A"}
           </p>
-          {/* Trust signal — right under the number */}
+          {/* Trust signal + liquidity */}
           {heroFromBLSold && heroSaleQty ? (
-            <p className="text-xs mt-2 font-medium" style={{ color: "var(--muted)" }}>
-              Based on {heroSaleQty} real sales · last 6 months
-            </p>
+            <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
+              <p className="text-xs font-medium" style={{ color: "var(--muted)" }}>
+                Based on {heroSaleQty} real sales · last 6 months
+              </p>
+              {liquiditySignal && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  style={{
+                    background: `${liquiditySignal.color}18`,
+                    color: liquiditySignal.color,
+                    border: `1px solid ${liquiditySignal.color}40`,
+                  }}>
+                  {liquiditySignal.label}
+                </span>
+              )}
+            </div>
           ) : heroFromBLStock && heroSaleQty ? (
             <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
               {heroSaleQty} active listings · asking prices
@@ -384,7 +503,7 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
 
         {/* Trend + RRP row */}
         <div className="px-6 pb-5 flex flex-col gap-3" style={{ borderTop: "1px solid var(--border)" }}>
-          <div className="pt-4 flex items-center justify-center gap-3">
+          <div className="pt-4 flex items-center justify-center gap-3 flex-wrap">
             {priceDelta !== null && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold"
                 style={{
@@ -419,31 +538,63 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
         </div>
       </div>
 
-      {/* ── 5. Data source + outage banners ── */}
-      {(brickLinkFailed || ebayFailed) && (
-        <div className="mx-4 mb-4 rounded-xl px-4 py-3 flex items-start gap-2.5"
-          style={{ background: "rgba(245,197,24,0.08)", border: "1px solid rgba(245,197,24,0.20)" }}>
-          <span className="text-sm leading-none mt-0.5">⚠️</span>
-          <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
-            {brickLinkFailed && ebayFailed
-              ? "Both BrickLink and eBay are temporarily unavailable. Prices may be incomplete — try again in a moment."
-              : brickLinkFailed
-                ? "BrickLink is temporarily unavailable. Showing eBay data only. Try again in a moment for full results."
-                : "eBay is temporarily unavailable. Showing BrickLink data only. Try again in a moment for full results."}
-          </p>
-        </div>
-      )}
-      {!hasBrickLink && !brickLinkFailed && pricing.data_source !== "sold" && (
-        <div className="mx-4 mb-4 rounded-xl px-4 py-3 flex items-start gap-2.5"
-          style={{ background: "rgba(245,197,24,0.08)", border: "1px solid rgba(245,197,24,0.20)" }}>
-          <span className="text-sm leading-none mt-0.5">⚠️</span>
-          <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
-            No recent sold transactions found. Prices shown are current eBay listing prices (asking prices, not confirmed sales).
-          </p>
+      {/* ── 4. Platform spread ── */}
+      {showPlatformSpread && (
+        <div className="mx-5 mb-5 rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+          <div className="px-4 pt-3.5 pb-1">
+            <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
+              Price by source
+            </p>
+          </div>
+          <div className="flex" style={{ borderTop: "1px solid var(--border)" }}>
+            {spreadSoldAvg !== null && (
+              <div className="flex-1 px-3 py-3 text-center">
+                <p className="text-[10px] font-medium mb-1" style={{ color: "var(--muted)" }}>BL Sold</p>
+                <p className="text-sm font-bold tabular-nums" style={{ color: "var(--foreground)" }}>
+                  {usdFormatter.format(spreadSoldAvg)}
+                </p>
+                <p className="text-[9px] mt-0.5" style={{ color: "var(--muted)" }}>real sales</p>
+              </div>
+            )}
+            {spreadEbayAvg !== null && (
+              <div className="flex-1 px-3 py-3 text-center" style={{ borderLeft: "1px solid var(--border)" }}>
+                <p className="text-[10px] font-medium mb-1" style={{ color: "var(--muted)" }}>eBay</p>
+                <p className="text-sm font-bold tabular-nums" style={{ color: "var(--foreground)" }}>
+                  {usdFormatter.format(spreadEbayAvg)}
+                </p>
+                <p className="text-[9px] mt-0.5" style={{ color: "var(--muted)" }}>
+                  {pricing.data_source === "sold" ? "sold" : "listings"}
+                </p>
+              </div>
+            )}
+            {spreadStockAvg !== null && (
+              <div className="flex-1 px-3 py-3 text-center" style={{ borderLeft: "1px solid var(--border)" }}>
+                <p className="text-[10px] font-medium mb-1" style={{ color: "var(--muted)" }}>BL Listed</p>
+                <p className="text-sm font-bold tabular-nums" style={{ color: "var(--foreground)" }}>
+                  {usdFormatter.format(spreadStockAvg)}
+                </p>
+                <p className="text-[9px] mt-0.5" style={{ color: "var(--muted)" }}>asking</p>
+              </div>
+            )}
+          </div>
+          {/* Sold vs asking gap callout */}
+          {askingGap !== null && (
+            <div className="px-4 py-2.5" style={{ borderTop: "1px solid var(--border)" }}>
+              <p className="text-[11px] text-center" style={{ color: "var(--muted)" }}>
+                {askingGap.pct >= 0
+                  ? `Sellers asking ${askingGap.pct.toFixed(0)}% above recent sold prices`
+                  : `Sellers asking ${Math.abs(askingGap.pct).toFixed(0)}% below recent sold prices`}
+                {" · "}
+                <span style={{ color: askingGap.pct >= 0 ? "#f97316" : "#22c55e", fontWeight: 600 }}>
+                  {askingGap.pct >= 0 ? "+" : ""}{usdFormatter.format(askingGap.delta)}
+                </span>
+              </p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── 6. BrickLink sold transactions ── */}
+      {/* ── 5. BrickLink sold transactions ── */}
       {hasBLSold && (
         <>
           <div className="mx-4 mb-2 flex justify-between items-center px-0.5">
@@ -473,7 +624,7 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
         </>
       )}
 
-      {/* ── 7. BrickLink current stock (active listings) ── */}
+      {/* ── 6. BrickLink current stock (active listings) ── */}
       {hasBLStock && activeStockDetails.length > 0 && (
         <>
           <div className="mx-4 mb-2 flex justify-between items-center px-0.5">
@@ -505,43 +656,62 @@ export function PriceReveal({ setInfo, pricing, setNumber, ebayFailed, brickLink
         </>
       )}
 
-      {/* ── 8. eBay listings — always shown when eBay data exists for this tab ── */}
-      {(tab === "new" ? pricing.ebay_new_sales : pricing.ebay_used_sales).length > 0 && (() => {
-        const ebaySales = tab === "new" ? pricing.ebay_new_sales : pricing.ebay_used_sales;
-        const ebayAvg = tab === "new" ? pricing.ebay_new_avg_usd : pricing.ebay_used_avg_usd;
-        const ebayLabel = pricing.data_source === "sold" ? "What buyers paid" : "What sellers are asking";
-        const ebaySubLabel = hasBrickLink
-          ? (pricing.data_source === "sold" ? "eBay · sold · comparison" : "eBay · live listings · comparison")
-          : (pricing.data_source === "sold" ? "eBay · sold" : "eBay · live listings");
-        return (
-          <>
-            <div className="mx-4 mb-2 flex justify-between items-center px-0.5">
-              <div>
-                <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
-                  {ebayLabel}
-                </span>
-                <span className="ml-2 text-[10px]" style={{ color: "var(--muted)" }}>{ebaySubLabel}</span>
-              </div>
-              {ebayAvg !== null && (
-                <span className="text-[10px] font-semibold" style={{ color: "var(--muted)" }}>
-                  avg {usdFormatter.format(ebayAvg)}
-                </span>
-              )}
+      {/* ── 7. eBay listings — shown when NO BrickLink data at all ── */}
+      {!hasBLSold && !hasBLStock && (
+        <>
+          <div className="mx-4 mb-2 flex justify-between items-center px-0.5">
+            <div>
+              <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
+                {pricing.data_source === "sold" ? "What buyers paid" : "What sellers are asking"}
+              </span>
+              <span className="ml-2 text-[10px]" style={{ color: "var(--muted)" }}>
+                {pricing.data_source === "sold" ? "eBay · sold" : "eBay · live listings"}
+              </span>
             </div>
-
-            {/* Only show sparkline if no BrickLink data (avoids double chart) */}
-            {!hasBrickLink && (
-              <PriceSparkline sales={ebaySales} dataSource={pricing.data_source} />
+            {activeAvg !== null && (
+              <span className="text-[10px] font-semibold" style={{ color: "var(--muted)" }}>
+                avg {usdFormatter.format(activeAvg)}
+              </span>
             )}
+          </div>
 
-            <div className="mx-4 mb-5 rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-              {ebaySales.map((sale, i) => (
-                <EbaySaleRow key={i} sale={sale} dotColor={dotColor} isLast={i === ebaySales.length - 1} />
-              ))}
-            </div>
-          </>
-        );
-      })()}
+          <PriceSparkline sales={activeTransactions} dataSource={pricing.data_source} />
+
+          <div className="mx-4 mb-5 rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+            {activeTransactions.map((sale, i) => (
+              <EbaySaleRow key={i} sale={sale} dotColor={dotColor} isLast={i === activeTransactions.length - 1} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ── 8. Buy / Search CTAs ── */}
+      {(bricklinkUrl || ebayUrl) && (
+        <div className="mx-5 mb-5 flex gap-3">
+          {bricklinkUrl && (
+            <a href={bricklinkUrl} target="_blank" rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold transition-opacity active:opacity-70"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--foreground)", textDecoration: "none" }}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M7 1C3.69 1 1 3.69 1 7s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M1 7h12M7 1c-1.5 1.8-2.5 3.8-2.5 6s1 4.2 2.5 6M7 1c1.5 1.8 2.5 3.8 2.5 6s-1 4.2-2.5 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+              Buy on BrickLink
+            </a>
+          )}
+          {ebayUrl && (
+            <a href={ebayUrl} target="_blank" rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold transition-opacity active:opacity-70"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--foreground)", textDecoration: "none" }}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+              Search eBay Sold
+            </a>
+          )}
+        </div>
+      )}
 
       {/* ── 9. Attribution ── */}
       <p className="text-center text-[11px] pb-8 pt-1 px-4" style={{ color: "var(--muted)" }}>
