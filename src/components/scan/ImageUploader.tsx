@@ -83,7 +83,12 @@ export function ImageUploader({ mode, onManualEntry }: Props) {
       setIsLoading(false); return;
     }
     if (mode === "minifig") {
-      router.push(`/result/minifig/${data.set_number}`);
+      if (data.candidates?.length) {
+        sessionStorage.setItem("brickval_last_candidates", JSON.stringify(data.candidates.slice(0, 3)));
+      }
+      const conf = data.candidates?.[0]?.score;
+      const extra = conf !== undefined ? `?conf=${Math.round(conf * 100)}` : "";
+      router.push(`/result/minifig/${data.set_number}${extra}`);
     } else {
       router.push(`/result/${data.set_number}`);
     }

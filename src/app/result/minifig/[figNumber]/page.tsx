@@ -46,15 +46,24 @@ export default function MinifigResultPage() {
   const params = useParams();
   const router = useRouter();
   const figNumber = (params.figNumber as string).replace(/[^a-z0-9]/gi, "");
+  const confParam = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("conf") : null;
 
   const [figInfo, setFigInfo] = useState<MinifigInfo | null>(null);
   const [pricing, setPricing] = useState<MinifigPricing | null>(null);
   const [error, setError] = useState<string | null>(figNumber ? null : "Invalid figure number.");
   const [loading, setLoading] = useState<boolean>(!!figNumber);
   const [tab, setTab] = useState<"used" | "new">("used");
+  const [candidates, setCandidates] = useState<{ id: string; score?: number }[]>([]);
+  const [conditionAdjust, setConditionAdjust] = useState<number>(1);
+  const [marketplace, setMarketplace] = useState<"ebay" | "bricklink" | "facebook">("ebay");
 
   useEffect(() => {
     if (!figNumber) return;
+    // restore candidate list from previous identify call (set by scanner)
+    try {
+      const raw = sessionStorage.getItem("brickval_last_candidates");
+      if (raw) setCandidates(JSON.parse(raw));
+    } catch {}
 
     fetch("/api/lookup", {
       method: "POST",
@@ -72,9 +81,10 @@ export default function MinifigResultPage() {
       .finally(() => setLoading(false));
   }, [figNumber, router]);
 
-  const heroPrice = tab === "used"
+  const heroPriceBase = tab === "used"
     ? (pricing?.used_sold_avg_usd ?? pricing?.used_stock_avg_usd ?? 0)
     : (pricing?.new_sold_avg_usd ?? pricing?.new_stock_avg_usd ?? 0);
+  const heroPrice = Math.round((heroPriceBase * conditionAdjust) * 100) / 100;
 
   if (loading) {
     return (
