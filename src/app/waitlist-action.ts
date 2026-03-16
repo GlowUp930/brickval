@@ -18,7 +18,10 @@ export async function joinWaitlist(
 
   // 23505 = unique_violation — already signed up
   if (error?.code === "23505") return { ok: true, duplicate: true };
-  if (error) return { ok: false, duplicate: false };
+  if (error) {
+    console.error("[waitlist] Supabase insert error:", error);
+    return { ok: false, duplicate: false };
+  }
   return { ok: true, duplicate: false };
 }
 
