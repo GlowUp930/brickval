@@ -120,6 +120,10 @@ SUPABASE_SERVICE_ROLE_KEY           ← server-only, never expose to client
 
 # App
 NEXT_PUBLIC_APP_URL                 ← https://brickvalue.live
+                                      NOTE: server actions (waitlist-action.ts)
+                                      derive appUrl from request headers
+                                      (host + x-forwarded-proto) — do not rely
+                                      on this env var for Stripe URLs.
 
 # Legacy (not active in current flow)
 RAPIDAPI_KEY
