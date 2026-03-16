@@ -156,9 +156,10 @@ function buildAuthHeader(method: string, url: string): string {
 
 async function brickLinkFetch<T>(path: string): Promise<T | null> {
   const url = `${API_BASE}${path}`;
-  const authHeader = buildAuthHeader("GET", url);
 
   try {
+    const authHeader = buildAuthHeader("GET", url);
+
     const res = await fetch(url, {
       method: "GET",
       headers: {
