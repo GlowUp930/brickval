@@ -23,7 +23,7 @@ export async function joinWaitlist(
 
 export async function createLifetimeCheckout() {
   const priceId = process.env.STRIPE_LIFETIME_PRICE_ID;
-  if (!priceId) throw new Error("Missing STRIPE_LIFETIME_PRICE_ID env var");
+  if (!priceId) redirect("/#waitlist");
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
