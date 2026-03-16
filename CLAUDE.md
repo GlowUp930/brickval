@@ -119,7 +119,7 @@ NEXT_PUBLIC_SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY           ← server-only, never expose to client
 
 # App
-NEXT_PUBLIC_APP_URL
+NEXT_PUBLIC_APP_URL                 ← https://brickvalue.live
 
 # Legacy (not active in current flow)
 RAPIDAPI_KEY
