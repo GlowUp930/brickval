@@ -398,6 +398,17 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
               </span>
             )}
           </div>
+          <div className="flex flex-wrap justify-center gap-2 text-[11px]">
+            <span className="px-2.5 py-1 rounded-full" style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--muted)" }}>
+              Source: {heroLabel.replace(" ·", "")}
+            </span>
+            <span className="px-2.5 py-1 rounded-full" style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--muted)" }}>
+              Sample size: {heroSaleQty ?? 0}{heroSaleQty ? " sales/listings" : " (few/no comps)"}
+            </span>
+            <span className="px-2.5 py-1 rounded-full" style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--muted)" }}>
+              Currency: USD
+            </span>
+          </div>
         </div>
       </div>
 
