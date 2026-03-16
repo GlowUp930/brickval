@@ -172,6 +172,7 @@ export async function POST(req: NextRequest) {
   if (!hasEbay && !hasBrickLink) {
     // Both providers failed → retryable error, not "bad set number"
     if (ebayFailed && brickLinkFailed) {
+      console.error(`[lookup] Both eBay and BrickLink failed for set ${setNumber} — check API credentials and network`);
       return NextResponse.json(
         { error: "upstream", message: "Something went wrong. Please try again in a moment." },
         { status: 502 }

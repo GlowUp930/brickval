@@ -112,6 +112,15 @@ export async function POST(req: NextRequest) {
 
   // ── Set mode: use Claude Vision ───────────────────────────────────────────
 
+  // Fail fast with a clear log if the API key is not configured
+  if (!process.env.BRICKVAL_ANTHROPIC_API_KEY) {
+    console.error("[identify] BRICKVAL_ANTHROPIC_API_KEY is not set — cannot call Claude Vision");
+    return NextResponse.json(
+      { error: "Vision API failed", message: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
+  }
+
   // Convert to base64 for Claude Vision
   const arrayBuffer = await imageFile.arrayBuffer();
   const base64 = Buffer.from(arrayBuffer).toString("base64");
@@ -145,7 +154,8 @@ export async function POST(req: NextRequest) {
     responseText =
       message.content[0].type === "text" ? message.content[0].text.trim() : "";
   } catch (err) {
-    console.error("[identify] Claude Vision error:", err);
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error("[identify] Claude Vision API error:", errMsg);
     return NextResponse.json(
       { error: "Vision API failed", message: "Something went wrong. Please try again." },
       { status: 500 }
