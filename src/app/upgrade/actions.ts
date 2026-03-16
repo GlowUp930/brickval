@@ -4,8 +4,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { stripe } from "@/lib/stripe";
 
-// Set this to your actual Stripe Price ID for $12.99 USD/month
-// Create it in: Stripe Dashboard → Products → Add product → $12.99 USD recurring
+// Set to the Price ID from your $29.99 one-time product in Stripe Dashboard
 const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID ?? "";
 
 export async function createCheckoutSession() {
@@ -14,30 +13,23 @@ export async function createCheckoutSession() {
 
   if (!STRIPE_PRICE_ID) {
     throw new Error(
-      "Missing STRIPE_PRICE_ID env var. Create the product in Stripe and add the price ID."
+      "Missing STRIPE_PRICE_ID env var. Add your $29.99 lifetime price ID from Stripe."
     );
   }
 
   const user = await currentUser();
   const email = user?.emailAddresses?.[0]?.emailAddress;
 
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
+    mode: "payment",
     payment_method_types: ["card"],
-    currency: "aud",
     ...(email ? { customer_email: email } : {}),
-    // clerk_user_id set on session + subscription so webhook can resolve the BrickVal user.
-    // Webhook reads subscription metadata first (always available for subscription events).
+    // clerk_user_id in session metadata so webhook can resolve the BrickVal user
+    // on checkout.session.completed.
     metadata: {
       clerk_user_id: userId,
-    },
-    subscription_data: {
-      metadata: {
-        clerk_user_id: userId,
-      },
     },
     line_items: [
       {
