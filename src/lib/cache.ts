@@ -36,10 +36,11 @@ export async function setCached<T>(
     Date.now() + ttlHours * 60 * 60 * 1000
   ).toISOString();
 
-  // Fire-and-forget: don't block the write on cleanup
-  supabase.from("api_cache").delete().lt("expires_at", now).then(() => {/* noop */});
-
   try {
+    // Cleanup expired rows (fire-and-forget — must be inside try so Supabase
+    // Proxy errors don't escape and crash callers like getBrickLinkMarketData)
+    supabase.from("api_cache").delete().lt("expires_at", now).then(() => {/* noop */});
+
     await supabase.from("api_cache").upsert({
       cache_key: key,
       data: value as object,

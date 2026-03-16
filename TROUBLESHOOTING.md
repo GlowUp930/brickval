@@ -138,8 +138,6 @@ Both middleware file "./src/src/middleware.ts" and proxy file "./src/src/proxy.t
 ```
 `src/middleware.ts` was removed to fix the build. `src/proxy.ts` is the correct Clerk middleware and was working all along.
 
-**Actual root cause — still under investigation.** The "something went wrong" error with a working API key and working Clerk middleware (`proxy.ts`) most likely comes from one of:
-- The model ID `claude-sonnet-4-5` in `src/app/api/identify/route.ts:130` may be deprecated. The current Sonnet model is `claude-sonnet-4-6`. If the API key is valid but the model is unavailable, every identify call would fail.
-- eBay or BrickLink API credentials missing/expired on Vercel, causing the lookup upstream error for certain flows.
+**Confirmed root cause:** `src/lib/cache.ts` `setCached()` had a Supabase fire-and-forget cleanup call **outside** the try/catch block (line 40). The `supabase` export is a lazy Proxy — its getter calls `getSupabase()` synchronously, which throws if `NEXT_PUBLIC_SUPABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY` are missing/wrong. That synchronous throw escaped `setCached`'s try/catch, rejecting the promise returned by `setCached`. Both `getBrickLinkMarketData` and `getEbayMarketData` `await setCached(...)` without a surrounding try/catch, so both threw → `brickLinkFailed = true`, `ebayFailed = true` → "Both BrickLink and eBay are temporarily unavailable."
 
-**Check server logs for:** `[identify] Claude Vision API error: <message>` to confirm the model issue.
+**Resolution:** Moved the fire-and-forget cleanup line inside the `try` block in `setCached`. Any Supabase error (missing env vars, network failure, wrong credentials) is now caught and logged as a warning — the cache silently degrades and the BrickLink/eBay data still returns normally.
