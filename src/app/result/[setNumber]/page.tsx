@@ -132,7 +132,7 @@ export default async function ResultPage({ params }: Props) {
 
       {/* Content — no outer padding so hero image goes full-bleed */}
       <div className="flex-1 flex flex-col w-full max-w-md mx-auto">
-        <PriceReveal setInfo={setInfo} pricing={pricing} setNumber={cleanedSetNumber} />
+        <PriceReveal setInfo={setInfo} pricing={pricing} setNumber={cleanedSetNumber} ebayFailed={ebayFailed} brickLinkFailed={brickLinkFailed} />
 
         {/* Scan another CTA */}
         <div className="px-5 pb-8">
