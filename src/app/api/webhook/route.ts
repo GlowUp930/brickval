@@ -69,6 +69,27 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (event.type) {
+      // ── One-time lifetime purchase ─────────────────────────────────────────
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        // Only handle one-time payments (mode: "payment"), not subscription checkouts
+        if (session.mode === "payment" && session.payment_status === "paid") {
+          const userId = session.metadata?.clerk_user_id;
+          if (!userId) {
+            console.error("[webhook] checkout.session.completed: no clerk_user_id in metadata");
+            break;
+          }
+          const { error } = await supabase
+            .from("users")
+            .upsert({ id: userId, is_pro: true }, { onConflict: "id" });
+          if (error) {
+            console.error(`[webhook] Failed to set is_pro for ${userId}:`, error);
+          }
+        }
+        break;
+      }
+
+      // ── Subscription events (kept for future use) ──────────────────────────
       // Activate Pro
       case "customer.subscription.created":
       case "customer.subscription.resumed":

@@ -6,10 +6,11 @@ import { motion } from "framer-motion";
 import { Check, ArrowLeft } from "lucide-react";
 
 const features = [
-  "Unlimited LEGO set scans",
-  "Real-time secondary market prices",
-  "Retirement status for every set",
-  "BrickLink + eBay price comparison",
+  "Unlimited LEGO set scans — forever",
+  "Unlimited minifigure scans",
+  "Real-time BrickLink + eBay prices",
+  "Deal score & retirement status",
+  "One-time payment, no subscription",
 ];
 
 export default function UpgradePage() {
@@ -26,28 +27,30 @@ export default function UpgradePage() {
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
       >
         {/* Icon */}
-        <div className="text-5xl">🧱</div>
+        <div className="text-5xl">💎</div>
 
         {/* Headline */}
         <div>
           <h1 className="text-2xl font-bold mb-2" style={{ color: "var(--foreground)" }}>
-            You&apos;ve used your 5 free scans
+            BrickVal Lifetime
           </h1>
           <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
-            Upgrade to BrickVal Pro for unlimited scans and instant access to
-            current LEGO market prices.
+            Pay once, scan forever. Unlimited access to real-time LEGO market
+            prices — no subscription, no renewal.
           </p>
         </div>
 
         {/* Price */}
         <div className="rounded-2xl p-4" style={{ background: "var(--surface-2)" }}>
           <p className="text-3xl font-bold" style={{ color: "var(--foreground)" }}>
-            $12.99{" "}
+            $29.99{" "}
             <span className="text-base font-normal" style={{ color: "var(--muted)" }}>
-              USD/month
+              USD
             </span>
           </p>
-          <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>Cancel anytime</p>
+          <p className="text-sm mt-1" style={{ color: "var(--accent)" }}>
+            One-time payment · Lifetime access
+          </p>
         </div>
 
         {/* Features */}
@@ -67,9 +70,13 @@ export default function UpgradePage() {
             className="w-full font-bold py-4 px-6 rounded-2xl text-lg transition-all active:scale-[0.98] glow-accent"
             style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
           >
-            Upgrade to Pro
+            Get Lifetime Access
           </button>
         </form>
+
+        <p className="text-xs" style={{ color: "var(--muted)" }}>
+          Secure checkout via Stripe · No recurring charges
+        </p>
 
         <Link
           href="/scan"
