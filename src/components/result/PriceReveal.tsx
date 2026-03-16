@@ -7,6 +7,8 @@ interface Props {
   setInfo: SetInfo | null;
   pricing: ComputedPricing;
   setNumber?: string;
+  ebayFailed?: boolean;
+  brickLinkFailed?: boolean;
 }
 
 // ── Animated count-up hook ──────────────────────────────────────────────────
