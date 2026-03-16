@@ -7,6 +7,8 @@ interface Props {
   setInfo: SetInfo | null;
   pricing: ComputedPricing;
   setNumber?: string;
+  ebayFailed?: boolean;
+  brickLinkFailed?: boolean;
 }
 
 // ── Animated count-up hook ──────────────────────────────────────────────────
@@ -82,6 +84,30 @@ function computePriceDelta(sales: EbaySale[]): { delta: number; pct: number } | 
   const newAvg = newer.reduce((s, x) => s + x.price_usd, 0) / newer.length;
   if (oldAvg === 0) return null;
   return { delta: newAvg - oldAvg, pct: ((newAvg - oldAvg) / oldAvg) * 100 };
+}
+
+// ── Deal score ───────────────────────────────────────────────────────────────
+function computeDealScore(
+  pricing: ComputedPricing,
+  isObsolete: boolean
+): { label: string; emoji: string; color: string; bg: string; border: string } | null {
+  const gainPct = pricing.gain_pct;
+  if (gainPct === null) return null;
+  if (isObsolete && gainPct > 30)
+    return { label: "Retired & Appreciating", emoji: "💎", color: "#a78bfa", bg: "rgba(167,139,250,0.12)", border: "rgba(167,139,250,0.28)" };
+  if (gainPct > 15)
+    return { label: "Hot Market", emoji: "🔥", color: "#f97316", bg: "rgba(249,115,22,0.12)", border: "rgba(249,115,22,0.28)" };
+  if (gainPct >= -10)
+    return { label: "Fair Value", emoji: "✅", color: "#22c55e", bg: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.28)" };
+  return { label: "Below RRP", emoji: "📉", color: "#ef4444", bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.28)" };
+}
+
+// ── Liquidity signal ─────────────────────────────────────────────────────────
+function getLiquiditySignal(qty: number | null): { label: string; color: string } | null {
+  if (!qty) return null;
+  if (qty >= 15) return { label: "High liquidity", color: "#22c55e" };
+  if (qty >= 5)  return { label: "Med liquidity",  color: "#f5c518" };
+  return { label: "Low liquidity", color: "#f97316" };
 }
 
 // ── Retirement pill (from BrickLink is_obsolete) ─────────────────────────────
@@ -221,6 +247,7 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
   const hasUsed = pricing.ebay_used_sales.length > 0 || hasBLSoldUsed || pricing.bricklink_used_avg_usd !== null || pricing.bricklink_stock_used_avg_usd !== null;
 
   const [tab, setTab] = useState<"new" | "used">(hasNew ? "new" : "used");
+  const [shareState, setShareState] = useState<"idle" | "copied">("idle");
 
   // ── Convert BrickLink sold details for sparkline ──────────────────────────
   const blSoldNewSales  = blDetailsToEbaySales(pricing.bricklink_sold_new_details);
@@ -294,6 +321,49 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
   const imageUrl = setInfo?.image_url ?? null;
   const displayName = setInfo?.name ?? (setNumber ? `Set #${setNumber}` : "LEGO Set");
 
+  // ── Deal score + liquidity ────────────────────────────────────────────────
+  const dealScore = computeDealScore(pricing, setInfo?.is_obsolete ?? false);
+  const liquiditySignal = getLiquiditySignal(heroSaleQty);
+
+  // ── Platform spread — BL sold vs eBay vs BL stock ────────────────────────
+  const spreadSoldAvg  = tab === "new" ? pricing.bricklink_new_avg_usd       : pricing.bricklink_used_avg_usd;
+  const spreadEbayAvg  = tab === "new" ? pricing.ebay_new_avg_usd             : pricing.ebay_used_avg_usd;
+  const spreadStockAvg = tab === "new" ? pricing.bricklink_stock_new_avg_usd  : pricing.bricklink_stock_used_avg_usd;
+  const showPlatformSpread = spreadSoldAvg !== null || spreadEbayAvg !== null || spreadStockAvg !== null;
+
+  // ── Sold vs asking gap ────────────────────────────────────────────────────
+  let askingGap: { pct: number; delta: number } | null = null;
+  if (spreadSoldAvg !== null && spreadStockAvg !== null && spreadSoldAvg > 0) {
+    const pct = ((spreadStockAvg - spreadSoldAvg) / spreadSoldAvg) * 100;
+    askingGap = { pct, delta: spreadStockAvg - spreadSoldAvg };
+  }
+
+  // ── Share handler ─────────────────────────────────────────────────────────
+  async function handleShare() {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    const text = heroUsd !== null
+      ? `${displayName} — ${usdFormatter.format(heroUsd)} market value`
+      : displayName;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try { await navigator.share({ title: "BrickVal", text, url }); return; }
+      catch { /* user cancelled — fall through */ }
+    }
+    try {
+      await navigator.clipboard.writeText(`${text} ${url}`);
+      setShareState("copied");
+      setTimeout(() => setShareState("idle"), 2000);
+    } catch { /* silent */ }
+  }
+
+  // ── Deep links ────────────────────────────────────────────────────────────
+  const rawSetNumber = setNumber ?? setInfo?.set_number?.replace(/-\d+$/, "") ?? "";
+  const bricklinkUrl = rawSetNumber
+    ? `https://www.bricklink.com/v2/catalog/catalogitem.page?S=${rawSetNumber}-1#T=P`
+    : null;
+  const ebayUrl = rawSetNumber
+    ? `https://www.ebay.com/sch/i.html?_nkw=LEGO+${encodeURIComponent(rawSetNumber)}&LH_Sold=1&LH_Complete=1`
+    : null;
+
   return (
     <div className="w-full flex flex-col">
 
@@ -327,8 +397,26 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
       </div>
 
       {/* ── 2. Identity block ── */}
-      <div className="px-5 pt-2 pb-5 text-center flex flex-col items-center gap-1.5">
-        <h1 className="text-xl font-bold leading-tight" style={{ color: "var(--foreground)" }}>
+      <div className="px-5 pt-2 pb-5 flex flex-col items-center gap-1.5">
+        <div className="w-full flex justify-end mb-1">
+          <button onClick={handleShare} aria-label="Share"
+            className="p-2 rounded-full transition-opacity active:opacity-60"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)" }}>
+            {shareState === "copied" ? (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3 8l3.5 3.5L13 4.5" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <circle cx="12" cy="3" r="1.8" stroke="currentColor" strokeWidth="1.4" />
+                <circle cx="4" cy="8" r="1.8" stroke="currentColor" strokeWidth="1.4" />
+                <circle cx="12" cy="13" r="1.8" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M5.7 7.1l4.7-2.8M5.7 8.9l4.7 2.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+            )}
+          </button>
+        </div>
+        <h1 className="text-xl font-bold leading-tight text-center" style={{ color: "var(--foreground)" }}>
           🧱 {displayName}
         </h1>
         <p className="text-xs" style={{ color: "var(--muted)" }}>
@@ -337,7 +425,15 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
             setInfo?.year_released && String(setInfo.year_released),
           ].filter(Boolean).join(" · ")}
         </p>
-        {setInfo && <RetirementPill isObsolete={setInfo.is_obsolete} />}
+        <div className="flex items-center gap-2 flex-wrap justify-center">
+          {setInfo && <RetirementPill isObsolete={setInfo.is_obsolete} />}
+          {dealScore && (
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+              style={{ background: dealScore.bg, color: dealScore.color, border: `1px solid ${dealScore.border}` }}>
+              {dealScore.emoji} {dealScore.label}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ── 3. Hero price card ── */}
@@ -371,12 +467,38 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
             aria-label={heroUsd !== null ? usdFormatter.format(heroUsd) : "N/A"}>
             {heroUsd !== null ? usdFormatter.format(animated) : "N/A"}
           </p>
-          <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>USD median price</p>
+          {heroFromBLSold && heroSaleQty ? (
+            <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
+              <p className="text-xs font-medium" style={{ color: "var(--muted)" }}>
+                Based on {heroSaleQty} real sales · last 6 months
+              </p>
+              {liquiditySignal && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  style={{ background: `${liquiditySignal.color}18`, color: liquiditySignal.color, border: `1px solid ${liquiditySignal.color}40` }}>
+                  {liquiditySignal.label}
+                </span>
+              )}
+            </div>
+          ) : heroFromBLStock && heroSaleQty ? (
+            <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>{heroSaleQty} active listings · asking prices</p>
+          ) : (
+            <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>USD</p>
+          )}
+          {tab === "new" && pricing.bricklink_new_min_usd !== null && pricing.bricklink_new_max_usd !== null && (
+            <p className="text-[11px] mt-1" style={{ color: "var(--muted)" }}>
+              Range: {usdFormatter.format(pricing.bricklink_new_min_usd)} – {usdFormatter.format(pricing.bricklink_new_max_usd)}
+            </p>
+          )}
+          {tab === "used" && pricing.bricklink_used_min_usd !== null && pricing.bricklink_used_max_usd !== null && (
+            <p className="text-[11px] mt-1" style={{ color: "var(--muted)" }}>
+              Range: {usdFormatter.format(pricing.bricklink_used_min_usd)} – {usdFormatter.format(pricing.bricklink_used_max_usd)}
+            </p>
+          )}
         </div>
 
         {/* Trend + RRP row */}
         <div className="px-6 pb-5 flex flex-col gap-3" style={{ borderTop: "1px solid var(--border)" }}>
-          <div className="pt-4 flex items-center justify-center gap-3">
+          <div className="pt-4 flex items-center justify-center gap-3 flex-wrap">
             {priceDelta !== null && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold"
                 style={{
@@ -392,6 +514,16 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
                 {" "}({priceDelta.pct >= 0 ? "+" : ""}{priceDelta.pct.toFixed(1)}%)
               </span>
             )}
+            {pricing.gain_pct !== null && (
+              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold"
+                style={{
+                  background: pricing.gain_pct >= 0 ? "rgba(34,197,94,0.18)" : "rgba(239,68,68,0.18)",
+                  color: pricing.gain_pct >= 0 ? "#22c55e" : "#ef4444",
+                  border: `1px solid ${pricing.gain_pct >= 0 ? "rgba(34,197,94,0.30)" : "rgba(239,68,68,0.30)"}`,
+                }}>
+                {pricing.gain_pct >= 0 ? "+" : ""}{pricing.gain_pct.toFixed(0)}% vs retail
+              </span>
+            )}
             {pricing.rrp_usd && (
               <span className="text-xs" style={{ color: "var(--muted)" }}>
                 RRP: ~{usdFormatter.format(pricing.rrp_usd)}
@@ -400,6 +532,53 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
           </div>
         </div>
       </div>
+
+      {/* ── 4. Platform spread ── */}
+      {showPlatformSpread && (
+        <div className="mx-5 mb-5 rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+          <div className="px-4 pt-3.5 pb-1">
+            <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>
+              Price by source
+            </p>
+          </div>
+          <div className="flex" style={{ borderTop: "1px solid var(--border)" }}>
+            {spreadSoldAvg !== null && (
+              <div className="flex-1 px-3 py-3 text-center">
+                <p className="text-[10px] font-medium mb-1" style={{ color: "var(--muted)" }}>BL Sold</p>
+                <p className="text-sm font-bold tabular-nums" style={{ color: "var(--foreground)" }}>{usdFormatter.format(spreadSoldAvg)}</p>
+                <p className="text-[9px] mt-0.5" style={{ color: "var(--muted)" }}>real sales</p>
+              </div>
+            )}
+            {spreadEbayAvg !== null && (
+              <div className="flex-1 px-3 py-3 text-center" style={{ borderLeft: "1px solid var(--border)" }}>
+                <p className="text-[10px] font-medium mb-1" style={{ color: "var(--muted)" }}>eBay</p>
+                <p className="text-sm font-bold tabular-nums" style={{ color: "var(--foreground)" }}>{usdFormatter.format(spreadEbayAvg)}</p>
+                <p className="text-[9px] mt-0.5" style={{ color: "var(--muted)" }}>{pricing.data_source === "sold" ? "sold" : "listings"}</p>
+              </div>
+            )}
+            {spreadStockAvg !== null && (
+              <div className="flex-1 px-3 py-3 text-center" style={{ borderLeft: "1px solid var(--border)" }}>
+                <p className="text-[10px] font-medium mb-1" style={{ color: "var(--muted)" }}>BL Listed</p>
+                <p className="text-sm font-bold tabular-nums" style={{ color: "var(--foreground)" }}>{usdFormatter.format(spreadStockAvg)}</p>
+                <p className="text-[9px] mt-0.5" style={{ color: "var(--muted)" }}>asking</p>
+              </div>
+            )}
+          </div>
+          {askingGap !== null && (
+            <div className="px-4 py-2.5" style={{ borderTop: "1px solid var(--border)" }}>
+              <p className="text-[11px] text-center" style={{ color: "var(--muted)" }}>
+                {askingGap.pct >= 0
+                  ? `Sellers asking ${askingGap.pct.toFixed(0)}% above recent sold prices`
+                  : `Sellers asking ${Math.abs(askingGap.pct).toFixed(0)}% below recent sold prices`}
+                {" · "}
+                <span style={{ color: askingGap.pct >= 0 ? "#f97316" : "#22c55e", fontWeight: 600 }}>
+                  {askingGap.pct >= 0 ? "+" : ""}{usdFormatter.format(askingGap.delta)}
+                </span>
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── 5. Data source banner ── */}
       {hasBrickLink && (
@@ -506,7 +685,35 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
         </>
       )}
 
-      {/* ── 9. Attribution ── */}
+      {/* ── 9. Buy / Search CTAs ── */}
+      {(bricklinkUrl || ebayUrl) && (
+        <div className="mx-5 mb-5 flex gap-3">
+          {bricklinkUrl && (
+            <a href={bricklinkUrl} target="_blank" rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold transition-opacity active:opacity-70"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--foreground)", textDecoration: "none" }}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M7 1C3.69 1 1 3.69 1 7s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M1 7h12M7 1c-1.5 1.8-2.5 3.8-2.5 6s1 4.2 2.5 6M7 1c1.5 1.8 2.5 3.8 2.5 6s-1 4.2-2.5 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+              Buy on BrickLink
+            </a>
+          )}
+          {ebayUrl && (
+            <a href={ebayUrl} target="_blank" rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold transition-opacity active:opacity-70"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--foreground)", textDecoration: "none" }}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+              Search eBay Sold
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* ── 10. Attribution ── */}
       <p className="text-center text-[11px] pb-8 pt-1 px-4" style={{ color: "var(--muted)" }}>
         {hasBLSold && !hasBLStock
           ? "Source: BrickLink (sold) + eBay (listings) · USD"
