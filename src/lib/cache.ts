@@ -5,15 +5,20 @@ import { supabase } from "./supabase";
  * Returns null if the key doesn't exist or is expired.
  */
 export async function getCached<T>(key: string): Promise<T | null> {
-  const { data, error } = await supabase
-    .from("api_cache")
-    .select("data")
-    .eq("cache_key", key)
-    .gt("expires_at", new Date().toISOString())
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("api_cache")
+      .select("data")
+      .eq("cache_key", key)
+      .gt("expires_at", new Date().toISOString())
+      .single();
 
-  if (error || !data) return null;
-  return data.data as T;
+    if (error || !data) return null;
+    return data.data as T;
+  } catch (err) {
+    console.warn("[cache] getCached failed", err);
+    return null;
+  }
 }
 
 /**
@@ -31,11 +36,15 @@ export async function setCached<T>(
     Date.now() + ttlHours * 60 * 60 * 1000
   ).toISOString();
 
-  await supabase.from("api_cache").delete().lt("expires_at", now);
+  try {
+    await supabase.from("api_cache").delete().lt("expires_at", now);
 
-  await supabase.from("api_cache").upsert({
-    cache_key: key,
-    data: value as object,
-    expires_at: expiresAt,
-  });
+    await supabase.from("api_cache").upsert({
+      cache_key: key,
+      data: value as object,
+      expires_at: expiresAt,
+    });
+  } catch (err) {
+    console.warn("[cache] setCached failed", err);
+  }
 }
