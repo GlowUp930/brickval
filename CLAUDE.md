@@ -180,9 +180,16 @@ CREATE TABLE api_cache (
   expires_at timestamp NOT NULL
 );
 -- Index: api_cache_expires_at_idx on (expires_at)
+
+CREATE TABLE waitlist (
+  email      text PRIMARY KEY,
+  created_at timestamp DEFAULT now()
+);
 ```
 
-RLS is enabled on both tables. Service role key bypasses RLS — no public policies needed.
+RLS is enabled on all tables. Service role key bypasses RLS — no public policies needed.
+**CRITICAL:** `SUPABASE_SERVICE_ROLE_KEY` must be the **service role** key (secret, longer),
+NOT the anon/public key. Using the anon key will cause 42501 RLS errors on waitlist inserts.
 
 The `increment_scan(p_user_id, p_free_limit)` RPC:
 - Atomically increments scans_used (handles free limit and pro users)
