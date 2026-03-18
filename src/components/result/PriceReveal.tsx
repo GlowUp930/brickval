@@ -111,38 +111,11 @@ function getLiquiditySignal(qty: number | null): { label: string; color: string 
 }
 
 // ── Retirement pill ───────────────────────────────────────────────────────────
-function RetirementPill({ isObsolete, retirementDate }: { isObsolete: boolean; retirementDate: string | null }) {
-  // Determine if retiring within 6 months
-  const isRetiringSoon = !isObsolete && retirementDate !== null && (() => {
-    const end = new Date(retirementDate).getTime();
-    const now = Date.now();
-    const sixMonthsMs = 6 * 30 * 24 * 60 * 60 * 1000;
-    return end > now && end - now <= sixMonthsMs;
-  })();
-
-  let label: string;
-  let bg: string;
-  let color: string;
-  let border: string;
-
-  if (isObsolete) {
-    label = "Retired";
-    bg = "rgba(239,68,68,0.10)";
-    color = "#ef4444";
-    border = "1px solid rgba(239,68,68,0.25)";
-  } else if (isRetiringSoon && retirementDate) {
-    const month = new Date(retirementDate).toLocaleDateString("en-US", { month: "short", year: "numeric" });
-    label = `Retiring · ${month}`;
-    bg = "rgba(249,115,22,0.10)";
-    color = "#f97316";
-    border = "1px solid rgba(249,115,22,0.25)";
-  } else {
-    label = "In Stores";
-    bg = "rgba(34,197,94,0.10)";
-    color = "#22c55e";
-    border = "1px solid rgba(34,197,94,0.25)";
-  }
-
+function RetirementPill({ isObsolete }: { isObsolete: boolean }) {
+  const label = isObsolete ? "Retired" : "In Stores";
+  const bg = isObsolete ? "rgba(239,68,68,0.10)" : "rgba(34,197,94,0.10)";
+  const color = isObsolete ? "#ef4444" : "#22c55e";
+  const border = isObsolete ? "1px solid rgba(239,68,68,0.25)" : "1px solid rgba(34,197,94,0.25)";
   return (
     <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
       style={{ background: bg, color, border }}>
@@ -454,7 +427,7 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
           ].filter(Boolean).join(" · ")}
         </p>
         <div className="flex items-center gap-2 flex-wrap justify-center">
-          {setInfo && <RetirementPill isObsolete={setInfo.is_obsolete} retirementDate={setInfo.retirement_date} />}
+          {setInfo && <RetirementPill isObsolete={setInfo.is_obsolete} />}
           {dealScore && (
             <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
               style={{ background: dealScore.bg, color: dealScore.color, border: `1px solid ${dealScore.border}` }}>

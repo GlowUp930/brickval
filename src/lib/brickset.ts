@@ -10,15 +10,15 @@ function getApiKey(): string {
 }
 
 /**
- * Returns the US retirement date (dateLastAvailable) for a LEGO set from Brickset.
- * Returns null if the set is not found, the date is unavailable, or the API fails.
- * Cached under `brickset:{setNumber}` for 24 hours.
+ * Returns the US RRP (retailPrice) for a LEGO set from Brickset.
+ * Returns null if the set is not found, price is unavailable, or the API fails.
+ * Cached under `brickset_rrp:{setNumber}` for 24 hours.
  */
-export async function getBricksetRetirementDate(setNumber: string): Promise<string | null> {
-  const cacheKey = `brickset:${setNumber}`;
+export async function getBricksetRrp(setNumber: string): Promise<number | null> {
+  const cacheKey = `brickset_rrp:${setNumber}`;
 
-  const cached = await getCached<{ retirement_date: string | null }>(cacheKey);
-  if (cached !== null) return cached.retirement_date;
+  const cached = await getCached<{ rrp_usd: number | null }>(cacheKey);
+  if (cached !== null) return cached.rrp_usd;
 
   try {
     const apiKey = getApiKey();
@@ -33,13 +33,13 @@ export async function getBricksetRetirementDate(setNumber: string): Promise<stri
 
     const json = await res.json();
     const set = json?.sets?.[0];
-    const rawDate: string | undefined = set?.LEGOCom?.US?.dateLastAvailable;
-    const retirement_date = rawDate ? rawDate.split("T")[0] : null;
+    const raw: unknown = set?.LEGOCom?.US?.retailPrice;
+    const rrp_usd = typeof raw === "number" && raw > 0 ? raw : null;
 
-    await setCached(cacheKey, { retirement_date }, CACHE_TTL_HOURS);
-    return retirement_date;
+    await setCached(cacheKey, { rrp_usd }, CACHE_TTL_HOURS);
+    return rrp_usd;
   } catch (err) {
-    console.warn("[brickset] Failed to fetch retirement date:", err);
+    console.warn("[brickset] Failed to fetch RRP:", err);
     return null;
   }
 }
