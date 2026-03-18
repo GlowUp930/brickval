@@ -30,7 +30,6 @@ export interface SetInfo {
   year_released: number | null;
   is_obsolete: boolean;
   set_number: string;
-  retirement_date: string | null; // ISO date from Brickset (e.g. "2025-12-31"), null if unknown
 }
 
 // Minifigure info (from BrickLink MINIFIG item API)
@@ -62,7 +61,7 @@ export interface MinifigPricing {
 }
 
 export interface ComputedPricing {
-  // RRP — currently null (was from Brickset). Kept for future Supabase-based RRP table.
+  // RRP from Brickset (US retail price)
   rrp_usd: number | null;
   gain_pct: number | null;
   exchange_rate_stale: boolean;

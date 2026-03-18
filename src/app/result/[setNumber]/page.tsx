@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { getEbayMarketData } from "@/lib/ebay";
 import { getBrickLinkMarketData } from "@/lib/bricklink";
-import { getBricksetRetirementDate } from "@/lib/brickset";
+import { getBricksetRrp } from "@/lib/brickset";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { computePricing } from "@/lib/compute-pricing";
 import { PriceReveal } from "@/components/result/PriceReveal";
@@ -51,7 +51,7 @@ export default async function ResultPage({ params }: Props) {
     stale: rates?.stale ?? true,
   };
 
-  const [ebayResult, brickLinkResult, retirementDate] = await Promise.all([
+  const [ebayResult, brickLinkResult, rrpUsd] = await Promise.all([
     getEbayMarketData(cleanedSetNumber, ratesWithFallbacks)
       .then((data) => ({ data, failed: false }))
       .catch(() => ({
@@ -65,7 +65,7 @@ export default async function ResultPage({ params }: Props) {
     getBrickLinkMarketData(cleanedSetNumber)
       .then((data) => ({ data, failed: false }))
       .catch(() => ({ data: null, failed: true })),
-    getBricksetRetirementDate(cleanedSetNumber).catch(() => null),
+    getBricksetRrp(cleanedSetNumber).catch(() => null),
   ]);
   const { data: ebayData, failed: ebayFailed } = ebayResult;
   const { data: brickLinkData, failed: brickLinkFailed } = brickLinkResult;
@@ -100,7 +100,7 @@ export default async function ResultPage({ params }: Props) {
     brickLinkData,
     cleanedSetNumber,
     rates?.stale ?? true,
-    retirementDate
+    rrpUsd
   );
 
   return (
