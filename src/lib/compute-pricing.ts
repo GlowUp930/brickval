@@ -10,7 +10,8 @@ export function computePricing(
   ebayData: EbayMarketData,
   brickLinkData: BrickLinkMarketData | null,
   setNumber: string,
-  ratesStale: boolean
+  ratesStale: boolean,
+  retirementDate: string | null = null
 ): { setInfo: SetInfo | null; pricing: ComputedPricing } {
   // ── SetInfo from BrickLink item API ──────────────────────────────────────
   const blItem = brickLinkData?.item ?? null;
@@ -25,6 +26,7 @@ export function computePricing(
         year_released: blItem.year_released ?? null,
         is_obsolete: blItem.is_obsolete ?? false,
         set_number: blItem.no ?? setNumber,
+        retirement_date: retirementDate,
       }
     : null;
 

@@ -30,6 +30,7 @@ export interface SetInfo {
   year_released: number | null;
   is_obsolete: boolean;
   set_number: string;
+  retirement_date: string | null; // ISO date from Brickset (e.g. "2025-12-31"), null if unknown
 }
 
 // Minifigure info (from BrickLink MINIFIG item API)
