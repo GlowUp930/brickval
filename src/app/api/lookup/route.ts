@@ -61,8 +61,14 @@ export async function POST(req: NextRequest) {
     }
 
     const item = minifigData.item;
+    const rawName = item?.name ?? figNumber;
+    const decodedName = rawName
+      .replace(/&#(\d+);/g, (_: string, dec: string) => String.fromCharCode(parseInt(dec, 10)))
+      .replace(/&#x([0-9a-f]+);/gi, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)))
+      .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"').replace(/&apos;/g, "'");
     const figInfo: MinifigInfo = {
-      name: item?.name ?? figNumber,
+      name: decodedName,
       image_url: item?.image_url ?? null,
       fig_number: figNumber,
       year_released: item?.year_released ?? null,
