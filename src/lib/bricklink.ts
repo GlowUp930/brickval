@@ -165,12 +165,20 @@ async function brickLinkFetch<T>(path: string): Promise<T | null> {
         Authorization: authHeader,
         Accept: "application/json",
       },
+      redirect: "follow",
       next: { revalidate: 0 },
     } as RequestInit);
 
     if (!res.ok) {
       const text = await res.text();
-      console.warn(`[bricklink] ${res.status} for ${path}: ${text}`);
+      console.warn(`[bricklink] ${res.status} for ${path}: ${text.slice(0, 300)}`);
+      return null;
+    }
+
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+      const text = await res.text();
+      console.warn(`[bricklink] Non-JSON response for ${path} (content-type: ${contentType}): ${text.slice(0, 300)}`);
       return null;
     }
 
