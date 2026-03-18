@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getEbayMarketData } from "@/lib/ebay";
 import { getBrickLinkMarketData, getMinifigMarketData } from "@/lib/bricklink";
+import { getBricksetRrp } from "@/lib/brickset";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { computePricing } from "@/lib/compute-pricing";
@@ -152,7 +153,7 @@ export async function POST(req: NextRequest) {
   let ebayFailed = false;
   let brickLinkFailed = false;
 
-  const [ebayData, brickLinkData] = await Promise.all([
+  const [ebayData, brickLinkData, rrpUsd] = await Promise.all([
     getEbayMarketData(setNumber, ratesWithFallbacks).catch(() => {
       ebayFailed = true;
       return { new_sales: [] as EbaySale[], used_sales: [] as EbaySale[], data_source: "listing" as const };
@@ -162,6 +163,7 @@ export async function POST(req: NextRequest) {
       console.warn("[lookup] BrickLink fetch failed:", err);
       return null;
     }),
+    getBricksetRrp(setNumber).catch(() => null),
   ]);
 
   // Check for ANY data — including stock listings (not just sold)
@@ -190,7 +192,8 @@ export async function POST(req: NextRequest) {
     ebayData,
     brickLinkData,
     setNumber,
-    rates?.stale ?? true
+    rates?.stale ?? true,
+    rrpUsd
   );
 
   return NextResponse.json({

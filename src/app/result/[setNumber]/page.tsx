@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { getEbayMarketData } from "@/lib/ebay";
 import { getBrickLinkMarketData } from "@/lib/bricklink";
+import { getBricksetRrp } from "@/lib/brickset";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { computePricing } from "@/lib/compute-pricing";
 import { PriceReveal } from "@/components/result/PriceReveal";
@@ -53,10 +54,13 @@ export default async function ResultPage({ params }: Props) {
     stale: ratesValue?.stale ?? true,
   };
 
-  // eBay needs rates for multi-currency conversion, starts after rates resolve
-  const ebayResult = await getEbayMarketData(cleanedSetNumber, ratesWithFallbacks)
-    .then((v) => ({ status: "fulfilled" as const, value: v }))
-    .catch(() => ({ status: "rejected" as const, reason: null }));
+  // eBay needs rates for multi-currency conversion; Brickset runs in parallel
+  const [ebayResult, rrpUsd] = await Promise.all([
+    getEbayMarketData(cleanedSetNumber, ratesWithFallbacks)
+      .then((v) => ({ status: "fulfilled" as const, value: v }))
+      .catch(() => ({ status: "rejected" as const, reason: null })),
+    getBricksetRrp(cleanedSetNumber).catch(() => null),
+  ]);
 
   const ebayFailed = ebayResult.status === "rejected";
   const brickLinkFailed = brickLinkResult.status === "rejected";
@@ -98,7 +102,8 @@ export default async function ResultPage({ params }: Props) {
     ebayData,
     brickLinkData,
     cleanedSetNumber,
-    ratesValue?.stale ?? true
+    ratesValue?.stale ?? true,
+    rrpUsd
   );
 
   return (
