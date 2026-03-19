@@ -8,7 +8,7 @@ import { joinWaitlist, createLifetimeCheckout } from "@/app/waitlist-action";
 const steps = [
   { icon: "📷", title: "Take a photo", desc: "Point your camera at any LEGO box" },
   { icon: "🤖", title: "AI reads it", desc: "Claude Vision finds the set number" },
-  { icon: "💰", title: "See the value", desc: "Get current market prices instantly" },
+  { icon: "💰", title: "See the value", desc: "USD market price, retirement status, and deal score — instantly" },
 ];
 
 const STUDS = Array.from({ length: 10 });
@@ -208,6 +208,81 @@ export function Hero() {
               </motion.div>
             ))}
           </div>
+
+          {/* ── Mini result demo ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.5, duration: 0.6 }}
+            className="mt-14 flex flex-col items-center gap-4"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--muted)" }}>
+              Here&apos;s what you get
+            </p>
+            <div
+              className="w-full max-w-sm rounded-3xl overflow-hidden"
+              style={{ background: "var(--background)", border: "1px solid var(--border)", boxShadow: "0 8px 40px -12px rgba(0,0,0,0.6)" }}
+            >
+              {/* Set image area */}
+              <div className="relative h-28 flex items-center justify-center" style={{ background: "var(--surface)" }}>
+                <span className="text-5xl">🧱</span>
+                <div className="absolute inset-x-0 bottom-0 h-8 pointer-events-none"
+                  style={{ background: "linear-gradient(to bottom, transparent, var(--background))" }} />
+              </div>
+
+              {/* Identity */}
+              <div className="px-4 pt-1 pb-3 text-center">
+                <p className="font-bold text-sm" style={{ color: "var(--foreground)" }}>Millennium Falcon</p>
+                <p className="text-[11px] mb-2" style={{ color: "var(--muted)" }}>#75192 · 2017</p>
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+                    style={{ background: "rgba(239,68,68,0.10)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.25)" }}>
+                    Retired
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+                    style={{ background: "rgba(167,139,250,0.12)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.28)" }}>
+                    💎 Retired &amp; Appreciating
+                  </span>
+                </div>
+              </div>
+
+              {/* Price card */}
+              <div className="mx-3 mb-3 rounded-2xl p-4 text-center"
+                style={{ border: "1px solid var(--border)", background: "linear-gradient(to bottom, rgba(245,197,24,0.05), transparent)" }}>
+                <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--accent)" }}>
+                  BrickLink Avg Sold · New / Sealed
+                </p>
+                <p className="text-4xl font-bold tabular-nums leading-none" style={{ color: "var(--foreground)" }}>$289</p>
+                <p className="text-[11px] mt-1" style={{ color: "var(--muted)" }}>Based on 42 real sales · last 6 months</p>
+                <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+                  <span className="text-xs font-bold px-3 py-1.5 rounded-full"
+                    style={{ background: "rgba(34,197,94,0.18)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.30)" }}>
+                    +43% vs retail
+                  </span>
+                  <span className="text-xs" style={{ color: "var(--muted)" }}>RRP: ~$200</span>
+                </div>
+              </div>
+
+              {/* Sample transaction rows */}
+              <div className="mx-3 mb-3 rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+                {[
+                  { label: "BrickLink sold · US", date: "12 Mar 2026", price: "$295" },
+                  { label: "BrickLink sold · DE", date: "8 Mar 2026", price: "$281" },
+                ].map((row, i) => (
+                  <div key={i} className="flex items-center gap-3 px-3 py-3"
+                    style={{ background: "var(--surface)", borderBottom: i === 0 ? "1px solid var(--border)" : "none" }}>
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: "var(--accent)" }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>{row.label}</p>
+                      <p className="text-[10px]" style={{ color: "var(--muted)" }}>{row.date}</p>
+                    </div>
+                    <span className="text-xs font-black tabular-nums" style={{ color: "var(--accent)" }}>{row.price}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
@@ -365,7 +440,7 @@ export function Hero() {
                     {/* Headline */}
                     <div className="flex flex-col gap-2">
                       <h2 className="text-3xl font-black tracking-tight" style={{ color: "var(--foreground)" }}>
-                        Be first when Pro lands.
+                        Be First To Know When We Launch
                       </h2>
                       <p className="text-base leading-relaxed" style={{ color: "var(--muted)" }}>
                         Get notified the moment BrickVal Pro goes live —<br className="hidden sm:block" />
