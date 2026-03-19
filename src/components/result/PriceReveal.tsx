@@ -462,12 +462,19 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
           <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>
             {heroLabel}
           </p>
-          <p className="text-5xl font-bold leading-none tabular-nums" style={{ color: "var(--foreground)" }}
-            aria-label={heroUsd !== null ? usdFormatter.format(heroUsd) : "N/A"}>
-            {heroUsd !== null ? usdFormatter.format(animated) : "N/A"}
-          </p>
+          {heroFromBLSold && heroUsd === 0 ? (
+            <p className="text-sm font-medium px-4 py-3 rounded-xl mx-auto max-w-xs text-center"
+              style={{ color: "var(--muted)", background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+              No transactions recorded on BrickLink yet
+            </p>
+          ) : (
+            <p className="text-5xl font-bold leading-none tabular-nums" style={{ color: "var(--foreground)" }}
+              aria-label={heroUsd !== null ? usdFormatter.format(heroUsd) : "N/A"}>
+              {heroUsd !== null ? usdFormatter.format(animated) : "N/A"}
+            </p>
+          )}
           {/* Trust signal + liquidity */}
-          {heroFromBLSold && heroSaleQty ? (
+          {heroFromBLSold && heroUsd === 0 ? null : heroFromBLSold && heroSaleQty ? (
             <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
               <p className="text-xs font-medium" style={{ color: "var(--muted)" }}>
                 Based on {heroSaleQty} real sales · last 6 months
@@ -490,13 +497,12 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
           ) : (
             <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>USD</p>
           )}
-          {/* Price range */}
-          {tab === "new" && pricing.bricklink_new_min_usd !== null && pricing.bricklink_new_max_usd !== null && (
+          {tab === "new" && pricing.bricklink_new_min_usd !== null && pricing.bricklink_new_max_usd !== null && (pricing.bricklink_new_min_usd > 0 || pricing.bricklink_new_max_usd > 0) && (
             <p className="text-[11px] mt-1" style={{ color: "var(--muted)" }}>
               Range: {usdFormatter.format(pricing.bricklink_new_min_usd)} – {usdFormatter.format(pricing.bricklink_new_max_usd)}
             </p>
           )}
-          {tab === "used" && pricing.bricklink_used_min_usd !== null && pricing.bricklink_used_max_usd !== null && (
+          {tab === "used" && pricing.bricklink_used_min_usd !== null && pricing.bricklink_used_max_usd !== null && (pricing.bricklink_used_min_usd > 0 || pricing.bricklink_used_max_usd > 0) && (
             <p className="text-[11px] mt-1" style={{ color: "var(--muted)" }}>
               Range: {usdFormatter.format(pricing.bricklink_used_min_usd)} – {usdFormatter.format(pricing.bricklink_used_max_usd)}
             </p>
@@ -552,9 +558,11 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
             {spreadSoldAvg !== null && (
               <div className="flex-1 px-3 py-3 text-center">
                 <p className="text-[10px] font-medium mb-1" style={{ color: "var(--muted)" }}>BL Sold</p>
-                <p className="text-sm font-bold tabular-nums" style={{ color: "var(--foreground)" }}>
-                  {usdFormatter.format(spreadSoldAvg)}
-                </p>
+                {spreadSoldAvg === 0 ? (
+                  <p className="text-[10px] font-medium tabular-nums" style={{ color: "var(--muted)" }}>No transactions</p>
+                ) : (
+                  <p className="text-sm font-bold tabular-nums" style={{ color: "var(--foreground)" }}>{usdFormatter.format(spreadSoldAvg)}</p>
+                )}
                 <p className="text-[9px] mt-0.5" style={{ color: "var(--muted)" }}>real sales</p>
               </div>
             )}
