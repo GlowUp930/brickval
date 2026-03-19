@@ -184,14 +184,15 @@ export default function MinifigResultPage() {
   }, [figNumber, router]);
 
   // ── Derived pricing ───────────────────────────────────────────────────────
+  // Treat 0 as no-data (BrickLink returns 0 avg when there are no transactions)
   const heroBase = tab === "used"
-    ? (pricing?.used_sold_avg_usd ?? pricing?.used_stock_avg_usd ?? null)
-    : (pricing?.new_sold_avg_usd  ?? pricing?.new_stock_avg_usd  ?? null);
+    ? (pricing?.used_sold_avg_usd || pricing?.used_stock_avg_usd || null)
+    : (pricing?.new_sold_avg_usd  || pricing?.new_stock_avg_usd  || null);
   const heroUsd = heroBase !== null ? Math.round(heroBase * 100) / 100 : null;
 
   const heroFromSold = tab === "used"
-    ? (pricing?.used_sold_avg_usd ?? null) !== null
-    : (pricing?.new_sold_avg_usd  ?? null) !== null;
+    ? !!(pricing?.used_sold_avg_usd)
+    : !!(pricing?.new_sold_avg_usd);
 
   const heroSaleQty = tab === "used"
     ? (pricing?.used_sold_qty ?? pricing?.used_stock_qty ?? null)
@@ -208,8 +209,8 @@ export default function MinifigResultPage() {
   const soldAvg  = tab === "used" ? (pricing?.used_sold_avg_usd  ?? null) : (pricing?.new_sold_avg_usd  ?? null);
   const stockAvg = tab === "used" ? (pricing?.used_stock_avg_usd ?? null) : (pricing?.new_stock_avg_usd ?? null);
 
-  const hasUsedData = (pricing?.used_sold_avg_usd ?? pricing?.used_stock_avg_usd) !== null;
-  const hasNewData  = (pricing?.new_sold_avg_usd  ?? pricing?.new_stock_avg_usd)  !== null;
+  const hasUsedData = !!(pricing?.used_sold_avg_usd || pricing?.used_stock_avg_usd);
+  const hasNewData  = !!(pricing?.new_sold_avg_usd  || pricing?.new_stock_avg_usd);
   const showTabs    = hasUsedData && hasNewData;
 
   const minUsd = tab === "used" ? (pricing?.used_sold_min_usd ?? null) : (pricing?.new_sold_min_usd ?? null);
@@ -219,7 +220,7 @@ export default function MinifigResultPage() {
   const priceDelta      = computePriceDelta(soldDetails);
 
   // Platform spread
-  const showPlatformSpread = soldAvg !== null || stockAvg !== null;
+  const showPlatformSpread = !!(soldAvg || stockAvg);
   let askingGap: { pct: number; delta: number } | null = null;
   if (soldAvg !== null && stockAvg !== null && soldAvg > 0) {
     const pct = ((stockAvg - soldAvg) / soldAvg) * 100;
@@ -394,11 +395,18 @@ export default function MinifigResultPage() {
             <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>
               {heroLabel}
             </p>
-            <p className="text-5xl font-bold leading-none tabular-nums" style={{ color: "var(--foreground)" }}
-              aria-label={heroUsd !== null ? usd.format(heroUsd) : "N/A"}>
-              {heroUsd !== null ? usd.format(animated) : "N/A"}
-            </p>
-            {heroFromSold && heroSaleQty ? (
+            {heroUsd === null ? (
+              <p className="text-sm font-medium px-4 py-3 rounded-xl mx-auto max-w-xs text-center"
+                style={{ color: "var(--muted)", background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                No transaction data available on BrickLink
+              </p>
+            ) : (
+              <p className="text-5xl font-bold leading-none tabular-nums" style={{ color: "var(--foreground)" }}
+                aria-label={usd.format(heroUsd)}>
+                {usd.format(animated)}
+              </p>
+            )}
+            {heroUsd !== null && heroFromSold && heroSaleQty ? (
               <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
                 <p className="text-xs font-medium" style={{ color: "var(--muted)" }}>
                   Based on {heroSaleQty} real {heroSaleQty === 1 ? "sale" : "sales"} · last 6 months
@@ -410,12 +418,17 @@ export default function MinifigResultPage() {
                   </span>
                 )}
               </div>
-            ) : heroSaleQty ? (
+            ) : heroUsd !== null && heroSaleQty ? (
               <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>{heroSaleQty} active listings · asking prices</p>
-            ) : (
+            ) : heroUsd !== null ? (
               <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>USD · BrickLink</p>
+            ) : null}
+            {heroUsd !== null && !heroFromSold && (
+              <p className="text-[11px] mt-2 px-2" style={{ color: "#f97316" }}>
+                Asking price only — no sold transactions recorded on BrickLink
+              </p>
             )}
-            {minUsd !== null && maxUsd !== null && (
+            {minUsd !== null && maxUsd !== null && (minUsd > 0 || maxUsd > 0) && (
               <p className="text-[11px] mt-1" style={{ color: "var(--muted)" }}>
                 Range: {usdDecimal.format(minUsd)} – {usdDecimal.format(maxUsd)}
               </p>
@@ -456,7 +469,11 @@ export default function MinifigResultPage() {
               {soldAvg !== null && (
                 <div className="flex-1 px-3 py-3 text-center">
                   <p className="text-[10px] font-medium mb-1" style={{ color: "var(--muted)" }}>BL Sold</p>
-                  <p className="text-sm font-bold tabular-nums" style={{ color: "var(--foreground)" }}>{usdDecimal.format(soldAvg)}</p>
+                  {soldAvg === 0 ? (
+                    <p className="text-[10px] font-medium" style={{ color: "var(--muted)" }}>No transactions</p>
+                  ) : (
+                    <p className="text-sm font-bold tabular-nums" style={{ color: "var(--foreground)" }}>{usdDecimal.format(soldAvg)}</p>
+                  )}
                   <p className="text-[9px] mt-0.5" style={{ color: "var(--muted)" }}>real sales</p>
                 </div>
               )}
