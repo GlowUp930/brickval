@@ -268,13 +268,16 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
     : pricing.bricklink_stock_used_details;
 
   // ── Hero price — BrickLink sold → eBay → BrickLink stock (same condition only)
-  const heroUsd = tab === "new"
-    ? (pricing.bricklink_new_avg_usd  ?? pricing.ebay_new_avg_usd  ?? pricing.bricklink_stock_new_avg_usd)
-    : (pricing.bricklink_used_avg_usd ?? pricing.ebay_used_avg_usd ?? pricing.bricklink_stock_used_avg_usd);
+  // Treat 0 as no-data (BrickLink returns 0 avg when there are no transactions)
+  const blSoldAvg = tab === "new"
+    ? (pricing.bricklink_new_avg_usd  || null)
+    : (pricing.bricklink_used_avg_usd || null);
+  const heroUsd = blSoldAvg
+    ?? (tab === "new" ? pricing.ebay_new_avg_usd  : pricing.ebay_used_avg_usd)
+    ?? (tab === "new" ? pricing.bricklink_stock_new_avg_usd : pricing.bricklink_stock_used_avg_usd);
 
-  const heroFromBLSold = tab === "new"
-    ? pricing.bricklink_new_avg_usd  !== null
-    : pricing.bricklink_used_avg_usd !== null;
+  const heroFromBLSold = blSoldAvg !== null;
+  const heroNoData = heroUsd === null || heroUsd === 0;
   const heroFromBLStock = !heroFromBLSold && (tab === "new"
     ? pricing.bricklink_stock_new_avg_usd  !== null
     : pricing.bricklink_stock_used_avg_usd !== null);
@@ -282,8 +285,8 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
 
   // Average shown in section header
   const activeAvg = tab === "new"
-    ? (pricing.bricklink_new_avg_usd  ?? pricing.ebay_new_avg_usd)
-    : (pricing.bricklink_used_avg_usd ?? pricing.ebay_used_avg_usd);
+    ? (blSoldAvg ?? pricing.ebay_new_avg_usd)
+    : (blSoldAvg ?? pricing.ebay_used_avg_usd);
 
   const dotColor = tab === "new" ? "var(--accent)" : "var(--muted)";
 
@@ -462,19 +465,18 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
           <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>
             {heroLabel}
           </p>
-          {heroFromBLSold && heroUsd === 0 ? (
+          {heroNoData ? (
             <p className="text-sm font-medium px-4 py-3 rounded-xl mx-auto max-w-xs text-center"
               style={{ color: "var(--muted)", background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-              No transactions recorded on BrickLink yet
+              No transaction data available on BrickLink
             </p>
           ) : (
             <p className="text-5xl font-bold leading-none tabular-nums" style={{ color: "var(--foreground)" }}
-              aria-label={heroUsd !== null ? usdFormatter.format(heroUsd) : "N/A"}>
-              {heroUsd !== null ? usdFormatter.format(animated) : "N/A"}
+              aria-label={usdFormatter.format(heroUsd!)}>
+              {usdFormatter.format(animated)}
             </p>
           )}
-          {/* Trust signal + liquidity */}
-          {heroFromBLSold && heroUsd === 0 ? null : heroFromBLSold && heroSaleQty ? (
+          {!heroNoData && heroFromBLSold && heroSaleQty ? (
             <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
               <p className="text-xs font-medium" style={{ color: "var(--muted)" }}>
                 Based on {heroSaleQty} real sales · last 6 months
@@ -490,12 +492,17 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
                 </span>
               )}
             </div>
-          ) : heroFromBLStock && heroSaleQty ? (
+          ) : !heroNoData && heroFromBLStock && heroSaleQty ? (
             <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
               {heroSaleQty} active listings · asking prices
             </p>
-          ) : (
+          ) : !heroNoData ? (
             <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>USD</p>
+          ) : null}
+          {!heroNoData && !heroFromBLSold && (
+            <p className="text-[11px] mt-2 px-2" style={{ color: "#f97316" }}>
+              Asking price only — no sold transactions recorded on BrickLink
+            </p>
           )}
           {tab === "new" && pricing.bricklink_new_min_usd !== null && pricing.bricklink_new_max_usd !== null && (pricing.bricklink_new_min_usd > 0 || pricing.bricklink_new_max_usd > 0) && (
             <p className="text-[11px] mt-1" style={{ color: "var(--muted)" }}>

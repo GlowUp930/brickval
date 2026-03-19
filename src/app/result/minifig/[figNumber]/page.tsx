@@ -71,8 +71,10 @@ export default function MinifigResultPage() {
       .finally(() => setLoading(false));
   }, [figNumber, router]);
 
-  const heroPrice = pricing?.used_sold_avg_usd ?? pricing?.new_sold_avg_usd ?? pricing?.used_stock_avg_usd ?? pricing?.new_stock_avg_usd ?? 0;
+  // Treat 0 as no-data (BrickLink returns 0 avg when there are no transactions)
+  const heroPrice = pricing?.used_sold_avg_usd || pricing?.new_sold_avg_usd || pricing?.used_stock_avg_usd || pricing?.new_stock_avg_usd || 0;
   const heroIsNew = !pricing?.used_sold_avg_usd && !!pricing?.new_sold_avg_usd;
+  const heroFromSold = !!(pricing?.used_sold_avg_usd || pricing?.new_sold_avg_usd);
 
   if (loading) {
     return (
@@ -152,26 +154,38 @@ export default function MinifigResultPage() {
         </div>
 
         {/* Hero price */}
-        {heroPrice > 0 && (
-          <div className="rounded-3xl p-6 flex flex-col items-center gap-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            <p className="text-xs font-medium uppercase tracking-widest" style={{ color: "var(--muted)" }}>
-              {heroIsNew
-                ? (pricing?.new_sold_avg_usd ? "Avg sold price (new)" : "Avg asking price (new)")
-                : (pricing?.used_sold_avg_usd ? "Avg sold price (used)" : "Avg asking price (used)")}
+        <div className="rounded-3xl p-6 flex flex-col items-center gap-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+          {heroPrice === 0 ? (
+            <p className="text-sm font-medium px-4 py-3 rounded-xl text-center"
+              style={{ color: "var(--muted)", background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+              No transaction data available on BrickLink
             </p>
-            <HeroPrice amount={heroPrice} />
-            {!heroIsNew && pricing?.used_sold_qty && (
-              <p className="text-xs" style={{ color: "var(--muted)" }}>
-                Based on {pricing.used_sold_qty} {pricing.used_sold_qty === 1 ? "sale" : "sales"} on BrickLink
+          ) : (
+            <>
+              <p className="text-xs font-medium uppercase tracking-widest" style={{ color: "var(--muted)" }}>
+                {heroIsNew
+                  ? (pricing?.new_sold_avg_usd ? "Avg sold price (new)" : "Avg asking price (new)")
+                  : (pricing?.used_sold_avg_usd ? "Avg sold price (used)" : "Avg asking price (used)")}
               </p>
-            )}
-            {heroIsNew && pricing?.new_sold_qty && (
-              <p className="text-xs" style={{ color: "var(--muted)" }}>
-                Based on {pricing.new_sold_qty} {pricing.new_sold_qty === 1 ? "sale" : "sales"} on BrickLink
-              </p>
-            )}
-          </div>
-        )}
+              <HeroPrice amount={heroPrice} />
+              {!heroIsNew && pricing?.used_sold_qty && (
+                <p className="text-xs" style={{ color: "var(--muted)" }}>
+                  Based on {pricing.used_sold_qty} {pricing.used_sold_qty === 1 ? "sale" : "sales"} on BrickLink
+                </p>
+              )}
+              {heroIsNew && pricing?.new_sold_qty && (
+                <p className="text-xs" style={{ color: "var(--muted)" }}>
+                  Based on {pricing.new_sold_qty} {pricing.new_sold_qty === 1 ? "sale" : "sales"} on BrickLink
+                </p>
+              )}
+              {!heroFromSold && (
+                <p className="text-[11px] mt-1 text-center px-2" style={{ color: "#f97316" }}>
+                  Asking price only — no sold transactions recorded on BrickLink
+                </p>
+              )}
+            </>
+          )}
+        </div>
 
         {/* Used pricing */}
         {pricing && (pricing.used_sold_avg_usd !== null || pricing.used_stock_avg_usd !== null) && (
