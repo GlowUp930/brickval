@@ -1,5 +1,9 @@
 # BrickVal — LEGO Scan & Value App (Lean MVP)
 
+## Active Development Branch
+**All development happens on `claude/stripe-appurl-fix-ihFVU` only.**
+Do NOT push to or edit the `claude/loveable-design-practices-ihFVU` branch.
+
 ## What we're building
 Mobile-first web app: scan a LEGO set photo → get its current USD market value.
 This is a Lean MVP. Build only what is in the plan. No extras, no abstractions.
