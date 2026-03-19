@@ -225,8 +225,14 @@ export function Hero() {
               style={{ background: "var(--background)", border: "1px solid var(--border)", boxShadow: "0 8px 40px -12px rgba(0,0,0,0.6)" }}
             >
               {/* Set image area */}
-              <div className="relative h-28 flex items-center justify-center" style={{ background: "var(--surface)" }}>
-                <span className="text-5xl">🧱</span>
+              <div className="relative h-28 flex items-center justify-center overflow-hidden" style={{ background: "var(--surface)" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://img.bricklink.com/ItemImage/SN/0/75192-1.png"
+                  alt="LEGO Millennium Falcon 75192"
+                  className="h-full w-full object-contain"
+                  style={{ padding: "8px" }}
+                />
                 <div className="absolute inset-x-0 bottom-0 h-8 pointer-events-none"
                   style={{ background: "linear-gradient(to bottom, transparent, var(--background))" }} />
               </div>
