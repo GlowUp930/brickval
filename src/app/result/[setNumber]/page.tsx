@@ -20,7 +20,7 @@ export default async function ResultPage({ params }: Props) {
   const { setNumber } = await params;
   const cleanedSetNumber = setNumber.replace(/[^0-9]/g, "");
 
-  if (cleanedSetNumber.length < 4) {
+  if (cleanedSetNumber.length < 4 || cleanedSetNumber.length > 6) {
     return <ErrorScreen message="Invalid set number. Please try again." />;
   }
 
@@ -74,6 +74,18 @@ export default async function ResultPage({ params }: Props) {
   const hasBrickLink = brickLinkData?.sold_new || brickLinkData?.sold_used
     || brickLinkData?.stock_new || brickLinkData?.stock_used;
   const hasEbay = ebayData.new_sales.length > 0 || ebayData.used_sales.length > 0;
+
+  // BrickLink responded successfully but found no item and no price data — set doesn't exist.
+  // eBay results alone are unreliable (fuzzy search returns unrelated listings).
+  if (!brickLinkFailed && !hasBrickLink && !brickLinkData?.item) {
+    return (
+      <ErrorScreen
+        message={`We don't have data for set #${cleanedSetNumber}. Double-check the number and try again.`}
+        backLabel="Try another set"
+        backHref="/scan"
+      />
+    );
+  }
 
   if (!hasEbay && !hasBrickLink) {
     if (ebayFailed && brickLinkFailed) {
