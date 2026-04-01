@@ -5,8 +5,28 @@
 Do NOT push to or edit the `claude/loveable-design-practices-ihFVU` branch.
 
 ## What we're building
-Mobile-first web app: scan a LEGO set photo → get its current USD market value.
+Mobile-first web app: scan a LEGO set photo → get its current **USD** market value (not AUD).
 This is a Lean MVP. Build only what is in the plan. No extras, no abstractions.
+
+### What's working
+- ✅ Scan flow: camera capture, file upload, manual set number entry
+- ✅ Claude Vision set number detection (claude-sonnet-4-5)
+- ✅ BrickLink API: sold + stock price guides + item metadata (OAuth 1.0)
+- ✅ eBay API: sold + listing prices across US/AU/GB/DE (OAuth 2.0)
+- ✅ Price reveal animation (count-up from $0, cubic ease-out, 60fps)
+- ✅ Supabase caching for all external API calls (24h TTL)
+- ✅ Vercel Cron job for hourly cache cleanup
+- ✅ Stripe webhook handler for subscription lifecycle events
+- ✅ Clerk authentication
+- ✅ Exchange rate conversion via Frankfurter API (cached 24h)
+- ✅ All pricing logic centralised in compute-pricing.ts (no duplication)
+
+### What's NOT working / stubbed
+- ⏸️ Paywall: `scan-gate.ts` returns `allowed: true` for everyone — Stripe paywall not wired yet
+- ⏸️ eBay Marketplace Insights: awaiting Application Growth Check approval, falls back to Browse API (active listings)
+- ⏸️ RRP / gain%: no data source after Brickset removal — future Supabase RRP table
+- ⏸️ No test coverage (no test framework configured)
+- ⏸️ `lucide-react`, `framer-motion`, `clsx` are installed but unused
 
 ## Tech Stack
 - Next.js 16 (App Router), React 19, Tailwind CSS v4, TypeScript 5
