@@ -67,8 +67,17 @@ export default async function ResultPage({ params }: Props) {
       .catch(() => ({ data: null, failed: true })),
     getBricksetRrp(cleanedSetNumber).catch(() => null),
   ]);
-  const { data: ebayData, failed: ebayFailed } = ebayResult;
+  const { data: rawEbayData, failed: ebayFailed } = ebayResult;
   const { data: brickLinkData, failed: brickLinkFailed } = brickLinkResult;
+
+  // Only keep eBay listings that mention the set number in their title.
+  // Prevents eBay's fuzzy search from returning unrelated results for
+  // non-existent or wrong set numbers.
+  const ebayData = {
+    ...rawEbayData,
+    new_sales:  rawEbayData.new_sales.filter(s => s.title.includes(cleanedSetNumber)),
+    used_sales: rawEbayData.used_sales.filter(s => s.title.includes(cleanedSetNumber)),
+  };
 
   // Check for ANY data — including stock listings (not just sold)
   const hasBrickLink = brickLinkData?.sold_new || brickLinkData?.sold_used
