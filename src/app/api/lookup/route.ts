@@ -6,6 +6,7 @@ import { getBricksetRrp } from "@/lib/brickset";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { computePricing } from "@/lib/compute-pricing";
+import { sortByMostRecentDate } from "@/lib/sort-transactions";
 import type { EbaySale, MinifigInfo, MinifigPricing } from "@/types/market";
 
 export async function POST(req: NextRequest) {
@@ -80,24 +81,24 @@ export async function POST(req: NextRequest) {
     const soldNew = minifigData.sold_new;
     const stockNew = minifigData.stock_new;
 
-    const soldDetails = (soldUsed?.price_detail ?? []).map((d) => ({
+    const soldDetails = sortByMostRecentDate((soldUsed?.price_detail ?? []).map((d) => ({
       price_usd: parseFloat(d.unit_price),
       quantity: d.quantity,
       date: d.date_ordered,
       country: d.seller_country_code,
-    }));
+    })));
     const stockDetails = (stockUsed?.price_detail ?? []).map((d) => ({
       price_usd: parseFloat(d.unit_price),
       quantity: d.quantity,
       country: d.seller_country_code,
     }));
 
-    const soldNewDetails = (soldNew?.price_detail ?? []).map((d) => ({
+    const soldNewDetails = sortByMostRecentDate((soldNew?.price_detail ?? []).map((d) => ({
       price_usd: parseFloat(d.unit_price),
       quantity: d.quantity,
       date: d.date_ordered,
       country: d.seller_country_code,
-    }));
+    })));
     const stockNewDetails = (stockNew?.price_detail ?? []).map((d) => ({
       price_usd: parseFloat(d.unit_price),
       quantity: d.quantity,

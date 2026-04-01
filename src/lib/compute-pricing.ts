@@ -1,5 +1,6 @@
 import type { BrickLinkMarketData } from "./bricklink";
 import type { ComputedPricing, EbayMarketData, SetInfo } from "@/types/market";
+import { sortByMostRecentDate } from "@/lib/sort-transactions";
 
 /**
  * Shared pricing computation — called by both the API route and the SSR page.
@@ -97,8 +98,12 @@ export function computePricing(
   const blStockUsedQty = brickLinkData?.stock_used?.unit_quantity ?? null;
 
   // ── BrickLink row details ────────────────────────────────────────────────
-  const blSoldNewDetails = toBlDetails(brickLinkData?.sold_new?.price_detail);
-  const blSoldUsedDetails = toBlDetails(brickLinkData?.sold_used?.price_detail);
+  const blSoldNewDetails = sortByMostRecentDate(
+    toBlDetails(brickLinkData?.sold_new?.price_detail)
+  );
+  const blSoldUsedDetails = sortByMostRecentDate(
+    toBlDetails(brickLinkData?.sold_used?.price_detail)
+  );
   const blStockNewDetails = toBlDetails(brickLinkData?.stock_new?.price_detail);
   const blStockUsedDetails = toBlDetails(brickLinkData?.stock_used?.price_detail);
 
