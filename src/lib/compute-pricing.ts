@@ -55,12 +55,14 @@ export function computePricing(
     seller_country_code?: string;
   };
   function toBlDetails(details: RawDetail[] | undefined) {
-    return (details ?? []).map((d) => ({
-      price_usd: parseFloat(d.unit_price) || 0,
-      quantity: d.quantity,
-      date: d.date_ordered,
-      country: d.seller_country_code,
-    }));
+    return (details ?? [])
+      .map((d) => ({
+        price_usd: parseFloat(d.unit_price) || 0,
+        quantity: d.quantity,
+        date: d.date_ordered,
+        country: d.seller_country_code,
+      }))
+      .filter((d) => d.price_usd > 0);
   }
 
   // ── BrickLink sold stats (last 6 months) ─────────────────────────────────

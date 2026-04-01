@@ -471,7 +471,7 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
           {heroNoData ? (
             <p className="text-sm font-medium px-4 py-3 rounded-xl mx-auto max-w-xs text-center"
               style={{ color: "var(--muted)", background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-              No transaction data available on BrickLink
+              No transaction data available for this condition
             </p>
           ) : (
             <p className="text-5xl font-bold leading-none tabular-nums" style={{ color: "var(--foreground)" }}
