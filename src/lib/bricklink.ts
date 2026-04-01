@@ -334,3 +334,30 @@ export async function getBrickLinkMarketData(
   await setCached(cacheKey, result, CACHE_TTL_HOURS);
   return result;
 }
+
+/**
+ * Lightweight item-only fetch for set preview cards.
+ * Tries "{setNumber}-1" then "{setNumber}" to match BrickLink format.
+ * Cached under "preview-set:{setNumber}" for 24 hours.
+ */
+export async function getBrickLinkSetItem(setNumber: string): Promise<BrickLinkItem | null> {
+  const cacheKey = `preview-set:${setNumber}`;
+  const cached = await getCached<BrickLinkItem>(cacheKey);
+  if (cached) return cached;
+  const item = await fetchItem(`${setNumber}-1`) ?? await fetchItem(setNumber);
+  if (item) await setCached(cacheKey, item, CACHE_TTL_HOURS);
+  return item ?? null;
+}
+
+/**
+ * Lightweight item-only fetch for minifig preview cards.
+ * Cached under "preview-minifig:{figNo}" for 24 hours.
+ */
+export async function getBrickLinkMinifigItem(figNo: string): Promise<BrickLinkItem | null> {
+  const cacheKey = `preview-minifig:${figNo}`;
+  const cached = await getCached<BrickLinkItem>(cacheKey);
+  if (cached) return cached;
+  const item = await fetchMinifigItem(figNo);
+  if (item) await setCached(cacheKey, item, CACHE_TTL_HOURS);
+  return item ?? null;
+}

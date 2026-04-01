@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Upload } from "lucide-react";
+import type { IdentifyCandidate } from "@/types/scan";
 
 const MAX_PIXELS_SET = 1_150_000;          // ~1.1 MP is fine for box OCR
 const MAX_PIXELS_MINIFIG = 3_000_000;      // keep detail for prints
@@ -41,7 +42,6 @@ async function compressImage(file: File, mode: "set" | "minifig", maxPixels: num
 }
 
 interface Props { mode: "set" | "minifig"; onManualEntry: () => void; }
-type Candidate = { id: string; score?: number };
 
 export function ImageUploader({ mode, onManualEntry }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -49,32 +49,48 @@ export function ImageUploader({ mode, onManualEntry }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [candidateOptions, setCandidateOptions] = useState<Candidate[]>([]);
   const router = useRouter();
 
   async function handleFile(file: File) {
-    setIsLoading(true); setError(null); setCandidateOptions([]);
+    setIsLoading(true); setError(null);
     let compressed: Blob;
     try {
       const targetPixels = mode === "minifig" ? MAX_PIXELS_MINIFIG : MAX_PIXELS_SET;
       compressed = await compressImage(file, mode, targetPixels);
-    }
-  catch { setError("Could not process this image. Try a different photo."); setIsLoading(false); return; }
+    } catch { setError("Could not process this image. Try a different photo."); setIsLoading(false); return; }
 
     const formData = new FormData();
     formData.append("image", compressed, "scan.jpg");
 
-    let data: { set_number: string | null; candidates?: Candidate[]; error?: string; message?: string };
+    let data: {
+      set_number: string | null;
+      confidence?: number;
+      needs_confirmation?: boolean;
+      candidates?: IdentifyCandidate[];
+      error?: string;
+      message?: string;
+    };
     try {
       const res = await fetch(`/api/identify?mode=${mode}`, { method: "POST", body: formData });
       data = await res.json();
       if (!res.ok) { setError(data.message ?? "Something went wrong. Please try again."); setIsLoading(false); return; }
     } catch { setError("Network error. Check your connection and try again."); setIsLoading(false); return; }
 
+    // Low-confidence: route to confirmation page
+    if (data.needs_confirmation && (data.candidates?.length ?? 0) >= 2) {
+      sessionStorage.setItem("brickval_confirm", JSON.stringify({
+        mode,
+        candidates: data.candidates,
+        timestamp: Date.now(),
+      }));
+      router.push(`/confirm?mode=${mode}`);
+      setIsLoading(false);
+      return;
+    }
+
+    // No match
     if (!data.set_number) {
-      if (mode === "minifig" && (data.candidates?.length ?? 0) > 0) {
-        setCandidateOptions((data.candidates ?? []).slice(0, 3));
-      } else if (mode === "minifig") {
+      if (mode === "minifig") {
         setError("Couldn't identify this minifigure. Try a clearer photo with a plain background.");
       } else {
         setError("Couldn't find a set number. Try a clearer photo or enter it below.");
@@ -82,11 +98,13 @@ export function ImageUploader({ mode, onManualEntry }: Props) {
       }
       setIsLoading(false); return;
     }
+
+    // High-confidence: route straight to result
     if (mode === "minifig") {
       if (data.candidates?.length) {
         sessionStorage.setItem("brickval_last_candidates", JSON.stringify(data.candidates.slice(0, 3)));
       }
-      const conf = data.candidates?.[0]?.score;
+      const conf = data.candidates?.[0]?.confidence;
       const extra = conf !== undefined ? `?conf=${Math.round(conf * 100)}` : "";
       router.push(`/result/minifig/${data.set_number}${extra}`);
     } else {
@@ -105,11 +123,6 @@ export function ImageUploader({ mode, onManualEntry }: Props) {
     setDragActive(false);
     const file = e.dataTransfer.files?.[0];
     if (file) handleFile(file);
-  }
-
-  function handleCandidateSelect(id: string) {
-    setIsLoading(false);
-    router.push(`/result/minifig/${id}`);
   }
 
   return (
@@ -185,26 +198,6 @@ export function ImageUploader({ mode, onManualEntry }: Props) {
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />
 
       {error && <p className="text-sm text-center mt-1" style={{ color: "var(--red)" }}>{error}</p>}
-
-      {candidateOptions.length > 0 && (
-        <div className="mt-2 w-full rounded-xl p-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-          <p className="text-xs font-semibold mb-2" style={{ color: "var(--muted)" }}>
-            We found possible matches. Pick the right minifigure:
-          </p>
-          <div className="flex flex-col gap-2">
-            {candidateOptions.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => handleCandidateSelect(c.id)}
-                className="w-full text-sm font-semibold px-4 py-2 rounded-lg text-left transition-all active:scale-[0.98]"
-                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-              >
-                {c.id} {typeof c.score === "number" ? `(score ${(c.score * 100).toFixed(0)}%)` : ""}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
