@@ -37,17 +37,18 @@ export default function ConfirmPage() {
       return;
     }
 
-    setMode(stored.mode);
+    const resolvedMode = stored.mode;
 
     // Fetch preview data for all candidates in parallel
     fetch("/api/preview", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ mode: stored.mode, ids: stored.candidates.map((c) => c.id) }),
+      body: JSON.stringify({ mode: resolvedMode, ids: stored.candidates.map((c) => c.id) }),
     })
       .then((r) => r.json())
       .then((data: { previews: CandidatePreview[] }) => {
         const previews = data.previews ?? [];
+        setMode(resolvedMode);
         setCards(
           stored.candidates.map((c, i) => {
             const preview = previews.find((p) => p.id === c.id) ?? {
@@ -59,6 +60,7 @@ export default function ConfirmPage() {
       })
       .catch(() => {
         // Fallback: render cards with raw IDs only, no preview images
+        setMode(resolvedMode);
         setCards(
           stored.candidates.map((c, i) => ({
             id: c.id, name: null, image_url: null, year_released: null, is_obsolete: null, rank: i,
