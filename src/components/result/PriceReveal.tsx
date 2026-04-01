@@ -258,7 +258,8 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
   // Priority: BrickLink sold → eBay (sold or listing)
   const activeTransactions: EbaySale[] = hasBLSold
     ? (tab === "new" ? blSoldNewSales  : blSoldUsedSales)
-    : (tab === "new" ? pricing.ebay_new_sales : pricing.ebay_used_sales);
+    : [...(tab === "new" ? pricing.ebay_new_sales : pricing.ebay_used_sales)]
+        .sort((a, b) => new Date(b.sold_date).getTime() - new Date(a.sold_date).getTime());
 
   // Sparkline: BrickLink sold has real dates → "sold"; eBay follows its data_source
   const activeDataSource: "sold" | "listing" = hasBLSold ? "sold" : pricing.data_source;
@@ -654,7 +655,8 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
           <PriceSparkline sales={activeTransactions} dataSource={activeDataSource} />
 
           <div className="mx-4 mb-5 rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-            {(tab === "new" ? pricing.bricklink_sold_new_details : pricing.bricklink_sold_used_details)
+            {[...(tab === "new" ? pricing.bricklink_sold_new_details : pricing.bricklink_sold_used_details)]
+              .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime())
               .slice(0, 10)
               .map((d, i, arr) => (
                 <BrickLinkRow key={i} detail={d} type="sold" isLast={i === arr.length - 1} />
