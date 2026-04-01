@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "BrickVal — LEGO Set Value Scanner",
   description:
-    "Point your camera at any LEGO set and instantly know what it's worth in AUD.",
+    "Point your camera at any LEGO set and instantly know what it's worth in USD.",
 };
 
 export default function RootLayout({
@@ -42,7 +42,7 @@ export default function RootLayout({
   }
 
   return (
-    <ClerkProvider publishableKey={clerkPublishableKey}>
+    <ClerkProvider publishableKey={clerkPublishableKey} afterSignInUrl="/scan" afterSignUpUrl="/scan">
       {appShell}
     </ClerkProvider>
   );
