@@ -80,24 +80,27 @@ export async function POST(req: NextRequest) {
     const soldNew = minifigData.sold_new;
     const stockNew = minifigData.stock_new;
 
-    const soldDetails = (soldUsed?.price_detail ?? []).map((d) => ({
+    const sortByDateDesc = <T extends { date?: string }>(arr: T[]) =>
+      arr.sort((a, b) => (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0));
+
+    const soldDetails = sortByDateDesc((soldUsed?.price_detail ?? []).map((d) => ({
       price_usd: parseFloat(d.unit_price),
       quantity: d.quantity,
       date: d.date_ordered,
       country: d.seller_country_code,
-    }));
+    })));
     const stockDetails = (stockUsed?.price_detail ?? []).map((d) => ({
       price_usd: parseFloat(d.unit_price),
       quantity: d.quantity,
       country: d.seller_country_code,
     }));
 
-    const soldNewDetails = (soldNew?.price_detail ?? []).map((d) => ({
+    const soldNewDetails = sortByDateDesc((soldNew?.price_detail ?? []).map((d) => ({
       price_usd: parseFloat(d.unit_price),
       quantity: d.quantity,
       date: d.date_ordered,
       country: d.seller_country_code,
-    }));
+    })));
     const stockNewDetails = (stockNew?.price_detail ?? []).map((d) => ({
       price_usd: parseFloat(d.unit_price),
       quantity: d.quantity,

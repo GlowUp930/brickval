@@ -656,7 +656,7 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
 
           <div className="mx-4 mb-5 rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
             {[...(tab === "new" ? pricing.bricklink_sold_new_details : pricing.bricklink_sold_used_details)]
-              .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime())
+              .sort((a, b) => (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0))
               .slice(0, 10)
               .map((d, i, arr) => (
                 <BrickLinkRow key={i} detail={d} type="sold" isLast={i === arr.length - 1} />

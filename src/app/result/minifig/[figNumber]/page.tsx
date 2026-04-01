@@ -528,7 +528,7 @@ export default function MinifigResultPage() {
             <MinifigSparkline details={soldDetails} />
             <div className="mx-4 rounded-b-2xl overflow-hidden" style={{ border: "1px solid var(--border)", borderTop: "none" }}>
               {[...soldDetails]
-                .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime())
+                .sort((a, b) => (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0))
                 .slice(0, 8).map((d, i) => (
                 <BLRow key={i} detail={d} type="sold" isLast={i === Math.min(soldDetails.length, 8) - 1} />
               ))}
