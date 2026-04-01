@@ -42,7 +42,7 @@ export default function RootLayout({
   }
 
   return (
-    <ClerkProvider publishableKey={clerkPublishableKey} afterSignInUrl="/scan" afterSignUpUrl="/scan">
+    <ClerkProvider publishableKey={clerkPublishableKey} signInForceRedirectUrl="/scan" signUpForceRedirectUrl="/scan">
       {appShell}
     </ClerkProvider>
   );
