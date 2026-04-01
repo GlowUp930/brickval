@@ -51,7 +51,7 @@ export default async function ResultPage({ params }: Props) {
     stale: rates?.stale ?? true,
   };
 
-  const [ebayResult, brickLinkResult, rrpUsd] = await Promise.all([
+  const [ebayResult, brickLinkResult, bricksetResult] = await Promise.all([
     getEbayMarketData(cleanedSetNumber, ratesWithFallbacks)
       .then((data) => ({ data, failed: false }))
       .catch(() => ({
@@ -65,10 +65,12 @@ export default async function ResultPage({ params }: Props) {
     getBrickLinkMarketData(cleanedSetNumber)
       .then((data) => ({ data, failed: false }))
       .catch(() => ({ data: null, failed: true })),
-    getBricksetRrp(cleanedSetNumber).catch(() => null),
+    getBricksetRrp(cleanedSetNumber).catch(() => ({ rrp: null, found: false })),
   ]);
   const { data: rawEbayData, failed: ebayFailed } = ebayResult;
   const { data: brickLinkData, failed: brickLinkFailed } = brickLinkResult;
+  const rrpUsd = bricksetResult.rrp;
+  const bricksetFound = bricksetResult.found;
 
   // Only keep eBay listings that mention the set number in their title.
   // Prevents eBay's fuzzy search from returning unrelated results for
@@ -84,9 +86,12 @@ export default async function ResultPage({ params }: Props) {
     || brickLinkData?.stock_new || brickLinkData?.stock_used;
   const hasEbay = ebayData.new_sales.length > 0 || ebayData.used_sales.length > 0;
 
-  // BrickLink responded successfully but found no item and no price data — set doesn't exist.
-  // eBay results alone are unreliable (fuzzy search returns unrelated listings).
-  if (!brickLinkFailed && !hasBrickLink && !brickLinkData?.item) {
+  // Dual-API existence gate: require BrickLink OR Brickset to confirm the set.
+  // eBay alone is unreliable (fuzzy search returns unrelated listings).
+  const blKnowsSet = !brickLinkFailed && (!!brickLinkData?.item || !!hasBrickLink);
+  const bricksetKnowsSet = bricksetFound === true;
+
+  if (!blKnowsSet && !bricksetKnowsSet) {
     return (
       <ErrorScreen
         message={`We don't have data for set #${cleanedSetNumber}. Double-check the number and try again.`}
