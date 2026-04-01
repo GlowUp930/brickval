@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
   let ebayFailed = false;
   let brickLinkFailed = false;
 
-  const [ebayData, brickLinkData, rrpUsd] = await Promise.all([
+  const [ebayData, brickLinkData, bricksetResult] = await Promise.all([
     getEbayMarketData(setNumber, ratesWithFallbacks).catch(() => {
       ebayFailed = true;
       return { new_sales: [] as EbaySale[], used_sales: [] as EbaySale[], data_source: "listing" as const };
@@ -185,13 +185,24 @@ export async function POST(req: NextRequest) {
       console.warn("[lookup] BrickLink fetch failed:", err);
       return null;
     }),
-    getBricksetRrp(setNumber).catch(() => null),
+    getBricksetRrp(setNumber).catch(() => ({ rrp: null, found: false })),
   ]);
+  const rrpUsd = bricksetResult.rrp;
+  const bricksetFound = bricksetResult.found;
 
   // Check for ANY data — including stock listings (not just sold)
   const hasBrickLink = brickLinkData?.sold_new || brickLinkData?.sold_used
     || brickLinkData?.stock_new || brickLinkData?.stock_used;
   const hasEbay = ebayData.new_sales.length > 0 || ebayData.used_sales.length > 0;
+
+  // Dual-API existence gate: require BrickLink OR Brickset to confirm the set.
+  const blKnowsSet = !brickLinkFailed && (!!brickLinkData?.item || !!hasBrickLink);
+  if (!blKnowsSet && !bricksetFound) {
+    return NextResponse.json(
+      { error: "not_found", message: "We don't have data for this set number. Double-check the number and try again." },
+      { status: 404 }
+    );
+  }
 
   if (!hasEbay && !hasBrickLink) {
     // Both providers failed → retryable error, not "bad set number"
