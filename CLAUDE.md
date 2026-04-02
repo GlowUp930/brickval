@@ -1,8 +1,7 @@
 # BrickVal — LEGO Scan & Value App (Lean MVP)
 
 ## Active Development Branch
-**All development happens on `claude/stripe-appurl-fix-ihFVU` only.**
-Do NOT push to or edit the `claude/loveable-design-practices-ihFVU` branch.
+**All development happens on `claude/fix-no-transaction-display-4bRbq` only.**
 
 ## What we're building
 Mobile-first web app: scan a LEGO set photo → get its current **USD** market value (not AUD).
@@ -10,12 +9,15 @@ This is a Lean MVP. Build only what is in the plan. No extras, no abstractions.
 
 ### What's working
 - ✅ Scan flow: camera capture, file upload, manual set number entry
-- ✅ Claude Vision set number detection (claude-sonnet-4-5)
+- ✅ Claude Vision set number detection (claude-sonnet-4-5) — multi-candidate JSON response
+- ✅ Low-confidence match confirmation: up to 3 candidates shown on /confirm before scan is charged
 - ✅ BrickLink API: sold + stock price guides + item metadata (OAuth 1.0)
-- ✅ eBay API: sold + listing prices across US/AU/GB/DE (OAuth 2.0)
+- ✅ BrickLink + Brickset dual-API gate: random/fake set numbers return "not found" error
+- ✅ eBay API: sold + listing prices across US/AU/GB/DE (OAuth 2.0), title-filtered to set number
 - ✅ Price reveal animation (count-up from $0, cubic ease-out, 60fps)
+- ✅ Zero-price transaction rows filtered out (BrickLink "0.0000" entries hidden)
 - ✅ Supabase caching for all external API calls (24h TTL)
-- ✅ Vercel Cron job for hourly cache cleanup
+- ✅ Vercel Cron job: daily cache cleanup at 03:00 UTC (keeps Supabase active, prevents free-tier pause)
 - ✅ Stripe webhook handler for subscription lifecycle events
 - ✅ Clerk authentication
 - ✅ Exchange rate conversion via Frankfurter API (cached 24h)
@@ -46,9 +48,14 @@ This is a Lean MVP. Build only what is in the plan. No extras, no abstractions.
 src/
 ├── app/
 │   ├── api/
-│   │   ├── identify/route.ts     # POST — Claude Vision set number extraction
+│   │   ├── cron/cleanup/route.ts # GET — daily cache cleanup + Supabase keep-alive (CRON_SECRET)
+│   │   ├── identify/route.ts     # POST — Claude Vision set number extraction (multi-candidate)
 │   │   ├── lookup/route.ts       # POST — market data aggregation (BrickLink + eBay + Brickset)
+│   │   ├── preview/route.ts      # POST — fetch BrickLink card data for confirm candidates (no scan charge)
 │   │   └── webhook/route.ts      # POST — Stripe subscription lifecycle events
+│   ├── confirm/
+│   │   ├── page.tsx              # Client component — candidate selection UI (reads sessionStorage)
+│   │   └── demo/page.tsx         # DEMO ONLY — hardcoded mock data for UI testing, delete before launch
 │   ├── result/[setNumber]/
 │   │   ├── page.tsx              # Server component — fetch + compute + render result
 │   │   └── error.tsx             # Error boundary for result page
@@ -67,8 +74,8 @@ src/
 │       └── ManualEntry.tsx       # Set number text input → /result/[setNumber]
 ├── lib/
 │   ├── anthropic.ts              # Claude SDK lazy singleton (BRICKVAL_ANTHROPIC_API_KEY)
-│   ├── bricklink.ts              # BrickLink OAuth 1.0 — price guide (sold + stock) + item info
-│   ├── brickset.ts               # Brickset API v3 — set metadata, RRP, retirement status
+│   ├── bricklink.ts              # BrickLink OAuth 1.0 — price guide (sold + stock) + item info + previews
+│   ├── brickset.ts               # Brickset API v3 — set metadata, RRP, retirement status (returns { rrp, found })
 │   ├── cache.ts                  # Supabase api_cache read/write helpers (TTL-based)
 │   ├── ebay.ts                   # eBay OAuth 2.0 — Browse API + Marketplace Insights
 │   ├── frankfurter.ts            # Frankfurter currency API (EUR/USD/AUD/GBP)
@@ -79,11 +86,13 @@ src/
 ├── types/
 │   ├── brickset.ts               # BricksetSet interface + getRetirementStatus()
 │   ├── market.ts                 # ComputedPricing, EbaySale, BrickLinkDetail, EbayMarketData
-│   └── scan.ts                   # IdentifyResponse, LookupResponse, LookupErrorResponse
+│   └── scan.ts                   # IdentifyResponse, IdentifyCandidate, CandidatePreview, LookupResponse
 └── proxy.ts                      # (internal — not used directly by routes)
 
 supabase/
 └── schema.sql                    # Table definitions + increment_scan() RPC
+
+vercel.json                       # Cron schedule: /api/cron/cleanup at 03:00 UTC daily
 ```
 
 ## Required Environment Variables
@@ -123,6 +132,9 @@ SUPABASE_SERVICE_ROLE_KEY           ← server-only, never expose to client
 # App
 NEXT_PUBLIC_APP_URL
 
+# Cron (protects /api/cron/cleanup from unauthorised calls)
+CRON_SECRET                         ← any long random string, set in Vercel env vars
+
 # Legacy (not active in current flow)
 RAPIDAPI_KEY
 ```
@@ -131,14 +143,21 @@ RAPIDAPI_KEY
 Send the LEGO box image with this prompt:
 
   "Look at this LEGO box image. Find the LEGO set number — it is typically a 4–6 digit
-  number printed on the front lower-right corner, back panel, or near the barcode.
-  Return ONLY valid JSON: {"set_number": "75192"} or {"set_number": null} if you cannot
-  find a set number with confidence. Do not guess. Do not include hyphens or suffixes."
+  number on the front lower-right corner, back panel, or near the barcode.
+  Return ONLY valid JSON with up to 3 plausible set numbers ordered by confidence (0.0–1.0):
+  {"candidates": [{"set_number": "75192", "confidence": 0.95}]}
+  Include up to 3 if there is genuine ambiguity. Return {"candidates": []} if you cannot
+  find any set number with confidence. Do not guess. Do not include hyphens or suffixes."
 
-Parse the JSON response. If set_number is null or parsing fails → show the
-"couldn't find set number" error and offer manual entry.
+Parse the JSON response. Take `candidates[0]` as the best match.
+If candidates is empty or parsing fails → show "couldn't find set number" error and offer manual entry.
 
-Model: claude-sonnet-4-5, max_tokens: 64, base64 image source.
+Low-confidence routing (handled in identify/route.ts):
+- If top confidence < 0.85 OR gap between top two < 0.12 → `needs_confirmation: true`
+- ImageUploader stores candidates in sessionStorage and routes to /confirm
+- User selects the correct match → full pricing lookup runs (scan is charged at this point)
+
+Model: claude-sonnet-4-5, max_tokens: 256, base64 image source.
 
 ## Non-negotiable rules
 - Build ONLY what is in the current task. Nothing extra.
@@ -273,8 +292,8 @@ This is not optional — it is in the success criteria.
 
 ## Key File Locations
 - `src/lib/ebay.ts` — eBay OAuth 2.0, Browse API + Marketplace Insights, multi-marketplace
-- `src/lib/bricklink.ts` — BrickLink OAuth 1.0, price guide (sold + stock), item info
-- `src/lib/brickset.ts` — Brickset API v3, set metadata + RRP + retirement
+- `src/lib/bricklink.ts` — BrickLink OAuth 1.0, price guide (sold + stock), item info, getBrickLinkSetItem/getBrickLinkMinifigItem
+- `src/lib/brickset.ts` — Brickset API v3, set metadata + RRP + retirement; returns `{ rrp, found }`
 - `src/lib/frankfurter.ts` — Frankfurter currency conversion (EUR/USD/AUD/GBP)
 - `src/lib/scan-gate.ts` — paywall/scan limit logic (stubbed, returns allowed: true)
 - `src/lib/cache.ts` — Supabase api_cache getCached() / setCached() helpers
@@ -282,13 +301,19 @@ This is not optional — it is in the success criteria.
 - `src/lib/supabase.ts` — Supabase service-role client singleton (lazy, server-only)
 - `src/lib/stripe.ts` — Stripe SDK singleton (lazy, server-only)
 - `src/lib/rapidapi.ts` — RapidAPI bulk dataset (legacy, not in active flow)
-- `src/app/api/identify/route.ts` — Claude Vision POST endpoint
+- `src/app/api/identify/route.ts` — Claude Vision POST endpoint (multi-candidate, low-confidence routing)
+- `src/app/api/preview/route.ts` — preview card data for /confirm candidates (no scan charge)
+- `src/app/api/cron/cleanup/route.ts` — daily cache cleanup + Supabase keep-alive
 - `src/app/api/lookup/route.ts` — market data aggregation POST endpoint
 - `src/app/api/webhook/route.ts` — Stripe webhook POST endpoint
+- `src/app/confirm/page.tsx` — low-confidence candidate selection page
+- `src/app/confirm/demo/page.tsx` — DEMO ONLY, delete before launch
 - `src/app/result/[setNumber]/page.tsx` — server-rendered result page
 - `src/components/result/PriceReveal.tsx` — price reveal animation
 - `src/types/market.ts` — ComputedPricing and all market data types
+- `src/types/scan.ts` — IdentifyResponse, IdentifyCandidate, CandidatePreview, LookupResponse
 - `supabase/schema.sql` — table definitions + increment_scan() RPC
+- `vercel.json` — Vercel cron schedule
 - `CLAUDE.md` — this file, at `/home/user/brickval/CLAUDE.md`
 
 ## Dev Commands
