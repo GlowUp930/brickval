@@ -71,7 +71,8 @@ export function ImageUploader({ mode, onManualEntry }: Props) {
       message?: string;
     };
     try {
-      const res = await fetch(`/api/identify?mode=${mode}`, { method: "POST", body: formData });
+      const forceConfirm = typeof window !== "undefined" && sessionStorage.getItem("brickval_force_confirm") === "1";
+      const res = await fetch(`/api/identify?mode=${mode}${forceConfirm ? "&force_confirm=1" : ""}`, { method: "POST", body: formData });
       data = await res.json();
       if (!res.ok) { setError(data.message ?? "Something went wrong. Please try again."); setIsLoading(false); return; }
     } catch { setError("Network error. Check your connection and try again."); setIsLoading(false); return; }

@@ -108,6 +108,33 @@ export async function POST(req: NextRequest) {
 
   const mode = req.nextUrl.searchParams.get("mode") ?? "set";
 
+  // ── TEST ONLY: force low-confidence path without a real image ─────────────
+  if (req.nextUrl.searchParams.get("force_confirm") === "1") {
+    if (mode === "minifig") {
+      return NextResponse.json({
+        set_number: "sw0001",
+        confidence: 0.71,
+        needs_confirmation: true,
+        candidates: [
+          { id: "sw0001", confidence: 0.71 },
+          { id: "sw0083", confidence: 0.65 },
+          { id: "sw0295", confidence: 0.58 },
+        ],
+      });
+    }
+    return NextResponse.json({
+      set_number: "75192",
+      confidence: 0.78,
+      needs_confirmation: true,
+      candidates: [
+        { id: "75192", confidence: 0.78 },
+        { id: "75105", confidence: 0.72 },
+        { id: "4504",  confidence: 0.61 },
+      ],
+    });
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   let formData: FormData;
   try {
     formData = await req.formData();
