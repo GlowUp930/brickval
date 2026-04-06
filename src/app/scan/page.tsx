@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ImageUploader } from "@/components/scan/ImageUploader";
 import { ManualEntry } from "@/components/scan/ManualEntry";
 import { UserButton } from "@clerk/nextjs";
@@ -11,7 +12,20 @@ import { Logo } from "@/components/Logo";
 export default function ScanPage() {
   const [showManual, setShowManual] = useState(false);
   const [mode, setMode] = useState<"set" | "minifig">("set");
+  const [ready, setReady] = useState(false);
   const authEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+  const router = useRouter();
+
+  // Redirect to onboarding if user hasn't completed it yet
+  useEffect(() => {
+    if (!localStorage.getItem("onboarded")) {
+      router.replace("/onboarding");
+    } else {
+      setReady(true);
+    }
+  }, [router]);
+
+  if (!ready) return null;
 
   return (
     <main className="min-h-screen flex flex-col" style={{ background: "var(--background)" }}>
