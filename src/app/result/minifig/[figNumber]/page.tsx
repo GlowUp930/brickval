@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 import type { MinifigInfo, MinifigPricing, BrickLinkDetail } from "@/types/market";
 
 // ── Count-up hook ─────────────────────────────────────────────────────────────
@@ -237,7 +238,7 @@ export default function MinifigResultPage() {
       ? `${displayName} — ${usd.format(heroUsd)} market value`
       : displayName;
     if (typeof navigator !== "undefined" && navigator.share) {
-      try { await navigator.share({ title: "BrickVal", text, url }); return; }
+      try { await navigator.share({ title: "Brickvalue.live", text, url }); return; }
       catch { /* cancelled */ }
     }
     try {
@@ -301,12 +302,7 @@ export default function MinifigResultPage() {
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </Link>
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: "var(--accent)" }}>
-            <span className="font-bold text-[10px]" style={{ color: "var(--accent-fg)" }}>B</span>
-          </div>
-          <span className="text-sm font-bold tracking-tight" style={{ color: "var(--foreground)" }}>BrickVal</span>
-        </div>
+        <Logo size="sm" />
         <div className="w-9" />
       </header>
 

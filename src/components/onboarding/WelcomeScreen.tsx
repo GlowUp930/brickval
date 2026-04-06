@@ -17,14 +17,22 @@ export function WelcomeScreen({ onNext: _ }: { onNext: () => void }) {
           style={{ background: "var(--accent)" }}
         />
         <div
-          className="relative w-24 h-24 rounded-3xl flex items-center justify-center"
-          style={{ background: "var(--accent)" }}
+          className="relative w-24 h-24 rounded-3xl flex items-center justify-center overflow-hidden"
+          style={{
+            background: "linear-gradient(135deg, #f5c518, #e6b200)",
+            boxShadow: "0 4px 24px rgba(245,197,24,0.35), inset 0 1px 0 rgba(255,255,255,0.25)",
+          }}
         >
+          {/* Studs */}
+          <div className="absolute top-2 flex gap-1.5">
+            <div className="w-3 h-3 rounded-full" style={{ background: "linear-gradient(180deg, #ffd740, #e6b200)", boxShadow: "inset 0 -1px 0 rgba(0,0,0,0.15)" }} />
+            <div className="w-3 h-3 rounded-full" style={{ background: "linear-gradient(180deg, #ffd740, #e6b200)", boxShadow: "inset 0 -1px 0 rgba(0,0,0,0.15)" }} />
+          </div>
           <span
-            className="text-4xl font-black"
+            className="text-2xl font-black mt-2 select-none"
             style={{ color: "var(--accent-fg)" }}
           >
-            B
+            BV
           </span>
         </div>
       </motion.div>
@@ -43,8 +51,11 @@ export function WelcomeScreen({ onNext: _ }: { onNext: () => void }) {
           Know what your{" "}
           <span style={{ color: "var(--accent)" }}>LEGO</span> is worth.
         </h1>
+        <p className="text-lg font-black tracking-tight" style={{ color: "var(--foreground)" }}>
+          Brick<span style={{ color: "var(--accent)" }}>value</span><span className="font-normal opacity-50">.live</span>
+        </p>
         <p className="text-base leading-relaxed" style={{ color: "var(--muted)" }}>
-          Scan any LEGO set and get the real market value in seconds.
+          Scan any set. See the real market value.
         </p>
       </motion.div>
 

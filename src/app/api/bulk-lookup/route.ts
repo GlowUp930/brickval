@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error: "paywall",
-        message: "You've used all 5 free scans. Upgrade to BrickVal Pro to continue.",
+        message: "You've used all 5 free scans. Upgrade to Brickvalue Pro to continue.",
         scansUsed: gate.scansUsed,
       },
       { status: 402 }

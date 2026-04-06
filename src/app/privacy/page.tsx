@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Logo } from "@/components/Logo";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — BrickVal",
+  title: "Privacy Policy — Brickvalue.live",
 };
 
 export default function PrivacyPage() {
@@ -10,6 +12,11 @@ export default function PrivacyPage() {
       className="min-h-screen px-6 py-16 max-w-2xl mx-auto"
       style={{ background: "var(--background)", color: "var(--foreground)" }}
     >
+      <div className="mb-10">
+        <Link href="/">
+          <Logo size="sm" />
+        </Link>
+      </div>
       <h1 className="text-3xl font-black mb-8" style={{ color: "var(--foreground)" }}>
         Privacy Policy
       </h1>
@@ -88,7 +95,7 @@ export default function PrivacyPage() {
             Contact
           </h2>
           <p>
-            For privacy questions or data deletion requests, email us at privacy@brickval.com.
+            For privacy questions or data deletion requests, email us at privacy@brickvalue.live.
           </p>
         </section>
       </div>

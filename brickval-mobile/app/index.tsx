@@ -17,7 +17,7 @@ import Purchases from "react-native-purchases";
  *   "restore_purchases"  — restore previous purchases via RevenueCat
  */
 
-const APP_URL = "https://brickval.com";
+const APP_URL = "https://brickvalue.live";
 
 export default function MainScreen() {
   const webviewRef = useRef<WebView>(null);

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
+import { Logo } from "@/components/Logo";
 
 type BulkResultRow =
   | {
@@ -45,7 +46,7 @@ function PriceCell({ value }: { value: number | null }) {
       {value != null ? (
         <span style={{ color: "var(--foreground)" }}>${Math.round(value)}</span>
       ) : (
-        <span style={{ color: "var(--muted)" }}>—</span>
+        <span style={{ color: "var(--muted)" }}>&mdash;</span>
       )}
     </td>
   );
@@ -62,11 +63,11 @@ function ResultsTable({ results }: { results: BulkResultRow[] }) {
         className="px-4 py-3 border-b flex items-center justify-between"
         style={{ background: "var(--surface)", borderColor: "var(--border)" }}
       >
-        <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+        <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
           {results.length} set{results.length !== 1 ? "s" : ""} looked up
         </p>
         <p className="text-xs" style={{ color: "var(--muted)" }}>
-          {found} found · {notFound} not found
+          {found} found &middot; {notFound} not found
         </p>
       </div>
 
@@ -78,7 +79,7 @@ function ResultsTable({ results }: { results: BulkResultRow[] }) {
               {["SET", "BL NEW", "EBAY NEW", "EBAY USED", "RRP", "GAIN", "SOURCE"].map((h, i) => (
                 <th
                   key={h}
-                  className={`py-2.5 text-xs font-semibold tracking-wide ${i === 0 ? "text-left px-4" : "text-right px-3"} ${h === "SOURCE" ? "text-center" : ""}`}
+                  className={`py-2.5 text-xs font-bold tracking-wide ${i === 0 ? "text-left px-4" : "text-right px-3"} ${h === "SOURCE" ? "text-center" : ""}`}
                   style={{ color: "var(--muted)" }}
                 >
                   {h}
@@ -95,7 +96,6 @@ function ResultsTable({ results }: { results: BulkResultRow[] }) {
                 onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "")}
               >
-                {/* Set info */}
                 <td className="px-4 py-3">
                   {row.error ? (
                     <div className="flex items-center gap-2">
@@ -106,86 +106,45 @@ function ResultsTable({ results }: { results: BulkResultRow[] }) {
                         ?
                       </div>
                       <div>
-                        <p className="text-xs italic" style={{ color: "var(--muted)" }}>
-                          Not found
-                        </p>
-                        <p className="text-xs" style={{ color: "var(--muted)" }}>
-                          #{row.setNumber}
-                        </p>
+                        <p className="text-xs italic" style={{ color: "var(--muted)" }}>Not found</p>
+                        <p className="text-xs" style={{ color: "var(--muted)" }}>#{row.setNumber}</p>
                       </div>
                     </div>
                   ) : (
-                    <Link
-                      href={`/result/${row.setNumber}`}
-                      className="flex items-center gap-2 group"
-                    >
+                    <Link href={`/result/${row.setNumber}`} className="flex items-center gap-2 group">
                       {row.setInfo?.image_url ? (
-                        <img
-                          src={row.setInfo.image_url}
-                          alt=""
-                          className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
-                        />
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={row.setInfo.image_url} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
                       ) : (
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-xs"
-                          style={{ background: "var(--surface)", color: "var(--muted)" }}
-                        >
-                          ?
-                        </div>
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-xs" style={{ background: "var(--surface)", color: "var(--muted)" }}>?</div>
                       )}
                       <div className="min-w-0">
-                        <p
-                          className="font-medium truncate group-hover:underline"
-                          style={{ color: "var(--foreground)", maxWidth: "140px" }}
-                        >
+                        <p className="font-medium truncate group-hover:underline" style={{ color: "var(--foreground)", maxWidth: "140px" }}>
                           {row.setInfo?.name ?? row.setNumber}
                         </p>
-                        <p className="text-xs" style={{ color: "var(--muted)" }}>
-                          #{row.setNumber}
-                        </p>
+                        <p className="text-xs" style={{ color: "var(--muted)" }}>#{row.setNumber}</p>
                       </div>
                     </Link>
                   )}
                 </td>
-
-                {/* Price columns */}
                 <PriceCell value={row.pricing?.bricklink_new_avg_usd ?? null} />
                 <PriceCell value={row.pricing?.ebay_new_avg_usd ?? null} />
                 <PriceCell value={row.pricing?.ebay_used_avg_usd ?? null} />
                 <PriceCell value={row.pricing?.rrp_usd ?? null} />
-
-                {/* Gain % */}
-                <td className="text-right px-3 py-3 font-semibold">
+                <td className="text-right px-3 py-3 font-bold">
                   {row.pricing?.gain_pct != null ? (
-                    <span
-                      style={{
-                        color: row.pricing.gain_pct >= 0 ? "var(--green)" : "var(--red)",
-                      }}
-                    >
-                      {row.pricing.gain_pct >= 0 ? "+" : ""}
-                      {Math.round(row.pricing.gain_pct)}%
+                    <span style={{ color: row.pricing.gain_pct >= 0 ? "var(--green)" : "var(--red)" }}>
+                      {row.pricing.gain_pct >= 0 ? "+" : ""}{Math.round(row.pricing.gain_pct)}%
                     </span>
                   ) : (
-                    <span style={{ color: "var(--muted)" }}>—</span>
+                    <span style={{ color: "var(--muted)" }}>&mdash;</span>
                   )}
                 </td>
-
-                {/* Data source badge */}
                 <td className="text-center px-3 py-3">
                   {!row.error && row.pricing?.data_source === "sold" ? (
-                    <span
-                      className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold"
-                      style={{ background: "rgba(34,197,94,0.12)", color: "var(--green)" }}
-                    >
-                      Sold
-                    </span>
+                    <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "rgba(34,197,94,0.12)", color: "var(--green)" }}>Sold</span>
                   ) : !row.error ? (
-                    <span
-                      className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold"
-                      style={{ background: "var(--surface)", color: "var(--muted)" }}
-                    >
-                      Listing
-                    </span>
+                    <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: "var(--surface)", color: "var(--muted)" }}>Listing</span>
                   ) : null}
                 </td>
               </tr>
@@ -230,7 +189,7 @@ export default function BulkPage() {
         return;
       }
       if (res.status === 402) {
-        setTopError("Upgrade to BrickVal Pro to use bulk lookup.");
+        setTopError("Upgrade to Brickvalue Pro to use bulk lookup.");
         return;
       }
       if (!res.ok) {
@@ -251,17 +210,11 @@ export default function BulkPage() {
     <main className="min-h-screen flex flex-col" style={{ background: "var(--background)" }}>
       {/* Header */}
       <header
-        className="flex items-center justify-between px-5 py-4 border-b"
-        style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+        className="flex items-center justify-between px-5 py-4 border-b backdrop-blur-xl"
+        style={{ borderColor: "var(--border)", background: "rgba(13,13,15,0.85)" }}
       >
-        <Link href="/" className="flex items-center gap-2">
-          <div
-            className="w-7 h-7 rounded-md flex items-center justify-center"
-            style={{ background: "var(--accent)" }}
-          >
-            <span className="font-bold text-xs" style={{ color: "var(--accent-fg)" }}>B</span>
-          </div>
-          <span className="font-bold tracking-tight" style={{ color: "var(--foreground)" }}>BrickVal</span>
+        <Link href="/">
+          <Logo size="sm" />
         </Link>
         {authEnabled ? (
           <UserButton />
@@ -274,9 +227,8 @@ export default function BulkPage() {
 
       {/* Content */}
       <div className="flex-1 flex flex-col px-5 py-8 max-w-2xl mx-auto w-full gap-6">
-        {/* Title */}
         <div>
-          <h1 className="text-3xl font-bold mb-1" style={{ color: "var(--foreground)" }}>
+          <h1 className="text-3xl font-black mb-1" style={{ color: "var(--foreground)" }}>
             Bulk Set Lookup
           </h1>
           <p className="text-sm" style={{ color: "var(--muted)" }}>
@@ -284,7 +236,6 @@ export default function BulkPage() {
           </p>
         </div>
 
-        {/* Input card */}
         <form onSubmit={handleSubmit}>
           <div
             className="rounded-3xl p-5 flex flex-col gap-4"
@@ -295,7 +246,7 @@ export default function BulkPage() {
               placeholder={"75192\n10497\n42151"}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              className="w-full rounded-xl px-4 py-3 text-sm font-medium resize-none focus:outline-none"
+              className="w-full rounded-2xl px-4 py-3 text-sm font-medium resize-none focus:outline-none"
               style={{
                 background: "var(--background)",
                 color: "var(--foreground)",
@@ -313,7 +264,7 @@ export default function BulkPage() {
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="w-full py-3.5 rounded-2xl font-bold text-sm transition-transform active:scale-[0.98] disabled:opacity-40"
+              className="w-full py-3.5 rounded-full font-black text-sm transition-transform active:scale-[0.98] disabled:opacity-40"
               style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
             >
               {loading ? "Looking up..." : "Look up sets"}
@@ -321,27 +272,20 @@ export default function BulkPage() {
           </div>
         </form>
 
-        {/* Top-level error */}
         {topError && (
-          <p className="text-sm text-center" style={{ color: "var(--red)" }}>
-            {topError}
-          </p>
+          <p className="text-sm text-center" style={{ color: "var(--red)" }}>{topError}</p>
         )}
 
-        {/* Loading spinner */}
         {loading && (
           <div className="flex flex-col items-center gap-3 py-8">
             <div
               className="w-8 h-8 rounded-full border-2 animate-spin"
               style={{ borderColor: "var(--border)", borderTopColor: "var(--accent)" }}
             />
-            <p className="text-sm" style={{ color: "var(--muted)" }}>
-              Fetching market data...
-            </p>
+            <p className="text-sm" style={{ color: "var(--muted)" }}>Fetching market data...</p>
           </div>
         )}
 
-        {/* Results */}
         {results && !loading && <ResultsTable results={results} />}
       </div>
     </main>

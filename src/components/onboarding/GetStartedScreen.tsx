@@ -35,13 +35,17 @@ export function GetStartedScreen({ onNext }: { onNext: () => void }) {
             />
           ))}
           <div
-            className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl"
+            className="w-20 h-20 rounded-3xl flex items-center justify-center overflow-hidden"
             style={{
-              background: "var(--accent)",
+              background: "linear-gradient(135deg, #f5c518, #e6b200)",
+              boxShadow: "0 4px 24px rgba(245,197,24,0.35)",
             }}
           >
-            <span style={{ color: "var(--accent-fg)" }}>
-              {"\uD83E\uDDF1"}
+            <span
+              className="text-xl font-black mt-1 select-none"
+              style={{ color: "var(--accent-fg)" }}
+            >
+              BV
             </span>
           </div>
         </div>
