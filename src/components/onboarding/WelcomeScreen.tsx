@@ -1,11 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Logo } from "@/components/Logo";
 
 export function WelcomeScreen({ onNext: _ }: { onNext: () => void }) {
   return (
     <div className="flex flex-col items-center gap-8 text-center py-12">
-      {/* Logo with glow */}
+      {/* Logo brick with glow */}
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -13,27 +14,11 @@ export function WelcomeScreen({ onNext: _ }: { onNext: () => void }) {
         className="relative"
       >
         <div
-          className="absolute inset-0 rounded-3xl blur-2xl opacity-40"
+          className="absolute -inset-8 rounded-full blur-3xl opacity-25"
           style={{ background: "var(--accent)" }}
         />
-        <div
-          className="relative w-24 h-24 rounded-3xl flex items-center justify-center overflow-hidden"
-          style={{
-            background: "linear-gradient(135deg, #f5c518, #e6b200)",
-            boxShadow: "0 4px 24px rgba(245,197,24,0.35), inset 0 1px 0 rgba(255,255,255,0.25)",
-          }}
-        >
-          {/* Studs */}
-          <div className="absolute top-2 flex gap-1.5">
-            <div className="w-3 h-3 rounded-full" style={{ background: "linear-gradient(180deg, #ffd740, #e6b200)", boxShadow: "inset 0 -1px 0 rgba(0,0,0,0.15)" }} />
-            <div className="w-3 h-3 rounded-full" style={{ background: "linear-gradient(180deg, #ffd740, #e6b200)", boxShadow: "inset 0 -1px 0 rgba(0,0,0,0.15)" }} />
-          </div>
-          <span
-            className="text-2xl font-black mt-2 select-none"
-            style={{ color: "var(--accent-fg)" }}
-          >
-            BV
-          </span>
+        <div className="relative">
+          <Logo size="lg" showText={false} />
         </div>
       </motion.div>
 
