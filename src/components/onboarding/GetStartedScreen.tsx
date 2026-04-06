@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Logo } from "@/components/Logo";
 
 export function GetStartedScreen({ onNext }: { onNext: () => void }) {
   return (
@@ -14,7 +15,7 @@ export function GetStartedScreen({ onNext }: { onNext: () => void }) {
       >
         {/* Glow ring */}
         <div
-          className="absolute -inset-6 rounded-full blur-3xl opacity-20"
+          className="absolute -inset-8 rounded-full blur-3xl opacity-20"
           style={{ background: "var(--accent)" }}
         />
         {/* Stud burst pattern */}
@@ -34,20 +35,7 @@ export function GetStartedScreen({ onNext }: { onNext: () => void }) {
               }}
             />
           ))}
-          <div
-            className="w-20 h-20 rounded-3xl flex items-center justify-center overflow-hidden"
-            style={{
-              background: "linear-gradient(135deg, #f5c518, #e6b200)",
-              boxShadow: "0 4px 24px rgba(245,197,24,0.35)",
-            }}
-          >
-            <span
-              className="text-xl font-black mt-1 select-none"
-              style={{ color: "var(--accent-fg)" }}
-            >
-              BV
-            </span>
-          </div>
+          <Logo size="lg" showText={false} />
         </div>
       </motion.div>
 
@@ -80,8 +68,12 @@ export function GetStartedScreen({ onNext }: { onNext: () => void }) {
       >
         <button
           onClick={onNext}
-          className="w-full font-black py-4 px-6 rounded-2xl text-lg transition-all active:scale-[0.98] glow-accent-sm"
-          style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+          className="w-full font-black py-4 px-6 rounded-full text-lg transition-all active:scale-[0.98]"
+          style={{
+            background: "var(--accent)",
+            color: "var(--accent-fg)",
+            boxShadow: "0 4px 24px rgba(245,197,24,0.3)",
+          }}
         >
           Scan My First Set
         </button>
