@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { createCheckoutSession } from "./actions";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -13,7 +14,27 @@ const features = [
   "One-time payment, no subscription",
 ];
 
+/** True when running inside the Expo React Native WebView shell. */
+function useIsNative(): boolean {
+  const [native, setNative] = useState(false);
+  useEffect(() => {
+    setNative(typeof window !== "undefined" && "ReactNativeWebView" in window);
+  }, []);
+  return native;
+}
+
+/** Trigger the native Superwall paywall via the postMessage bridge. */
+function triggerNativePaywall() {
+  if (typeof window !== "undefined" && "ReactNativeWebView" in window) {
+    (window as { ReactNativeWebView: { postMessage: (msg: string) => void } }).ReactNativeWebView.postMessage(
+      JSON.stringify({ action: "show_paywall" })
+    );
+  }
+}
+
 export default function UpgradePage() {
+  const isNative = useIsNative();
+
   return (
     <main
       className="min-h-screen flex flex-col items-center justify-center p-6"
@@ -63,19 +84,31 @@ export default function UpgradePage() {
           ))}
         </ul>
 
-        {/* CTA */}
-        <form action={createCheckoutSession}>
+        {/* CTA — native uses Superwall via postMessage, web uses Stripe */}
+        {isNative ? (
           <button
-            type="submit"
+            onClick={triggerNativePaywall}
             className="w-full font-bold py-4 px-6 rounded-2xl text-lg transition-all active:scale-[0.98] glow-accent"
             style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
           >
             Get Lifetime Access
           </button>
-        </form>
+        ) : (
+          <form action={createCheckoutSession}>
+            <button
+              type="submit"
+              className="w-full font-bold py-4 px-6 rounded-2xl text-lg transition-all active:scale-[0.98] glow-accent"
+              style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+            >
+              Get Lifetime Access
+            </button>
+          </form>
+        )}
 
         <p className="text-xs" style={{ color: "var(--muted)" }}>
-          Secure checkout via Stripe · No recurring charges
+          {isNative
+            ? "Secure checkout via Google Play"
+            : "Secure checkout via Stripe · No recurring charges"}
         </p>
 
         <Link
