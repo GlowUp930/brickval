@@ -350,7 +350,7 @@ export function PriceReveal({ setInfo, pricing, setNumber }: Props) {
       ? `${displayName} — ${usdFormatter.format(heroUsd)} market value`
       : displayName;
     if (typeof navigator !== "undefined" && navigator.share) {
-      try { await navigator.share({ title: "BrickVal", text, url }); return; }
+      try { await navigator.share({ title: "Brickvalue.live", text, url }); return; }
       catch { /* user cancelled — fall through */ }
     }
     try {

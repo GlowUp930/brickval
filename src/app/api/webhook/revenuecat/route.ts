@@ -17,7 +17,7 @@ import { supabase } from "@/lib/supabase";
  * }
  *
  * Setup: In RevenueCat dashboard → Integrations → Webhooks,
- * set URL to https://brickval.com/api/webhook/revenuecat
+ * set URL to https://brickvalue.live/api/webhook/revenuecat
  * and set Authorization header to Bearer <REVENUECAT_WEBHOOK_SECRET>.
  */
 

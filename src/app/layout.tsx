@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BrickVal — LEGO Set Value Scanner",
+  title: "Brickvalue.live — LEGO Set Value Scanner",
   description:
     "Point your camera at any LEGO set and instantly know what it's worth in USD.",
 };
