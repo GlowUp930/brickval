@@ -1,30 +1,39 @@
 import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import Purchases from "react-native-purchases";
-import Superwall, { SuperwallDelegate } from "@superwall/react-native-superwall";
+import Constants from "expo-constants";
 
 const REVENUECAT_GOOGLE_KEY = "goog_NUvLtaesNxERCcRAffebyZByADU";
 const SUPERWALL_ANDROID_KEY = "pk_Op2uaWA1p5uPdvwtEWtWr";
 
+// Expo Go ships only standard Expo modules. RevenueCat + Superwall are
+// custom native modules and will throw "doesn't seem to be linked" if we
+// import them under Expo Go. Detect Expo Go and skip paywall init entirely
+// — production EAS dev/preview/release builds still get the full flow.
+const isExpoGo = Constants.appOwnership === "expo";
+
 export default function RootLayout() {
   useEffect(() => {
-    // Initialize RevenueCat first
+    if (isExpoGo) return;
+
+    // Dynamic require so the JS bundler doesn't try to resolve the native
+    // bridge at module load time inside Expo Go.
+    const Purchases = require("react-native-purchases").default;
+    const Superwall = require("@superwall/react-native-superwall").default;
+
     Purchases.configure({ apiKey: REVENUECAT_GOOGLE_KEY });
 
-    // Initialize Superwall, using RevenueCat as the purchase controller
     Superwall.configure({
       apiKey: SUPERWALL_ANDROID_KEY,
       purchaseController: {
         async purchaseFromAppStore() {
-          // Android only — handled via RevenueCat
           return { type: "cancelled" };
         },
-        async purchaseFromGooglePlay(productId, basePlanId, offerId) {
+        async purchaseFromGooglePlay(productId: string) {
           try {
             const offerings = await Purchases.getOfferings();
             const pkg = offerings.current?.availablePackages.find(
-              (p) => p.product.identifier === productId
+              (p: any) => p.product.identifier === productId
             );
             if (!pkg) return { type: "cancelled" };
             const result = await Purchases.purchasePackage(pkg);
@@ -46,8 +55,7 @@ export default function RootLayout() {
       },
     });
 
-    // Keep Superwall subscription status in sync with RevenueCat
-    Purchases.addCustomerInfoUpdateListener((info) => {
+    Purchases.addCustomerInfoUpdateListener((info: any) => {
       const isPro = !!info.entitlements.active["pro"];
       Superwall.setUserAttributeWithKey("is_pro", isPro);
     });
