@@ -12,7 +12,7 @@ import Purchases from "react-native-purchases";
  *   - Superwall dashboard → Settings → API Keys → Android
  */
 
-const REVENUECAT_GOOGLE_KEY = "goog_YOUR_KEY_HERE";
+const REVENUECAT_GOOGLE_KEY = "goog_NUvLtaesNxERCcRAffebyZByADU";
 // const SUPERWALL_ANDROID_KEY = "pk_YOUR_KEY_HERE";
 
 export default function RootLayout() {
