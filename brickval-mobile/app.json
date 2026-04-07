@@ -34,8 +34,7 @@
         {
           "cameraPermission": "Brickvalue uses your camera to scan LEGO sets and look up market prices."
         }
-      ],
-      "react-native-reanimated/plugin"
+      ]
     ]
   }
 }
