@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
 import { View, StyleSheet } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { router } from "expo-router";
 import { TopBar } from "../components/TopBar";
 import { CameraScanner } from "../components/CameraScanner";
@@ -67,7 +66,7 @@ export default function ScanHome() {
   };
 
   return (
-    <GestureHandlerRootView style={styles.root}>
+    <View style={styles.root}>
       <CameraScanner
         enabled={status === "idle"}
         onCapture={handleCapture}
@@ -85,7 +84,7 @@ export default function ScanHome() {
       />
 
       <ManualEntrySheet ref={manualRef} onSubmit={handleManualSubmit} />
-    </GestureHandlerRootView>
+    </View>
   );
 }
 
