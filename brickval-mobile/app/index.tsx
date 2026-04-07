@@ -1,115 +1,94 @@
-import { useRef, useCallback } from "react";
-import { SafeAreaView, StyleSheet } from "react-native";
-import { WebView, type WebViewMessageEvent } from "react-native-webview";
-// import Superwall from "@superwall/react-native-superwall";
-import Purchases from "react-native-purchases";
+import { useRef, useState } from "react";
+import { View, StyleSheet } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { router } from "expo-router";
+import { TopBar } from "../components/TopBar";
+import { CameraScanner } from "../components/CameraScanner";
+import { ResultCard } from "../components/ResultCard";
+import { LegoLoaderNative } from "../components/LegoLoaderNative";
+import { ManualEntrySheet, type ManualEntryHandle } from "../components/ManualEntrySheet";
+import { identifySet, lookupSet, type LookupResult } from "../lib/api";
+import { warn } from "../lib/haptics";
 
 /**
- * Main screen — WebView loading the live BrickVal web app.
- *
- * Bridge protocol:
- *   Web → Native:  window.ReactNativeWebView.postMessage(JSON.stringify({ action, ... }))
- *   Native → Web:  webviewRef.injectJavaScript(`window.__BRICKVAL_NATIVE__ = { ... }`)
- *
- * Actions:
- *   "show_paywall"       — trigger Superwall paywall presentation
- *   "check_subscription" — query RevenueCat entitlements, inject result back
- *   "restore_purchases"  — restore previous purchases via RevenueCat
+ * Native scan home screen — fullscreen camera, auto-capture on stability,
+ * result slides up over the dimmed camera background. WebView is opened as
+ * a modal route for /account, /upgrade, full /result/[setNumber], etc.
  */
 
-const APP_URL = "https://brickvalue.live";
+type Status = "idle" | "loading" | "result";
 
-export default function MainScreen() {
-  const webviewRef = useRef<WebView>(null);
+export default function ScanHome() {
+  const [status, setStatus] = useState<Status>("idle");
+  const [loadingMsg, setLoadingMsg] = useState("Reading set number...");
+  const [result, setResult] = useState<LookupResult | null>(null);
+  const manualRef = useRef<ManualEntryHandle>(null);
 
-  const injectState = useCallback(
-    (data: Record<string, unknown>) => {
-      webviewRef.current?.injectJavaScript(
-        `window.__BRICKVAL_NATIVE__ = ${JSON.stringify(data)}; true;`
-      );
-    },
-    []
-  );
-
-  const handleMessage = useCallback(
-    async (event: WebViewMessageEvent) => {
-      let msg: { action?: string };
-      try {
-        msg = JSON.parse(event.nativeEvent.data);
-      } catch {
+  const handleCapture = async (photoUri: string) => {
+    setStatus("loading");
+    setLoadingMsg("Reading set number...");
+    try {
+      const setNumber = await identifySet(photoUri);
+      if (!setNumber) {
+        warn();
+        setStatus("idle");
         return;
       }
+      setLoadingMsg("Fetching market prices...");
+      const data = await lookupSet(setNumber);
+      setResult(data);
+      setStatus("result");
+    } catch (e) {
+      warn();
+      setStatus("idle");
+    }
+  };
 
-      switch (msg.action) {
-        case "show_paywall": {
-          // Superwall.shared.register("tap_upgrade");
-          // TODO: Uncomment once Superwall is configured
-          break;
-        }
+  const handleManualSubmit = async (setNumber: string) => {
+    setStatus("loading");
+    setLoadingMsg("Fetching market prices...");
+    try {
+      const data = await lookupSet(setNumber);
+      setResult(data);
+      setStatus("result");
+    } catch (e) {
+      warn();
+      setStatus("idle");
+    }
+  };
 
-        case "check_subscription": {
-          try {
-            const info = await Purchases.getCustomerInfo();
-            const isPro =
-              info.entitlements.active["pro"] !== undefined;
-            injectState({ isPro, platform: "android" });
-          } catch {
-            injectState({ isPro: false, platform: "android" });
-          }
-          break;
-        }
+  const dismissResult = () => {
+    setResult(null);
+    setStatus("idle");
+  };
 
-        case "restore_purchases": {
-          try {
-            const info = await Purchases.restorePurchases();
-            const isPro =
-              info.entitlements.active["pro"] !== undefined;
-            injectState({ isPro, platform: "android", restored: true });
-          } catch {
-            injectState({ isPro: false, platform: "android", restored: false });
-          }
-          break;
-        }
-      }
-    },
-    [injectState]
-  );
+  const openWebView = (path: string) => {
+    router.push({ pathname: "/webview-modal", params: { path } });
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <WebView
-        ref={webviewRef}
-        source={{ uri: APP_URL }}
-        style={styles.webview}
-        onMessage={handleMessage}
-        // Inject native detection flag on page load
-        injectedJavaScriptBeforeContentLoaded={`
-          window.__BRICKVAL_NATIVE__ = { platform: 'android' };
-          true;
-        `}
-        // Camera & file upload support
-        allowsInlineMediaPlayback
-        mediaPlaybackRequiresUserAction={false}
-        // Performance
-        cacheEnabled
-        javaScriptEnabled
-        domStorageEnabled
-        // UI
-        overScrollMode="never"
-        startInLoadingState
-        renderLoading={() => null}
+    <GestureHandlerRootView style={styles.root}>
+      <CameraScanner
+        enabled={status === "idle"}
+        onCapture={handleCapture}
+        onManualPress={() => manualRef.current?.open()}
       />
-    </SafeAreaView>
+
+      <TopBar onAccountPress={() => openWebView("/account")} />
+
+      {status === "loading" && <LegoLoaderNative message={loadingMsg} />}
+
+      <ResultCard
+        result={status === "result" ? result : null}
+        onDismiss={dismissResult}
+        onViewDetails={(setNumber) => openWebView(`/result/${setNumber}`)}
+      />
+
+      <ManualEntrySheet ref={manualRef} onSubmit={handleManualSubmit} />
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0d0d0f",
-  },
-  webview: {
-    flex: 1,
-    backgroundColor: "#0d0d0f",
-  },
+  root: { flex: 1, backgroundColor: "#0d0d0f" },
 });
