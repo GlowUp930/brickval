@@ -4,51 +4,156 @@ import { motion } from "framer-motion";
 
 /**
  * Full-screen LEGO-themed loading overlay.
- * Shows animated bricks stacking + rotating status text.
- *
- * Usage:
- *   <LegoLoader message="Scanning set..." />
+ * Bricks drop in from above and stack neatly to build a tower.
+ * Tower then fades out and rebuilds in a continuous loop.
  */
 
-const BRICK_COLORS = [
-  "#f5c518", // gold (brand)
-  "#e74c3c", // red
-  "#3498db", // blue
-  "#2ecc71", // green
-  "#f39c12", // orange
+// Ordered bottom → top. Each layer alternates width/offset for realistic
+// interlocking brick look. x is centered around 0; width in "pixels".
+const LAYERS = [
+  { color: "#f5c518", width: 80, x: 0 },       // gold 4x1 (base)
+  { color: "#e74c3c", width: 64, x: -8 },      // red 3x1
+  { color: "#3498db", width: 64, x: 8 },       // blue 3x1
+  { color: "#2ecc71", width: 48, x: -16 },     // green 2x1
+  { color: "#f39c12", width: 48, x: 0 },       // orange 2x1
 ];
 
-function Brick({ color, delay, x }: { color: string; delay: number; x: number }) {
+const BRICK_HEIGHT = 18;       // visible brick body height
+const STUD_HEIGHT = 5;         // studs sitting on top
+const LAYER_OFFSET = BRICK_HEIGHT; // bricks sit body-to-body; studs nest into layer above
+
+const STAGGER = 0.18;          // delay between each brick
+const DROP_DURATION = 0.45;
+const HOLD_DURATION = 0.8;     // time the completed tower stays visible
+const TOTAL_BUILD = LAYERS.length * STAGGER + DROP_DURATION;
+const CYCLE = TOTAL_BUILD + HOLD_DURATION;
+
+function StackedBrick({
+  color,
+  width,
+  x,
+  layerIndex,
+}: {
+  color: string;
+  width: number;
+  x: number;
+  layerIndex: number;
+}) {
+  // Final resting Y: bottom of container = 0, each layer goes up
+  // layer 0 (base) sits at bottom, layer N sits at N * LAYER_OFFSET above
+  const finalY = -(layerIndex * LAYER_OFFSET);
+  const studCount = Math.round(width / 16); // roughly 1 stud per 16px
+
+  const dropDelay = layerIndex * STAGGER;
+
   return (
     <motion.div
-      initial={{ y: -60, opacity: 0, rotate: -15 }}
-      animate={{ y: 0, opacity: 1, rotate: 0 }}
+      initial={{ y: -160, opacity: 0 }}
+      animate={{
+        y: [-160, finalY, finalY, -160],
+        opacity: [0, 1, 1, 0],
+      }}
       transition={{
-        delay,
-        duration: 0.4,
-        ease: [0.34, 1.56, 0.64, 1], // bouncy
+        duration: CYCLE,
+        times: [
+          0,
+          (dropDelay + DROP_DURATION) / CYCLE,
+          (TOTAL_BUILD + HOLD_DURATION * 0.6) / CYCLE,
+          1,
+        ],
+        ease: ["easeIn", "linear", "easeOut"],
         repeat: Infinity,
-        repeatType: "loop",
-        repeatDelay: 1.6,
+        repeatDelay: 0.3,
       }}
       className="absolute"
-      style={{ left: x }}
+      style={{
+        bottom: 0,
+        left: "50%",
+        marginLeft: x - width / 2,
+      }}
     >
-      <svg width="32" height="24" viewBox="0 0 32 24" fill="none">
+      <svg
+        width={width}
+        height={BRICK_HEIGHT + STUD_HEIGHT}
+        viewBox={`0 0 ${width} ${BRICK_HEIGHT + STUD_HEIGHT}`}
+        fill="none"
+      >
+        {/* Studs on top */}
+        {Array.from({ length: studCount }).map((_, i) => {
+          const spacing = width / studCount;
+          const cx = spacing * i + spacing / 2;
+          return (
+            <g key={i}>
+              <rect
+                x={cx - 3.5}
+                y={0}
+                width="7"
+                height={STUD_HEIGHT}
+                rx="1"
+                fill={color}
+              />
+              <ellipse
+                cx={cx}
+                cy={0.5}
+                rx="3.5"
+                ry="1.3"
+                fill="rgba(255,255,255,0.25)"
+              />
+              <ellipse
+                cx={cx}
+                cy={0.5}
+                rx="3.5"
+                ry="1.3"
+                stroke="rgba(0,0,0,0.1)"
+                strokeWidth="0.5"
+              />
+            </g>
+          );
+        })}
+
         {/* Brick body */}
-        <rect x="0" y="6" width="32" height="18" rx="2" fill={color} />
+        <rect
+          x="0"
+          y={STUD_HEIGHT}
+          width={width}
+          height={BRICK_HEIGHT}
+          rx="2"
+          fill={color}
+        />
         {/* Top highlight */}
-        <rect x="0" y="6" width="32" height="1.5" rx="0.75" fill="rgba(255,255,255,0.3)" />
+        <rect
+          x="0"
+          y={STUD_HEIGHT}
+          width={width}
+          height="1.5"
+          rx="0.75"
+          fill="rgba(255,255,255,0.3)"
+        />
         {/* Bottom shadow */}
-        <rect x="0" y="22" width="32" height="2" rx="1" fill="rgba(0,0,0,0.15)" />
-        {/* Left stud */}
-        <rect x="5" y="2" width="7" height="5" rx="1" fill={color} />
-        <ellipse cx="8.5" cy="2.5" rx="3.5" ry="1.5" fill="rgba(255,255,255,0.2)" />
-        <ellipse cx="8.5" cy="2.5" rx="3.5" ry="1.5" stroke="rgba(0,0,0,0.08)" strokeWidth="0.5" />
-        {/* Right stud */}
-        <rect x="20" y="2" width="7" height="5" rx="1" fill={color} />
-        <ellipse cx="23.5" cy="2.5" rx="3.5" ry="1.5" fill="rgba(255,255,255,0.2)" />
-        <ellipse cx="23.5" cy="2.5" rx="3.5" ry="1.5" stroke="rgba(0,0,0,0.08)" strokeWidth="0.5" />
+        <rect
+          x="0"
+          y={STUD_HEIGHT + BRICK_HEIGHT - 2}
+          width={width}
+          height="2"
+          rx="1"
+          fill="rgba(0,0,0,0.18)"
+        />
+        {/* Left edge highlight */}
+        <rect
+          x="0"
+          y={STUD_HEIGHT}
+          width="1"
+          height={BRICK_HEIGHT}
+          fill="rgba(255,255,255,0.15)"
+        />
+        {/* Right edge shadow */}
+        <rect
+          x={width - 1}
+          y={STUD_HEIGHT}
+          width="1"
+          height={BRICK_HEIGHT}
+          fill="rgba(0,0,0,0.1)"
+        />
       </svg>
     </motion.div>
   );
@@ -59,6 +164,9 @@ interface LegoLoaderProps {
 }
 
 export function LegoLoader({ message = "Looking up..." }: LegoLoaderProps) {
+  // Container height = all layers stacked + room for studs at top
+  const towerHeight = LAYERS.length * LAYER_OFFSET + STUD_HEIGHT;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -67,14 +175,27 @@ export function LegoLoader({ message = "Looking up..." }: LegoLoaderProps) {
       className="fixed inset-0 z-[100] flex flex-col items-center justify-center"
       style={{ background: "rgba(13,13,15,0.92)", backdropFilter: "blur(8px)" }}
     >
-      {/* Stacking bricks animation */}
-      <div className="relative w-40 h-32 mb-8">
-        {BRICK_COLORS.map((color, i) => (
-          <Brick
+      {/* Stacking tower */}
+      <div
+        className="relative mb-10"
+        style={{ width: 120, height: towerHeight + 20 }}
+      >
+        {/* Ground shadow */}
+        <div
+          className="absolute left-1/2 -translate-x-1/2 bottom-[-4px] rounded-full blur-md"
+          style={{
+            width: 90,
+            height: 10,
+            background: "rgba(245,197,24,0.25)",
+          }}
+        />
+        {LAYERS.map((layer, i) => (
+          <StackedBrick
             key={i}
-            color={color}
-            delay={i * 0.2}
-            x={4 + (i % 2) * 16 + (i % 3) * 4}
+            color={layer.color}
+            width={layer.width}
+            x={layer.x}
+            layerIndex={i}
           />
         ))}
       </div>
@@ -89,7 +210,6 @@ export function LegoLoader({ message = "Looking up..." }: LegoLoaderProps) {
         {message}
       </motion.p>
 
-      {/* Subtitle */}
       <p className="text-xs mt-2" style={{ color: "var(--muted)" }}>
         Fetching real market data...
       </p>
