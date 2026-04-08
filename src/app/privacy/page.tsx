@@ -86,7 +86,11 @@ export default function PrivacyPage() {
             Your Rights
           </h2>
           <p>
-            You can request deletion of your account and all associated data at any time by contacting us. We will delete your data within 30 days of your request.
+            You can delete your account and all associated data at any time from the{" "}
+            <Link href="/delete-account" className="underline" style={{ color: "var(--foreground)" }}>
+              Delete Account
+            </Link>{" "}
+            page. Deletion is immediate and cannot be undone.
           </p>
         </section>
 
