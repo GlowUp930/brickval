@@ -96,16 +96,18 @@ export function CameraScanner({ enabled, onCapture, onManualPress }: Props) {
           <Text style={styles.icon}>⌨</Text>
         </Pressable>
 
-        <Animated.View
-          style={[
-            styles.pulse,
-            {
-              transform: [{ scale: pulseScale }],
-              opacity: pulseOpacity,
-            },
-          ]}
-          pointerEvents="none"
-        />
+        {/* Manual shutter — also shows stability pulse animation */}
+        <Pressable onPress={handleStable} hitSlop={12}>
+          <Animated.View
+            style={[
+              styles.pulse,
+              {
+                transform: [{ scale: pulseScale }],
+                opacity: pulseOpacity,
+              },
+            ]}
+          />
+        </Pressable>
 
         <Pressable onPress={() => setTorch((t) => !t)} style={styles.iconBtn} hitSlop={12}>
           <Text style={styles.icon}>{torch ? "⚡" : "⚡︎"}</Text>
