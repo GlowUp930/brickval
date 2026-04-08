@@ -1,8 +1,32 @@
 # BrickVal — LEGO Scan & Value App (Lean MVP)
 
+## Active Development Branch
+**All development happens on `claude/stripe-appurl-fix-ihFVU` only.**
+Do NOT push to or edit the `claude/loveable-design-practices-ihFVU` branch.
+
 ## What we're building
-Mobile-first web app: scan a LEGO set photo → get its current USD market value.
+Mobile-first web app: scan a LEGO set photo → get its current **USD** market value (not AUD).
 This is a Lean MVP. Build only what is in the plan. No extras, no abstractions.
+
+### What's working
+- ✅ Scan flow: camera capture, file upload, manual set number entry
+- ✅ Claude Vision set number detection (claude-sonnet-4-5)
+- ✅ BrickLink API: sold + stock price guides + item metadata (OAuth 1.0)
+- ✅ eBay API: sold + listing prices across US/AU/GB/DE (OAuth 2.0)
+- ✅ Price reveal animation (count-up from $0, cubic ease-out, 60fps)
+- ✅ Supabase caching for all external API calls (24h TTL)
+- ✅ Vercel Cron job for hourly cache cleanup
+- ✅ Stripe webhook handler for subscription lifecycle events
+- ✅ Clerk authentication
+- ✅ Exchange rate conversion via Frankfurter API (cached 24h)
+- ✅ All pricing logic centralised in compute-pricing.ts (no duplication)
+
+### What's NOT working / stubbed
+- ⏸️ Paywall: `scan-gate.ts` returns `allowed: true` for everyone — Stripe paywall not wired yet
+- ⏸️ eBay Marketplace Insights: awaiting Application Growth Check approval, falls back to Browse API (active listings)
+- ⏸️ RRP / gain%: no data source after Brickset removal — future Supabase RRP table
+- ⏸️ No test coverage (no test framework configured)
+- ⏸️ `lucide-react`, `framer-motion`, `clsx` are installed but unused
 
 ## Tech Stack
 - Next.js 16 (App Router), React 19, Tailwind CSS v4, TypeScript 5
@@ -180,9 +204,16 @@ CREATE TABLE api_cache (
   expires_at timestamp NOT NULL
 );
 -- Index: api_cache_expires_at_idx on (expires_at)
+
+CREATE TABLE waitlist (
+  email      text PRIMARY KEY,
+  created_at timestamp DEFAULT now()
+);
 ```
 
-RLS is enabled on both tables. Service role key bypasses RLS — no public policies needed.
+RLS is enabled on all tables. Service role key bypasses RLS — no public policies needed.
+**CRITICAL:** `SUPABASE_SERVICE_ROLE_KEY` must be the **service role** key (secret, longer),
+NOT the anon/public key. Using the anon key will cause 42501 RLS errors on waitlist inserts.
 
 The `increment_scan(p_user_id, p_free_limit)` RPC:
 - Atomically increments scans_used (handles free limit and pro users)

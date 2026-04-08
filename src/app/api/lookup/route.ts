@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getEbayMarketData } from "@/lib/ebay";
 import { getBrickLinkMarketData, getMinifigMarketData } from "@/lib/bricklink";
+import { getBricksetRrp } from "@/lib/brickset";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { computePricing } from "@/lib/compute-pricing";
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: "paywall",
-          message: "You've used all 5 free scans. Upgrade to BrickVal Pro to continue.",
+          message: "You've used all 5 free scans. Upgrade to Brickvalue Pro to continue.",
           scansUsed: gate.scansUsed,
         },
         { status: 402 }
@@ -61,8 +62,14 @@ export async function POST(req: NextRequest) {
     }
 
     const item = minifigData.item;
+    const rawName = item?.name ?? figNumber;
+    const decodedName = rawName
+      .replace(/&#(\d+);/g, (_: string, dec: string) => String.fromCharCode(parseInt(dec, 10)))
+      .replace(/&#x([0-9a-f]+);/gi, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)))
+      .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"').replace(/&apos;/g, "'");
     const figInfo: MinifigInfo = {
-      name: item?.name ?? figNumber,
+      name: decodedName,
       image_url: item?.image_url ?? null,
       fig_number: figNumber,
       year_released: item?.year_released ?? null,
@@ -97,19 +104,20 @@ export async function POST(req: NextRequest) {
       country: d.seller_country_code,
     }));
 
+    // Use `|| null` so "0.0000" strings from BrickLink parse as null, not 0
     const pricing: MinifigPricing = {
-      used_sold_avg_usd: soldUsed?.qty_avg_price ? parseFloat(soldUsed.qty_avg_price) : null,
-      used_sold_min_usd: soldUsed?.min_price ? parseFloat(soldUsed.min_price) : null,
-      used_sold_max_usd: soldUsed?.max_price ? parseFloat(soldUsed.max_price) : null,
-      used_sold_qty: soldUsed?.unit_quantity ?? null,
-      used_stock_avg_usd: stockUsed?.qty_avg_price ? parseFloat(stockUsed.qty_avg_price) : null,
-      used_stock_qty: stockUsed?.unit_quantity ?? null,
-      new_sold_avg_usd: soldNew?.qty_avg_price ? parseFloat(soldNew.qty_avg_price) : null,
-      new_sold_min_usd: soldNew?.min_price ? parseFloat(soldNew.min_price) : null,
-      new_sold_max_usd: soldNew?.max_price ? parseFloat(soldNew.max_price) : null,
-      new_sold_qty: soldNew?.unit_quantity ?? null,
-      new_stock_avg_usd: stockNew?.qty_avg_price ? parseFloat(stockNew.qty_avg_price) : null,
-      new_stock_qty: stockNew?.unit_quantity ?? null,
+      used_sold_avg_usd: soldUsed?.qty_avg_price ? (parseFloat(soldUsed.qty_avg_price) || null) : null,
+      used_sold_min_usd: soldUsed?.min_price ? (parseFloat(soldUsed.min_price) || null) : null,
+      used_sold_max_usd: soldUsed?.max_price ? (parseFloat(soldUsed.max_price) || null) : null,
+      used_sold_qty: soldUsed?.unit_quantity || null,
+      used_stock_avg_usd: stockUsed?.qty_avg_price ? (parseFloat(stockUsed.qty_avg_price) || null) : null,
+      used_stock_qty: stockUsed?.unit_quantity || null,
+      new_sold_avg_usd: soldNew?.qty_avg_price ? (parseFloat(soldNew.qty_avg_price) || null) : null,
+      new_sold_min_usd: soldNew?.min_price ? (parseFloat(soldNew.min_price) || null) : null,
+      new_sold_max_usd: soldNew?.max_price ? (parseFloat(soldNew.max_price) || null) : null,
+      new_sold_qty: soldNew?.unit_quantity || null,
+      new_stock_avg_usd: stockNew?.qty_avg_price ? (parseFloat(stockNew.qty_avg_price) || null) : null,
+      new_stock_qty: stockNew?.unit_quantity || null,
       sold_details: soldDetails,
       stock_details: stockDetails,
       sold_new_details: soldNewDetails,
@@ -144,7 +152,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error: "paywall",
-        message: "You've used all 5 free scans. Upgrade to BrickVal Pro to continue.",
+        message: "You've used all 5 free scans. Upgrade to Brickvalue Pro to continue.",
         scansUsed: gate.scansUsed,
       },
       { status: 402 }
@@ -163,11 +171,11 @@ export async function POST(req: NextRequest) {
     stale: rates?.stale ?? true,
   };
 
-  // Fetch eBay + BrickLink data in parallel — track whether failures occurred
+  // Fetch eBay + BrickLink + Brickset in parallel — track whether failures occurred
   let ebayFailed = false;
   let brickLinkFailed = false;
 
-  const [ebayData, brickLinkData] = await Promise.all([
+  const [ebayData, brickLinkData, rrpUsd] = await Promise.all([
     getEbayMarketData(setNumber, ratesWithFallbacks).catch(() => {
       ebayFailed = true;
       return { new_sales: [] as EbaySale[], used_sales: [] as EbaySale[], data_source: "listing" as const };
@@ -177,6 +185,7 @@ export async function POST(req: NextRequest) {
       console.warn("[lookup] BrickLink fetch failed:", err);
       return null;
     }),
+    getBricksetRrp(setNumber).catch(() => null),
   ]);
 
   // Check for ANY data — including stock listings (not just sold)
@@ -204,7 +213,8 @@ export async function POST(req: NextRequest) {
     ebayData,
     brickLinkData,
     setNumber,
-    rates?.stale ?? true
+    rates?.stale ?? true,
+    rrpUsd
   );
 
   return NextResponse.json({

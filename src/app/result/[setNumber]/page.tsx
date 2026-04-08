@@ -3,10 +3,12 @@ import { redirect } from "next/navigation";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { getEbayMarketData } from "@/lib/ebay";
 import { getBrickLinkMarketData } from "@/lib/bricklink";
+import { getBricksetRrp } from "@/lib/brickset";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { computePricing } from "@/lib/compute-pricing";
 import { PriceReveal } from "@/components/result/PriceReveal";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 
 interface Props {
   params: Promise<{ setNumber: string }>;
@@ -50,7 +52,7 @@ export default async function ResultPage({ params }: Props) {
     stale: rates?.stale ?? true,
   };
 
-  const [ebayResult, brickLinkResult] = await Promise.all([
+  const [ebayResult, brickLinkResult, rrpUsd] = await Promise.all([
     getEbayMarketData(cleanedSetNumber, ratesWithFallbacks)
       .then((data) => ({ data, failed: false }))
       .catch(() => ({
@@ -64,6 +66,7 @@ export default async function ResultPage({ params }: Props) {
     getBrickLinkMarketData(cleanedSetNumber)
       .then((data) => ({ data, failed: false }))
       .catch(() => ({ data: null, failed: true })),
+    getBricksetRrp(cleanedSetNumber).catch(() => null),
   ]);
   const { data: ebayData, failed: ebayFailed } = ebayResult;
   const { data: brickLinkData, failed: brickLinkFailed } = brickLinkResult;
@@ -97,7 +100,8 @@ export default async function ResultPage({ params }: Props) {
     ebayData,
     brickLinkData,
     cleanedSetNumber,
-    rates?.stale ?? true
+    rates?.stale ?? true,
+    rrpUsd
   );
 
   return (
@@ -116,23 +120,13 @@ export default async function ResultPage({ params }: Props) {
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </Link>
-        <div className="flex items-center gap-2">
-          <div
-            className="w-6 h-6 rounded-md flex items-center justify-center"
-            style={{ background: "var(--accent)" }}
-          >
-            <span className="font-bold text-[10px]" style={{ color: "var(--accent-fg)" }}>B</span>
-          </div>
-          <span className="text-sm font-bold tracking-tight" style={{ color: "var(--foreground)" }}>
-            BrickVal
-          </span>
-        </div>
+        <Logo size="sm" />
         <div className="w-9" />
       </header>
 
       {/* Content — no outer padding so hero image goes full-bleed */}
       <div className="flex-1 flex flex-col w-full max-w-md mx-auto">
-        <PriceReveal setInfo={setInfo} pricing={pricing} setNumber={cleanedSetNumber} />
+        <PriceReveal setInfo={setInfo} pricing={pricing} setNumber={cleanedSetNumber} ebayFailed={ebayFailed} brickLinkFailed={brickLinkFailed} />
 
         {/* Scan another CTA */}
         <div className="px-5 pb-8">

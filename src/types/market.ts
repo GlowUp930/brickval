@@ -61,7 +61,7 @@ export interface MinifigPricing {
 }
 
 export interface ComputedPricing {
-  // RRP — currently null (was from Brickset). Kept for future Supabase-based RRP table.
+  // RRP from Brickset (US retail price)
   rrp_usd: number | null;
   gain_pct: number | null;
   exchange_rate_stale: boolean;

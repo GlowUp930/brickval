@@ -10,7 +10,8 @@ export function computePricing(
   ebayData: EbayMarketData,
   brickLinkData: BrickLinkMarketData | null,
   setNumber: string,
-  ratesStale: boolean
+  ratesStale: boolean,
+  rrpUsd: number | null = null
 ): { setInfo: SetInfo | null; pricing: ComputedPricing } {
   // ── SetInfo from BrickLink item API ──────────────────────────────────────
   const blItem = brickLinkData?.item ?? null;
@@ -101,10 +102,17 @@ export function computePricing(
   const blStockNewDetails = toBlDetails(brickLinkData?.stock_new?.price_detail);
   const blStockUsedDetails = toBlDetails(brickLinkData?.stock_used?.price_detail);
 
+  // ── Hero price + gain % ──────────────────────────────────────────────────
+  const heroNewAvgUsd = blNewAvg ?? ebayNewAvgUsd ?? blStockNewAvg;
+  const gain_pct =
+    heroNewAvgUsd !== null && rrpUsd !== null && rrpUsd > 0
+      ? Math.round(((heroNewAvgUsd - rrpUsd) / rrpUsd) * 100)
+      : null;
+
   // ── Assemble ComputedPricing ─────────────────────────────────────────────
   const pricing: ComputedPricing = {
-    rrp_usd: null,
-    gain_pct: null,
+    rrp_usd: rrpUsd,
+    gain_pct,
     exchange_rate_stale: ratesStale,
     ebay_new_sales: ebayData.new_sales,
     ebay_used_sales: ebayData.used_sales,
