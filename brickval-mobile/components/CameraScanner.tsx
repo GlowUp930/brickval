@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Pressable, StyleSheet, Text } from "react-native";
+import { View, Pressable, StyleSheet, Text, Animated } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import Animated, { useSharedValue, useAnimatedStyle, withTiming } from "react-native-reanimated";
 import { ViewfinderOverlay } from "./ViewfinderOverlay";
 import { useStabilityDetector } from "../lib/stability";
 import { tap, success, warn } from "../lib/haptics";
@@ -41,6 +40,25 @@ export function CameraScanner({ enabled, onCapture, onManualPress }: Props) {
 
   const { reset, pulse } = useStabilityDetector(enabled && !scanning, handleStable);
 
+  // Drive the pulse circle with RN's built-in Animated API
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(pulseAnim, {
+      toValue: pulse,
+      duration: 80,
+      useNativeDriver: true,
+    }).start();
+  }, [pulse]);
+
+  const pulseScale = pulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.6, 1.2],
+  });
+  const pulseOpacity = pulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.4, 1],
+  });
+
   // When parent re-enables (after dismissing result), reset detector
   useEffect(() => {
     if (enabled) {
@@ -48,11 +66,6 @@ export function CameraScanner({ enabled, onCapture, onManualPress }: Props) {
       reset();
     }
   }, [enabled]);
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 0.6 + pulse * 0.6 }],
-    opacity: 0.4 + pulse * 0.6,
-  }));
 
   if (!permission) return <View style={styles.black} />;
   if (!permission.granted) {
@@ -83,7 +96,16 @@ export function CameraScanner({ enabled, onCapture, onManualPress }: Props) {
           <Text style={styles.icon}>⌨</Text>
         </Pressable>
 
-        <Animated.View style={[styles.pulse, pulseStyle]} pointerEvents="none" />
+        <Animated.View
+          style={[
+            styles.pulse,
+            {
+              transform: [{ scale: pulseScale }],
+              opacity: pulseOpacity,
+            },
+          ]}
+          pointerEvents="none"
+        />
 
         <Pressable onPress={() => setTorch((t) => !t)} style={styles.iconBtn} hitSlop={12}>
           <Text style={styles.icon}>{torch ? "⚡" : "⚡︎"}</Text>

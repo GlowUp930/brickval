@@ -1,19 +1,10 @@
-import { useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withSequence,
-  withTiming,
-  withDelay,
-  Easing,
-} from "react-native-reanimated";
+import { useEffect, useRef } from "react";
+import { View, Text, StyleSheet, Animated, Easing } from "react-native";
 
 /**
  * RN port of src/components/LegoLoader.tsx — a tower of LEGO bricks that
- * stack themselves into place, hold, then loop. Pure Reanimated, no SVG
- * (uses plain Views with backgrounds for the brick bodies + studs).
+ * stack themselves into place, hold, then loop. Uses RN's built-in Animated
+ * API (no reanimated / worklets) for Expo Go compatibility.
  */
 
 const LAYERS = [
@@ -34,56 +25,82 @@ const TOWER_H = LAYERS.length * LAYER_OFFSET + STUD_HEIGHT;
 const TOTAL_BUILD = LAYERS.length * STAGGER + DROP;
 const CYCLE = TOTAL_BUILD + HOLD;
 
-function StackedBrick({ color, width, x, layerIndex }: { color: string; width: number; x: number; layerIndex: number }) {
+function StackedBrick({
+  color,
+  width,
+  x,
+  layerIndex,
+}: {
+  color: string;
+  width: number;
+  x: number;
+  layerIndex: number;
+}) {
   const finalY = -(layerIndex * LAYER_OFFSET);
   const studCount = Math.max(1, Math.round(width / 16));
   const dropDelay = layerIndex * STAGGER;
 
-  const y = useSharedValue(-160);
-  const op = useSharedValue(0);
+  const y = useRef(new Animated.Value(-160)).current;
+  const op = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    y.value = withRepeat(
-      withSequence(
-        withDelay(dropDelay, withTiming(finalY, { duration: DROP, easing: Easing.in(Easing.cubic) })),
-        withTiming(finalY, { duration: HOLD }),
-        withTiming(-160, { duration: 0 }),
-        withTiming(-160, { duration: Math.max(0, CYCLE - dropDelay - DROP - HOLD) })
-      ),
-      -1
-    );
-    op.value = withRepeat(
-      withSequence(
-        withDelay(dropDelay, withTiming(1, { duration: DROP / 2 })),
-        withTiming(1, { duration: HOLD + DROP / 2 }),
-        withTiming(0, { duration: 0 }),
-        withTiming(0, { duration: Math.max(0, CYCLE - dropDelay - DROP - HOLD) })
-      ),
-      -1
-    );
-  }, []);
+    const dropAnim = Animated.sequence([
+      Animated.delay(dropDelay),
+      Animated.parallel([
+        Animated.timing(y, {
+          toValue: finalY,
+          duration: DROP,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(op, {
+          toValue: 1,
+          duration: DROP / 2,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.delay(HOLD),
+      Animated.parallel([
+        Animated.timing(op, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(y, {
+          toValue: -160,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.delay(Math.max(0, CYCLE - dropDelay - DROP - HOLD - 200)),
+    ]);
 
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: y.value }],
-    opacity: op.value,
-  }));
+    const loop = Animated.loop(dropAnim);
+    loop.start();
+    return () => loop.stop();
+  }, []);
 
   return (
     <Animated.View
-      style={[
-        {
-          position: "absolute",
-          bottom: 0,
-          left: "50%",
-          marginLeft: x - width / 2,
-          width,
-          height: BRICK_HEIGHT + STUD_HEIGHT,
-        },
-        animStyle,
-      ]}
+      style={{
+        position: "absolute",
+        bottom: 0,
+        left: "50%",
+        marginLeft: x - width / 2,
+        width,
+        height: BRICK_HEIGHT + STUD_HEIGHT,
+        transform: [{ translateY: y }],
+        opacity: op,
+      }}
     >
       {/* Studs row */}
-      <View style={{ flexDirection: "row", justifyContent: "space-around", height: STUD_HEIGHT }}>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-around",
+          height: STUD_HEIGHT,
+        }}
+      >
         {Array.from({ length: studCount }).map((_, i) => (
           <View
             key={i}
