@@ -1,228 +1,327 @@
 "use client";
 
-import { useState } from "react";
-import { Logo } from "@/components/Logo";
+import Link from "next/link";
 import { BottomNav } from "@/components/BottomNav";
 
-// ── Static mock data ─────────────────────────────────────────────────────────
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const C = {
+  bg:                    "#0e0e0e",
+  primary:               "#ffc32c",
+  primaryContainer:      "#e9b011",
+  onPrimary:             "#584000",
+  surfaceContainerLow:   "#131313",
+  surfaceContainerHigh:  "#20201f",
+  onSurface:             "#ffffff",
+  onSurfaceVariant:      "#adaaaa",
+} as const;
 
-const TOTAL_VALUE = 4284.0;
-const TOTAL_PAID = 2150.0;
-const TOTAL_GAIN = TOTAL_VALUE - TOTAL_PAID;
-const GAIN_PCT = ((TOTAL_GAIN / TOTAL_PAID) * 100).toFixed(1);
+const F = {
+  headline: "Manrope, var(--font-manrope), sans-serif",
+  label:    "'Space Grotesk', var(--font-space-grotesk), sans-serif",
+  body:     "Inter, var(--font-geist-sans), sans-serif",
+} as const;
 
-const STATS = { total: 12, new: 8, used: 4 };
-
-const TIME_TABS = ["7D", "1M", "3M", "6M", "1Y"] as const;
-
-const SETS = [
-  { setNumber: "75192", name: "Millennium Falcon", condition: "New",  qty: 1, value: 289.0,  paid: 200.0,  theme: "Star Wars" },
-  { setNumber: "10294", name: "Titanic",           condition: "New",  qty: 1, value: 478.0,  paid: 285.0,  theme: "Creator" },
-  { setNumber: "21325", name: "Medieval Blacksmith",condition: "Used", qty: 2, value: 248.0,  paid: 160.0,  theme: "Ideas" },
-  { setNumber: "10281", name: "Bonsai Tree",       condition: "New",  qty: 3, value: 189.0,  paid: 135.0,  theme: "Botanical" },
+// ── Static mock data ───────────────────────────────────────────────────────────
+const RECENT_SCANS = [
+  { setNumber: "75192", name: "Star Wars UCS Falcon",    price: 849.99, gain: 12.0 },
+  { setNumber: "42056", name: "Technic Porsche 911 GT3", price: 612.40, gain: 4.2  },
 ];
 
-// SVG chart path — smooth rising trend (y=0 top, y=100 bottom in viewBox 0 0 300 100)
-const CHART_LINE = "M0,88 C25,84 45,78 70,68 C95,58 110,50 140,40 C168,30 190,20 225,13 C255,7 278,4 300,2";
-const CHART_AREA = `${CHART_LINE} L300,100 L0,100 Z`;
+const MARKET_TRENDS = [
+  { setNumber: "21044", name: "Paris Skyline",        theme: "Architecture", badge: "Retiring Soon", gain: 42.00 },
+  { setNumber: "21309", name: "NASA Apollo Saturn V",  theme: "Ideas",        badge: "Bullish",       gain: 28.15 },
+];
 
-// ── Component ────────────────────────────────────────────────────────────────
-
-export function MobileHome() {
-  const [activeTab, setActiveTab] = useState<(typeof TIME_TABS)[number]>("1Y");
-
+// ── Icons (SVG) ───────────────────────────────────────────────────────────────
+function BellIcon() {
   return (
-    <main
-      className="min-h-screen flex flex-col pb-24"
-      style={{ background: "var(--background)" }}
-    >
-      {/* ── Header ── */}
-      <header className="flex items-center justify-between px-5 pt-12 pb-3">
-        <Logo size="sm" showText />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="#ffc32c">
+      <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+    </svg>
+  );
+}
+
+function TrendingUpIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6h-6z"/>
+    </svg>
+  );
+}
+
+function ScanFocusIcon() {
+  return (
+    <svg width="52" height="52" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M5 15H3v4c0 1.1.9 2 2 2h4v-2H5v-4zm0-10h4V3H5C3.9 3 3 3.9 3 5v4h2V5zm14-2h-4v2h4v4h2V5c0-1.1-.9-2-2-2zm0 16h-4v2h4c1.1 0 2-.9 2-2v-4h-2v4zM12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="#adaaaa">
+      <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+    </svg>
+  );
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+export function MobileHome() {
+  return (
+    <main className="min-h-screen pb-28" style={{ background: C.bg, color: C.onSurface, fontFamily: F.body }}>
+
+      {/* ── TopAppBar ── */}
+      <header
+        className="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16"
+        style={{
+          background: "rgba(14,14,14,0.7)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+        }}
+      >
+        {/* Avatar */}
         <div
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold"
-          style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)" }}
+          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+          style={{ background: "#1a1a1a", border: "1px solid rgba(255,195,44,0.2)" }}
         >
-          <span>🇺🇸</span>
-          <span>USD</span>
+          <UserIcon />
         </div>
+
+        {/* Wordmark */}
+        <h1
+          className="text-2xl font-black tracking-tighter select-none"
+          style={{ color: C.primary, fontFamily: F.headline }}
+        >
+          BrickValue
+        </h1>
+
+        {/* Bell */}
+        <button className="active:opacity-60 transition-opacity">
+          <BellIcon />
+        </button>
       </header>
 
-      {/* ── Collection Value ── */}
-      <section className="px-5 pt-6 pb-1 text-center">
-        <p
-          className="text-[11px] font-semibold uppercase tracking-[0.2em] mb-3"
-          style={{ color: "var(--muted)" }}
-        >
-          Your collection is worth
-        </p>
-        <p
-          className="text-5xl font-black tabular-nums leading-none mb-2"
-          style={{ color: "#22c55e" }}
-        >
-          ${TOTAL_VALUE.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </p>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
-          Total Paid · ${TOTAL_PAID.toLocaleString("en-US", { minimumFractionDigits: 2 })}{" "}
-          <span style={{ color: "#22c55e" }}>(+{GAIN_PCT}%)</span>
-        </p>
-      </section>
+      {/* ── Scrollable content ── */}
+      <div className="pt-24 px-6 flex flex-col gap-10">
 
-      {/* ── Stats Row ── */}
-      <section className="flex gap-2.5 px-5 pt-5 pb-1">
-        {[
-          { label: "Total Sets", value: STATS.total },
-          { label: "New",        value: STATS.new },
-          { label: "Used",       value: STATS.used },
-        ].map((s) => (
-          <div
-            key={s.label}
-            className="flex-1 rounded-2xl py-3 text-center"
-            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+        {/* ── Hero: collection value ── */}
+        <section>
+          <p
+            className="uppercase text-xs tracking-widest mb-2"
+            style={{ color: C.onSurfaceVariant, fontFamily: F.label }}
           >
-            <p className="text-xl font-black" style={{ color: "var(--foreground)" }}>{s.value}</p>
-            <p
-              className="text-[10px] font-semibold uppercase tracking-wider mt-0.5"
-              style={{ color: "var(--muted)" }}
-            >
-              {s.label}
-            </p>
-          </div>
-        ))}
-      </section>
+            Your Collection Value
+          </p>
 
-      {/* ── Chart ── */}
-      <section className="px-5 pt-4">
-        <div
-          className="rounded-3xl p-4"
-          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-        >
-          {/* Gain badge + date range */}
-          <div className="flex items-center justify-between mb-1 px-1">
+          <div className="flex items-baseline gap-4 flex-wrap">
+            <h2
+              className="text-5xl font-extrabold tracking-tighter"
+              style={{ fontFamily: F.headline }}
+            >
+              $12,450.00
+            </h2>
             <span
-              className="text-xs font-bold px-2.5 py-1 rounded-full"
-              style={{
-                background: "rgba(34,197,94,0.12)",
-                color: "#22c55e",
-                border: "1px solid rgba(34,197,94,0.22)",
-              }}
+              className="flex items-center gap-1 text-sm font-semibold px-3 py-1 rounded-full"
+              style={{ color: C.primary, background: "rgba(255,195,44,0.1)", fontFamily: F.label }}
             >
-              +${TOTAL_GAIN.toLocaleString("en-US", { minimumFractionDigits: 2 })} ({GAIN_PCT}%)
+              <TrendingUpIcon />
+              +2.4%
             </span>
-            <span className="text-[11px]" style={{ color: "var(--muted)" }}>All time</span>
           </div>
 
-          {/* SVG line chart */}
-          <div className="relative mt-2">
-            <svg viewBox="0 0 300 100" className="w-full" style={{ height: 110 }} preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"   stopColor="#22c55e" stopOpacity="0.28" />
-                  <stop offset="80%"  stopColor="#22c55e" stopOpacity="0.04" />
-                  <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              {/* Filled area */}
-              <path d={CHART_AREA} fill="url(#chartFill)" />
-              {/* Line */}
-              <path d={CHART_LINE} stroke="#22c55e" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-              {/* End dot */}
-              <circle cx="300" cy="2" r="3.5" fill="#22c55e" />
-              <circle cx="300" cy="2" r="7" fill="rgba(34,197,94,0.22)" />
+          {/* Sparkline */}
+          <div
+            className="mt-6 h-32 w-full relative overflow-hidden"
+            style={{ background: C.surfaceContainerLow, borderRadius: 12 }}
+          >
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: "linear-gradient(to top, rgba(255,195,44,0.1), transparent)" }}
+            />
+            <svg className="w-full h-full" viewBox="0 0 400 100" preserveAspectRatio="none">
+              <path
+                d="M0 80 Q 50 70, 100 85 T 200 40 T 300 60 T 400 20"
+                fill="none"
+                stroke="#ffc32c"
+                strokeWidth="3"
+                strokeLinecap="round"
+                style={{ filter: "drop-shadow(0 0 8px rgba(255,195,44,0.6))" }}
+              />
             </svg>
           </div>
+        </section>
 
-          {/* Time period tabs */}
-          <div className="flex gap-1 mt-3">
-            {TIME_TABS.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className="flex-1 py-1.5 rounded-full text-xs font-bold transition-all"
-                style={
-                  activeTab === tab
-                    ? { background: "var(--accent)", color: "var(--accent-fg)" }
-                    : { color: "var(--muted)" }
-                }
+        {/* ── Scan CTA ── */}
+        <section>
+          <Link
+            href="/scan"
+            className="w-full h-32 flex items-center justify-between px-8 relative overflow-hidden active:scale-95 transition-transform"
+            style={{
+              background: `linear-gradient(135deg, ${C.primary}, ${C.primaryContainer})`,
+              borderRadius: 12,
+              boxShadow: "0 20px 40px rgba(255,195,44,0.2)",
+            }}
+          >
+            <div>
+              <h3
+                className="text-2xl font-bold"
+                style={{ color: C.onPrimary, fontFamily: F.headline }}
               >
-                {tab}
-              </button>
-            ))}
+                Scan LEGO
+              </h3>
+              <p className="text-sm mt-1" style={{ color: "rgba(88,64,0,0.8)" }}>
+                Identify sets instantly via camera
+              </p>
+            </div>
+            <span style={{ color: "rgba(88,64,0,0.9)" }}>
+              <ScanFocusIcon />
+            </span>
+          </Link>
+        </section>
+
+        {/* ── Recent Scans ── */}
+        <section>
+          <div className="flex justify-between items-end mb-5">
+            <h3
+              className="text-2xl font-bold tracking-tight"
+              style={{ fontFamily: F.headline }}
+            >
+              Recent Scans
+            </h3>
+            <button
+              className="text-xs uppercase tracking-widest"
+              style={{ color: C.primary, fontFamily: F.label }}
+            >
+              View All
+            </button>
           </div>
-        </div>
-      </section>
 
-      {/* ── Top Performers ── */}
-      <section className="px-5 pt-6">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
-            Top Performers
-          </p>
-          <button className="text-xs font-semibold" style={{ color: "var(--muted)" }}>
-            See all
-          </button>
-        </div>
-
-        <div className="flex flex-col gap-2.5">
-          {SETS.map((set) => {
-            const gain    = set.value - set.paid;
-            const gainPct = ((gain / set.paid) * 100).toFixed(0);
-            return (
+          {/* Horizontal scroll — hide scrollbar */}
+          <div
+            className="flex gap-4 overflow-x-auto pb-3"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+          >
+            {RECENT_SCANS.map((set) => (
               <div
                 key={set.setNumber}
-                className="flex items-center gap-3 p-3 rounded-2xl active:opacity-80 transition-opacity"
-                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                className="shrink-0 overflow-hidden"
+                style={{ minWidth: 270, background: C.surfaceContainerHigh, borderRadius: 12 }}
               >
-                {/* Set thumbnail */}
+                {/* Image area */}
+                <div className="h-40 relative flex items-center justify-center" style={{ background: "#111" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`https://img.bricklink.com/ItemImage/SN/0/${set.setNumber}-1.png`}
+                    alt={set.name}
+                    className="h-full w-full object-contain p-3"
+                  />
+                  {/* Set number badge */}
+                  <div
+                    className="absolute top-3 right-3 px-2 py-1 text-[10px] font-bold uppercase tracking-tighter text-white"
+                    style={{
+                      background: "rgba(0,0,0,0.6)",
+                      backdropFilter: "blur(8px)",
+                      WebkitBackdropFilter: "blur(8px)",
+                      borderRadius: 4,
+                      fontFamily: F.label,
+                    }}
+                  >
+                    {set.setNumber}
+                  </div>
+                </div>
+
+                {/* Card info */}
+                <div className="p-4">
+                  <h4
+                    className="font-bold text-lg truncate"
+                    style={{ fontFamily: F.headline }}
+                  >
+                    {set.name}
+                  </h4>
+                  <p className="text-sm mt-1" style={{ color: C.onSurfaceVariant, fontFamily: F.label }}>
+                    ${set.price.toFixed(2)}
+                    <span className="ml-2 font-semibold" style={{ color: C.primary }}>
+                      +{set.gain}%
+                    </span>
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Market Trends ── */}
+        <section className="pb-2">
+          <h3
+            className="text-2xl font-bold tracking-tight mb-5"
+            style={{ fontFamily: F.headline }}
+          >
+            Market Trends
+          </h3>
+
+          <div className="flex flex-col gap-3">
+            {MARKET_TRENDS.map((set) => (
+              <div
+                key={set.setNumber}
+                className="flex items-center gap-4 p-4"
+                style={{
+                  background: C.surfaceContainerLow,
+                  borderRadius: 12,
+                  borderLeft: `4px solid ${C.primary}`,
+                }}
+              >
+                {/* Thumbnail */}
                 <div
-                  className="w-12 h-12 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
-                  style={{ background: "var(--surface-2)" }}
+                  className="w-20 h-20 shrink-0 flex items-center justify-center overflow-hidden"
+                  style={{ background: "#000", borderRadius: 8 }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={`https://img.bricklink.com/ItemImage/SN/0/${set.setNumber}-1.png`}
                     alt={set.name}
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-contain p-1 opacity-90"
                   />
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <p
-                    className="font-bold text-sm truncate"
-                    style={{ color: "var(--foreground)" }}
+                    className="text-[10px] font-bold uppercase tracking-wider mb-0.5"
+                    style={{ color: C.primary, fontFamily: F.label }}
+                  >
+                    {set.badge}
+                  </p>
+                  <h4
+                    className="font-bold truncate"
+                    style={{ fontFamily: F.headline }}
                   >
                     {set.name}
-                  </p>
-                  <p className="text-[11px] mt-0.5" style={{ color: "var(--muted)" }}>
-                    #{set.setNumber} · {set.condition} · Qty {set.qty}
+                  </h4>
+                  <p className="text-xs mt-0.5" style={{ color: C.onSurfaceVariant }}>
+                    {set.theme} · {set.setNumber}
                   </p>
                 </div>
 
-                {/* Value + gain */}
+                {/* Gain */}
                 <div className="text-right shrink-0">
-                  <p className="font-bold text-sm" style={{ color: "var(--foreground)" }}>
-                    ${set.value.toFixed(2)}
+                  <p className="font-bold" style={{ color: C.primary, fontFamily: F.label }}>
+                    +${set.gain.toFixed(2)}
                   </p>
-                  <span
-                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                    style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}
+                  <p
+                    className="text-[10px] uppercase tracking-wide mt-0.5"
+                    style={{ color: C.onSurfaceVariant, fontFamily: F.label }}
                   >
-                    +{gainPct}%
-                  </span>
+                    This Month
+                  </p>
                 </div>
-
-                {/* Chevron */}
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0 ml-0.5">
-                  <path d="M9 18l6-6-6-6" stroke="#6b6b7a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
               </div>
-            );
-          })}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
 
-      {/* Bottom nav */}
+      </div>
+
       <BottomNav />
     </main>
   );
