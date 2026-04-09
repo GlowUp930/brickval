@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Hero } from "@/components/home/Hero";
+import { MobileHome } from "@/components/home/MobileHome";
 
 export default function HomePage() {
   const router = useRouter();
@@ -18,5 +18,5 @@ export default function HomePage() {
 
   if (!checked) return null;
 
-  return <Hero />;
+  return <MobileHome />;
 }

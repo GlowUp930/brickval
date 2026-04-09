@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * Brickvalue.live logo — a LEGO 2×1 brick icon + wordmark.
- * The icon is a side-profile brick with two studs, rendered as an SVG
- * so it scales crisply at every size.
+ * BrickVal logo — a top-down 2×2 LEGO brick icon with scan-bracket corners.
+ * Matches the app icon design: yellow brick, grey viewfinder brackets, dark bg.
  *
  * Sizes:
  *   "sm"  — 24px icon (headers/nav)
@@ -23,10 +22,7 @@ const dims = {
   lg: { px: 48, text: "text-2xl", gap: "gap-3" },
 };
 
-/**
- * SVG LEGO 2×1 brick — isometric-ish side view.
- * Gold gradient with two studs on top, subtle 3D depth.
- */
+/** Top-down 2×2 LEGO brick with camera-viewfinder corner brackets. */
 function BrickIcon({ px }: { px: number }) {
   return (
     <svg
@@ -37,65 +33,28 @@ function BrickIcon({ px }: { px: number }) {
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      <defs>
-        {/* Main brick body gradient */}
-        <linearGradient id="brickBody" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ffd740" />
-          <stop offset="100%" stopColor="#d4a017" />
-        </linearGradient>
-        {/* Brick front face — slightly darker */}
-        <linearGradient id="brickFront" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#f5c518" />
-          <stop offset="100%" stopColor="#c9960d" />
-        </linearGradient>
-        {/* Stud top gradient */}
-        <linearGradient id="studTop" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ffe066" />
-          <stop offset="100%" stopColor="#e6b200" />
-        </linearGradient>
-        {/* Stud side gradient */}
-        <linearGradient id="studSide" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#d4a017" />
-          <stop offset="100%" stopColor="#b8860b" />
-        </linearGradient>
-        {/* Glow filter */}
-        <filter id="brickGlow">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="2" />
-        </filter>
-      </defs>
+      {/* Corner scan brackets */}
+      <path d="M4 15 L4 4 L15 4" stroke="#888898" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M33 4 L44 4 L44 15" stroke="#888898" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M4 33 L4 44 L15 44" stroke="#888898" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M33 44 L44 44 L44 33" stroke="#888898" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
 
-      {/* Ambient glow behind brick */}
-      <rect x="6" y="14" width="36" height="24" rx="2" fill="#f5c518" opacity="0.15" filter="url(#brickGlow)" />
+      {/* Brick body — top-down 2×2 view */}
+      <rect x="10" y="10" width="28" height="28" rx="4" fill="#F5C518"/>
+      {/* Subtle inner shadow for depth */}
+      <rect x="10" y="10" width="28" height="28" rx="4" fill="rgba(0,0,0,0.06)"/>
 
-      {/* ── Brick body ── */}
-      {/* Top face */}
-      <rect x="6" y="16" width="36" height="20" rx="3" fill="url(#brickBody)" />
-      {/* Front face overlay for depth */}
-      <rect x="6" y="24" width="36" height="12" rx="0" fill="url(#brickFront)" opacity="0.5" />
-      {/* Bottom edge highlight */}
-      <rect x="6" y="34" width="36" height="2" rx="1" fill="rgba(0,0,0,0.12)" />
-      {/* Top edge highlight */}
-      <rect x="6" y="16" width="36" height="1.5" rx="0.75" fill="rgba(255,255,255,0.3)" />
-      {/* Left edge shadow */}
-      <rect x="6" y="16" width="1.2" height="20" fill="rgba(255,255,255,0.15)" />
-      {/* Right edge shadow */}
-      <rect x="40.8" y="16" width="1.2" height="20" fill="rgba(0,0,0,0.08)" />
+      {/* 4 studs */}
+      <circle cx="17.5" cy="17.5" r="4.2" fill="#D4971A"/>
+      <circle cx="30.5" cy="17.5" r="4.2" fill="#D4971A"/>
+      <circle cx="17.5" cy="30.5" r="4.2" fill="#D4971A"/>
+      <circle cx="30.5" cy="30.5" r="4.2" fill="#D4971A"/>
 
-      {/* ── Left stud ── */}
-      {/* Stud cylinder side */}
-      <rect x="12" y="10" width="8" height="7" rx="1" fill="url(#studSide)" />
-      {/* Stud top ellipse */}
-      <ellipse cx="16" cy="10.5" rx="4" ry="2" fill="url(#studTop)" />
-      {/* Stud highlight */}
-      <ellipse cx="15" cy="10" rx="1.8" ry="0.8" fill="rgba(255,255,255,0.35)" />
-
-      {/* ── Right stud ── */}
-      {/* Stud cylinder side */}
-      <rect x="28" y="10" width="8" height="7" rx="1" fill="url(#studSide)" />
-      {/* Stud top ellipse */}
-      <ellipse cx="32" cy="10.5" rx="4" ry="2" fill="url(#studTop)" />
-      {/* Stud highlight */}
-      <ellipse cx="31" cy="10" rx="1.8" ry="0.8" fill="rgba(255,255,255,0.35)" />
+      {/* Stud highlights */}
+      <circle cx="16.2" cy="16.2" r="1.6" fill="rgba(255,255,255,0.38)"/>
+      <circle cx="29.2" cy="16.2" r="1.6" fill="rgba(255,255,255,0.38)"/>
+      <circle cx="16.2" cy="29.2" r="1.6" fill="rgba(255,255,255,0.38)"/>
+      <circle cx="29.2" cy="29.2" r="1.6" fill="rgba(255,255,255,0.38)"/>
     </svg>
   );
 }
@@ -113,8 +72,7 @@ export function Logo({ size = "md", showText = true, className = "" }: LogoProps
           style={{ color: "var(--foreground)" }}
         >
           Brick
-          <span style={{ color: "var(--accent)" }}>value</span>
-          <span className="font-normal opacity-50">.live</span>
+          <span style={{ color: "var(--accent)" }}>Val</span>
         </span>
       )}
     </div>
