@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Logo } from "@/components/Logo";
+import { Button } from "@/components/ui/Button";
 
 export function GetStartedScreen({ onNext }: { onNext: () => void }) {
   return (
@@ -66,17 +67,14 @@ export function GetStartedScreen({ onNext }: { onNext: () => void }) {
         transition={{ delay: 0.6, duration: 0.5 }}
         className="w-full flex flex-col gap-3"
       >
-        <button
+        <Button
+          variant="primary"
+          size="lg"
           onClick={onNext}
-          className="w-full font-black py-4 px-6 rounded-full text-lg transition-all active:scale-[0.98]"
-          style={{
-            background: "var(--accent)",
-            color: "var(--accent-fg)",
-            boxShadow: "0 4px 24px rgba(245,197,24,0.3)",
-          }}
+          className="w-full font-black text-lg"
         >
           Scan My First Set
-        </button>
+        </Button>
         <p className="text-xs" style={{ color: "var(--muted)" }}>
           Pro: Unlimited scans for less than $0.43/day
         </p>

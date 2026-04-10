@@ -130,23 +130,48 @@ export function MobileHome() {
             </span>
           </div>
 
-          {/* Sparkline */}
+          {/* Sparkline — line draws itself left→right on mount */}
           <div
             className="mt-6 h-32 w-full relative overflow-hidden"
             style={{ background: C.surfaceContainerLow, borderRadius: 12 }}
           >
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{ background: "linear-gradient(to top, rgba(255,195,44,0.1), transparent)" }}
-            />
             <svg className="w-full h-full" viewBox="0 0 400 100" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor="#ffc32c" stopOpacity="0.18" />
+                  <stop offset="100%" stopColor="#ffc32c" stopOpacity="0"    />
+                </linearGradient>
+              </defs>
+              {/* Area fill — fades in after the line starts */}
+              <path
+                d="M0 80 Q 50 70, 100 85 T 200 40 T 300 60 T 400 20 L400 100 L0 100 Z"
+                fill="url(#sparkFill)"
+                style={{ animation: "fill-fade 1s ease-out 0.7s both" }}
+              />
+              {/* Line — draws left→right */}
               <path
                 d="M0 80 Q 50 70, 100 85 T 200 40 T 300 60 T 400 20"
                 fill="none"
                 stroke="#ffc32c"
                 strokeWidth="3"
                 strokeLinecap="round"
-                style={{ filter: "drop-shadow(0 0 8px rgba(255,195,44,0.6))" }}
+                style={{
+                  filter: "drop-shadow(0 0 8px rgba(255,195,44,0.6))",
+                  strokeDasharray: 620,
+                  strokeDashoffset: 620,
+                  animation: "draw-line 1.5s cubic-bezier(0.4,0,0.2,1) 0.1s forwards",
+                }}
+              />
+              {/* End dot — appears when line arrives */}
+              <circle
+                cx="400" cy="20" r="4"
+                fill="#ffc32c"
+                style={{ animation: "fill-fade 0.3s ease-out 1.5s both" }}
+              />
+              <circle
+                cx="400" cy="20" r="8"
+                fill="rgba(255,195,44,0.2)"
+                style={{ animation: "dot-pulse 0.8s ease-out 1.6s both" }}
               />
             </svg>
           </div>

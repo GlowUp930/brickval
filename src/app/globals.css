@@ -63,3 +63,64 @@
     background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(245,197,24,0.06), rgba(245,197,24,0.03), transparent);
   }
 }
+
+/* ── Button component (cal.ai-inspired) ──────────────────────────────────── */
+@layer components {
+  .btn-primary {
+    background: #ffc32c;
+    color: #584000;
+    box-shadow: 0 4px 20px rgba(255,195,44,0.25), 0 1px 3px rgba(0,0,0,0.25);
+    font-family: 'Space Grotesk', var(--font-space-grotesk), sans-serif;
+    letter-spacing: 0.01em;
+  }
+  .btn-primary:not(:disabled):hover {
+    background: #e9b011;
+    box-shadow: 0 8px 28px rgba(255,195,44,0.38), 0 2px 5px rgba(0,0,0,0.3);
+    transform: translateY(-1px);
+  }
+  .btn-primary:focus-visible {
+    box-shadow: 0 0 0 3px rgba(255,195,44,0.45);
+  }
+
+  .btn-secondary {
+    background: #1a1a1a;
+    color: #ffffff;
+    border: 1px solid #484847;
+  }
+  .btn-secondary:not(:disabled):hover {
+    background: #262626;
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: #adaaaa;
+  }
+  .btn-ghost:not(:disabled):hover {
+    background: rgba(255,255,255,0.06);
+    color: #ffffff;
+  }
+
+  .btn-destructive {
+    background: #b92902;
+    color: #ffffff;
+  }
+  .btn-destructive:not(:disabled):hover {
+    background: #a02300;
+    transform: translateY(-1px);
+  }
+}
+
+/* ── Sparkline draw animation ─────────────────────────────────────────────── */
+@keyframes draw-line {
+  from { stroke-dashoffset: 520 }
+  to   { stroke-dashoffset: 0   }
+}
+@keyframes fill-fade {
+  from { opacity: 0 }
+  to   { opacity: 1 }
+}
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(1);   opacity: 1;   }
+  50%       { transform: scale(1.5); opacity: 0.7; }
+}
