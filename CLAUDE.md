@@ -1,8 +1,60 @@
 # BrickVal — LEGO Scan & Value App (Lean MVP)
 
 ## Active Development Branch
-**All development happens on `claude/stripe-appurl-fix-ihFVU` only.**
-Do NOT push to or edit the `claude/loveable-design-practices-ihFVU` branch.
+**All design/UI work happens on `claude/design-mockup-handoff-6NWr2`.**
+Do NOT push to `claude/stripe-appurl-fix-ihFVU` or `claude/loveable-design-practices-ihFVU`.
+
+## Mobile Redesign Status (branch: claude/design-mockup-handoff-6NWr2)
+
+### Design inspiration
+- **Layout/aesthetic**: BrickValue HTML mockup (Google Stitch export) — dark `#0e0e0e` bg, yellow `#ffc32c` primary
+- **UI feel**: cal.ai (button system, hover lift, loading states, onboarding wizard)
+- **Scanner UX**: Shiny TCG app (full-screen camera, "Set Detected" bottom card)
+- **Figma file**: https://www.figma.com/design/iqjiLwCNdcn48msYVxh3BB/Brickvalue
+
+### What's been built (UI-only, all mock data)
+
+#### New components
+- `src/components/ui/Button.tsx` — shared button: primary/secondary/ghost/destructive variants, sm/md/lg sizes, loading spinner, startIcon/endIcon, hover lift + shadow (cal.ai pattern)
+- `src/components/BottomNav.tsx` — 4-tab fixed bottom nav: Home · Scanner · Collection · Market
+- `src/components/home/MobileHome.tsx` — full mobile home dashboard
+
+#### MobileHome layout
+1. **Header**: avatar circle + "BrickValue" wordmark (Manrope, yellow) + bell icon
+2. **Hero**: large `$12,450.00` collection value + `+2.4%` trending badge
+3. **Sparkline**: animated SVG line that draws left→right on mount (1.5s, CSS stroke-dashoffset), area fill fades in, end dot pulses
+4. **Scan CTA**: full-width yellow gradient button → `/scan`
+5. **Recent Scans**: horizontal scroll cards with BrickLink set images + number badges
+6. **Market Trends**: left-yellow-border rows (Retiring Soon / Bullish badges)
+
+#### Updated components
+- `src/components/Logo.tsx` — new icon: top-down 2×2 LEGO brick + camera viewfinder brackets; wordmark updated to "BrickVal"
+- `src/app/layout.tsx` — Manrope + Space Grotesk fonts added via next/font/google
+- `src/app/globals.css` — btn-* CSS classes (hover/focus/active), draw-line/fill-fade/dot-pulse keyframes
+- `src/components/onboarding/OnboardingShell.tsx` — Continue + Skip use `<Button>`
+- `src/components/onboarding/GetStartedScreen.tsx` — final CTA uses `<Button variant="primary">`
+
+### Design tokens in use (MobileHome / BottomNav)
+```
+bg:                   #0e0e0e
+primary:              #ffc32c
+primaryContainer:     #e9b011
+onPrimary:            #584000
+surfaceContainerLow:  #131313
+surfaceContainerHigh: #20201f
+onSurface:            #ffffff
+onSurfaceVariant:     #adaaaa
+font headline:        Manrope (--font-manrope)
+font label:           Space Grotesk (--font-space-grotesk)
+font body:            Inter / Geist Sans
+```
+
+### What comes next
+- Scanner page redesign: full-screen camera + animated corner brackets + "Set Detected" slide-up card
+- Collection page
+- Market page
+- Settings page
+- Wire Figma MCP (connected, needs new Claude Code session to activate tools)
 
 ## What we're building
 Mobile-first web app: scan a LEGO set photo → get its current **USD** market value (not AUD).
