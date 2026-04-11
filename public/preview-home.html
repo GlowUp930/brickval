@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BrickVal — Home Screen Redesign</title>
+<style>
+  /* ── Reset & page ─────────────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #080808;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 40px 20px 80px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Design tokens ────────────────────────────────────────────────────────── */
+  :root {
+    --bg:           #0e0e0e;
+    --surf-low:     #131313;
+    --surf-high:    #1c1c1c;
+    --surf-overlay: rgba(14,14,14,0.80);
+    --border:       rgba(255,255,255,0.07);
+
+    --primary:      #ffc32c;   /* LEGO Yellow */
+    --primary-dim:  rgba(255,195,44,0.12);
+    --primary-cont: #e9b011;
+    --on-primary:   #3a2800;
+
+    --green:        #00a650;   /* LEGO Green  */
+    --green-dim:    rgba(0,166,80,0.12);
+    --red:          #e3000b;   /* LEGO Red    */
+    --red-dim:      rgba(227,0,11,0.12);
+    --orange:       #ff6b00;   /* LEGO Orange */
+    --orange-dim:   rgba(255,107,0,0.12);
+    --blue:         #006cb7;   /* LEGO Blue   */
+    --blue-dim:     rgba(0,108,183,0.12);
+
+    --white:        #ffffff;
+    --muted:        #adaaaa;
+    --faint:        #4d4d4d;
+  }
+
+  /* ── Phone frame wrapper ──────────────────────────────────────────────────── */
+  .phone-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+  }
+  .label {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--bg);
+    border-radius: 48px;
+    overflow: hidden;
+    position: relative;
+    border: 1.5px solid rgba(255,255,255,0.10);
+    box-shadow:
+      0 0 0 8px #111,
+      0 0 0 9px rgba(255,255,255,0.06),
+      0 40px 80px rgba(0,0,0,0.8);
+  }
+
+  /* ── Status bar ───────────────────────────────────────────────────────────── */
+  .status-bar {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px 0 32px;
+    position: relative;
+    z-index: 100;
+  }
+  .status-time { font-size: 15px; font-weight: 700; color: var(--white); }
+  .status-icons { display: flex; align-items: center; gap: 6px; }
+  .status-icons svg { fill: var(--white); }
+
+  /* ── Top App Bar ──────────────────────────────────────────────────────────── */
+  .top-bar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    background: var(--surf-overlay);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--surf-high);
+    border: 1px solid rgba(255,195,44,0.2);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .avatar svg { fill: var(--muted); width: 18px; height: 18px; }
+  .wordmark {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--primary);
+    letter-spacing: -0.3px;
+  }
+  .wordmark span {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--on-primary);
+    background: var(--primary);
+    padding: 2px 5px;
+    border-radius: 4px;
+    margin-left: 5px;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+  }
+  .bell svg { fill: var(--muted); width: 20px; height: 20px; }
+
+  /* ── Scrollable content ───────────────────────────────────────────────────── */
+  .scroll {
+    height: calc(844px - 44px - 56px - 72px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+  }
+  .scroll::-webkit-scrollbar { display: none; }
+
+  /* ── Filter bar ───────────────────────────────────────────────────────────── */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    background: var(--surf-high);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .chip-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--primary);
+  }
+  .chip-outline {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.14);
+    color: var(--white);
+  }
+  .chip-lock {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: var(--faint);
+    font-size: 14px;
+  }
+
+  /* ── Hero section ─────────────────────────────────────────────────────────── */
+  .hero {
+    padding: 8px 20px 0;
+    text-align: center;
+  }
+  .hero-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .hero-value {
+    font-size: 48px;
+    font-weight: 900;
+    color: var(--white);
+    letter-spacing: -1px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    animation: countUp 1s cubic-bezier(0.16,1,0.3,1) 0.2s both;
+  }
+  .hero-value .dollar { font-size: 28px; vertical-align: super; margin-right: 2px; color: var(--muted); }
+  .hero-sub {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .hero-gain {
+    color: var(--green);
+    font-weight: 700;
+    font-size: 12px;
+  }
+
+  /* ── Stats row ────────────────────────────────────────────────────────────── */
+  .stats-row {
+    display: flex;
+    margin: 16px 20px 0;
+    background: var(--surf-low);
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .stat {
+    flex: 1;
+    padding: 12px 8px;
+    text-align: center;
+    position: relative;
+  }
+  .stat + .stat::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 16%; height: 68%;
+    width: 1px;
+    background: var(--border);
+  }
+  .stat-val {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--primary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.3px;
+  }
+  .stat-val.green { color: var(--green); }
+  .stat-val.blue  { color: #4fa8f0; }
+  .stat-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  /* ── Chart section ────────────────────────────────────────────────────────── */
+  .chart-section {
+    margin-top: 20px;
+  }
+  .chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px 8px;
+  }
+  .chart-date {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .chart-date strong { color: var(--white); font-weight: 700; }
+  .chart-minmax {
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    overflow: hidden;
+  }
+  .chart-svg {
+    width: 100%;
+    height: 160px;
+    display: block;
+  }
+  .chart-dates {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 20px 0;
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .chart-gain {
+    text-align: right;
+    padding: 2px 20px 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--green);
+  }
+
+  /* ── Time range tabs ──────────────────────────────────────────────────────── */
+  .time-tabs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 12px 20px 0;
+  }
+  .tab {
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border: none;
+    background: none;
+  }
+  .tab.active {
+    background: var(--primary);
+    color: var(--on-primary);
+    font-weight: 700;
+  }
+
+  /* ── Section header ───────────────────────────────────────────────────────── */
+  .section-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 20px 12px;
+  }
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--white);
+  }
+  .section-title .icon { font-size: 15px; }
+  .section-more {
+    font-size: 18px;
+    color: var(--faint);
+    letter-spacing: 1px;
+  }
+
+  /* ── List rows ────────────────────────────────────────────────────────────── */
+  .list {
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .list-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .list-row:last-child { border-bottom: none; }
+  .thumb {
+    width: 44px;
+    height: 58px;
+    border-radius: 6px;
+    background: var(--surf-high);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .thumb-inner {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+  .row-info { flex: 1; min-width: 0; }
+  .row-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--white);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .row-meta {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .rarity-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .row-val {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .row-gain-val {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--green);
+    margin-top: 1px;
+    font-variant-numeric: tabular-nums;
+  }
+  .row-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .row-price {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--white);
+    font-variant-numeric: tabular-nums;
+  }
+  .row-badge {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+  .badge-orange { background: var(--orange-dim); color: var(--orange); }
+  .badge-green  { background: var(--green-dim);  color: var(--green);  }
+  .badge-red    { background: var(--red-dim);     color: var(--red);    }
+  .badge-blue   { background: var(--blue-dim);    color: #4fa8f0;       }
+  .chevron {
+    color: var(--faint);
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  /* ── Insight card ─────────────────────────────────────────────────────────── */
+  .insight-card {
+    margin: 12px 20px 20px;
+    background: var(--surf-low);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+  .insight-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: var(--primary-dim);
+    border: 1px solid rgba(255,195,44,0.18);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .insight-icon svg { width: 18px; height: 18px; fill: var(--primary); }
+  .insight-text { flex: 1; min-width: 0; }
+  .insight-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--white);
+  }
+  .insight-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+
+  /* ── Bottom Nav ───────────────────────────────────────────────────────────── */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0;
+    left: 0; right: 0;
+    height: 72px;
+    background: rgba(14,14,14,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 4px 8px;
+  }
+  .nav-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 4px;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  .nav-tab.active {
+    background: rgba(255,195,44,0.08);
+  }
+  .nav-icon { width: 22px; height: 22px; }
+  .nav-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .nav-tab.active .nav-label { color: var(--primary); }
+  .nav-tab.active .nav-icon path,
+  .nav-tab.active .nav-icon rect,
+  .nav-tab.active .nav-icon circle { fill: var(--primary); }
+
+  /* ── Animations ───────────────────────────────────────────────────────────── */
+  @keyframes countUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes draw-line {
+    from { stroke-dashoffset: 900; }
+    to   { stroke-dashoffset: 0; }
+  }
+  @keyframes fill-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes dot-pulse {
+    0%   { r: 4px; opacity: 0.9; }
+    100% { r: 10px; opacity: 0; }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .hero        { animation: slide-up 0.4s cubic-bezier(0.16,1,0.3,1) 0.0s both; }
+  .stats-row   { animation: slide-up 0.4s cubic-bezier(0.16,1,0.3,1) 0.08s both; }
+  .chart-section { animation: slide-up 0.4s cubic-bezier(0.16,1,0.3,1) 0.14s both; }
+  .time-tabs   { animation: slide-up 0.4s cubic-bezier(0.16,1,0.3,1) 0.18s both; }
+  .section-hdr { animation: slide-up 0.4s cubic-bezier(0.16,1,0.3,1) 0.22s both; }
+  .list        { animation: slide-up 0.4s cubic-bezier(0.16,1,0.3,1) 0.26s both; }
+  .insight-card{ animation: slide-up 0.4s cubic-bezier(0.16,1,0.3,1) 0.30s both; }
+
+  .chart-line {
+    stroke-dasharray: 900;
+    stroke-dashoffset: 900;
+    animation: draw-line 1.6s cubic-bezier(0.4,0,0.2,1) 0.4s forwards;
+  }
+  .chart-area {
+    opacity: 0;
+    animation: fill-fade 1s ease-out 1.2s forwards;
+  }
+</style>
+</head>
+<body>
+
+<div class="phone-wrap">
+  <div class="label">BrickVal · Home Screen · Redesign</div>
+  <div class="phone">
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <span class="status-time">9:41</span>
+      <div class="status-icons">
+        <!-- Signal -->
+        <svg width="17" height="12" viewBox="0 0 17 12">
+          <rect x="0"  y="7" width="3" height="5" rx="1"/>
+          <rect x="4"  y="4" width="3" height="8" rx="1"/>
+          <rect x="8"  y="2" width="3" height="10" rx="1"/>
+          <rect x="12" y="0" width="3" height="12" rx="1"/>
+        </svg>
+        <!-- Wifi -->
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+          <path d="M8 9.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" fill="white"/>
+          <path d="M2.4 6.6A7.8 7.8 0 018 4.5c2.1 0 4 .8 5.6 2.1" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+          <path d="M0 3.9A11.7 11.7 0 018 1c3.2 0 6.1 1.2 8.3 3.2" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.5"/>
+        </svg>
+        <!-- Battery -->
+        <svg width="25" height="12" viewBox="0 0 25 12">
+          <rect x="0" y="1" width="22" height="10" rx="3" stroke="white" stroke-width="1" fill="none"/>
+          <rect x="1.5" y="2.5" width="17" height="7" rx="2" fill="white"/>
+          <path d="M23 4v4a2 2 0 000-4z" fill="white" opacity="0.5"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Top App Bar -->
+    <div class="top-bar">
+      <div class="avatar">
+        <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+      </div>
+      <div class="wordmark">BrickVal <span>PRO</span></div>
+      <div class="bell">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="#adaaaa"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+      </div>
+    </div>
+
+    <!-- Scrollable content -->
+    <div class="scroll">
+
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <div class="chip"><div class="chip-dot"></div> All Sets <span style="color:var(--faint);margin-left:2px;">▾</span></div>
+        <div class="chip chip-outline">↑ Share Collection</div>
+        <div class="chip chip-lock">🔒</div>
+      </div>
+
+      <!-- Hero -->
+      <div class="hero">
+        <div class="hero-label">Your collection is worth</div>
+        <div class="hero-value">
+          <span class="dollar">$</span>12,450<span style="font-size:32px">.00</span>
+        </div>
+        <div class="hero-sub">
+          Total Paid · $8,240.00 &nbsp;
+          <span class="hero-gain">▲ +51.1%</span>
+        </div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-val">24</div>
+          <div class="stat-label">New Sealed</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val green">8</div>
+          <div class="stat-label">Used</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val blue">412</div>
+          <div class="stat-label">Sets Tracked</div>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="chart-section">
+        <div class="chart-header">
+          <div class="chart-date">
+            ★ <strong>Apr 11, 2026</strong> &nbsp; $12,450
+          </div>
+          <div class="chart-minmax">Min $8.2k &nbsp; Max $12.5k</div>
+        </div>
+
+        <div class="chart-wrap">
+          <svg class="chart-svg" viewBox="0 0 390 160" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#00a650" stop-opacity="0.22"/>
+                <stop offset="100%" stop-color="#00a650" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <!-- Area fill -->
+            <path class="chart-area"
+              d="M0 145 C 30 140, 50 138, 80 135 S 120 128, 150 120 S 190 108, 220 96 S 260 78, 290 62 S 330 44, 360 28 L 390 10 L 390 160 L 0 160 Z"
+              fill="url(#chartGrad)"
+            />
+            <!-- Line -->
+            <path class="chart-line"
+              d="M0 145 C 30 140, 50 138, 80 135 S 120 128, 150 120 S 190 108, 220 96 S 260 78, 290 62 S 330 44, 360 28 L 390 10"
+              fill="none"
+              stroke="#00a650"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              style="filter: drop-shadow(0 0 6px rgba(0,166,80,0.7))"
+            />
+            <!-- End dot -->
+            <circle cx="390" cy="10" r="4" fill="#00a650" style="animation: fill-fade 0.3s ease-out 2s both; opacity:0"/>
+            <circle cx="390" cy="10" r="10" fill="rgba(0,166,80,0.2)" style="animation: fill-fade 0.5s ease-out 2s both; opacity:0"/>
+          </svg>
+        </div>
+
+        <div class="chart-dates">
+          <span>Mar 4</span>
+          <span>Jun 2</span>
+          <span>Sep 8</span>
+          <span>Dec 12</span>
+          <span>Apr 11</span>
+        </div>
+        <div class="chart-gain">+$4,210.00 (51.1%)</div>
+      </div>
+
+      <!-- Time range tabs -->
+      <div class="time-tabs">
+        <button class="tab">7D</button>
+        <button class="tab">1M</button>
+        <button class="tab">3M</button>
+        <button class="tab">6M</button>
+        <button class="tab active">1Y</button>
+      </div>
+
+      <!-- Section header -->
+      <div class="section-hdr">
+        <div class="section-title">
+          <span class="icon">🏆</span> Most Valuable Sets
+        </div>
+        <div class="section-more">···</div>
+      </div>
+
+      <!-- List rows -->
+      <div class="list">
+
+        <!-- Row 1 -->
+        <div class="list-row">
+          <div class="thumb">
+            <div class="thumb-inner" style="background: linear-gradient(135deg,#1a1a2e,#16213e);">🧱</div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Millennium Falcon UCS</div>
+            <div class="row-meta">
+              <span class="rarity-dot" style="background:var(--green)"></span>
+              New Sealed · Star Wars
+            </div>
+            <div class="row-val">$849.99 · Qty 1</div>
+            <div class="row-gain-val">+$385.00 profit (+82.7%)</div>
+          </div>
+          <div class="row-right">
+            <div class="row-price">$849.99</div>
+            <div class="row-badge badge-green">BULLISH</div>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+
+        <!-- Row 2 -->
+        <div class="list-row">
+          <div class="thumb">
+            <div class="thumb-inner" style="background: linear-gradient(135deg,#1a1209,#2d1f00);">🟡</div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Eiffel Tower</div>
+            <div class="row-meta">
+              <span class="rarity-dot" style="background:var(--orange)"></span>
+              New Sealed · Icons
+            </div>
+            <div class="row-val">$612.40 · Qty 2</div>
+            <div class="row-gain-val">+$212.80 profit (+53.2%)</div>
+          </div>
+          <div class="row-right">
+            <div class="row-price">$612.40</div>
+            <div class="row-badge badge-orange">RETIRING</div>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+
+        <!-- Row 3 -->
+        <div class="list-row">
+          <div class="thumb">
+            <div class="thumb-inner" style="background: linear-gradient(135deg,#001a33,#003366);">🔵</div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">NASA Apollo Saturn V</div>
+            <div class="row-meta">
+              <span class="rarity-dot" style="background:#4fa8f0"></span>
+              Used · Ideas
+            </div>
+            <div class="row-val">$548.00 · Qty 1</div>
+            <div class="row-gain-val">+$148.00 profit (+37.0%)</div>
+          </div>
+          <div class="row-right">
+            <div class="row-price">$548.00</div>
+            <div class="row-badge badge-blue">STABLE</div>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+
+      </div>
+
+      <!-- Insight card -->
+      <div class="insight-card">
+        <div class="insight-icon">
+          <svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>
+        </div>
+        <div class="insight-text">
+          <div class="insight-title">Market Insight</div>
+          <div class="insight-sub">3 sets in your collection are retiring within 6 months — prices trending +18%.</div>
+        </div>
+        <div class="chevron" style="font-size:18px;color:var(--muted)">›</div>
+      </div>
+
+    </div><!-- end .scroll -->
+
+    <!-- Bottom Nav -->
+    <div class="bottom-nav">
+
+      <div class="nav-tab active">
+        <svg class="nav-icon" viewBox="0 0 24 24">
+          <path d="M3 13h2v-2H3v2zm0 4h2v-4H3v4zm0-8h2V7H3v2zm4 8h2v-2H7v2zm0-4h2v-2H7v2zm0-4h2V7H7v2zm4 8h2v-2h-2v2zm0-4h2v-2h-2v2zm0-4h2V7h-2v2zm4 8h2v-2h-2v2zm0-4h2v-2h-2v2zm0-4h2V7h-2v2z" fill="var(--primary)"/>
+        </svg>
+        <span class="nav-label" style="color:var(--primary)">Home</span>
+      </div>
+
+      <div class="nav-tab">
+        <svg class="nav-icon" viewBox="0 0 24 24">
+          <path d="M5 15H3v4c0 1.1.9 2 2 2h4v-2H5v-4zm0-10h4V3H5C3.9 3 3 3.9 3 5v4h2V5zm14-2h-4v2h4v4h2V5c0-1.1-.9-2-2-2zm0 16h-4v2h4c1.1 0 2-.9 2-2v-4h-2v4zM12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" fill="var(--faint)"/>
+        </svg>
+        <span class="nav-label">Scanner</span>
+      </div>
+
+      <div class="nav-tab">
+        <svg class="nav-icon" viewBox="0 0 24 24">
+          <path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.72V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.72c.57-.38 1-.99 1-1.71V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-8H4V4l16-.01V6z" fill="var(--faint)"/>
+        </svg>
+        <span class="nav-label">Collection</span>
+      </div>
+
+      <div class="nav-tab">
+        <svg class="nav-icon" viewBox="0 0 24 24">
+          <path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z" fill="var(--faint)"/>
+        </svg>
+        <span class="nav-label">Market</span>
+      </div>
+
+    </div>
+
+  </div><!-- end .phone -->
+  <div class="label" style="color:var(--faint);font-size:9px;letter-spacing:1px;">390 × 844 · DESIGN.md v1</div>
+</div>
+
+</body>
+</html>
