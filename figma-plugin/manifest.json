@@ -1,0 +1,8 @@
+{
+  "name": "BrickVal — Generate Designs",
+  "id": "brickval-generate-designs",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"]
+}

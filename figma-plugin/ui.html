@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { font-family: -apple-system, sans-serif; margin: 0; padding: 16px; background: #0e0e0e; color: #fff; }
+  h2 { font-size: 14px; font-weight: 700; margin: 0 0 6px; color: #ffc32c; }
+  p { font-size: 11px; color: #adaaaa; margin: 0 0 16px; line-height: 1.5; }
+  button {
+    width: 100%; padding: 10px; background: #ffc32c; color: #584000;
+    border: none; border-radius: 8px; font-size: 13px; font-weight: 700;
+    cursor: pointer; margin-bottom: 8px;
+  }
+  button:hover { background: #e9b011; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  #status { font-size: 11px; color: #ffc32c; text-align: center; min-height: 16px; }
+</style>
+</head>
+<body>
+  <h2>BrickVal Design Generator</h2>
+  <p>Creates all BrickVal screens in this file:<br>
+  Home · Scan · Result · Button System</p>
+  <button id="run" onclick="generate()">Generate All Screens</button>
+  <div id="status"></div>
+  <script>
+    function generate() {
+      document.getElementById('run').disabled = true;
+      document.getElementById('status').textContent = 'Generating…';
+      parent.postMessage({ pluginMessage: { type: 'generate' } }, '*');
+    }
+    window.onmessage = (e) => {
+      const msg = e.data.pluginMessage;
+      if (!msg) return;
+      document.getElementById('status').textContent = msg.text || '';
+      if (msg.done) document.getElementById('run').disabled = false;
+    };
+  </script>
+</body>
+</html>
