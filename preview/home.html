@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>BrickVal — Home Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:          #0e0e0e;
+    --primary:     #ffc32c;
+    --on-primary:  #584000;
+    --surface:     #131313;
+    --on-surface:  #f0f0f4;
+    --muted:       #68686e;
+    --green:       #22c55e;
+    --amber:       #f59e0b;
+    --f-head:      'Manrope', system-ui, sans-serif;
+    --f-label:     'Space Grotesk', system-ui, sans-serif;
+    --f-body:      system-ui, -apple-system, sans-serif;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--on-surface);
+    font-family: var(--f-body);
+    -webkit-font-smoothing: antialiased;
+    height: 100%;
+  }
+
+  /* Simulate phone frame */
+  .phone-frame {
+    width: 390px;
+    min-height: 844px;
+    margin: 32px auto;
+    background: var(--bg);
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 40px 80px rgba(0,0,0,0.7), 0 8px 24px rgba(0,0,0,0.5);
+  }
+
+  /* If mobile viewport, show full-bleed */
+  @media (max-width: 430px) {
+    body { background: var(--bg); }
+    .phone-frame {
+      width: 100%;
+      margin: 0;
+      border-radius: 0;
+      min-height: 100vh;
+      box-shadow: none;
+    }
+  }
+
+  /* ── Header ── */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    height: 60px;
+    background: rgba(14,14,14,0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .avatar-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+
+  .wordmark {
+    font-family: var(--f-head);
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    color: var(--primary);
+    user-select: none;
+  }
+
+  .bell-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+
+  /* ── Content ── */
+  .content {
+    padding: 20px 20px 120px;
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+    overflow-y: auto;
+  }
+
+  /* ── Portfolio ── */
+  .section-label {
+    font-family: var(--f-label);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .portfolio-value-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+
+  .portfolio-value {
+    font-family: var(--f-head);
+    font-size: 52px;
+    font-weight: 900;
+    letter-spacing: -2px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--on-surface);
+  }
+
+  .trend-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--f-label);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(255,195,44,0.10);
+    color: var(--primary);
+    margin-bottom: 8px;
+  }
+
+  .portfolio-sub {
+    font-family: var(--f-label);
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  /* Sparkline */
+  .sparkline-wrap { width: 100%; }
+
+  .month-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+  .month-labels span {
+    font-family: var(--f-label);
+    font-size: 9px;
+    color: var(--muted);
+  }
+
+  /* Sparkline animations */
+  @keyframes draw-line {
+    from { stroke-dashoffset: 520; }
+    to   { stroke-dashoffset: 0;   }
+  }
+  @keyframes fill-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes dot-pulse {
+    0%, 100% { transform: scale(1);   opacity: 1;   }
+    50%       { transform: scale(1.5); opacity: 0.7; }
+  }
+
+  .spark-line {
+    stroke-dasharray: 520;
+    stroke-dashoffset: 520;
+    animation: draw-line 1.5s cubic-bezier(0.4,0,0.2,1) 0.2s forwards;
+  }
+  .spark-area {
+    animation: fill-fade 1s ease-out 0.8s both;
+  }
+  .spark-dot-outer {
+    animation: fill-fade 0.3s ease-out 1.6s both;
+    opacity: 0;
+  }
+  .spark-dot-pulse {
+    animation: dot-pulse 0.8s ease-out 1.7s both;
+    opacity: 0;
+  }
+
+  /* ── Scan CTA ── */
+  .scan-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    background: var(--primary);
+    border-radius: 16px;
+    box-shadow: 0 10px 36px rgba(255,195,44,0.30), 0 2px 8px rgba(0,0,0,0.28);
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.12s ease-out;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .scan-cta:active { transform: scale(0.98); }
+
+  .scan-cta-title {
+    font-family: var(--f-head);
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: -0.3px;
+    line-height: 1;
+    color: var(--on-primary);
+  }
+  .scan-cta-sub {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(88,64,0,0.72);
+    margin-top: 6px;
+  }
+
+  /* ── Sections ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-family: var(--f-head);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    color: var(--on-surface);
+  }
+  .see-all {
+    font-family: var(--f-label);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--primary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  /* ── Scan Cards ── */
+  .scan-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scan-scroll::-webkit-scrollbar { display: none; }
+
+  .scan-card {
+    flex-shrink: 0;
+    width: 196px;
+    background: var(--surface);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.05);
+    overflow: hidden;
+  }
+  .scan-card-img {
+    height: 116px;
+    background: #0a0a0a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px 14px 0 0;
+  }
+  .scan-card-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 12px;
+  }
+  .scan-card-body {
+    padding: 10px 12px 12px;
+  }
+  .scan-card-name {
+    font-family: var(--f-head);
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+    color: var(--on-surface);
+  }
+  .scan-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+  .scan-card-price {
+    font-family: var(--f-label);
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--on-surface);
+  }
+  .scan-card-gain {
+    font-family: var(--f-label);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  /* ── Market Signals ── */
+  .signal-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .signal-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .signal-gain {
+    flex-shrink: 0;
+    width: 52px;
+    text-align: right;
+  }
+  .signal-gain-num {
+    font-family: var(--f-label);
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .signal-gain-label {
+    font-family: var(--f-label);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .signal-divider {
+    width: 1px;
+    align-self: stretch;
+    background: rgba(255,255,255,0.07);
+    flex-shrink: 0;
+  }
+  .signal-thumb {
+    width: 44px; height: 44px;
+    flex-shrink: 0;
+    background: #0a0a0a;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .signal-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 2px;
+  }
+  .signal-info { flex: 1; min-width: 0; }
+  .signal-badge {
+    display: inline-block;
+    font-family: var(--f-label);
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-bottom: 4px;
+  }
+  .signal-name {
+    font-family: var(--f-head);
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+    color: var(--on-surface);
+  }
+  .signal-meta {
+    font-family: var(--f-label);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* ── Bottom Nav ── */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 390px;
+    height: 80px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 16px;
+    background: rgba(14,14,14,0.80);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+    z-index: 50;
+  }
+  @media (max-width: 430px) {
+    .bottom-nav { width: 100%; left: 0; transform: none; }
+  }
+  .nav-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 16px;
+    border-radius: 12px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: transform 0.15s ease-out;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-tab:active { transform: scale(0.90); }
+  .nav-tab.active { background: rgba(255,195,44,0.08); }
+  .nav-label {
+    font-family: var(--f-label);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Entrance animation */
+  @keyframes home-rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0);    }
+  }
+  .rise-1 { animation: home-rise 0.45s cubic-bezier(0.16,1,0.3,1) 0.06s both; }
+  .rise-2 { animation: home-rise 0.45s cubic-bezier(0.16,1,0.3,1) 0.12s both; }
+  .rise-3 { animation: home-rise 0.45s cubic-bezier(0.16,1,0.3,1) 0.18s both; }
+  .rise-4 { animation: home-rise 0.45s cubic-bezier(0.16,1,0.3,1) 0.24s both; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rise-1, .rise-2, .rise-3, .rise-4 { animation: none; }
+    .spark-line { animation: none; stroke-dashoffset: 0; }
+    .spark-area { animation: none; opacity: 1; }
+    .spark-dot-outer { animation: none; opacity: 1; }
+    .spark-dot-pulse { animation: none; opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+
+  <!-- Header -->
+  <header class="header">
+    <button class="avatar-btn" aria-label="Profile">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#68686e">
+        <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+      </svg>
+    </button>
+
+    <span class="wordmark">BrickVal</span>
+
+    <button class="bell-btn" aria-label="Notifications">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#68686e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- Portfolio -->
+    <section class="rise-1">
+      <p class="section-label">Collection</p>
+
+      <div class="portfolio-value-row">
+        <h2 class="portfolio-value">$12,450</h2>
+        <span class="trend-badge">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6h-6z"/>
+          </svg>
+          +2.4%
+        </span>
+      </div>
+
+      <p class="portfolio-sub">+$298 this month · 28 sets</p>
+
+      <!-- Sparkline -->
+      <div class="sparkline-wrap">
+        <svg width="100%" height="68" viewBox="0 0 400 68" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="sg-area" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stop-color="#ffc32c" stop-opacity="0.16"/>
+              <stop offset="100%" stop-color="#ffc32c" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path class="spark-area"
+            d="M0 54 Q50 46 100 58 T200 26 T300 42 T400 10 L400 68 L0 68 Z"
+            fill="url(#sg-area)"/>
+          <path class="spark-line"
+            d="M0 54 Q50 46 100 58 T200 26 T300 42 T400 10"
+            fill="none" stroke="#ffc32c" stroke-width="2" stroke-linecap="round"/>
+          <circle class="spark-dot-outer" cx="400" cy="10" r="3" fill="#ffc32c"/>
+          <circle class="spark-dot-pulse" cx="400" cy="10" r="7" fill="rgba(255,195,44,0.2)"/>
+        </svg>
+        <div class="month-labels">
+          <span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scan CTA -->
+    <section class="rise-2">
+      <a href="#" class="scan-cta">
+        <div>
+          <p class="scan-cta-title">Scan a Set</p>
+          <p class="scan-cta-sub">Identify &amp; value any LEGO set instantly</p>
+        </div>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#584000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.85">
+          <polyline points="23 7 23 1 17 1"/>
+          <polyline points="1 17 1 23 7 23"/>
+          <polyline points="7 1 1 1 1 7"/>
+          <polyline points="17 23 23 23 23 17"/>
+        </svg>
+      </a>
+    </section>
+
+    <!-- Recent Scans -->
+    <section class="rise-3">
+      <div class="section-header">
+        <h3 class="section-title">Recent Scans</h3>
+        <button class="see-all">
+          See all
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="scan-scroll">
+        <div class="scan-card">
+          <div class="scan-card-img">
+            <img src="https://img.bricklink.com/ItemImage/SN/0/75192-1.png" alt="Millennium Falcon" onerror="this.style.opacity='0.3'">
+          </div>
+          <div class="scan-card-body">
+            <p class="scan-card-name">Millennium Falcon</p>
+            <div class="scan-card-meta">
+              <span class="scan-card-price">$849</span>
+              <span class="scan-card-gain">+12.0%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="scan-card">
+          <div class="scan-card-img">
+            <img src="https://img.bricklink.com/ItemImage/SN/0/42056-1.png" alt="Porsche 911 GT3" onerror="this.style.opacity='0.3'">
+          </div>
+          <div class="scan-card-body">
+            <p class="scan-card-name">Porsche 911 GT3</p>
+            <div class="scan-card-meta">
+              <span class="scan-card-price">$612</span>
+              <span class="scan-card-gain">+4.2%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Placeholder card hint -->
+        <div class="scan-card" style="opacity:0.35; border-style:dashed;">
+          <div class="scan-card-img" style="flex-direction:column;gap:6px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#68686e" stroke-width="1.5" stroke-linecap="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+            </svg>
+          </div>
+          <div class="scan-card-body">
+            <p class="scan-card-name" style="color:#68686e;">Add a scan</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Market Signals -->
+    <section class="rise-4">
+      <div class="section-header">
+        <h3 class="section-title">Market Signals</h3>
+      </div>
+
+      <div class="signal-list">
+        <!-- Retiring Soon -->
+        <div class="signal-row">
+          <div class="signal-gain">
+            <p class="signal-gain-num" style="color:#f59e0b;">+42.1</p>
+            <p class="signal-gain-label">pct</p>
+          </div>
+          <div class="signal-divider"></div>
+          <div class="signal-thumb">
+            <img src="https://img.bricklink.com/ItemImage/SN/0/21044-1.png" alt="Paris" onerror="this.style.opacity='0.3'">
+          </div>
+          <div class="signal-info">
+            <span class="signal-badge" style="color:#f59e0b; background:rgba(245,158,11,0.14);">Retiring</span>
+            <p class="signal-name">Paris</p>
+            <p class="signal-meta">Architecture · #21044</p>
+          </div>
+        </div>
+
+        <!-- Rising -->
+        <div class="signal-row">
+          <div class="signal-gain">
+            <p class="signal-gain-num" style="color:#22c55e;">+28.2</p>
+            <p class="signal-gain-label">pct</p>
+          </div>
+          <div class="signal-divider"></div>
+          <div class="signal-thumb">
+            <img src="https://img.bricklink.com/ItemImage/SN/0/21309-1.png" alt="Apollo Saturn V" onerror="this.style.opacity='0.3'">
+          </div>
+          <div class="signal-info">
+            <span class="signal-badge" style="color:#22c55e; background:rgba(34,197,94,0.14);">Rising</span>
+            <p class="signal-name">Apollo Saturn V</p>
+            <p class="signal-meta">Ideas · #21309</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <button class="nav-tab active">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#ffc32c">
+        <path d="M3 13h2v-2H3v2zm0 4h2v-4H3v4zm0-8h2V7H3v2zm4 8h2v-2H7v2zm0-4h2v-2H7v2zm0-4h2V7H7v2zm4 8h2v-2h-2v2zm0-4h2v-2h-2v2zm0-4h2V7h-2v2zm4 8h2v-2h-2v2zm0-4h2v-2h-2v2zm0-4h2V7h-2v2z"/>
+      </svg>
+      <span class="nav-label" style="color:#ffc32c;">Home</span>
+    </button>
+
+    <button class="nav-tab">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#71717a">
+        <path d="M5 15H3v4c0 1.1.9 2 2 2h4v-2H5v-4zm0-10h4V3H5C3.9 3 3 3.9 3 5v4h2V5zm14-2h-4v2h4v4h2V5c0-1.1-.9-2-2-2zm0 16h-4v2h4c1.1 0 2-.9 2-2v-4h-2v4zM12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+      </svg>
+      <span class="nav-label" style="color:#71717a;">Scanner</span>
+    </button>
+
+    <button class="nav-tab">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#71717a">
+        <path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.72V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.72c.57-.38 1-.99 1-1.71V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-8H4V4l16-.01V6z"/>
+      </svg>
+      <span class="nav-label" style="color:#71717a;">Collection</span>
+    </button>
+
+    <button class="nav-tab">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#71717a">
+        <path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99l1.5 1.5z"/>
+      </svg>
+      <span class="nav-label" style="color:#71717a;">Market</span>
+    </button>
+  </nav>
+
+</div>
+
+</body>
+</html>
