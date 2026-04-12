@@ -347,3 +347,28 @@ This is not optional — it is in the success criteria.
 - npm run dev — start development server (http://localhost:3000)
 - npm run build — production build
 - npm run lint — ESLint
+
+## Design Context
+
+### Users
+LEGO investors and resellers — adults treating sets as financial assets. They scan in the field (thrift stores, garage sales) under time pressure. Job to be done: "Tell me what this set is worth in the real market, instantly, so I can act."
+
+### Brand Personality
+**Fast. Sharp. Alive.** Bold, playful, energetic — the data is serious (this is people's money) but the experience feels alive. Like LEGO itself: deliberately colorful, confident, never boring. Emotional goals: confidence, delight at the price reveal, trust in the data.
+
+### Aesthetic Direction
+Dark theme (#0e0e0e). LEGO yellow (#ffc32c) as a precision accent — not wallpaper, used for CTAs, active states, and key moments. Visual feel: between editorial magazine and financial dashboard. Tight type, sharp contrast, deliberate motion. Reference energy: cal.ai interactions, early Robinhood data clarity, Shiny TCG scanner UX.
+
+### Anti-references
+1. **NOT toy/kids app** — no rounded-everything, no bright primary-color soup. Users are adults making financial decisions.
+2. **NOT heavy e-commerce/marketplace** — not BrickLink's dense tables and product grids. That's the data source, not the design aspiration.
+
+### Design Principles
+1. **Speed first.** Investors are in a hurry. Every interaction should feel instant.
+2. **Trust through clarity.** Show numbers prominently, cite sources, no ambiguity.
+3. **LEGO energy, adult execution.** Bold without being juvenile. Yellow as exclamation point, not wallpaper.
+4. **The reveal is everything.** The price count-up is the emotional core. Everything builds toward it.
+5. **Not BrickLink, not a toy store.** Editorial confidence — a well-designed finance magazine that covers LEGO.
+
+### Accessibility
+Best-effort: good contrast, legible type, 44×44px minimum tap targets, `prefers-reduced-motion` respected.
