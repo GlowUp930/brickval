@@ -22,7 +22,7 @@
   "submit": {
     "production": {
       "android": {
-        "serviceAccountKeyPath": "./google-services.json",
+        "serviceAccountKeyPath": "/Users/holamchan/.config/brickval/play-service-account.json",
         "track": "internal"
       }
     }

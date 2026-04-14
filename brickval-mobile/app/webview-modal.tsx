@@ -1,9 +1,11 @@
 import { useLocalSearchParams, router, Stack } from "expo-router";
 import { View, Pressable, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { WebView } from "react-native-webview";
+import { WebView, WebViewMessageEvent } from "react-native-webview";
 import * as WebBrowser from "expo-web-browser";
-import { API_BASE } from "../lib/api";
+import * as SecureStore from "expo-secure-store";
+import { API_BASE, clearAuthToken, setAuthToken } from "../lib/api";
+import { syncSuperwallIdentity } from "../lib/paywall";
 
 /**
  * Generic WebView modal — opens any path on brickvalue.live in a fullscreen
@@ -14,6 +16,49 @@ import { API_BASE } from "../lib/api";
 export default function WebViewModal() {
   const { path } = useLocalSearchParams<{ path?: string }>();
   const url = `${API_BASE}${path ?? "/"}`;
+  const authReturnUrl = `${API_BASE}/account`;
+  const SUPERWALL_USER_ID_KEY = "superwall_user_id";
+
+  const openExternalAuth = (authUrl: string) => {
+    WebBrowser.openAuthSessionAsync(authUrl, authReturnUrl).catch(() => {});
+  };
+
+  const isExternalAuthUrl = (targetUrl: string) => {
+    return (
+      targetUrl.startsWith("https://accounts.google.com") ||
+      targetUrl.includes("oauth_google") ||
+      targetUrl.includes("clerk.") ||
+      targetUrl.includes("/oauth") ||
+      targetUrl.includes("/sso-callback")
+    );
+  };
+
+  const handleMessage = (event: WebViewMessageEvent) => {
+    try {
+      const payload = JSON.parse(event.nativeEvent.data) as {
+        type?: string;
+        token?: string | null;
+        userId?: string | null;
+      };
+
+      if (payload.type !== "auth_token") return;
+
+      if (payload.token) {
+        setAuthToken(payload.token).catch(() => {});
+        if (payload.userId) {
+          SecureStore.setItemAsync(SUPERWALL_USER_ID_KEY, payload.userId).catch(() => {});
+          void syncSuperwallIdentity(payload.userId);
+        }
+        return;
+      }
+
+      clearAuthToken().catch(() => {});
+      SecureStore.deleteItemAsync(SUPERWALL_USER_ID_KEY).catch(() => {});
+      void syncSuperwallIdentity(null);
+    } catch {
+      // Ignore malformed messages from hosted pages we don't control.
+    }
+  };
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -30,31 +75,34 @@ export default function WebViewModal() {
           window.__BRICKVAL_NATIVE__ = { platform: 'android' };
           true;
         `}
-        // Google blocks OAuth from embedded WebViews ("disallowed_useragent").
-        // Intercept any navigation to accounts.google.com and hand it off to
-        // the system browser (Chrome Custom Tabs / SFAuthenticationSession),
-        // which Google does allow.
-        onShouldStartLoadWithRequest={(req) => {
-          const isGoogleAuth =
-            req.url.startsWith("https://accounts.google.com") ||
-            req.url.includes("oauth_google");
-          if (isGoogleAuth) {
-            WebBrowser.openAuthSessionAsync(
-              req.url,
-              `${API_BASE}/sign-in/sso-callback`
-            ).catch(() => {});
+      // Google blocks OAuth from embedded WebViews ("disallowed_useragent").
+      // Intercept any navigation to accounts.google.com and hand it off to
+      // the system browser (Chrome Custom Tabs / SFAuthenticationSession),
+      // which Google does allow.
+      onShouldStartLoadWithRequest={(req) => {
+          if (isExternalAuthUrl(req.url)) {
+            openExternalAuth(req.url);
             return false;
           }
           return true;
         }}
+        onOpenWindow={(event) => {
+          const targetUrl = event.nativeEvent.targetUrl;
+          if (isExternalAuthUrl(targetUrl)) {
+            openExternalAuth(targetUrl);
+          }
+        }}
         allowsInlineMediaPlayback
         mediaPlaybackRequiresUserAction={false}
+        setSupportMultipleWindows
+        javaScriptCanOpenWindowsAutomatically
         cacheEnabled
         javaScriptEnabled
         domStorageEnabled
         sharedCookiesEnabled
         thirdPartyCookiesEnabled
         overScrollMode="never"
+        onMessage={handleMessage}
       />
     </SafeAreaView>
   );

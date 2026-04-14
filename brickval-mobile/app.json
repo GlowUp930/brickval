@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "scheme": "brickval",
-    "newArchEnabled": false,
     "splash": {
       "backgroundColor": "#0d0d0f"
     },
@@ -19,7 +18,12 @@
     },
     "android": {
       "package": "com.brickval.app",
-      "permissions": ["CAMERA", "VIBRATE"]
+      "permissions": [
+        "CAMERA",
+        "VIBRATE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -29,7 +33,15 @@
         {
           "cameraPermission": "Brickvalue uses your camera to scan LEGO sets and look up market prices."
         }
-      ]
-    ]
+      ],
+      "expo-web-browser"
+    ],
+    "extra": {
+      "enableNativePaywall": true,
+      "router": {},
+      "eas": {
+        "projectId": "fa3ae6da-2a21-46f9-84c5-50c0cbe689d6"
+      }
+    }
   }
 }

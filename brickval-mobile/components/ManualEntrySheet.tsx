@@ -11,10 +11,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import type { ScanMode } from "../lib/api";
 
 const GOLD = "#f5c518";
 const { height: SCREEN_H } = Dimensions.get("window");
-const SHEET_H = 320;
+const SHEET_H = Math.min(480, Math.round(SCREEN_H * 0.72));
 
 export interface ManualEntryHandle {
   open: () => void;
@@ -22,13 +23,15 @@ export interface ManualEntryHandle {
 }
 
 interface Props {
+  mode: ScanMode;
   onSubmit: (setNumber: string) => void;
 }
 
 export const ManualEntrySheet = forwardRef<ManualEntryHandle, Props>(
-  ({ onSubmit }, ref) => {
+  ({ mode, onSubmit }, ref) => {
     const [visible, setVisible] = useState(false);
     const [value, setValue] = useState("");
+    const [error, setError] = useState("");
     const slide = useRef(new Animated.Value(SHEET_H)).current;
 
     useImperativeHandle(ref, () => ({
@@ -46,10 +49,20 @@ export const ManualEntrySheet = forwardRef<ManualEntryHandle, Props>(
     }, [visible]);
 
     const submit = () => {
-      const cleaned = value.replace(/[^0-9]/g, "");
-      if (cleaned.length < 4) return;
+      const cleaned = mode === "minifig"
+        ? value.trim().replace(/[^a-z0-9]/gi, "").toLowerCase()
+        : value.replace(/[^0-9]/g, "");
+      if (cleaned.length < (mode === "minifig" ? 3 : 4)) {
+        setError(
+          mode === "minifig"
+            ? "Enter a valid minifigure ID, like sw0001."
+            : "Enter a set number with at least 4 digits."
+        );
+        return;
+      }
       setVisible(false);
       setValue("");
+      setError("");
       onSubmit(cleaned);
     };
 
@@ -65,7 +78,8 @@ export const ManualEntrySheet = forwardRef<ManualEntryHandle, Props>(
           onPress={() => setVisible(false)}
         />
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 18 : 0}
           style={styles.kav}
           pointerEvents="box-none"
         >
@@ -76,25 +90,38 @@ export const ManualEntrySheet = forwardRef<ManualEntryHandle, Props>(
             ]}
           >
             <View style={styles.handle} />
-            <Text style={styles.title}>Enter set number</Text>
+            <Text style={styles.title}>
+              {mode === "minifig" ? "Enter minifigure ID" : "Enter set number"}
+            </Text>
             <Text style={styles.subtitle}>
-              Find it on the front lower-right of the box
+              {mode === "minifig"
+                ? "Use the BrickLink ID, like sw0001"
+                : "Find it on the front lower-right of the box"}
             </Text>
             <TextInput
               value={value}
-              onChangeText={setValue}
-              placeholder="75192"
+              onChangeText={(text) => {
+                setValue(text);
+                if (error) setError("");
+              }}
+              placeholder={mode === "minifig" ? "sw0001" : "75192"}
               placeholderTextColor="rgba(255,255,255,0.3)"
-              keyboardType="number-pad"
-              maxLength={8}
+              keyboardType={mode === "minifig" ? "default" : "number-pad"}
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={mode === "minifig" ? 16 : 8}
               style={styles.input}
               autoFocus
+              returnKeyType="go"
+              onSubmitEditing={submit}
             />
+            {error ? <Text style={styles.error}>{error}</Text> : null}
             <Pressable
               style={[
                 styles.btn,
-                value.replace(/[^0-9]/g, "").length < 4 && styles.btnDisabled,
+                value.trim().replace(mode === "minifig" ? /[^a-z0-9]/gi : /[^0-9]/g, "").length < (mode === "minifig" ? 3 : 4) && styles.btnDisabled,
               ]}
+              disabled={value.trim().replace(mode === "minifig" ? /[^a-z0-9]/gi : /[^0-9]/g, "").length < (mode === "minifig" ? 3 : 4)}
               onPress={submit}
             >
               <Text style={styles.btnText}>Look up</Text>
@@ -116,6 +143,7 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 14,
     minHeight: SHEET_H,
+    paddingBottom: 30,
   },
   handle: {
     width: 40,
@@ -138,6 +166,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "800",
     letterSpacing: 1,
+  },
+  error: {
+    color: "#ffb4b4",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: -2,
   },
   btn: {
     backgroundColor: GOLD,
