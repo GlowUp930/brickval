@@ -89,28 +89,6 @@ export async function POST(req: NextRequest) {
         break;
       }
 
-      // ── Subscription events (kept for future use) ──────────────────────────
-      // Activate Pro
-      case "customer.subscription.created":
-      case "customer.subscription.resumed":
-      case "invoice.payment_succeeded": {
-        const obj = event.data.object as Stripe.Subscription | Stripe.Invoice;
-        const customerId =
-          "customer" in obj ? (obj.customer as string) : "";
-        if (customerId) {
-          const sub =
-            event.type === "invoice.payment_succeeded"
-              ? (obj as Stripe.Invoice)
-              : (obj as Stripe.Subscription);
-          const status =
-            "status" in sub ? sub.status : "active";
-          const isPro = status === "active" || status === "trialing";
-          const subMeta = "metadata" in sub ? sub.metadata : null;
-          await setProStatus(customerId, isPro, subMeta);
-        }
-        break;
-      }
-
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
         const isPro = sub.status === "active" || sub.status === "trialing";
@@ -120,7 +98,6 @@ export async function POST(req: NextRequest) {
 
       // Deactivate Pro
       case "customer.subscription.deleted":
-      case "customer.subscription.paused":
       case "invoice.payment_failed": {
         const obj = event.data.object as Stripe.Subscription | Stripe.Invoice;
         const customerId =

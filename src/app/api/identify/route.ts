@@ -4,7 +4,17 @@ import { anthropic } from "@/lib/anthropic";
 
 const MIN_SCORE = 0.50; // minimum Brickognize confidence we trust when a preferred type exists
 
-const VISION_PROMPT = `Look at this LEGO box image. Find the LEGO set number — it is typically a 4–6 digit number printed on the front lower-right corner, back panel, or near the barcode. Return ONLY valid JSON: {"set_number": "75192"} or {"set_number": null} if you cannot find a set number with confidence. Do not guess. Do not include hyphens or suffixes.`;
+const VISION_PROMPT = `Look at this LEGO box image. Find the LEGO set number — it is typically a 4–6 digit number printed on the front lower-right corner, back panel, or near the barcode.
+
+Return ONLY valid JSON in this shape:
+{"set_number":"75192","confidence":0.93,"candidates":[{"id":"75192","score":0.93},{"id":"75257","score":0.41}]}
+
+Rules:
+- set_number is your best guess, or null if you are not confident.
+- confidence is a number from 0 to 1 for your best guess.
+- candidates is an ordered list of up to 4 likely set numbers.
+- Only include numbers you can justify from the image.
+- Do not guess wildly. Do not include hyphens or suffixes.`;
 
 const BRICKOGNIZE_URL = "https://api.brickognize.com/predict/";
 
@@ -17,6 +27,11 @@ const ACCEPTED_MEDIA_TYPES = [
 
 type AcceptedMediaType = (typeof ACCEPTED_MEDIA_TYPES)[number];
 type Candidate = { id: string; score: number };
+type IdentificationResponse = {
+  set_number: string | null;
+  confidence?: number | null;
+  candidates?: Candidate[];
+};
 
 function isAcceptedMediaType(type: string): type is AcceptedMediaType {
   return ACCEPTED_MEDIA_TYPES.includes(type as AcceptedMediaType);
@@ -73,11 +88,7 @@ async function identifyMinifig(imageFile: File): Promise<{ best: string | null; 
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  // Auth check
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  await auth();
 
   const mode = req.nextUrl.searchParams.get("mode") ?? "set";
 
@@ -111,10 +122,11 @@ export async function POST(req: NextRequest) {
   // ── Minifig mode: use Brickognize ─────────────────────────────────────────
   if (mode === "minifig") {
     const { best, candidates } = await identifyMinifig(imageFile);
-    if (!best) {
-      return NextResponse.json({ set_number: null, candidates });
-    }
-    return NextResponse.json({ set_number: best, candidates });
+    return NextResponse.json({
+      set_number: best,
+      confidence: candidates[0]?.score ?? null,
+      candidates: candidates.slice(0, 4),
+    });
   }
 
   // ── Set mode: use Claude Vision ───────────────────────────────────────────
@@ -160,7 +172,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Parse the JSON response from Claude
-  let parsed: { set_number: string | null };
+  let parsed: IdentificationResponse;
   try {
     // Claude should return only JSON, but strip any markdown code fences just in case
     const cleaned = responseText
@@ -171,17 +183,46 @@ export async function POST(req: NextRequest) {
   } catch {
     console.error("[identify] Failed to parse Claude response:", responseText);
     // Treat unparseable response as "not found"
-    return NextResponse.json({ set_number: null });
+    return NextResponse.json({ set_number: null, confidence: null, candidates: [] });
   }
 
   // Validate the set number format (4–8 digits)
   if (parsed.set_number) {
     const cleaned = parsed.set_number.replace(/[^0-9]/g, "");
     if (cleaned.length < 4 || cleaned.length > 8) {
-      return NextResponse.json({ set_number: null });
+      parsed.set_number = null;
+    } else {
+      parsed.set_number = cleaned;
     }
-    parsed.set_number = cleaned;
   }
 
-  return NextResponse.json({ set_number: parsed.set_number ?? null });
+  const candidates = (parsed.candidates ?? [])
+    .map((candidate) => {
+      const cleaned = candidate.id.replace(/[^0-9]/g, "");
+      const score = Number(candidate.score);
+      return {
+        id: cleaned,
+        score: Number.isFinite(score) ? Math.max(0, Math.min(1, score)) : 0,
+      };
+    })
+    .filter((candidate) => candidate.id.length >= 4 && candidate.id.length <= 8)
+    .slice(0, 4);
+
+  const confidence =
+    typeof parsed.confidence === "number" && Number.isFinite(parsed.confidence)
+      ? Math.max(0, Math.min(1, parsed.confidence))
+      : candidates[0]?.score ?? null;
+
+  if (!candidates.length && parsed.set_number) {
+    candidates.push({
+      id: parsed.set_number,
+      score: confidence ?? 0,
+    });
+  }
+
+  return NextResponse.json({
+    set_number: parsed.set_number ?? null,
+    confidence,
+    candidates,
+  });
 }

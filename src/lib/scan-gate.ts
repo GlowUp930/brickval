@@ -19,6 +19,14 @@ export async function checkAndIncrementScan(
   userId: string
 ): Promise<ScanGateResult> {
   try {
+    const { error: upsertError } = await supabase
+      .from("users")
+      .upsert({ id: userId }, { onConflict: "id" });
+
+    if (upsertError) {
+      console.warn("[scan-gate] Failed to create user row:", upsertError);
+    }
+
     const { data, error } = await supabase.rpc("increment_scan", {
       p_user_id: userId,
       p_free_limit: FREE_SCAN_LIMIT,
@@ -29,9 +37,9 @@ export async function checkAndIncrementScan(
       return { allowed: true, scansUsed: 0, isPro: false, paywallHit: false };
     }
 
-    const allowed: boolean = data.allowed ?? false;
-    const scansUsed: number = data.scans_used ?? 0;
-    const isPro: boolean = data.is_pro ?? false;
+    const allowed = Boolean(data.allowed);
+    const scansUsed = Number(data.scans_used ?? 0);
+    const isPro = Boolean(data.is_pro);
 
     return { allowed, scansUsed, isPro, paywallHit: !allowed };
   } catch {

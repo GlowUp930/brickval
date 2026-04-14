@@ -11,9 +11,6 @@ import type { EbaySale, MinifigInfo, MinifigPricing } from "@/types/market";
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   let body: { setNumber?: string; mode?: string };
   try {
@@ -31,26 +28,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid figure number" }, { status: 400 });
     }
 
-    let gate;
-    try {
-      gate = await checkAndIncrementScan(userId);
-    } catch (err) {
-      console.error("[lookup/minifig] Scan gate error:", err);
-      return NextResponse.json(
-        { error: "internal", message: "Something went wrong. Please try again." },
-        { status: 500 }
-      );
-    }
+    let gate = { allowed: true, scansUsed: 0, isPro: false };
+    if (userId) {
+      try {
+        gate = await checkAndIncrementScan(userId);
+      } catch (err) {
+        console.error("[lookup/minifig] Scan gate error:", err);
+        return NextResponse.json(
+          { error: "internal", message: "Something went wrong. Please try again." },
+          { status: 500 }
+        );
+      }
 
-    if (!gate.allowed) {
-      return NextResponse.json(
-        {
-          error: "paywall",
-          message: "You've used all 5 free scans. Upgrade to Brickvalue Pro to continue.",
-          scansUsed: gate.scansUsed,
-        },
-        { status: 402 }
-      );
+      if (!gate.allowed) {
+        return NextResponse.json(
+          {
+            error: "paywall",
+            message: "You've used all 5 free scans. Upgrade to Brickvalue Pro to continue.",
+            scansUsed: gate.scansUsed,
+          },
+          { status: 402 }
+        );
+      }
     }
 
     const minifigData = await getMinifigMarketData(figNumber).catch(() => null);
@@ -71,7 +70,7 @@ export async function POST(req: NextRequest) {
       .replace(/&quot;/g, '"').replace(/&apos;/g, "'");
     const figInfo: MinifigInfo = {
       name: decodedName,
-      image_url: item?.image_url ?? null,
+      image_url: item?.image_url ?? item?.thumbnail_url ?? null,
       fig_number: figNumber,
       year_released: item?.year_released ?? null,
     };
@@ -138,26 +137,28 @@ export async function POST(req: NextRequest) {
   }
 
   // Check paywall and increment scan counter atomically
-  let gate;
-  try {
-    gate = await checkAndIncrementScan(userId);
-  } catch (err) {
-    console.error("[lookup] Scan gate error:", err);
-    return NextResponse.json(
-      { error: "internal", message: "Something went wrong. Please try again." },
-      { status: 500 }
-    );
-  }
+  let gate = { allowed: true, scansUsed: 0, isPro: false };
+  if (userId) {
+    try {
+      gate = await checkAndIncrementScan(userId);
+    } catch (err) {
+      console.error("[lookup] Scan gate error:", err);
+      return NextResponse.json(
+        { error: "internal", message: "Something went wrong. Please try again." },
+        { status: 500 }
+      );
+    }
 
-  if (!gate.allowed) {
-    return NextResponse.json(
-      {
-        error: "paywall",
-        message: "You've used all 5 free scans. Upgrade to Brickvalue Pro to continue.",
-        scansUsed: gate.scansUsed,
-      },
-      { status: 402 }
-    );
+    if (!gate.allowed) {
+      return NextResponse.json(
+        {
+          error: "paywall",
+          message: "You've used all 5 free scans. Upgrade to Brickvalue Pro to continue.",
+          scansUsed: gate.scansUsed,
+        },
+        { status: 402 }
+      );
+    }
   }
 
   // Fetch exchange rates first (fast — Supabase-cached)
@@ -193,8 +194,9 @@ export async function POST(req: NextRequest) {
   const hasBrickLink = brickLinkData?.sold_new || brickLinkData?.sold_used
     || brickLinkData?.stock_new || brickLinkData?.stock_used;
   const hasEbay = ebayData.new_sales.length > 0 || ebayData.used_sales.length > 0;
+  const hasSetIdentity = !!brickLinkData?.item || rrpUsd !== null;
 
-  if (!hasEbay && !hasBrickLink) {
+  if (!hasEbay && !hasBrickLink && !hasSetIdentity) {
     // Both providers failed → retryable error, not "bad set number"
     if (ebayFailed && brickLinkFailed) {
       return NextResponse.json(
@@ -217,9 +219,20 @@ export async function POST(req: NextRequest) {
     rates?.stale ?? true,
     rrpUsd
   );
+  const resolvedSetInfo =
+    setInfo ??
+    (hasSetIdentity
+      ? {
+          name: `LEGO set #${setNumber}`,
+          image_url: null,
+          year_released: null,
+          is_obsolete: false,
+          set_number: setNumber,
+        }
+      : null);
 
   return NextResponse.json({
-    setInfo,
+    setInfo: resolvedSetInfo,
     pricing,
     scansUsed: gate.scansUsed,
     isPro: gate.isPro,

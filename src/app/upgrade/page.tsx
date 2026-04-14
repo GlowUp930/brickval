@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { createCheckoutSession } from "./actions";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -14,25 +13,7 @@ const features = [
   "All future features included",
 ];
 
-function useIsNative(): boolean {
-  const [native, setNative] = useState(false);
-  useEffect(() => {
-    setNative(typeof window !== "undefined" && "ReactNativeWebView" in window);
-  }, []);
-  return native;
-}
-
-function triggerNativePaywall() {
-  if (typeof window !== "undefined" && "ReactNativeWebView" in window) {
-    (window as { ReactNativeWebView: { postMessage: (msg: string) => void } }).ReactNativeWebView.postMessage(
-      JSON.stringify({ action: "show_paywall" })
-    );
-  }
-}
-
 export default function UpgradePage() {
-  const isNative = useIsNative();
-
   return (
     <main
       className="min-h-screen flex flex-col items-center justify-center p-6"
@@ -101,9 +82,9 @@ export default function UpgradePage() {
         </ul>
 
         {/* CTA */}
-        {isNative ? (
+        <form action={createCheckoutSession}>
           <button
-            onClick={triggerNativePaywall}
+            type="submit"
             className="w-full font-black py-4 px-6 rounded-full text-lg transition-all active:scale-[0.98]"
             style={{
               background: "var(--accent)",
@@ -113,26 +94,10 @@ export default function UpgradePage() {
           >
             Get lifetime access
           </button>
-        ) : (
-          <form action={createCheckoutSession}>
-            <button
-              type="submit"
-              className="w-full font-black py-4 px-6 rounded-full text-lg transition-all active:scale-[0.98]"
-              style={{
-                background: "var(--accent)",
-                color: "var(--accent-fg)",
-                boxShadow: "0 4px 24px rgba(245,197,24,0.3)",
-              }}
-            >
-              Get lifetime access
-            </button>
-          </form>
-        )}
+        </form>
 
         <p className="text-xs" style={{ color: "var(--muted)" }}>
-          {isNative
-            ? "Secure checkout via Google Play"
-            : "Secure checkout via Stripe"}
+          Secure checkout via Stripe
         </p>
 
         <Link

@@ -9,7 +9,7 @@ const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID ?? "";
 
 export async function createCheckoutSession() {
   const { userId } = await auth();
-  if (!userId) redirect("/sign-in");
+  if (!userId) redirect("/account");
 
   if (!STRIPE_PRICE_ID) {
     throw new Error(

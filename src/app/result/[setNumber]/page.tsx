@@ -16,7 +16,7 @@ interface Props {
 
 export default async function ResultPage({ params }: Props) {
   const { userId } = await auth();
-  if (!userId) redirect("/sign-in");
+  if (!userId) redirect("/account");
 
   const { setNumber } = await params;
   const cleanedSetNumber = setNumber.replace(/[^0-9]/g, "");
@@ -75,8 +75,9 @@ export default async function ResultPage({ params }: Props) {
   const hasBrickLink = brickLinkData?.sold_new || brickLinkData?.sold_used
     || brickLinkData?.stock_new || brickLinkData?.stock_used;
   const hasEbay = ebayData.new_sales.length > 0 || ebayData.used_sales.length > 0;
+  const hasSetIdentity = !!brickLinkData?.item || rrpUsd !== null;
 
-  if (!hasEbay && !hasBrickLink) {
+  if (!hasEbay && !hasBrickLink && !hasSetIdentity) {
     if (ebayFailed && brickLinkFailed) {
       return (
         <ErrorScreen
@@ -103,6 +104,17 @@ export default async function ResultPage({ params }: Props) {
     rates?.stale ?? true,
     rrpUsd
   );
+  const resolvedSetInfo =
+    setInfo ??
+    (hasSetIdentity
+      ? {
+          name: `LEGO set #${cleanedSetNumber}`,
+          image_url: null,
+          year_released: null,
+          is_obsolete: false,
+          set_number: cleanedSetNumber,
+        }
+      : null);
 
   return (
     <main className="min-h-screen flex flex-col" style={{ background: "var(--background)" }}>
@@ -126,7 +138,7 @@ export default async function ResultPage({ params }: Props) {
 
       {/* Content — no outer padding so hero image goes full-bleed */}
       <div className="flex-1 flex flex-col w-full max-w-md mx-auto">
-        <PriceReveal setInfo={setInfo} pricing={pricing} setNumber={cleanedSetNumber} ebayFailed={ebayFailed} brickLinkFailed={brickLinkFailed} />
+        <PriceReveal setInfo={resolvedSetInfo} pricing={pricing} setNumber={cleanedSetNumber} ebayFailed={ebayFailed} brickLinkFailed={brickLinkFailed} />
 
         {/* Scan another CTA */}
         <div className="px-5 pb-8">
