@@ -162,7 +162,7 @@ export function AccountClient() {
           </p>
         </div>
 
-        <SignOutButton>
+        <SignOutButton redirectUrl="/account">
           <button
             type="button"
             className="w-full font-bold py-3 px-5 rounded-full"
@@ -172,13 +172,27 @@ export function AccountClient() {
           </button>
         </SignOutButton>
 
-        <Link
-          href="/scan"
-          className="text-center text-sm font-medium"
-          style={{ color: "var(--muted)" }}
-        >
-          Back to scanner
-        </Link>
+        {typeof window !== "undefined" && !!(window as Window & { ReactNativeWebView?: unknown }).ReactNativeWebView ? (
+          <button
+            type="button"
+            onClick={() => {
+              const nativeWindow = window as Window & { ReactNativeWebView?: { postMessage: (msg: string) => void } };
+              nativeWindow.ReactNativeWebView?.postMessage(JSON.stringify({ type: "close_modal" }));
+            }}
+            className="text-center text-sm font-medium bg-transparent border-0 cursor-pointer"
+            style={{ color: "var(--muted)" }}
+          >
+            Back to scanner
+          </button>
+        ) : (
+          <Link
+            href="/scan"
+            className="text-center text-sm font-medium"
+            style={{ color: "var(--muted)" }}
+          >
+            Back to scanner
+          </Link>
+        )}
       </motion.div>
     </main>
   );
