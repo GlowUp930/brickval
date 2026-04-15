@@ -27,8 +27,10 @@ export default function WebViewModal() {
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
+      console.log("[webview-modal] AppState change:", state, "authInProgress:", authInProgress.current);
       if (state === "active" && authInProgress.current) {
         authInProgress.current = false;
+        console.log("[webview-modal] Reloading WebView after auth return");
         webViewRef.current?.reload();
       }
     });
@@ -36,6 +38,7 @@ export default function WebViewModal() {
   }, []);
 
   const openExternalAuth = async (authUrl: string) => {
+    console.log("[webview-modal] openExternalAuth ->", authUrl);
     authInProgress.current = true;
     try {
       if (Platform.OS === "android") {
@@ -47,11 +50,12 @@ export default function WebViewModal() {
       } else {
         await WebBrowser.openAuthSessionAsync(authUrl, authReturnUrl);
       }
-    } catch {
-      // ignore browser errors
+    } catch (err) {
+      console.log("[webview-modal] external browser error:", err);
     }
     // Reload the WebView so AccountClient re-runs with the new Clerk session.
     // On iOS sharedCookiesEnabled means the session cookie is already present.
+    console.log("[webview-modal] external browser closed, reloading WebView");
     authInProgress.current = false;
     webViewRef.current?.reload();
   };
@@ -74,6 +78,8 @@ export default function WebViewModal() {
         userId?: string | null;
       };
 
+      console.log("[webview-modal] postMessage received:", payload.type, "tokenPresent:", !!payload.token);
+
       if (payload.type === "close_modal") {
         router.back();
         return;
@@ -82,7 +88,8 @@ export default function WebViewModal() {
       if (payload.type !== "auth_token") return;
 
       if (payload.token) {
-        setAuthToken(payload.token).catch(() => {});
+        console.log("[webview-modal] saving auth_token (len:", payload.token.length, ") userId:", payload.userId);
+        setAuthToken(payload.token).catch((err) => console.log("[webview-modal] setAuthToken error:", err));
         if (payload.userId) {
           SecureStore.setItemAsync(SUPERWALL_USER_ID_KEY, payload.userId).catch(() => {});
           void syncSuperwallIdentity(payload.userId);
@@ -90,11 +97,12 @@ export default function WebViewModal() {
         return;
       }
 
+      console.log("[webview-modal] clearing auth_token (signed out)");
       clearAuthToken().catch(() => {});
       SecureStore.deleteItemAsync(SUPERWALL_USER_ID_KEY).catch(() => {});
       void syncSuperwallIdentity(null);
-    } catch {
-      // Ignore malformed messages from hosted pages we don't control.
+    } catch (err) {
+      console.log("[webview-modal] handleMessage parse error:", err);
     }
   };
 
