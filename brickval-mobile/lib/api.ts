@@ -99,6 +99,7 @@ export interface LookupResult {
   market_history: MarketHistoryPoint[];
   pricing: {
     hero_new_avg_usd: number | null;
+    hero_used_avg_usd: number | null;
     rrp_usd: number | null;
     gain_pct: number | null;
     bricklink_new_qty: number | null;
@@ -202,6 +203,11 @@ function normalizeSetResult(data: any): LookupResult {
         data.pricing?.ebay_new_avg_usd ??
         data.pricing?.bricklink_stock_new_avg_usd ??
         null,
+      hero_used_avg_usd:
+        data.pricing?.bricklink_used_avg_usd ??
+        data.pricing?.ebay_used_avg_usd ??
+        data.pricing?.bricklink_stock_used_avg_usd ??
+        null,
       rrp_usd: data.pricing?.rrp_usd ?? null,
       gain_pct: data.pricing?.gain_pct ?? null,
       bricklink_new_qty:
@@ -214,10 +220,15 @@ function normalizeSetResult(data: any): LookupResult {
 }
 
 function normalizeMinifigResult(data: MinifigLookupResponse): LookupResult {
-  const soldAverage = data.pricing.new_sold_avg_usd ?? data.pricing.used_sold_avg_usd;
-  const stockAverage = data.pricing.new_stock_avg_usd ?? data.pricing.used_stock_avg_usd;
+  const newSoldAvg = data.pricing.new_sold_avg_usd;
+  const usedSoldAvg = data.pricing.used_sold_avg_usd;
+  const newStockAvg = data.pricing.new_stock_avg_usd;
+  const usedStockAvg = data.pricing.used_stock_avg_usd;
   const soldQty = data.pricing.new_sold_qty ?? data.pricing.used_sold_qty;
   const stockQty = data.pricing.new_stock_qty ?? data.pricing.used_stock_qty;
+  const heroNewAvg = newSoldAvg ?? newStockAvg ?? null;
+  const heroUsedAvg = usedSoldAvg ?? usedStockAvg ?? null;
+  const heroAvg = heroNewAvg ?? heroUsedAvg;
   return {
     set_number: data.figInfo.fig_number,
     item_type: "minifig",
@@ -227,11 +238,12 @@ function normalizeMinifigResult(data: MinifigLookupResponse): LookupResult {
     image_url: data.figInfo.image_url,
     market_history: getMinifigMarketHistory(data.pricing),
     pricing: {
-      hero_new_avg_usd: soldAverage ?? stockAverage ?? null,
+      hero_new_avg_usd: heroNewAvg,
+      hero_used_avg_usd: heroUsedAvg,
       rrp_usd: null,
       gain_pct: null,
       bricklink_new_qty: soldQty ?? stockQty ?? null,
-      data_source: soldAverage !== null && soldAverage !== undefined ? "sold" : stockAverage !== null && stockAverage !== undefined ? "listing" : null,
+      data_source: heroAvg !== null ? (newSoldAvg !== null || usedSoldAvg !== null ? "sold" : "listing") : null,
     },
   };
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useLocalSearchParams, router, Stack } from "expo-router";
-import { AppState, View, Pressable, Text, StyleSheet } from "react-native";
+import { AppState, Platform, View, Pressable, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import * as WebBrowser from "expo-web-browser";
@@ -38,7 +38,15 @@ export default function WebViewModal() {
   const openExternalAuth = async (authUrl: string) => {
     authInProgress.current = true;
     try {
-      await WebBrowser.openAuthSessionAsync(authUrl, authReturnUrl);
+      if (Platform.OS === "android") {
+        // openAuthSessionAsync uses BrowserProxyActivity on Android which causes
+        // instability with Google OAuth (flickering logo, premature dismissal).
+        // openBrowserAsync opens Chrome Custom Tabs directly — the AppState
+        // listener below handles the WebView reload when the user returns.
+        await WebBrowser.openBrowserAsync(authUrl);
+      } else {
+        await WebBrowser.openAuthSessionAsync(authUrl, authReturnUrl);
+      }
     } catch {
       // ignore browser errors
     }
@@ -65,6 +73,11 @@ export default function WebViewModal() {
         token?: string | null;
         userId?: string | null;
       };
+
+      if (payload.type === "close_modal") {
+        router.back();
+        return;
+      }
 
       if (payload.type !== "auth_token") return;
 

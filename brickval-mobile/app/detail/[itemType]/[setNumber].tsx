@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
+  Animated,
+  GestureResponderEvent,
   View,
   Text,
   StyleSheet,
@@ -65,6 +67,8 @@ export default function ItemDetailScreen() {
   const itemType = Array.isArray(params.itemType) ? params.itemType[0] : params.itemType;
   const setNumber = Array.isArray(params.setNumber) ? params.setNumber[0] : params.setNumber;
   const [items, setItems] = useState<CollectionItem[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const popupProgress = useRef(new Animated.Value(0)).current;
 
   useFocusEffect(
     useCallback(() => {
@@ -81,29 +85,60 @@ export default function ItemDetailScreen() {
     }, [])
   );
 
+  useEffect(() => {
+    Animated.timing(popupProgress, {
+      toValue: selectedIndex !== null ? 1 : 0,
+      duration: 160,
+      useNativeDriver: true,
+    }).start();
+  }, [popupProgress, selectedIndex]);
+
   const item = items.find((entry) => entry.set_number === setNumber && entry.item_type === itemType);
   const quantity = item?.quantity ?? 1;
   const unitValue = item?.market_value_usd ?? null;
   const totalValue = item ? getItemTotalValue(item) : 0;
   const history: HistoryPoint[] = (item?.market_history ?? [])
-    .filter((point: HistoryPoint) => point.date && Number.isFinite(point.price_usd))
-    .sort((a: HistoryPoint, b: HistoryPoint) => a.date.localeCompare(b.date));
+    .filter((point: HistoryPoint) => {
+      if (!point.date || !Number.isFinite(point.price_usd)) return false;
+      const d = new Date(`${point.date.slice(0, 10)}T00:00:00Z`);
+      return !isNaN(d.getTime());
+    })
+    .sort((a: HistoryPoint, b: HistoryPoint) => a.date.slice(0, 10).localeCompare(b.date.slice(0, 10)));
   const chartWidth = Math.min(360, Math.max(260, screenWidth - 40));
   const chartHeight = 220;
+  const chartPlotHeight = 150;
   const chartBottom = chartHeight - 26;
   const minHistoryValue = history.length ? Math.min(...history.map((point) => point.price_usd * quantity)) : 0;
   const maxHistoryValue = history.length ? Math.max(...history.map((point) => point.price_usd * quantity)) : 0;
   const historyRange = Math.max(maxHistoryValue - minHistoryValue, 1);
+  const hasMovement = history.some((point) => point.price_usd * quantity !== minHistoryValue);
   const chartPoints: ChartPoint[] = history.length
     ? history.map((point: HistoryPoint, index: number) => {
         const x = history.length > 1 ? (index * chartWidth) / (history.length - 1) : chartWidth / 2;
         const total = point.price_usd * quantity;
-        const y = chartBottom - ((total - minHistoryValue) / historyRange) * 150;
+        const y = hasMovement
+          ? chartBottom - ((total - minHistoryValue) / historyRange) * chartPlotHeight
+          : chartHeight / 2;
         return { ...point, x, y, total };
       })
     : item
-      ? [{ date: isoDate(new Date(item.added_at)), price_usd: unitValue ?? 0, source: "bricklink" as const, x: chartWidth / 2, y: chartBottom / 2, total: totalValue }]
+      ? [{ date: isoDate(new Date(item.added_at)), price_usd: unitValue ?? 0, source: "bricklink" as const, x: chartWidth / 2, y: chartHeight / 2, total: totalValue }]
       : [];
+  const chartStep = chartPoints.length > 1 ? chartWidth / (chartPoints.length - 1) : chartWidth;
+  const selectedPoint = selectedIndex !== null ? chartPoints[selectedIndex] ?? null : null;
+  const selectedCoord = selectedPoint ? { x: selectedPoint.x, y: selectedPoint.y } : null;
+  const popupWidth = 132;
+  const popupLeft = selectedCoord ? Math.max(4, Math.min(chartWidth - popupWidth - 4, selectedCoord.x - popupWidth / 2)) : 0;
+  const popupTop = selectedCoord ? Math.max(4, selectedCoord.y - 76) : 0;
+  const popupTranslateY = popupProgress.interpolate({ inputRange: [0, 1], outputRange: [8, 0] });
+
+  const handleChartTouch = (event: GestureResponderEvent) => {
+    if (chartPoints.length === 0) return;
+    const locationX = Math.max(0, Math.min(chartWidth, event.nativeEvent.locationX));
+    const nextIndex = Math.round(locationX / chartStep);
+    const bounded = Math.max(0, Math.min(chartPoints.length - 1, nextIndex));
+    setSelectedIndex((curr) => (curr === bounded ? curr : bounded));
+  };
   const chartLinePath = getSmoothPath(chartPoints);
   const firstPoint = chartPoints[0];
   const lastPoint = chartPoints[chartPoints.length - 1];
@@ -169,10 +204,36 @@ export default function ItemDetailScreen() {
             <Text style={styles.chartTitle}>Value history</Text>
             <Text style={styles.chartMeta}>{history.length ? `${history.length} points` : "Saved snapshot"}</Text>
           </View>
-          <View style={[styles.chartWrap, { width: chartWidth, height: chartHeight }]}>
+          <View
+            style={[styles.chartWrap, { width: chartWidth, height: chartHeight }]}
+            onStartShouldSetResponder={() => true}
+            onMoveShouldSetResponder={() => true}
+            onResponderGrant={handleChartTouch}
+            onResponderMove={handleChartTouch}
+          >
             <View style={styles.gridLineTop} />
             <View style={styles.gridLineMid} />
             <View style={styles.gridLineBottom} />
+            {selectedCoord ? (
+              <>
+                <View style={[styles.chartCursor, { left: selectedCoord.x }]} />
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    styles.chartPopup,
+                    {
+                      left: popupLeft,
+                      top: popupTop,
+                      opacity: popupProgress,
+                      transform: [{ translateY: popupTranslateY }],
+                    },
+                  ]}
+                >
+                  <Text style={styles.chartPopupLabel}>{formatTimelineLabel(selectedPoint!.date)}</Text>
+                  <Text style={styles.chartPopupValue}>{USD.format(selectedPoint!.total)}</Text>
+                </Animated.View>
+              </>
+            ) : null}
             <Svg width={chartWidth} height={chartHeight} style={StyleSheet.absoluteFill}>
               <Defs>
                 <LinearGradient id="detailFill" x1="0" y1="0" x2="0" y2="1">
@@ -182,9 +243,20 @@ export default function ItemDetailScreen() {
               </Defs>
               {chartAreaPath ? <Path d={chartAreaPath} fill="url(#detailFill)" /> : null}
               {chartLinePath ? <Path d={chartLinePath} fill="none" stroke={ACCENT} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" /> : null}
-              {chartPoints.map((point) => (
-                <Circle key={`${point.date}-${point.total}`} cx={point.x} cy={point.y} r={3.4} fill={ACCENT} stroke={PANEL} strokeWidth={1.4} />
-              ))}
+              {chartPoints.map((point, index) => {
+                const selected = selectedIndex === index;
+                return (
+                  <Circle
+                    key={`${point.date}-${point.total}`}
+                    cx={point.x}
+                    cy={point.y}
+                    r={selected ? 5 : 3.4}
+                    fill={selected ? INK : ACCENT}
+                    stroke={selected ? ACCENT : PANEL}
+                    strokeWidth={selected ? 2 : 1.4}
+                  />
+                );
+              })}
             </Svg>
           </View>
           <View style={styles.timeline}>
@@ -279,6 +351,30 @@ const styles = StyleSheet.create({
   gridLineBottom: { position: "absolute", bottom: 24, left: 0, right: 0, height: 1, backgroundColor: "rgba(153,231,189,0.2)" },
   timeline: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 2 },
   timelineLabel: { color: SOFT, fontSize: 10, fontWeight: "800" },
+  chartCursor: {
+    position: "absolute",
+    top: 20,
+    bottom: 20,
+    width: 1,
+    backgroundColor: "rgba(247,244,234,0.38)",
+    zIndex: 2,
+  },
+  chartPopup: {
+    position: "absolute",
+    zIndex: 4,
+    width: 132,
+    borderRadius: 18,
+    backgroundColor: INK,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.24,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  chartPopupLabel: { color: "#253129", fontSize: 9, fontWeight: "900", textTransform: "uppercase" },
+  chartPopupValue: { color: "#07100c", fontSize: 16, fontWeight: "900", marginTop: 2 },
   noteCard: {
     borderRadius: 24,
     borderWidth: 1,
