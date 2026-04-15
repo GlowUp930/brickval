@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, View, StyleSheet, Pressable, Text } from "react-native";
+import { Alert, Animated, Easing, View, StyleSheet, Pressable, Text } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { router } from "expo-router";
 import { TopBar } from "../../components/TopBar";
@@ -8,22 +8,23 @@ import { ResultCard } from "../../components/ResultCard";
 import { LegoLoaderNative } from "../../components/LegoLoaderNative";
 import { ManualEntrySheet, type ManualEntryHandle } from "../../components/ManualEntrySheet";
 import {
-  clearAuthToken,
   getAuthToken,
   identifySet,
   lookupSet,
   type IdentificationCandidate,
   type IdentificationResult,
-  type LookupResult,
+  type LookupDetailResult,
+  type LookupSummaryResult,
   type ScanMode,
 } from "../../lib/api";
 import { addToCollection, type CollectionCondition } from "../../lib/collection";
 import { success, warn } from "../../lib/haptics";
 import { presentSuperwallUpgrade } from "../../lib/paywall";
+import { setLatestLookupResult } from "../../lib/live-result";
 
 /**
  * Native scan screen — fullscreen camera, manual capture, result sheet over
- * the dimmed camera background, and hosted WebView details when needed.
+ * the dimmed camera background, and native detail drill-down when needed.
  */
 
 type Status = "idle" | "loading" | "result" | "candidates";
@@ -31,7 +32,7 @@ const GUEST_SCAN_LIMIT = 3;
 const GUEST_SCAN_KEY = "guest_scan_lookups_used";
 const LOW_CONFIDENCE_THRESHOLD = 0.8;
 
-const previewResult: LookupResult = {
+const previewResult: LookupDetailResult = {
   set_number: "75192",
   item_type: "set",
   name: "Millennium Falcon",
@@ -49,10 +50,37 @@ const previewResult: LookupResult = {
     gain_pct: -4,
     bricklink_new_qty: 18,
     data_source: "sold",
+    exchange_rate_stale: false,
+    ebay_new_sales: [],
+    ebay_used_sales: [],
+    ebay_new_avg_usd: 799,
+    ebay_used_avg_usd: 640,
+    bricklink_new_avg_usd: 812,
+    bricklink_new_min_usd: 790,
+    bricklink_new_max_usd: 839,
+    bricklink_used_avg_usd: 645,
+    bricklink_used_min_usd: 598,
+    bricklink_used_max_usd: 701,
+    bricklink_used_qty: 9,
+    bricklink_stock_new_avg_usd: 828,
+    bricklink_stock_new_qty: 22,
+    bricklink_stock_used_avg_usd: 659,
+    bricklink_stock_used_qty: 14,
+    bricklink_sold_new_details: [
+      { price_usd: 812, quantity: 1, date: "2026-03-22", country: "US" },
+      { price_usd: 804, quantity: 1, date: "2026-02-09", country: "GB" },
+    ],
+    bricklink_sold_used_details: [],
+    bricklink_stock_new_details: [{ price_usd: 829, quantity: 1, country: "DE" }],
+    bricklink_stock_used_details: [],
+  },
+  set_info: {
+    year_released: 2017,
+    is_obsolete: true,
   },
 };
 
-const previewMinifigResult: LookupResult = {
+const previewMinifigResult: LookupDetailResult = {
   set_number: "sw0001",
   item_type: "minifig",
   name: "Battle Droid Tan with Back Plate",
@@ -70,6 +98,26 @@ const previewMinifigResult: LookupResult = {
     gain_pct: null,
     bricklink_new_qty: 42,
     data_source: "sold",
+    used_sold_avg_usd: 4.15,
+    used_sold_min_usd: 3.5,
+    used_sold_max_usd: 5,
+    used_sold_qty: 42,
+    used_stock_avg_usd: 4.85,
+    used_stock_qty: 17,
+    new_sold_avg_usd: 5.1,
+    new_sold_min_usd: 4.8,
+    new_sold_max_usd: 5.4,
+    new_sold_qty: 5,
+    new_stock_avg_usd: 5.5,
+    new_stock_qty: 8,
+    sold_details: [{ price_usd: 4, quantity: 1, date: "2026-03-22", country: "US" }],
+    stock_details: [{ price_usd: 5, quantity: 1, country: "CA" }],
+    sold_new_details: [],
+    stock_new_details: [],
+  },
+  fig_info: {
+    fig_number: "sw0001",
+    year_released: 1999,
   },
 };
 
@@ -77,7 +125,7 @@ export default function ScanHome() {
   const [mode, setMode] = useState<ScanMode>("set");
   const [status, setStatus] = useState<Status>("idle");
   const [loadingMsg, setLoadingMsg] = useState("Reading set number...");
-  const [result, setResult] = useState<LookupResult | null>(null);
+  const [result, setResult] = useState<LookupDetailResult | null>(null);
   const [addedSetNumber, setAddedSetNumber] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [candidateOptions, setCandidateOptions] = useState<IdentificationCandidate[]>([]);
@@ -112,12 +160,11 @@ export default function ScanHome() {
     }).start();
   }, [candidateProgress, status]);
 
-  const openWebView = (path: string) => {
-    router.push({ pathname: "/webview-modal", params: { path } });
-  };
-
-  const openUpgrade = () => {
-    void presentSuperwallUpgrade(() => openWebView("/upgrade"));
+  const openUpgrade = async () => {
+    const shown = await presentSuperwallUpgrade();
+    if (!shown) {
+      Alert.alert("Upgrade unavailable", "Use an EAS Android build with the native paywall enabled.");
+    }
   };
 
   const getGuestScansUsed = async () => {
@@ -142,15 +189,16 @@ export default function ScanHome() {
   };
 
   const openAccountForSignIn = () => {
-    openWebView("/account");
+    router.push("/account");
   };
 
   const beginLookup = async (identifier: string) => {
     setLoadingMsg("Fetching market prices...");
-    const data = await lookupSet(identifier, mode);
-    setResult(data);
-    setAddedSetNumber(null);
-    setStatus("result");
+      const data = await lookupSet(identifier, mode);
+      setResult(data);
+      setLatestLookupResult(data);
+      setAddedSetNumber(null);
+      setStatus("result");
   };
 
   const maybeShowCandidates = (identification: IdentificationResult) => {
@@ -171,18 +219,6 @@ export default function ScanHome() {
     );
     setStatus("candidates");
     return true;
-  };
-
-  const openHostedDetails = async (identifier: string) => {
-    const token = await getAuthToken();
-    if (!token) {
-      openAccountForSignIn();
-      return;
-    }
-
-    openWebView(
-      result?.item_type === "minifig" ? `/result/minifig/${identifier}` : `/result/${identifier}`
-    );
   };
 
   const handleCapture = async (photoUri: string) => {
@@ -219,7 +255,6 @@ export default function ScanHome() {
         await beginLookup(identification.set_number);
       } catch (e) {
         if (e instanceof Error && e.message.includes("401")) {
-          await clearAuthToken();
           openAccountForSignIn();
           setStatus("idle");
           return;
@@ -264,7 +299,6 @@ export default function ScanHome() {
       await beginLookup(identifier);
     } catch (e) {
       if (e instanceof Error && e.message.includes("401")) {
-        await clearAuthToken();
         openAccountForSignIn();
         setStatus("idle");
         return;
@@ -298,7 +332,6 @@ export default function ScanHome() {
       await beginLookup(identifier);
     } catch (e) {
       if (e instanceof Error && e.message.includes("401")) {
-        await clearAuthToken();
         openAccountForSignIn();
         setStatus("idle");
         return;
@@ -335,13 +368,15 @@ export default function ScanHome() {
 
   const showPreviewResult = () => {
     setErrorMessage(null);
-    setResult(mode === "minifig" ? previewMinifigResult : previewResult);
+    const preview = mode === "minifig" ? previewMinifigResult : previewResult;
+    setResult(preview);
+    setLatestLookupResult(preview);
     setAddedSetNumber(null);
     setStatus("result");
   };
 
   const handleAddToCollection = async (
-    item: LookupResult,
+    item: LookupSummaryResult,
     options: { quantity: number; condition: CollectionCondition }
   ) => {
     await addToCollection(item, options);
@@ -367,7 +402,7 @@ export default function ScanHome() {
         }}
       />
 
-      <TopBar onAccountPress={() => openWebView("/account")} />
+      <TopBar onAccountPress={openAccountForSignIn} />
 
       {__DEV__ && status === "idle" && (
         <Pressable style={styles.previewBtn} onPress={showPreviewResult}>
@@ -486,10 +521,10 @@ export default function ScanHome() {
         onDismiss={dismissResult}
         onAddToCollection={handleAddToCollection}
         addedToCollection={!!result && addedSetNumber === result.set_number}
-        onViewDetails={(identifier) => {
-          openHostedDetails(identifier).catch(() => {
-            openAccountForSignIn();
-          });
+        onViewDetails={() => {
+          if (!result) return;
+          setLatestLookupResult(result);
+          router.push("/detail/live");
         }}
       />
 

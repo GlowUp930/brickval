@@ -3,8 +3,9 @@ import { useCallback, useState } from "react";
 import { Alert, Image, View, Text, StyleSheet, Pressable, ScrollView, type ImageSourcePropType } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { clearCollection, getCollection, getCollectionValue, type CollectionItem } from "../../lib/collection";
+import { getAuthToken } from "../../lib/api";
 import { tap, warn } from "../../lib/haptics";
-import { presentSuperwallUpgrade } from "../../lib/paywall";
+import { presentSuperwallUpgrade, restoreNativePurchases } from "../../lib/paywall";
 
 const ACCENT = "#62c79a";
 const LEGO_RED = "#df463f";
@@ -72,12 +73,42 @@ export default function SettingsScreen() {
   const minifigureCount = items.reduce((total, item) => total + (item.item_type === "minifig" ? item.quantity ?? 1 : 0), 0);
   const selectedAvatar = getAvatarOption(avatar);
 
-  const openWebView = (path: string) => {
-    router.push({ pathname: "/webview-modal", params: { path } });
+  const openAccount = () => {
+    router.push("/account");
   };
 
-  const openUpgrade = () => {
-    void presentSuperwallUpgrade(() => openWebView("/upgrade"));
+  const openUpgrade = async () => {
+    const token = await getAuthToken();
+    if (!token) {
+      openAccount();
+      return;
+    }
+
+    const shown = await presentSuperwallUpgrade();
+    if (!shown) {
+      Alert.alert("Upgrade unavailable", "Use an EAS Android build with the native paywall enabled.");
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    const token = await getAuthToken();
+    if (!token) {
+      openAccount();
+      return;
+    }
+
+    const restored = await restoreNativePurchases();
+    if (restored === null) {
+      Alert.alert("Restore unavailable", "Use an EAS Android build with RevenueCat enabled.");
+      return;
+    }
+
+    Alert.alert(
+      restored ? "BrickVal Pro restored" : "No purchase found",
+      restored
+        ? "Your Google Play purchase is active on this device."
+        : "We could not find an active BrickVal Pro purchase for this account."
+    );
   };
 
   const handleClearCollection = async () => {
@@ -122,14 +153,14 @@ export default function SettingsScreen() {
             <View style={styles.passportCopy}>
               <Text style={styles.passportLabel}>Collector profile</Text>
               <Text style={styles.passportTitle}>BrickVal account</Text>
-              <Text style={styles.passportMeta}>Sign in on brickvalue.live to sync account and billing.</Text>
+              <Text style={styles.passportMeta}>Native Google sign-in, Pro access, and account actions now stay inside the app.</Text>
             </View>
           </View>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Open account"
             style={styles.primaryAction}
-            onPress={() => openWebView("/account")}
+            onPress={openAccount}
           >
             <Text style={styles.primaryActionText}>Open account</Text>
           </Pressable>
@@ -171,16 +202,23 @@ export default function SettingsScreen() {
           <SettingsRow
             code="PRO"
             title="BrickVal Pro"
-            meta="Subscription and lifetime purchase options"
+            meta="Native Android upgrade flow"
             accent={ACCENT}
-            onPress={openUpgrade}
+            onPress={() => void openUpgrade()}
           />
           <SettingsRow
-            code="WEB"
-            title="Hosted account"
-            meta="Profile, auth, and web billing screens"
+            code="RST"
+            title="Restore purchases"
+            meta="Re-check Google Play access for this account"
             accent={LEGO_BLUE}
-            onPress={() => openWebView("/account")}
+            onPress={() => void handleRestorePurchases()}
+          />
+          <SettingsRow
+            code="ACT"
+            title="Native account"
+            meta="Google sign-in, sign out, and delete account"
+            accent={LEGO_YELLOW}
+            onPress={openAccount}
           />
         </View>
 

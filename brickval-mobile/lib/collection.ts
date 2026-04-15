@@ -1,5 +1,5 @@
 import * as SecureStore from "expo-secure-store";
-import type { LookupResult, MarketHistoryPoint, ScanMode } from "./api";
+import type { LookupSummaryResult, MarketHistoryPoint, ScanMode } from "./api";
 
 const COLLECTION_KEY = "brickval_collection";
 
@@ -64,7 +64,7 @@ export async function getCollection(): Promise<CollectionItem[]> {
 }
 
 export async function addToCollection(
-  result: LookupResult,
+  result: LookupSummaryResult,
   options: AddToCollectionOptions
 ): Promise<CollectionItem[]> {
   const existing = await getCollection();

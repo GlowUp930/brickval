@@ -11,7 +11,7 @@ import {
   Easing,
   useWindowDimensions,
 } from "react-native";
-import { LookupResult } from "../lib/api";
+import { LookupSummaryResult } from "../lib/api";
 import type { CollectionCondition } from "../lib/collection";
 
 /**
@@ -27,9 +27,9 @@ const SURFACE = "#151514";
 const LINE = "rgba(247,244,234,0.12)";
 
 interface Props {
-  result: LookupResult | null;
+  result: LookupSummaryResult | null;
   onDismiss: () => void;
-  onAddToCollection: (result: LookupResult, options: { quantity: number; condition: CollectionCondition }) => void;
+  onAddToCollection: (result: LookupSummaryResult, options: { quantity: number; condition: CollectionCondition }) => void;
   addedToCollection: boolean;
   onViewDetails: (setNumber: string) => void;
 }
