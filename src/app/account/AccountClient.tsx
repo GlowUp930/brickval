@@ -18,10 +18,30 @@ function postNativeAuthToken(token: string | null, userId: string | null = null)
   );
 }
 
+function postNativeCloseModal() {
+  if (typeof window === "undefined") return;
+  const nativeWindow = window as Window & {
+    ReactNativeWebView?: { postMessage: (message: string) => void };
+  };
+  nativeWindow.ReactNativeWebView?.postMessage(
+    JSON.stringify({ type: "close_modal" })
+  );
+}
+
+function detectNativeWebView(): boolean {
+  if (typeof window === "undefined") return false;
+  return !!(window as Window & { ReactNativeWebView?: unknown }).ReactNativeWebView;
+}
+
 export function AccountClient() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const { user } = useUser();
   const [syncState, setSyncState] = useState<SyncState>("idle");
+  const [isNative, setIsNative] = useState(false);
+
+  useEffect(() => {
+    setIsNative(detectNativeWebView());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,6 +75,18 @@ export function AccountClient() {
       cancelled = true;
     };
   }, [getToken, isLoaded, isSignedIn, user?.id]);
+
+  // When signed in via the native WebView and the token sync completes,
+  // auto-close the modal so the user is returned to the native scanner
+  // instead of being left on the hosted /account page.
+  useEffect(() => {
+    if (!isNative) return;
+    if (syncState !== "done") return;
+    const t = setTimeout(() => {
+      postNativeCloseModal();
+    }, 600);
+    return () => clearTimeout(t);
+  }, [isNative, syncState]);
 
   if (!isLoaded) {
     return (
@@ -101,15 +133,32 @@ export function AccountClient() {
             </p>
           </div>
           <div className="rounded-2xl overflow-hidden" style={{ background: "#fff" }}>
-            <SignIn />
+            {/* Force redirect back to /account so AccountClient stays mounted
+                and can sync the Clerk token to the native app (overrides
+                the ClerkProvider-level signInForceRedirectUrl="/scan"). */}
+            <SignIn
+              forceRedirectUrl="/account"
+              signUpForceRedirectUrl="/account"
+            />
           </div>
-          <Link
-            href="/"
-            className="text-center text-sm font-medium"
-            style={{ color: "var(--muted)" }}
-          >
-            Back to home
-          </Link>
+          {isNative ? (
+            <button
+              type="button"
+              onClick={postNativeCloseModal}
+              className="text-center text-sm font-medium bg-transparent border-0 cursor-pointer"
+              style={{ color: "var(--muted)" }}
+            >
+              Back to scanner
+            </button>
+          ) : (
+            <Link
+              href="/"
+              className="text-center text-sm font-medium"
+              style={{ color: "var(--muted)" }}
+            >
+              Back to home
+            </Link>
+          )}
         </motion.div>
       </main>
     );
@@ -120,7 +169,9 @@ export function AccountClient() {
     syncState === "syncing"
       ? "Syncing your mobile session..."
       : syncState === "done"
-        ? "Mobile access is ready. You can close this page."
+        ? isNative
+          ? "Mobile access is ready. Returning to scanner..."
+          : "Mobile access is ready. You can close this page."
         : syncState === "error"
           ? "We signed you in, but mobile token sync failed. Refresh this page once."
           : "Signed in.";
@@ -172,13 +223,10 @@ export function AccountClient() {
           </button>
         </SignOutButton>
 
-        {typeof window !== "undefined" && !!(window as Window & { ReactNativeWebView?: unknown }).ReactNativeWebView ? (
+        {isNative ? (
           <button
             type="button"
-            onClick={() => {
-              const nativeWindow = window as Window & { ReactNativeWebView?: { postMessage: (msg: string) => void } };
-              nativeWindow.ReactNativeWebView?.postMessage(JSON.stringify({ type: "close_modal" }));
-            }}
+            onClick={postNativeCloseModal}
             className="text-center text-sm font-medium bg-transparent border-0 cursor-pointer"
             style={{ color: "var(--muted)" }}
           >
