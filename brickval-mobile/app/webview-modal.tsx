@@ -1,5 +1,6 @@
+import { useEffect, useRef } from "react";
 import { useLocalSearchParams, router, Stack } from "expo-router";
-import { View, Pressable, Text, StyleSheet } from "react-native";
+import { AppState, View, Pressable, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import * as WebBrowser from "expo-web-browser";
@@ -18,9 +19,33 @@ export default function WebViewModal() {
   const url = `${API_BASE}${path ?? "/"}`;
   const authReturnUrl = `${API_BASE}/account`;
   const SUPERWALL_USER_ID_KEY = "superwall_user_id";
+  const webViewRef = useRef<WebView>(null);
+  // Tracks whether a Google OAuth session is in progress so we know to reload
+  // when the app returns to foreground (needed on Android where Chrome Custom
+  // Tabs do not auto-close and openAuthSessionAsync may not resolve cleanly).
+  const authInProgress = useRef(false);
 
-  const openExternalAuth = (authUrl: string) => {
-    WebBrowser.openAuthSessionAsync(authUrl, authReturnUrl).catch(() => {});
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active" && authInProgress.current) {
+        authInProgress.current = false;
+        webViewRef.current?.reload();
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
+  const openExternalAuth = async (authUrl: string) => {
+    authInProgress.current = true;
+    try {
+      await WebBrowser.openAuthSessionAsync(authUrl, authReturnUrl);
+    } catch {
+      // ignore browser errors
+    }
+    // Reload the WebView so AccountClient re-runs with the new Clerk session.
+    // On iOS sharedCookiesEnabled means the session cookie is already present.
+    authInProgress.current = false;
+    webViewRef.current?.reload();
   };
 
   const isExternalAuthUrl = (targetUrl: string) => {
@@ -69,6 +94,7 @@ export default function WebViewModal() {
         </Pressable>
       </View>
       <WebView
+        ref={webViewRef}
         source={{ uri: url }}
         style={styles.webview}
         injectedJavaScriptBeforeContentLoaded={`
