@@ -1,5 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 import type { LookupSummaryResult, MarketHistoryPoint, ScanMode } from "./api";
+import { getPriceByCondition } from "./pricing";
 
 const COLLECTION_KEY = "brickval_collection";
 
@@ -75,9 +76,7 @@ export async function addToCollection(
     theme: result.theme,
     pieces: result.pieces,
     image_url: result.image_url,
-    market_value_usd: options.condition === "used"
-      ? (result.pricing.hero_used_avg_usd ?? result.pricing.hero_new_avg_usd)
-      : result.pricing.hero_new_avg_usd,
+    market_value_usd: getPriceByCondition(result.pricing, options.condition),
     rrp_usd: result.pricing.rrp_usd,
     gain_pct: result.pricing.gain_pct,
     data_source: result.pricing.data_source,

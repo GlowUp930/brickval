@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { LookupSummaryResult } from "../lib/api";
 import type { CollectionCondition } from "../lib/collection";
+import { getPriceByCondition } from "../lib/pricing";
 
 /**
  * Fullscreen modal that slides up from the bottom over the camera.
@@ -146,7 +147,7 @@ export function ResultCard({
   const { pricing } = result;
   const itemLabel = result.item_type === "minifig" ? "Minifig" : "Set";
   const gain = pricing.gain_pct;
-  const hasPrice = pricing.hero_new_avg_usd !== null && pricing.hero_new_avg_usd !== undefined;
+  const hasPrice = pricing.hero_new_avg_usd != null;
   const sourceText =
     pricing.data_source === "sold"
       ? `Sold data${pricing.bricklink_new_qty ? ` · ${pricing.bricklink_new_qty} BrickLink sales` : ""}`
@@ -155,19 +156,20 @@ export function ResultCard({
         : "Market source unavailable";
   const confidenceText = pricing.data_source === "sold" ? "Higher confidence" : "Use as a guide";
   const deltaText =
-    gain !== null && gain !== undefined
+    gain != null
       ? `${gain >= 0 ? "+" : ""}${gain.toFixed(0)}%`
       : "Not enough data";
   const rrpText =
-    pricing.rrp_usd !== null && pricing.rrp_usd !== undefined
+    pricing.rrp_usd != null
       ? `Retail estimate: ~${Math.round(pricing.rrp_usd).toLocaleString()}`
       : result.item_type === "minifig"
         ? "Retail estimate not used for minifigures"
         : "Retail estimate unavailable";
-  const conditionPrice = condition === "used"
-    ? (pricing.hero_used_avg_usd ?? pricing.hero_new_avg_usd)
-    : pricing.hero_new_avg_usd;
-  const collectionValue = conditionPrice !== null && conditionPrice !== undefined
+  const conditionPrice = useMemo(
+    () => getPriceByCondition(pricing, condition),
+    [pricing, condition]
+  );
+  const collectionValue = conditionPrice != null
     ? `$${Math.round(conditionPrice * quantity).toLocaleString()}`
     : "Unavailable";
   const contentTranslateY = content.interpolate({
