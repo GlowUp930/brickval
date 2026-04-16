@@ -164,7 +164,12 @@ export function ResultCard({
       : result.item_type === "minifig"
         ? "Retail estimate not used for minifigures"
         : "Retail estimate unavailable";
-  const collectionValue = hasPrice ? `$${Math.round((pricing.hero_new_avg_usd ?? 0) * quantity).toLocaleString()}` : "Unavailable";
+  const conditionPrice = condition === "used"
+    ? (pricing.hero_used_avg_usd ?? pricing.hero_new_avg_usd)
+    : pricing.hero_new_avg_usd;
+  const collectionValue = conditionPrice !== null && conditionPrice !== undefined
+    ? `$${Math.round(conditionPrice * quantity).toLocaleString()}`
+    : "Unavailable";
   const contentTranslateY = content.interpolate({
     inputRange: [0, 1],
     outputRange: [12, 0],

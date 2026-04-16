@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { router, useFocusEffect } from "expo-router";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import * as AuthSession from "expo-auth-session";
+import * as Linking from "expo-linking";
 import { useAuth, useClerk, useSSO, useUser } from "@clerk/expo";
 import { API_BASE } from "../lib/api";
 import { isClerkConfigured } from "../lib/clerk";
@@ -64,7 +64,7 @@ function ConfiguredAccountScreen() {
     setErrorMessage(null);
 
     try {
-      const redirectUrl = AuthSession.makeRedirectUri({ scheme: "brickval" });
+      const redirectUrl = Linking.createURL("/");
       const { createdSessionId, setActive } = await startSSOFlow({
         strategy: "oauth_google",
         redirectUrl,

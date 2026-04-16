@@ -46,6 +46,7 @@ const previewResult: LookupDetailResult = {
   ],
   pricing: {
     hero_new_avg_usd: 812,
+    hero_used_avg_usd: 645,
     rrp_usd: 849,
     gain_pct: -4,
     bricklink_new_qty: 18,
@@ -94,6 +95,7 @@ const previewMinifigResult: LookupDetailResult = {
   ],
   pricing: {
     hero_new_avg_usd: 5,
+    hero_used_avg_usd: 4.15,
     rrp_usd: null,
     gain_pct: null,
     bricklink_new_qty: 42,

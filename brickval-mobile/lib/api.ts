@@ -81,6 +81,7 @@ export async function lookupSet(setNumber: string, mode: ScanMode = "set"): Prom
 
 export interface LookupSummaryPricing {
   hero_new_avg_usd: number | null;
+  hero_used_avg_usd: number | null;
   rrp_usd: number | null;
   gain_pct: number | null;
   bricklink_new_qty: number | null;
@@ -260,6 +261,11 @@ function normalizeSetResult(data: any): SetLookupDetailResult {
       data.pricing?.ebay_new_avg_usd ??
       data.pricing?.bricklink_stock_new_avg_usd ??
       null,
+    hero_used_avg_usd:
+      data.pricing?.bricklink_used_avg_usd ??
+      data.pricing?.ebay_used_avg_usd ??
+      data.pricing?.bricklink_stock_used_avg_usd ??
+      null,
     rrp_usd: data.pricing?.rrp_usd ?? null,
     gain_pct: data.pricing?.gain_pct ?? null,
     bricklink_new_qty:
@@ -313,6 +319,7 @@ function normalizeMinifigResult(data: MinifigLookupResponse): MinifigLookupDetai
   const stockQty = data.pricing.new_stock_qty ?? data.pricing.used_stock_qty;
   const summaryPricing: LookupSummaryPricing = {
     hero_new_avg_usd: soldAverage ?? stockAverage ?? null,
+    hero_used_avg_usd: data.pricing.used_sold_avg_usd ?? data.pricing.used_stock_avg_usd ?? null,
     rrp_usd: null,
     gain_pct: null,
     bricklink_new_qty: soldQty ?? stockQty ?? null,
