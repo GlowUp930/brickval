@@ -64,12 +64,7 @@ function ConfiguredAccountScreen() {
     setErrorMessage(null);
 
     try {
-      // makeRedirectUri() auto-detects the runtime:
-      //   - Expo Go → returns exp://... (Expo Go's scheme, works in dev)
-      //   - Custom dev client / EAS build → returns brickval:// (from app.json)
-      // Hard-coding { scheme: "brickval" } breaks Expo Go because the browser
-      // redirect never routes back into Expo Go.
-      const redirectUrl = AuthSession.makeRedirectUri();
+      const redirectUrl = AuthSession.makeRedirectUri({ scheme: "brickval" });
       const ssoResult = await startSSOFlow({
         strategy: "oauth_google",
         redirectUrl,
