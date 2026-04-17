@@ -1,5 +1,5 @@
 import * as SecureStore from "expo-secure-store";
-import type { LookupSummaryResult, MarketHistoryPoint, ScanMode } from "./api";
+import type { LookupDetailResult, MarketHistoryPoint, ScanMode } from "./api";
 
 const COLLECTION_KEY = "brickval_collection";
 
@@ -9,6 +9,34 @@ export type CollectionCondition = "new_sealed" | "used";
 export interface AddToCollectionOptions {
   quantity: number;
   condition: CollectionCondition;
+}
+
+/**
+ * Pick the market value that matches the user's selected condition.
+ * new_sealed keeps the existing hero waterfall (BrickLink sold → eBay sold → BrickLink stock).
+ * used falls back through used-specific fields only; never returns a new-condition price.
+ */
+export function resolveConditionPriceUsd(
+  result: LookupDetailResult,
+  condition: CollectionCondition
+): number | null {
+  if (result.item_type === "minifig") {
+    const pricing = result.pricing;
+    if (condition === "used") {
+      return pricing.used_sold_avg_usd ?? pricing.used_stock_avg_usd ?? null;
+    }
+    return pricing.new_sold_avg_usd ?? pricing.new_stock_avg_usd ?? null;
+  }
+  const pricing = result.pricing;
+  if (condition === "used") {
+    return (
+      pricing.bricklink_used_avg_usd ??
+      pricing.ebay_used_avg_usd ??
+      pricing.bricklink_stock_used_avg_usd ??
+      null
+    );
+  }
+  return pricing.hero_new_avg_usd ?? null;
 }
 
 export interface CollectionItem {
@@ -64,10 +92,11 @@ export async function getCollection(): Promise<CollectionItem[]> {
 }
 
 export async function addToCollection(
-  result: LookupSummaryResult,
+  result: LookupDetailResult,
   options: AddToCollectionOptions
 ): Promise<CollectionItem[]> {
   const existing = await getCollection();
+  const condition = normalizeCondition(options.condition);
   const item: CollectionItem = {
     set_number: result.set_number,
     item_type: result.item_type ?? inferItemType(result.set_number),
@@ -75,12 +104,12 @@ export async function addToCollection(
     theme: result.theme,
     pieces: result.pieces,
     image_url: result.image_url,
-    market_value_usd: result.pricing.hero_new_avg_usd,
+    market_value_usd: resolveConditionPriceUsd(result, condition),
     rrp_usd: result.pricing.rrp_usd,
     gain_pct: result.pricing.gain_pct,
     data_source: result.pricing.data_source,
     quantity: normalizeQuantity(options.quantity),
-    condition: normalizeCondition(options.condition),
+    condition,
     market_history: result.market_history,
     added_at: new Date().toISOString(),
   };

@@ -11,8 +11,8 @@ import {
   Easing,
   useWindowDimensions,
 } from "react-native";
-import { LookupSummaryResult } from "../lib/api";
-import type { CollectionCondition } from "../lib/collection";
+import { LookupDetailResult } from "../lib/api";
+import { resolveConditionPriceUsd, type CollectionCondition } from "../lib/collection";
 
 /**
  * Fullscreen modal that slides up from the bottom over the camera.
@@ -27,9 +27,9 @@ const SURFACE = "#151514";
 const LINE = "rgba(247,244,234,0.12)";
 
 interface Props {
-  result: LookupSummaryResult | null;
+  result: LookupDetailResult | null;
   onDismiss: () => void;
-  onAddToCollection: (result: LookupSummaryResult, options: { quantity: number; condition: CollectionCondition }) => void;
+  onAddToCollection: (result: LookupDetailResult, options: { quantity: number; condition: CollectionCondition }) => void;
   addedToCollection: boolean;
   onViewDetails: (setNumber: string) => void;
 }
@@ -146,7 +146,6 @@ export function ResultCard({
   const { pricing } = result;
   const itemLabel = result.item_type === "minifig" ? "Minifig" : "Set";
   const gain = pricing.gain_pct;
-  const hasPrice = pricing.hero_new_avg_usd !== null && pricing.hero_new_avg_usd !== undefined;
   const sourceText =
     pricing.data_source === "sold"
       ? `Sold data${pricing.bricklink_new_qty ? ` · ${pricing.bricklink_new_qty} BrickLink sales` : ""}`
@@ -164,7 +163,11 @@ export function ResultCard({
       : result.item_type === "minifig"
         ? "Retail estimate not used for minifigures"
         : "Retail estimate unavailable";
-  const collectionValue = hasPrice ? `$${Math.round((pricing.hero_new_avg_usd ?? 0) * quantity).toLocaleString()}` : "Unavailable";
+  const conditionPrice = resolveConditionPriceUsd(result, condition);
+  const collectionValue =
+    conditionPrice !== null
+      ? `$${Math.round(conditionPrice * quantity).toLocaleString()}`
+      : "Unavailable";
   const contentTranslateY = content.interpolate({
     inputRange: [0, 1],
     outputRange: [12, 0],

@@ -65,18 +65,59 @@ function ConfiguredAccountScreen() {
 
     try {
       const redirectUrl = AuthSession.makeRedirectUri({ scheme: "brickval" });
-      const { createdSessionId, setActive } = await startSSOFlow({
+      const ssoResult = await startSSOFlow({
         strategy: "oauth_google",
         redirectUrl,
       });
 
+      if (__DEV__) {
+        console.log("[Google SSO]", {
+          isLoaded,
+          isSignedIn,
+          redirectUrl,
+          createdSessionId: ssoResult.createdSessionId ?? null,
+          hasSetActive: Boolean(ssoResult.setActive),
+          signInStatus: ssoResult.signIn?.status ?? null,
+          signUpStatus: ssoResult.signUp?.status ?? null,
+          authSessionResultType: ssoResult.authSessionResult?.type ?? null,
+        });
+      }
+
+      const { createdSessionId, setActive, signUp, authSessionResult } = ssoResult;
+
       if (createdSessionId && setActive) {
         await setActive({ session: createdSessionId });
         await refreshProStatus();
+        return;
       }
+
+      // First-time Google user: Clerk hands back a transferable signUp that we
+      // must finalize with `transfer: true` to mint a session.
+      if (signUp && (signUp.status === "missing_requirements" || signUp.status === "transferable")) {
+        const completedSignUp = await signUp.create({ transfer: true });
+        if (completedSignUp.createdSessionId && setActive) {
+          await setActive({ session: completedSignUp.createdSessionId });
+          await refreshProStatus();
+          return;
+        }
+        setErrorMessage(
+          "Google sign-in needs more info before it can finish. Check that Google OAuth is enabled in the Clerk dashboard."
+        );
+        return;
+      }
+
+      // User cancelled the browser or the redirect never completed.
+      if (authSessionResult && authSessionResult.type !== "success") {
+        return;
+      }
+
+      setErrorMessage(
+        "Google sign-in didn't create a session. Verify the Clerk OAuth config for this Android build."
+      );
     } catch (error) {
       console.warn("Google sign-in failed", error);
-      setErrorMessage("Google sign-in did not finish. Try again.");
+      const detail = error instanceof Error ? error.message : "unknown error";
+      setErrorMessage(`Google sign-in did not finish: ${detail}. Try again.`);
     } finally {
       setAuthBusy(false);
     }
