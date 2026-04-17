@@ -1,8 +1,15 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## ⚠️ IMPORTANT: Dual Codebase Setup
+**Two versions exist:**
+1. **Web App** (`CLAUDE.md`) — Next.js hosted backend at `brickvalue.live`
+2. **Mobile App** (`AGENTS.md` — THIS FILE) — Android native app via Expo/EAS
+
+**For mobile development: Use AGENTS.md as the source of truth. Ignore CLAUDE.md unless explicitly instructed.**
+
 ## Active Development Branch
-**All development happens on `Codex/stripe-appurl-fix-ihFVU` only.**
-Do NOT push to or edit the `Codex/loveable-design-practices-ihFVU` branch.
+**All development happens on `claude/document-latest-issues-HCaVa` only.**
+Do NOT push to or edit other branches without explicit permission.
 
 ## What we're building
 Android-first native mobile app: scan a LEGO set photo → get its current **USD** market value (not AUD).
@@ -301,7 +308,7 @@ This is not optional — it is in the success criteria.
 - `src/components/result/PriceReveal.tsx` — hosted web price reveal animation
 - `src/types/market.ts` — ComputedPricing and all market data types
 - `supabase/schema.sql` — table definitions + increment_scan() RPC
-- `AGENTS.md` — this file, at `/Users/holamchan/brickval/AGENTS.md`
+- `AGENTS.md` — this file, at `/home/user/brickval/AGENTS.md` (mobile development source of truth)
 
 ## Dev Commands
 - From `brickval-mobile`: `npm run start` — start Expo
