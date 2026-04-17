@@ -1,5 +1,9 @@
 # BrickVal — LEGO Scan & Value App (Lean MVP)
 
+## IMPORTANT (mobile app)
+If your task is the **native Expo app**, stop and read `brickval-mobile/CLAUDE.md` and follow that instead of this file.
+This repo-root `CLAUDE.md` is for the **web/Next.js app** in `src/`.
+
 ## Active Development Branch
 **All development happens on `claude/stripe-appurl-fix-ihFVU` only.**
 Do NOT push to or edit the `claude/loveable-design-practices-ihFVU` branch.
