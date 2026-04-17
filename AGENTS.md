@@ -36,6 +36,7 @@ The existing Next.js app remains the hosted API/web backend at `brickvalue.live`
 - ✅ Hosted backend still supports Codex Vision set number detection, BrickLink, eBay, Brickset, Frankfurter, Supabase cache, Clerk, and Stripe webhook flow
 
 ### What's NOT working / stubbed
+- 🔴 **BLOCKER: Google Sign-In stuck on loading** — native app unable to navigate to Clerk sign-in page, gets stuck on loading screen (tested on Android). Needs investigation of Expo Web Browser / Clerk integration
 - ⏸️ iOS app is future work; do not prioritize it until Android APK launch is stable
 - ⏸️ Native paywall now opens a live Superwall placement, but the dashboard campaign still needs to be kept in sync with the app placement name
 - ⏸️ Collection storage is local-device only for the MVP; backend sync is future work
