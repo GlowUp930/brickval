@@ -1,8 +1,15 @@
-# BrickVal — LEGO Scan & Value App (Lean MVP)
+# BrickVal — LEGO Scan & Value App (Web Backend)
+
+## ⚠️ IMPORTANT: Dual Codebase Setup
+**Two versions exist:**
+1. **Web App** (`CLAUDE.md` — THIS FILE) — Next.js hosted backend at `brickvalue.live`
+2. **Mobile App** (`AGENTS.md`) — Android native app via Expo/EAS
+
+**For web development: Use CLAUDE.md as the source of truth. For mobile: Use AGENTS.md.**
 
 ## Active Development Branch
-**All development happens on `claude/stripe-appurl-fix-ihFVU` only.**
-Do NOT push to or edit the `claude/loveable-design-practices-ihFVU` branch.
+**All development happens on `claude/document-latest-issues-HCaVa` only.**
+Do NOT push to or edit other branches without explicit permission.
 
 ## What we're building
 Mobile-first web app: scan a LEGO set photo → get its current **USD** market value (not AUD).
