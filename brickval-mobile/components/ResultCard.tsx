@@ -11,8 +11,9 @@ import {
   Easing,
   useWindowDimensions,
 } from "react-native";
-import { LookupSummaryResult } from "../lib/api";
+import { LookupDetailResult, getConditionMarketValueUsd } from "../lib/api";
 import type { CollectionCondition } from "../lib/collection";
+import { QuestionMarkPlaceholder } from "./QuestionMarkPlaceholder";
 
 /**
  * Fullscreen modal that slides up from the bottom over the camera.
@@ -27,9 +28,9 @@ const SURFACE = "#151514";
 const LINE = "rgba(247,244,234,0.12)";
 
 interface Props {
-  result: LookupSummaryResult | null;
+  result: LookupDetailResult | null;
   onDismiss: () => void;
-  onAddToCollection: (result: LookupSummaryResult, options: { quantity: number; condition: CollectionCondition }) => void;
+  onAddToCollection: (result: LookupDetailResult, options: { quantity: number; condition: CollectionCondition }) => void;
   addedToCollection: boolean;
   onViewDetails: (setNumber: string) => void;
 }
@@ -47,10 +48,21 @@ export function ResultCard({
   const backdrop = useRef(new Animated.Value(0)).current;
   const content = useRef(new Animated.Value(0)).current;
   const price = useRef(new Animated.Value(0)).current;
+  const priceValue = useRef(0);
   const savePulse = useRef(new Animated.Value(1)).current;
   const [displayPrice, setDisplayPrice] = useState("$0");
   const [quantity, setQuantity] = useState(1);
   const [condition, setCondition] = useState<CollectionCondition>("new_sealed");
+
+  useEffect(() => {
+    const listener = price.addListener(({ value }) => {
+      priceValue.current = value;
+      setDisplayPrice(`$${Math.round(value).toLocaleString()}`);
+    });
+    return () => {
+      price.removeListener(listener);
+    };
+  }, [price]);
 
   useEffect(() => {
     if (result) {
@@ -80,27 +92,10 @@ export function ResultCard({
         }),
       ]).start();
 
-      // Count-up animation for the price reveal.
-      const target = result.pricing.hero_new_avg_usd ?? 0;
-      if (result.pricing.hero_new_avg_usd === null || result.pricing.hero_new_avg_usd === undefined) {
-        setDisplayPrice("Unavailable");
-        return;
-      }
-      setDisplayPrice("$0");
+      // Reset the price animation for this result.
+      price.stopAnimation();
+      priceValue.current = 0;
       price.setValue(0);
-      const listener = price.addListener(({ value }) => {
-        setDisplayPrice(`$${Math.round(value).toLocaleString()}`);
-      });
-      Animated.timing(price, {
-        toValue: target,
-        duration: 900,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }).start();
-
-      return () => {
-        price.removeListener(listener);
-      };
     } else {
       Animated.timing(backdrop, {
         toValue: 0,
@@ -116,6 +111,25 @@ export function ResultCard({
       }).start();
     }
   }, [result, screenHeight, slide, backdrop, content, price]);
+
+  useEffect(() => {
+    if (!result) return;
+
+    const target = getConditionMarketValueUsd(result, condition);
+    if (target === null || target === undefined) {
+      price.stopAnimation();
+      setDisplayPrice("Unavailable");
+      return;
+    }
+
+    const duration = priceValue.current <= 0 ? 900 : 420;
+    Animated.timing(price, {
+      toValue: target,
+      duration,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [condition, price, result]);
 
   useEffect(() => {
     if (!addedToCollection) return;
@@ -146,7 +160,7 @@ export function ResultCard({
   const { pricing } = result;
   const itemLabel = result.item_type === "minifig" ? "Minifig" : "Set";
   const gain = pricing.gain_pct;
-  const hasPrice = pricing.hero_new_avg_usd !== null && pricing.hero_new_avg_usd !== undefined;
+  const selectedUnitValue = getConditionMarketValueUsd(result, condition);
   const sourceText =
     pricing.data_source === "sold"
       ? `Sold data${pricing.bricklink_new_qty ? ` · ${pricing.bricklink_new_qty} BrickLink sales` : ""}`
@@ -164,7 +178,8 @@ export function ResultCard({
       : result.item_type === "minifig"
         ? "Retail estimate not used for minifigures"
         : "Retail estimate unavailable";
-  const collectionValue = hasPrice ? `$${Math.round((pricing.hero_new_avg_usd ?? 0) * quantity).toLocaleString()}` : "Unavailable";
+  const collectionValue =
+    selectedUnitValue === null ? "Unavailable" : `$${Math.round(selectedUnitValue * quantity).toLocaleString()}`;
   const contentTranslateY = content.interpolate({
     inputRange: [0, 1],
     outputRange: [12, 0],
@@ -219,7 +234,7 @@ export function ResultCard({
               {result.image_url ? (
                 <Image source={{ uri: result.image_url }} style={styles.thumb} />
               ) : (
-                <View style={[styles.thumb, { backgroundColor: "#222" }]} />
+                <QuestionMarkPlaceholder style={styles.thumb} />
               )}
               <View style={styles.identity}>
                 <Text style={styles.name} numberOfLines={2}>

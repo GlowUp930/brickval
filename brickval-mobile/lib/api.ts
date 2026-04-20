@@ -104,6 +104,77 @@ export interface MarketHistoryPoint {
   source: "bricklink" | "ebay";
 }
 
+export function normalizeHistoryDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString().slice(0, 10);
+}
+
+export function getConditionMarketValueUsd(
+  result: LookupDetailResult,
+  condition: "new_sealed" | "used"
+): number | null {
+  if (result.item_type === "minifig") {
+    return condition === "used"
+      ? result.pricing.used_sold_avg_usd ?? result.pricing.used_stock_avg_usd ?? null
+      : result.pricing.new_sold_avg_usd ?? result.pricing.new_stock_avg_usd ?? null;
+  }
+
+  return condition === "used"
+    ? result.pricing.bricklink_used_avg_usd ??
+        result.pricing.ebay_used_avg_usd ??
+        result.pricing.bricklink_stock_used_avg_usd ??
+        null
+    : result.pricing.bricklink_new_avg_usd ??
+        result.pricing.ebay_new_avg_usd ??
+        result.pricing.bricklink_stock_new_avg_usd ??
+        null;
+}
+
+export function getConditionMarketHistory(
+  result: LookupDetailResult,
+  condition: "new_sealed" | "used"
+): MarketHistoryPoint[] {
+  if (result.item_type === "minifig") {
+    const rows = condition === "used" ? result.pricing.sold_details : result.pricing.sold_new_details;
+    return cleanHistory(
+      rows.map((row) => ({
+        date: row.date ?? "",
+        price_usd: row.price_usd,
+        source: "bricklink" as const,
+      }))
+    );
+  }
+
+  const bricklinkRows =
+    condition === "used" ? result.pricing.bricklink_sold_used_details : result.pricing.bricklink_sold_new_details;
+  const ebayRows = condition === "used" ? result.pricing.ebay_used_sales : result.pricing.ebay_new_sales;
+
+  return cleanHistory([
+    ...bricklinkRows.map((row) => ({
+      date: row.date ?? "",
+      price_usd: row.price_usd,
+      source: "bricklink" as const,
+    })),
+    ...ebayRows.map((row) => ({
+      date: row.sold_date ?? "",
+      price_usd: row.price_usd,
+      source: "ebay" as const,
+    })),
+  ]);
+}
+
+function normalizeImageUrl(value: string | null | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 export interface BrickLinkDetail {
   price_usd: number;
   quantity: number;
@@ -211,6 +282,10 @@ interface MinifigLookupResponse {
 
 function cleanHistory(points: MarketHistoryPoint[]): MarketHistoryPoint[] {
   return points
+    .map((point) => ({
+      ...point,
+      date: normalizeHistoryDate(point.date) ?? "",
+    }))
     .filter((point) => point.date && Number.isFinite(point.price_usd) && point.price_usd > 0)
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-120);
@@ -274,7 +349,7 @@ function normalizeSetResult(data: any): SetLookupDetailResult {
     name: setInfo.name ?? data.name ?? "Unknown LEGO set",
     theme: data.theme ?? "LEGO set",
     pieces: data.pieces ?? null,
-    image_url: setInfo.image_url ?? data.image_url ?? null,
+    image_url: normalizeImageUrl(setInfo.image_url ?? data.image_url ?? null),
     market_history: getSetMarketHistory(data.pricing),
     set_info: {
       year_released: setInfo.year_released ?? null,
@@ -329,7 +404,7 @@ function normalizeMinifigResult(data: MinifigLookupResponse): MinifigLookupDetai
     name: data.figInfo.name,
     theme: data.figInfo.year_released ? `Minifigure · ${data.figInfo.year_released}` : "Minifigure",
     pieces: null,
-    image_url: data.figInfo.image_url,
+    image_url: normalizeImageUrl(data.figInfo.image_url),
     market_history: getMinifigMarketHistory(data.pricing),
     fig_info: {
       fig_number: data.figInfo.fig_number,

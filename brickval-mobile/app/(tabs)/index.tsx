@@ -19,8 +19,10 @@ import {
   getCollectionValue,
   getItemTotalValue,
 } from "../../lib/collection";
+import { QuestionMarkPlaceholder } from "../../components/QuestionMarkPlaceholder";
 
 const ACCENT = "#62c79a";
+const LEGO_YELLOW = "#f2c94c";
 const INK = "#f7f4ea";
 const MUTED = "rgba(247,244,234,0.62)";
 const SOFT = "rgba(247,244,234,0.38)";
@@ -57,6 +59,10 @@ function formatRetailComparison(value: number | null) {
 
 function formatCondition(value: CollectionItem["condition"]) {
   return value === "used" ? "Used" : "New / sealed";
+}
+
+function formatConditionTag(value: CollectionItem["condition"]) {
+  return value === "used" ? "USED" : "NEW";
 }
 
 function isoDate(date: Date) {
@@ -425,9 +431,9 @@ export default function HomeDashboard() {
               const itemLabel = item.item_type === "minifig" ? "Minifig" : "Set";
               return (
                 <Pressable
-                  key={`${item.item_type}-${item.set_number}`}
+                  key={`${item.item_type}-${item.set_number}-${item.condition}`}
                   accessibilityRole="button"
-                  accessibilityLabel={`Open details for ${item.name}`}
+                  accessibilityLabel={`Open details for ${item.name}. ${formatCondition(item.condition)}.`}
                   style={styles.item}
                   onPress={() =>
                     router.push({
@@ -435,6 +441,7 @@ export default function HomeDashboard() {
                       params: {
                         itemType: item.item_type,
                         setNumber: item.set_number,
+                        condition: item.condition,
                       },
                     })
                   }
@@ -442,10 +449,15 @@ export default function HomeDashboard() {
                   {item.image_url ? (
                     <Image source={{ uri: item.image_url }} style={styles.thumb} />
                   ) : (
-                    <View style={styles.thumb} />
+                    <QuestionMarkPlaceholder style={styles.thumb} />
                   )}
                   <View style={styles.itemCopy}>
                     <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
+                    <View style={[styles.itemConditionBadge, item.condition === "used" ? styles.itemConditionBadgeUsed : styles.itemConditionBadgeNew]}>
+                      <Text style={[styles.itemConditionText, item.condition === "used" ? styles.itemConditionTextUsed : styles.itemConditionTextNew]}>
+                        {formatConditionTag(item.condition)}
+                      </Text>
+                    </View>
                     <Text style={styles.itemMeta} numberOfLines={1}>
                       #{index + 1} · {itemLabel} {item.set_number} · {item.theme}
                     </Text>
@@ -704,6 +716,25 @@ const styles = StyleSheet.create({
   thumb: { width: 56, height: 56, borderRadius: 10, backgroundColor: "rgba(247,244,234,0.08)" },
   itemCopy: { flex: 1, gap: 4, minWidth: 0 },
   itemName: { color: INK, fontSize: 15, fontWeight: "900", lineHeight: 20 },
+  itemConditionBadge: {
+    alignSelf: "flex-start",
+    minHeight: 22,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    justifyContent: "center",
+    borderWidth: 1,
+  },
+  itemConditionBadgeNew: {
+    borderColor: "rgba(98,199,154,0.34)",
+    backgroundColor: "rgba(98,199,154,0.12)",
+  },
+  itemConditionBadgeUsed: {
+    borderColor: "rgba(242,201,76,0.28)",
+    backgroundColor: "rgba(242,201,76,0.11)",
+  },
+  itemConditionText: { fontSize: 9, fontWeight: "900", letterSpacing: 0.6, textTransform: "uppercase" },
+  itemConditionTextNew: { color: ACCENT },
+  itemConditionTextUsed: { color: LEGO_YELLOW },
   itemMeta: { color: MUTED, fontSize: 11, fontWeight: "800" },
   itemSubMeta: { color: SOFT, fontSize: 10, fontWeight: "700" },
   itemDelta: { fontSize: 11, fontWeight: "900" },

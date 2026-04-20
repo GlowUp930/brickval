@@ -1,5 +1,12 @@
 import * as SecureStore from "expo-secure-store";
-import type { LookupSummaryResult, MarketHistoryPoint, ScanMode } from "./api";
+import {
+  getConditionMarketHistory,
+  getConditionMarketValueUsd,
+  type LookupDetailResult,
+  type MarketHistoryPoint,
+  normalizeHistoryDate,
+  type ScanMode,
+} from "./api";
 
 const COLLECTION_KEY = "brickval_collection";
 
@@ -42,13 +49,25 @@ function normalizeCondition(value: unknown): CollectionCondition {
   return value === "used" ? "used" : "new_sealed";
 }
 
+function normalizeImageUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 function normalizeCollectionItem(item: CollectionItem): CollectionItem {
   return {
     ...item,
     item_type: item.item_type ?? inferItemType(item.set_number),
     quantity: normalizeQuantity((item as Partial<CollectionItem>).quantity),
     condition: normalizeCondition((item as Partial<CollectionItem>).condition),
-    market_history: item.market_history ?? [],
+    image_url: normalizeImageUrl(item.image_url),
+    market_history: (item.market_history ?? [])
+      .map((point) => ({
+        ...point,
+        date: normalizeHistoryDate(point.date) ?? "",
+      }))
+      .filter((point) => point.date && Number.isFinite(point.price_usd) && point.price_usd > 0),
   };
 }
 
@@ -64,27 +83,36 @@ export async function getCollection(): Promise<CollectionItem[]> {
 }
 
 export async function addToCollection(
-  result: LookupSummaryResult,
+  result: LookupDetailResult,
   options: AddToCollectionOptions
 ): Promise<CollectionItem[]> {
   const existing = await getCollection();
+  const condition = normalizeCondition(options.condition);
   const item: CollectionItem = {
     set_number: result.set_number,
-    item_type: result.item_type ?? inferItemType(result.set_number),
+    item_type: result.item_type,
     name: result.name,
     theme: result.theme,
     pieces: result.pieces,
-    image_url: result.image_url,
-    market_value_usd: result.pricing.hero_new_avg_usd,
+    image_url: normalizeImageUrl(result.image_url),
+    market_value_usd: getConditionMarketValueUsd(result, condition),
     rrp_usd: result.pricing.rrp_usd,
     gain_pct: result.pricing.gain_pct,
     data_source: result.pricing.data_source,
     quantity: normalizeQuantity(options.quantity),
-    condition: normalizeCondition(options.condition),
-    market_history: result.market_history,
+    condition,
+    market_history: getConditionMarketHistory(result, condition),
     added_at: new Date().toISOString(),
   };
-  const next = [item, ...existing.filter((entry) => entry.set_number !== item.set_number)];
+  const next = [
+    item,
+    ...existing.filter(
+      (entry) =>
+        entry.set_number !== item.set_number ||
+        entry.item_type !== item.item_type ||
+        entry.condition !== item.condition
+    ),
+  ];
   await SecureStore.setItemAsync(COLLECTION_KEY, JSON.stringify(next));
   return next;
 }

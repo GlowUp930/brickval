@@ -29,7 +29,7 @@ function PlainStack() {
 }
 
 function AuthenticatedAppStack() {
-  const { isLoaded, userId } = useAuth();
+  const { isLoaded, userId } = useAuth({ treatPendingAsSignedOut: false });
 
   useEffect(() => {
     initializeNativePaywall();

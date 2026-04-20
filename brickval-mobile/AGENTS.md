@@ -24,6 +24,8 @@ The existing Next.js app remains the hosted API/web backend at `brickvalue.live`
 - ✅ API bridge from the native app to hosted `/api/identify` and `/api/lookup`
 - ✅ Native Superwall placement trigger for the upgrade flow
 - ✅ Clerk auth token handoff now includes the Clerk user id for native identity sync
+- ✅ Native Clerk account sign-in works (email + Google) and the app shows signed-in status
+- ✅ Collection pricing respects saved condition (New / sealed vs Used)
 - ✅ Android APK preview build profile via EAS
 - ✅ Future iOS identifiers already present in Expo config
 - ✅ Hosted backend still supports Codex Vision set number detection, BrickLink, eBay, Brickset, Frankfurter, Supabase cache, Clerk, and Stripe webhook flow
@@ -31,17 +33,18 @@ The existing Next.js app remains the hosted API/web backend at `brickvalue.live`
 ### What's NOT working / stubbed
 - ⏸️ iOS app is future work; do not prioritize it until Android APK launch is stable
 - ⏸️ Native paywall now opens a live Superwall placement, but the dashboard campaign still needs to be kept in sync with the app placement name
+- ⏸️ RevenueCat offerings still need Play Store products configured in the RevenueCat dashboard (otherwise offerings load errors appear)
 - ⏸️ Collection storage is local-device only for the MVP; backend sync is future work
 - ⏸️ eBay Marketplace Insights: awaiting Application Growth Check approval, falls back to Browse API (active listings)
 - ⏸️ No native test coverage configured
-- 🐛 Google sign-in (native account) still not working in latest APK:
-  - Repro: Settings → Open account → stuck on "Checking session..." indefinitely.
-  - Repro: tap "Try Google sign-in" → "Google sign-in did not finish..." and no sign-in UI completes.
-  - Expected: Google sign-in opens system browser or native Google UI, returns to app, and account shows signed-in email.
-- 🐛 Collection pricing ignores condition:
-  - Repro: Add a set to collection as "New/Sealed" vs "Used" → stored/displayed price is the same.
-  - Expected: "Used" should use the used market pricing fields; "New/Sealed" should use new market pricing fields.
+- 🐛 Account screen UI: the login section below "or" is oddly placed; either fix layout or hide that section.
+- 🐛 Account screen UI: after entering email, the keyboard can cover the input container (needs proper keyboard avoidance/scroll behavior).
+- 🐛 Item detail value history graph can show "Invalid Date" labels (needs date normalization for saved history points)
 - 🔁 Ops: Expo/EAS account switched from `leochan930@gmail.com` to `swiftieconcept@gmail.com` (no action required in code; tracking only).
+
+### Future action items
+- Add swipe left-to-delete on collection rows for faster cleanup.
+- Add a "use my image" path in scanning so users can reuse an existing photo instead of taking a new scan.
 
 ## Tech Stack
 - Expo 55, Expo Router, React Native 0.84, React 19, TypeScript 5.9

@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
+  Animated,
+  Easing,
   View,
   Text,
   StyleSheet,
@@ -8,9 +10,12 @@ import {
   Pressable,
   useWindowDimensions,
   Image,
+  type GestureResponderEvent,
 } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import { CollectionItem, getCollection, getItemTotalValue } from "../../../lib/collection";
+import { normalizeHistoryDate } from "../../../lib/api";
+import { QuestionMarkPlaceholder } from "../../../components/QuestionMarkPlaceholder";
 
 const ACCENT = "#62c79a";
 const INK = "#f7f4ea";
@@ -20,6 +25,12 @@ const SURFACE = "#070908";
 const PANEL = "#0b0e0d";
 const LINE = "rgba(153,231,189,0.14)";
 const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+type Horizon = "1M" | "3M" | "6M";
+const HORIZON_DAYS: Record<Horizon, number> = {
+  "1M": 30,
+  "3M": 90,
+  "6M": 180,
+};
 type HistoryPoint = CollectionItem["market_history"][number];
 type ChartPoint = HistoryPoint & { x: number; y: number; total: number };
 
@@ -37,9 +48,44 @@ function isoDate(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
 function formatTimelineLabel(value: string) {
-  const date = new Date(`${value}T00:00:00Z`);
+  const normalized = normalizeHistoryDate(value);
+  if (!normalized) return "";
+  const date = new Date(`${normalized}T00:00:00Z`);
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function getHistoryWindow(history: HistoryPoint[], horizon: Horizon) {
+  const days = HORIZON_DAYS[horizon];
+  const startIso = isoDate(addDays(new Date(), -days));
+  const normalizedHistory = history
+    .map((point) => ({
+      ...point,
+      date: normalizeHistoryDate(point.date) ?? "",
+    }))
+    .filter((point) => point.date && Number.isFinite(point.price_usd))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const windowedHistory = normalizedHistory.filter((point) => point.date >= startIso);
+  return windowedHistory.length > 0 ? windowedHistory : normalizedHistory.slice(-1);
+}
+
+function countSalesInWindow(history: HistoryPoint[], horizon: Horizon) {
+  const startIso = isoDate(addDays(new Date(), -HORIZON_DAYS[horizon]));
+  return history.filter((point) => {
+    const normalized = normalizeHistoryDate(point.date);
+    return normalized ? normalized >= startIso : false;
+  }).length;
+}
+
+function formatHorizonDays(horizon: Horizon) {
+  return `${HORIZON_DAYS[horizon]} days`;
 }
 
 function getSmoothPath(points: { x: number; y: number }[]) {
@@ -61,10 +107,19 @@ function getSmoothPath(points: { x: number; y: number }[]) {
 
 export default function ItemDetailScreen() {
   const { width: screenWidth } = useWindowDimensions();
-  const params = useLocalSearchParams<{ itemType?: string | string[]; setNumber?: string | string[] }>();
+  const params = useLocalSearchParams<{
+    itemType?: string | string[];
+    setNumber?: string | string[];
+    condition?: string | string[];
+  }>();
   const itemType = Array.isArray(params.itemType) ? params.itemType[0] : params.itemType;
   const setNumber = Array.isArray(params.setNumber) ? params.setNumber[0] : params.setNumber;
+  const conditionParam = Array.isArray(params.condition) ? params.condition[0] : params.condition;
   const [items, setItems] = useState<CollectionItem[]>([]);
+  const [horizon, setHorizon] = useState<Horizon>("6M");
+  const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<number | null>(null);
+  const popupProgress = useRef(new Animated.Value(0)).current;
+  const horizonProgress = useRef(new Animated.Value(1)).current;
 
   useFocusEffect(
     useCallback(() => {
@@ -81,22 +136,30 @@ export default function ItemDetailScreen() {
     }, [])
   );
 
-  const item = items.find((entry) => entry.set_number === setNumber && entry.item_type === itemType);
+  const matchingItems = items.filter((entry) => entry.set_number === setNumber && entry.item_type === itemType);
+  const item =
+    conditionParam === "used"
+      ? matchingItems.find((entry) => entry.condition === "used")
+      : conditionParam === "new_sealed"
+        ? matchingItems.find((entry) => entry.condition === "new_sealed")
+        : matchingItems.find((entry) => entry.condition === "new_sealed") ?? matchingItems[0];
   const quantity = item?.quantity ?? 1;
   const unitValue = item?.market_value_usd ?? null;
   const totalValue = item ? getItemTotalValue(item) : 0;
   const history: HistoryPoint[] = (item?.market_history ?? [])
     .filter((point: HistoryPoint) => point.date && Number.isFinite(point.price_usd))
     .sort((a: HistoryPoint, b: HistoryPoint) => a.date.localeCompare(b.date));
+  const windowedHistory = getHistoryWindow(history, horizon);
+  const salesInWindow = countSalesInWindow(history, horizon);
   const chartWidth = Math.min(360, Math.max(260, screenWidth - 40));
   const chartHeight = 220;
   const chartBottom = chartHeight - 26;
-  const minHistoryValue = history.length ? Math.min(...history.map((point) => point.price_usd * quantity)) : 0;
-  const maxHistoryValue = history.length ? Math.max(...history.map((point) => point.price_usd * quantity)) : 0;
+  const minHistoryValue = windowedHistory.length ? Math.min(...windowedHistory.map((point) => point.price_usd * quantity)) : 0;
+  const maxHistoryValue = windowedHistory.length ? Math.max(...windowedHistory.map((point) => point.price_usd * quantity)) : 0;
   const historyRange = Math.max(maxHistoryValue - minHistoryValue, 1);
-  const chartPoints: ChartPoint[] = history.length
-    ? history.map((point: HistoryPoint, index: number) => {
-        const x = history.length > 1 ? (index * chartWidth) / (history.length - 1) : chartWidth / 2;
+  const chartPoints: ChartPoint[] = windowedHistory.length
+    ? windowedHistory.map((point: HistoryPoint, index: number) => {
+        const x = windowedHistory.length > 1 ? (index * chartWidth) / (windowedHistory.length - 1) : chartWidth / 2;
         const total = point.price_usd * quantity;
         const y = chartBottom - ((total - minHistoryValue) / historyRange) * 150;
         return { ...point, x, y, total };
@@ -110,6 +173,54 @@ export default function ItemDetailScreen() {
   const chartAreaPath = chartLinePath && firstPoint && lastPoint
     ? `${chartLinePath} L ${lastPoint.x} ${chartBottom} L ${firstPoint.x} ${chartBottom} Z`
     : "";
+  const chartStep = chartPoints.length > 1 ? chartWidth / (chartPoints.length - 1) : chartWidth;
+  const timelinePoints = chartPoints.filter((point, index) => {
+    if (chartPoints.length <= 5) return true;
+    const stride = Math.max(1, Math.round(chartPoints.length / 4));
+    return index === 0 || index === chartPoints.length - 1 || index % stride === 0;
+  });
+  const clampTimelineLeft = (x: number) => Math.max(0, Math.min(chartWidth - 52, x - 26));
+  const selectedHistoryPoint = selectedHistoryIndex === null ? null : chartPoints[selectedHistoryIndex] ?? null;
+  const selectedX = selectedHistoryPoint?.x ?? 0;
+  const popupWidth = 132;
+  const popupLeft = selectedHistoryPoint
+    ? Math.max(4, Math.min(chartWidth - popupWidth - 4, selectedHistoryPoint.x - popupWidth / 2))
+    : 0;
+  const popupTop = selectedHistoryPoint ? Math.max(4, selectedHistoryPoint.y - 76) : 0;
+
+  const handleChartTouch = (event: GestureResponderEvent) => {
+    const locationX = Math.max(0, Math.min(chartWidth, event.nativeEvent.locationX));
+    const nextIndex = Math.round(locationX / chartStep);
+    const boundedIndex = Math.max(0, Math.min(chartPoints.length - 1, nextIndex));
+    setSelectedHistoryIndex((currentIndex) => (currentIndex === boundedIndex ? currentIndex : boundedIndex));
+  };
+
+  useEffect(() => {
+    Animated.timing(popupProgress, {
+      toValue: selectedHistoryPoint ? 1 : 0,
+      duration: 160,
+      useNativeDriver: true,
+    }).start();
+  }, [popupProgress, selectedHistoryPoint]);
+
+  const popupTranslateY = popupProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [8, 0],
+  });
+  const horizonTranslateY = horizonProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [8, 0],
+  });
+
+  useEffect(() => {
+    horizonProgress.setValue(0.96);
+    Animated.timing(horizonProgress, {
+      toValue: 1,
+      duration: 260,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [horizon, horizonProgress]);
 
   if (!item) {
     return (
@@ -146,7 +257,7 @@ export default function ItemDetailScreen() {
             {item.image_url ? (
               <Image source={{ uri: item.image_url }} style={styles.image} />
             ) : (
-              <View style={styles.image} />
+              <QuestionMarkPlaceholder style={styles.image} />
             )}
             <View style={styles.heroCopy}>
               <Text style={styles.valueLabel}>Collection value</Text>
@@ -167,33 +278,116 @@ export default function ItemDetailScreen() {
         <View style={styles.chartCard}>
           <View style={styles.chartHeader}>
             <Text style={styles.chartTitle}>Value history</Text>
-            <Text style={styles.chartMeta}>{history.length ? `${history.length} points` : "Saved snapshot"}</Text>
+            <Text style={styles.chartMeta}>
+              {windowedHistory.length ? `${windowedHistory.length} points` : "Saved snapshot"}
+            </Text>
           </View>
-          <View style={[styles.chartWrap, { width: chartWidth, height: chartHeight }]}>
-            <View style={styles.gridLineTop} />
-            <View style={styles.gridLineMid} />
-            <View style={styles.gridLineBottom} />
-            <Svg width={chartWidth} height={chartHeight} style={StyleSheet.absoluteFill}>
-              <Defs>
-                <LinearGradient id="detailFill" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={ACCENT} stopOpacity="0.22" />
-                  <Stop offset="1" stopColor={ACCENT} stopOpacity="0" />
-                </LinearGradient>
-              </Defs>
-              {chartAreaPath ? <Path d={chartAreaPath} fill="url(#detailFill)" /> : null}
-              {chartLinePath ? <Path d={chartLinePath} fill="none" stroke={ACCENT} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" /> : null}
-              {chartPoints.map((point) => (
-                <Circle key={`${point.date}-${point.total}`} cx={point.x} cy={point.y} r={3.4} fill={ACCENT} stroke={PANEL} strokeWidth={1.4} />
+          <Animated.View
+            style={[
+              styles.chartMotion,
+              {
+                opacity: horizonProgress,
+                transform: [{ translateY: horizonTranslateY }, { scale: horizonProgress }],
+              },
+            ]}
+          >
+            <View style={styles.salesCard}>
+              <View style={styles.salesStat}>
+                <Text style={styles.salesValue}>{salesInWindow}</Text>
+                <Text style={styles.salesLabel}>Sales in last {formatHorizonDays(horizon)}</Text>
+              </View>
+              <View style={styles.salesStat}>
+                <Text style={styles.salesValue}>{horizon}</Text>
+                <Text style={styles.salesLabel}>Chart window</Text>
+              </View>
+            </View>
+
+            <View
+              accessibilityLabel="Saved item value history chart"
+              style={[styles.chartWrap, { width: chartWidth, height: chartHeight }]}
+              onStartShouldSetResponder={() => true}
+              onMoveShouldSetResponder={() => true}
+              onResponderGrant={handleChartTouch}
+              onResponderMove={handleChartTouch}
+            >
+              <View style={styles.gridLineTop} />
+              <View style={styles.gridLineMid} />
+              <View style={styles.gridLineBottom} />
+              {selectedHistoryPoint ? (
+                <>
+                  <View style={[styles.chartCursor, { left: selectedX }]} />
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[
+                      styles.chartPopup,
+                      {
+                        left: popupLeft,
+                        top: popupTop,
+                        opacity: popupProgress,
+                        transform: [{ translateY: popupTranslateY }],
+                      },
+                    ]}
+                  >
+                    <Text style={styles.chartPopupLabel}>{formatTimelineLabel(selectedHistoryPoint.date)}</Text>
+                    <Text style={styles.chartPopupValue}>{USD.format(selectedHistoryPoint.total)}</Text>
+                  </Animated.View>
+                </>
+              ) : null}
+              <Svg width={chartWidth} height={chartHeight} style={StyleSheet.absoluteFill}>
+                <Defs>
+                  <LinearGradient id="detailFill" x1="0" y1="0" x2="0" y2="1">
+                    <Stop offset="0" stopColor={ACCENT} stopOpacity="0.22" />
+                    <Stop offset="1" stopColor={ACCENT} stopOpacity="0" />
+                  </LinearGradient>
+                </Defs>
+                {chartAreaPath ? <Path d={chartAreaPath} fill="url(#detailFill)" /> : null}
+                {chartLinePath ? <Path d={chartLinePath} fill="none" stroke={ACCENT} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" /> : null}
+                {chartPoints.map((point, index) => {
+                  const selected = selectedHistoryIndex === index;
+                  return (
+                    <Circle
+                      key={`${point.date}-${point.total}`}
+                      cx={point.x}
+                      cy={point.y}
+                      r={selected ? 5 : 3.4}
+                      fill={selected ? INK : ACCENT}
+                      stroke={selected ? ACCENT : PANEL}
+                      strokeWidth={selected ? 2 : 1.4}
+                    />
+                  );
+                })}
+              </Svg>
+            </View>
+            <View style={[styles.timeline, { width: chartWidth }]}>
+              {timelinePoints.map((point) => (
+                <Text key={`${point.date}-${point.total}`} style={[styles.timelineLabel, { left: clampTimelineLeft(point.x) }]} numberOfLines={1}>
+                  {formatTimelineLabel(point.date)}
+                </Text>
               ))}
-            </Svg>
-          </View>
-          <View style={styles.timeline}>
-            {chartPoints.map((point) => (
-              <Text key={`${point.date}-${point.total}`} style={styles.timelineLabel}>
-                {formatTimelineLabel(point.date)}
-              </Text>
-            ))}
-          </View>
+            </View>
+            <View style={styles.horizonRow}>
+              {(["1M", "3M", "6M"] as Horizon[]).map((option) => (
+                <Pressable
+                  key={option}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: horizon === option }}
+                  accessibilityLabel={`Show ${option} value history`}
+                  style={[styles.horizonPill, horizon === option && styles.horizonPillActive]}
+                  onPress={() => {
+                    setSelectedHistoryIndex(null);
+                    setHorizon(option);
+                  }}
+                >
+                  <Text style={[styles.horizonText, horizon === option && styles.horizonTextActive]}>
+                    {option}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            {salesInWindow === 0 ? (
+              <Text style={styles.noSalesText}>No sales in the selected time frame for this item.</Text>
+            ) : null}
+          </Animated.View>
         </View>
 
         <View style={styles.noteCard}>
@@ -273,12 +467,93 @@ const styles = StyleSheet.create({
   chartHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   chartTitle: { color: INK, fontSize: 15, fontWeight: "900" },
   chartMeta: { color: MUTED, fontSize: 11, fontWeight: "800" },
+  chartMotion: {
+    gap: 12,
+  },
+  salesCard: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  salesStat: {
+    flex: 1,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: LINE,
+    backgroundColor: "rgba(255,255,255,0.02)",
+    padding: 12,
+    gap: 4,
+  },
+  salesValue: { color: INK, fontSize: 18, fontWeight: "900", letterSpacing: -0.4 },
+  salesLabel: { color: SOFT, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
   chartWrap: { alignSelf: "center", position: "relative" },
   gridLineTop: { position: "absolute", top: 24, left: 0, right: 0, height: 1, backgroundColor: "rgba(153,231,189,0.08)" },
   gridLineMid: { position: "absolute", top: 108, left: 0, right: 0, height: 1, backgroundColor: "rgba(153,231,189,0.12)" },
   gridLineBottom: { position: "absolute", bottom: 24, left: 0, right: 0, height: 1, backgroundColor: "rgba(153,231,189,0.2)" },
-  timeline: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 2 },
-  timelineLabel: { color: SOFT, fontSize: 10, fontWeight: "800" },
+  chartCursor: {
+    position: "absolute",
+    top: 20,
+    bottom: 20,
+    width: 1,
+    backgroundColor: "rgba(247,244,234,0.38)",
+    zIndex: 2,
+  },
+  chartPopup: {
+    position: "absolute",
+    zIndex: 4,
+    width: 132,
+    borderRadius: 18,
+    backgroundColor: INK,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.24,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  chartPopupLabel: {
+    color: "#253129",
+    fontSize: 9,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+  chartPopupValue: {
+    color: "#07100c",
+    fontSize: 16,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+  timeline: { alignSelf: "center", position: "relative", height: 22, marginTop: -2 },
+  timelineLabel: {
+    position: "absolute",
+    width: 52,
+    color: SOFT,
+    fontSize: 9,
+    fontWeight: "900",
+    textAlign: "center",
+    letterSpacing: 0.2,
+  },
+  horizonRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    gap: 10,
+    marginTop: 2,
+    borderRadius: 999,
+    backgroundColor: "rgba(247,244,234,0.07)",
+    padding: 4,
+  },
+  horizonPill: {
+    minHeight: 34,
+    minWidth: 62,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  horizonPillActive: { backgroundColor: ACCENT, borderColor: ACCENT },
+  horizonText: { color: SOFT, fontSize: 11, fontWeight: "900" },
+  horizonTextActive: { color: "#07100c" },
+  noSalesText: { color: MUTED, fontSize: 12, fontWeight: "700", lineHeight: 18 },
   noteCard: {
     borderRadius: 24,
     borderWidth: 1,

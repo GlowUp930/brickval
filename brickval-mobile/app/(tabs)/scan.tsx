@@ -14,7 +14,6 @@ import {
   type IdentificationCandidate,
   type IdentificationResult,
   type LookupDetailResult,
-  type LookupSummaryResult,
   type ScanMode,
 } from "../../lib/api";
 import { addToCollection, type CollectionCondition } from "../../lib/collection";
@@ -376,7 +375,7 @@ export default function ScanHome() {
   };
 
   const handleAddToCollection = async (
-    item: LookupSummaryResult,
+    item: LookupDetailResult,
     options: { quantity: number; condition: CollectionCondition }
   ) => {
     await addToCollection(item, options);

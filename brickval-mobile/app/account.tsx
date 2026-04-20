@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { router, useFocusEffect } from "expo-router";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import * as AuthSession from "expo-auth-session";
-import { useAuth, useClerk, useSSO, useUser } from "@clerk/expo";
+import { AuthView } from "@clerk/expo/native";
+import { useAuth, useClerk, useUser } from "@clerk/expo";
 import { API_BASE } from "../lib/api";
 import { isClerkConfigured } from "../lib/clerk";
 import { getNativeProStatus, presentSuperwallUpgrade, restoreNativePurchases } from "../lib/paywall";
@@ -34,11 +34,9 @@ export default function AccountScreen() {
 }
 
 function ConfiguredAccountScreen() {
-  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth({ treatPendingAsSignedOut: false });
   const { user } = useUser();
   const { signOut } = useClerk();
-  const { startSSOFlow } = useSSO();
-  const [authBusy, setAuthBusy] = useState(false);
   const [accountBusy, setAccountBusy] = useState(false);
   const [proStatus, setProStatus] = useState<boolean | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -59,28 +57,15 @@ function ConfiguredAccountScreen() {
     }, [refreshProStatus])
   );
 
-  const handleGoogleSignIn = async () => {
-    setAuthBusy(true);
-    setErrorMessage(null);
-
-    try {
-      const redirectUrl = AuthSession.makeRedirectUri({ scheme: "brickval" });
-      const { createdSessionId, setActive } = await startSSOFlow({
-        strategy: "oauth_google",
-        redirectUrl,
-      });
-
-      if (createdSessionId && setActive) {
-        await setActive({ session: createdSessionId });
-        await refreshProStatus();
-      }
-    } catch (error) {
-      console.warn("Google sign-in failed", error);
-      setErrorMessage("Google sign-in did not finish. Try again.");
-    } finally {
-      setAuthBusy(false);
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setProStatus(false);
+      return;
     }
-  };
+
+    void refreshProStatus();
+  }, [isLoaded, isSignedIn, refreshProStatus]);
 
   const handleUpgrade = async () => {
     setErrorMessage(null);
@@ -194,7 +179,7 @@ function ConfiguredAccountScreen() {
           <Text style={styles.eyebrow}>Account</Text>
           <Text style={styles.title}>Native access</Text>
           <Text style={styles.body}>
-            Google sign-in opens your browser, then returns to BrickVal. No web screens stay inside the app.
+            Sign in natively inside BrickVal, then manage your account and Pro access below.
           </Text>
         </View>
 
@@ -214,13 +199,11 @@ function ConfiguredAccountScreen() {
 
         {!isLoaded ? null : !isSignedIn ? (
           <View style={styles.section}>
-            <ActionButton
-              label={authBusy ? "Opening Google..." : "Continue with Google"}
-              onPress={handleGoogleSignIn}
-              disabled={authBusy}
-            />
+            <View style={styles.authShell}>
+              <AuthView mode="signInOrUp" />
+            </View>
             <Text style={styles.helpText}>
-              Guest mode covers the first 3 mobile lookups. Sign in after that to keep scanning and attach Pro access to your account.
+              Guest mode covers the first 3 mobile lookups. Sign in to keep scanning and attach Pro access to your account.
             </Text>
           </View>
         ) : (
@@ -328,6 +311,14 @@ const styles = StyleSheet.create({
   cardTitle: { color: INK, fontSize: 24, fontWeight: "900" },
   cardMeta: { color: ACCENT, fontSize: 14, fontWeight: "800" },
   section: { gap: 10 },
+  authShell: {
+    height: 560,
+    borderRadius: 20,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: LINE,
+    backgroundColor: PANEL,
+  },
   action: {
     minHeight: 48,
     borderRadius: 8,

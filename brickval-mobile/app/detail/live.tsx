@@ -1,8 +1,20 @@
 import { router } from "expo-router";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  Animated,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+  type GestureResponderEvent,
+} from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from "react-native-svg";
-import type { BrickLinkDetail, EbaySale, LookupDetailResult } from "../../lib/api";
+import { normalizeHistoryDate, type BrickLinkDetail, type EbaySale, type LookupDetailResult } from "../../lib/api";
 import { getLatestLookupResult } from "../../lib/live-result";
+import { QuestionMarkPlaceholder } from "../../components/QuestionMarkPlaceholder";
 
 const ACCENT = "#62c79a";
 const INK = "#f7f4ea";
@@ -33,7 +45,9 @@ function formatDate(value: string | undefined) {
 }
 
 function formatTimelineLabel(value: string) {
-  const date = new Date(`${value}T00:00:00Z`);
+  const normalized = normalizeHistoryDate(value);
+  if (!normalized) return "";
+  const date = new Date(`${normalized}T00:00:00Z`);
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
@@ -123,6 +137,8 @@ function buildMinifigRows(result: Extract<LookupDetailResult, { item_type: "mini
 export default function LiveDetailScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const result = getLatestLookupResult();
+  const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<number | null>(null);
+  const popupProgress = useRef(new Animated.Value(0)).current;
 
   if (!result) {
     return (
@@ -156,6 +172,34 @@ export default function LiveDetailScreen() {
   const chartAreaPath = chartLinePath && firstPoint && lastPoint
     ? `${chartLinePath} L ${lastPoint.x} ${chartBottom} L ${firstPoint.x} ${chartBottom} Z`
     : "";
+  const chartStep = chartPoints.length > 1 ? chartWidth / (chartPoints.length - 1) : chartWidth;
+  const selectedHistoryPoint = selectedHistoryIndex === null ? null : chartPoints[selectedHistoryIndex] ?? null;
+  const selectedX = selectedHistoryPoint?.x ?? 0;
+  const popupWidth = 132;
+  const popupLeft = selectedHistoryPoint
+    ? Math.max(4, Math.min(chartWidth - popupWidth - 4, selectedHistoryPoint.x - popupWidth / 2))
+    : 0;
+  const popupTop = selectedHistoryPoint ? Math.max(4, selectedHistoryPoint.y - 76) : 0;
+
+  const handleChartTouch = (event: GestureResponderEvent) => {
+    const locationX = Math.max(0, Math.min(chartWidth, event.nativeEvent.locationX));
+    const nextIndex = Math.round(locationX / chartStep);
+    const boundedIndex = Math.max(0, Math.min(chartPoints.length - 1, nextIndex));
+    setSelectedHistoryIndex((currentIndex) => (currentIndex === boundedIndex ? currentIndex : boundedIndex));
+  };
+
+  useEffect(() => {
+    Animated.timing(popupProgress, {
+      toValue: selectedHistoryPoint ? 1 : 0,
+      duration: 160,
+      useNativeDriver: true,
+    }).start();
+  }, [popupProgress, selectedHistoryPoint]);
+
+  const popupTranslateY = popupProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [8, 0],
+  });
   const heroPrice = result.pricing.hero_new_avg_usd;
   const marketRows = result.item_type === "set" ? buildSetRows(result) : buildMinifigRows(result);
 
@@ -180,7 +224,7 @@ export default function LiveDetailScreen() {
             {result.image_url ? (
               <Image source={{ uri: result.image_url }} style={styles.image} />
             ) : (
-              <View style={styles.image} />
+              <QuestionMarkPlaceholder style={styles.image} />
             )}
             <View style={styles.heroCopy}>
               <Text style={styles.valueLabel}>Market price</Text>
@@ -201,10 +245,37 @@ export default function LiveDetailScreen() {
             <Text style={styles.chartTitle}>Value history</Text>
             <Text style={styles.chartMeta}>{history.length ? `${history.length} points` : "No history yet"}</Text>
           </View>
-          <View style={[styles.chartWrap, { width: chartWidth, height: chartHeight }]}>
+          <View
+            accessibilityLabel="Live value history chart"
+            style={[styles.chartWrap, { width: chartWidth, height: chartHeight }]}
+            onStartShouldSetResponder={() => true}
+            onMoveShouldSetResponder={() => true}
+            onResponderGrant={handleChartTouch}
+            onResponderMove={handleChartTouch}
+          >
             <View style={styles.gridLineTop} />
             <View style={styles.gridLineMid} />
             <View style={styles.gridLineBottom} />
+            {selectedHistoryPoint ? (
+              <>
+                <View style={[styles.chartCursor, { left: selectedX }]} />
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    styles.chartPopup,
+                    {
+                      left: popupLeft,
+                      top: popupTop,
+                      opacity: popupProgress,
+                      transform: [{ translateY: popupTranslateY }],
+                    },
+                  ]}
+                >
+                  <Text style={styles.chartPopupLabel}>{formatTimelineLabel(selectedHistoryPoint.date)}</Text>
+                  <Text style={styles.chartPopupValue}>{USD_DECIMAL.format(selectedHistoryPoint.price_usd)}</Text>
+                </Animated.View>
+              </>
+            ) : null}
             <Svg width={chartWidth} height={chartHeight} style={StyleSheet.absoluteFill}>
               <Defs>
                 <LinearGradient id="detailFill" x1="0" y1="0" x2="0" y2="1">
@@ -214,9 +285,20 @@ export default function LiveDetailScreen() {
               </Defs>
               {chartAreaPath ? <Path d={chartAreaPath} fill="url(#detailFill)" /> : null}
               {chartLinePath ? <Path d={chartLinePath} fill="none" stroke={ACCENT} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" /> : null}
-              {chartPoints.map((point) => (
-                <Circle key={`${point.date}-${point.price_usd}`} cx={point.x} cy={point.y} r={3.4} fill={ACCENT} stroke={PANEL} strokeWidth={1.4} />
-              ))}
+              {chartPoints.map((point, index) => {
+                const selected = selectedHistoryIndex === index;
+                return (
+                  <Circle
+                    key={`${point.date}-${point.price_usd}`}
+                    cx={point.x}
+                    cy={point.y}
+                    r={selected ? 5 : 3.4}
+                    fill={selected ? INK : ACCENT}
+                    stroke={selected ? ACCENT : PANEL}
+                    strokeWidth={selected ? 2 : 1.4}
+                  />
+                );
+              })}
             </Svg>
           </View>
           <View style={styles.timeline}>
@@ -330,8 +412,42 @@ const styles = StyleSheet.create({
   gridLineTop: { position: "absolute", left: 0, right: 0, top: 18, borderTopWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
   gridLineMid: { position: "absolute", left: 0, right: 0, top: 92, borderTopWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
   gridLineBottom: { position: "absolute", left: 0, right: 0, bottom: 26, borderTopWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
-  timeline: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
-  timelineLabel: { flex: 1, color: SOFT, fontSize: 10, fontWeight: "700" },
+  chartCursor: {
+    position: "absolute",
+    top: 20,
+    bottom: 20,
+    width: 1,
+    backgroundColor: "rgba(247,244,234,0.38)",
+    zIndex: 2,
+  },
+  chartPopup: {
+    position: "absolute",
+    zIndex: 4,
+    width: 132,
+    borderRadius: 18,
+    backgroundColor: INK,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.24,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  chartPopupLabel: {
+    color: "#253129",
+    fontSize: 9,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+  chartPopupValue: {
+    color: "#07100c",
+    fontSize: 16,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+  timeline: { flexDirection: "row", justifyContent: "space-between", marginTop: -6, paddingHorizontal: 2 },
+  timelineLabel: { flex: 1, color: SOFT, fontSize: 9, fontWeight: "900", textAlign: "center" },
   marketCard: {
     borderRadius: 8,
     borderWidth: 1,
