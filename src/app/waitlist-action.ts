@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
+import { getAppUrl } from "@/lib/app-url";
 import { stripe } from "@/lib/stripe";
 import { supabase } from "@/lib/supabase";
 
@@ -29,10 +29,7 @@ export async function createLifetimeCheckout() {
   const priceId = process.env.STRIPE_LIFETIME_PRICE_ID;
   if (!priceId) redirect("/#waitlist");
 
-  const h = await headers();
-  const host = h.get("host") ?? "brickvalue.live";
-  const proto = h.get("x-forwarded-proto") ?? "https";
-  const appUrl = `${proto}://${host}`;
+  const appUrl = await getAppUrl();
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
