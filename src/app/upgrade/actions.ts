@@ -2,6 +2,7 @@
 
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { getAppUrl } from "@/lib/app-url";
 import { stripe } from "@/lib/stripe";
 
 // Set to the Price ID from your $29.99 one-time product in Stripe Dashboard
@@ -20,7 +21,7 @@ export async function createCheckoutSession() {
   const user = await currentUser();
   const email = user?.emailAddresses?.[0]?.emailAddress;
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = await getAppUrl();
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
