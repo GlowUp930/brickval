@@ -33,6 +33,11 @@ type MarketRow = {
   priceUsd: number;
 };
 
+type CollectorField = {
+  label: string;
+  value: string;
+};
+
 function formatRetailComparison(value: number | null) {
   if (value === null) return "No retail comparison";
   if (value >= 0) return `${Math.round(value)}% higher than retail`;
@@ -134,6 +139,28 @@ function buildMinifigRows(result: Extract<LookupDetailResult, { item_type: "mini
   return [...soldRows, ...stockRows];
 }
 
+function buildPartRows(result: Extract<LookupDetailResult, { item_type: "part" }>): MarketRow[] {
+  const soldRows = [...result.pricing.sold_details, ...result.pricing.sold_used_details]
+    .slice(0, 5)
+    .map((row: BrickLinkDetail, index: number) => ({
+      id: `part-sold-${index}`,
+      label: "BrickLink sold",
+      meta: `${formatDate(row.date)}${row.country ? ` · ${row.country}` : ""}`,
+      priceUsd: row.price_usd,
+    }));
+
+  const stockRows = [...result.pricing.stock_details, ...result.pricing.stock_used_details]
+    .slice(0, 4)
+    .map((row: BrickLinkDetail, index: number) => ({
+      id: `part-stock-${index}`,
+      label: "BrickLink listing",
+      meta: `${row.country ? `${row.country} · ` : ""}qty ${row.quantity}`,
+      priceUsd: row.price_usd,
+    }));
+
+  return [...soldRows, ...stockRows];
+}
+
 export default function LiveDetailScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const result = getLatestLookupResult();
@@ -173,6 +200,10 @@ export default function LiveDetailScreen() {
     ? `${chartLinePath} L ${lastPoint.x} ${chartBottom} L ${firstPoint.x} ${chartBottom} Z`
     : "";
   const chartStep = chartPoints.length > 1 ? chartWidth / (chartPoints.length - 1) : chartWidth;
+  const timelinePoints = chartPoints.filter((point, index) => {
+    if (index === 0) return true;
+    return normalizeHistoryDate(point.date) !== normalizeHistoryDate(chartPoints[index - 1].date);
+  });
   const selectedHistoryPoint = selectedHistoryIndex === null ? null : chartPoints[selectedHistoryIndex] ?? null;
   const selectedX = selectedHistoryPoint?.x ?? 0;
   const popupWidth = 132;
@@ -201,7 +232,30 @@ export default function LiveDetailScreen() {
     outputRange: [8, 0],
   });
   const heroPrice = result.pricing.hero_new_avg_usd;
-  const marketRows = result.item_type === "set" ? buildSetRows(result) : buildMinifigRows(result);
+  const marketRows =
+    result.item_type === "set" ? buildSetRows(result) : result.item_type === "part" ? buildPartRows(result) : buildMinifigRows(result);
+  const collectorFields: CollectorField[] = (
+    result.item_type === "set"
+      ? [
+          { label: "Set ID", value: result.set_number },
+          result.theme ? { label: "Theme", value: result.theme } : null,
+          result.set_info.year_released ? { label: "Release year", value: String(result.set_info.year_released) } : null,
+          result.pieces ? { label: "Piece count", value: result.pieces.toLocaleString() } : null,
+          { label: "Status", value: result.set_info.is_obsolete ? "Retired" : "Current or unknown" },
+        ]
+      : result.item_type === "minifig"
+        ? [
+            { label: "Minifigure ID", value: result.fig_info.fig_number },
+            result.fig_info.year_released ? { label: "Release year", value: String(result.fig_info.year_released) } : null,
+            { label: "Category", value: "Minifigure" },
+          ]
+        : [
+            { label: "Part ID", value: result.part_info.part_number },
+            result.part_info.color_name ? { label: "Color", value: result.part_info.color_name } : null,
+            result.part_info.year_released ? { label: "Release year", value: String(result.part_info.year_released) } : null,
+            { label: "Category", value: "Part" },
+          ]
+  ).filter((field): field is CollectorField => field !== null);
 
   return (
     <View style={styles.root}>
@@ -211,7 +265,9 @@ export default function LiveDetailScreen() {
         </Pressable>
 
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>{result.item_type === "set" ? "Live set result" : "Live minifigure result"}</Text>
+          <Text style={styles.eyebrow}>
+            {result.item_type === "set" ? "Live set result" : result.item_type === "part" ? "Live part result" : "Live minifigure result"}
+          </Text>
           <Text style={styles.title}>{result.name}</Text>
           <Text style={styles.meta}>
             {result.set_number} · {result.theme}
@@ -229,14 +285,21 @@ export default function LiveDetailScreen() {
             <View style={styles.heroCopy}>
               <Text style={styles.valueLabel}>Market price</Text>
               <Text style={styles.value}>{heroPrice === null ? "Unavailable" : USD.format(heroPrice)}</Text>
-              <Text style={styles.unitValue}>{formatRetailComparison(result.pricing.gain_pct)}</Text>
+              <Text style={styles.unitValue}>
+                {result.item_type === "part"
+                  ? result.part_info.color_name ?? "Part color"
+                  : formatRetailComparison(result.pricing.gain_pct)}
+              </Text>
             </View>
           </View>
 
           <View style={styles.statsRow}>
             <Stat label="Source" value={result.pricing.data_source === "sold" ? "Sold data" : result.pricing.data_source === "listing" ? "Listing data" : "Unknown"} />
             <Stat label="Volume" value={result.pricing.bricklink_new_qty ? `${result.pricing.bricklink_new_qty} rows` : "Light data"} />
-            <Stat label="RRP" value={result.pricing.rrp_usd === null ? "Unavailable" : `~${USD.format(result.pricing.rrp_usd)}`} />
+            <Stat
+              label={result.item_type === "part" ? "Color" : "RRP"}
+              value={result.item_type === "part" ? result.part_info.color_name ?? "Unknown" : result.pricing.rrp_usd === null ? "Unavailable" : `~${USD.format(result.pricing.rrp_usd)}`}
+            />
           </View>
         </View>
 
@@ -301,13 +364,13 @@ export default function LiveDetailScreen() {
               })}
             </Svg>
           </View>
-          <View style={styles.timeline}>
-            {chartPoints.map((point) => (
-              <Text key={`${point.date}-${point.price_usd}`} style={styles.timelineLabel}>
-                {formatTimelineLabel(point.date)}
-              </Text>
-            ))}
-          </View>
+            <View style={styles.timeline}>
+              {timelinePoints.map((point) => (
+                <Text key={`${point.date}-${point.price_usd}`} style={styles.timelineLabel}>
+                  {formatTimelineLabel(point.date)}
+                </Text>
+              ))}
+            </View>
         </View>
 
         <View style={styles.marketCard}>
@@ -330,11 +393,16 @@ export default function LiveDetailScreen() {
           )}
         </View>
 
-        <View style={styles.noteCard}>
-          <Text style={styles.noteTitle}>Why this page exists</Text>
-          <Text style={styles.noteBody}>
-            The result card gives the quick price reveal. This page keeps the same scan native and shows the pricing rows behind that headline number.
-          </Text>
+        <View style={styles.collectorCard}>
+          <Text style={styles.collectorTitle}>Collector Details</Text>
+          <View style={styles.collectorGrid}>
+            {collectorFields.map((field) => (
+              <View key={field.label} style={styles.collectorField}>
+                <Text style={styles.collectorLabel}>{field.label}</Text>
+                <Text style={styles.collectorValue}>{field.value}</Text>
+              </View>
+            ))}
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -469,14 +537,31 @@ const styles = StyleSheet.create({
   marketMeta: { color: SOFT, fontSize: 11, fontWeight: "700" },
   marketValue: { color: ACCENT, fontSize: 13, fontWeight: "900" },
   emptyRows: { color: MUTED, fontSize: 13, fontWeight: "700", lineHeight: 18 },
-  noteCard: {
+  collectorCard: {
     borderRadius: 8,
     borderWidth: 1,
     borderColor: LINE,
-    backgroundColor: "rgba(255,255,255,0.03)",
+    backgroundColor: "rgba(255,255,255,0.025)",
     padding: 16,
-    gap: 8,
+    gap: 12,
   },
-  noteTitle: { color: INK, fontSize: 14, fontWeight: "900" },
-  noteBody: { color: MUTED, fontSize: 13, fontWeight: "700", lineHeight: 19 },
+  collectorTitle: { color: INK, fontSize: 14, fontWeight: "900" },
+  collectorGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  collectorField: {
+    minWidth: "47%",
+    flexGrow: 1,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(153,231,189,0.1)",
+    backgroundColor: "rgba(255,255,255,0.02)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 4,
+  },
+  collectorLabel: { color: SOFT, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
+  collectorValue: { color: INK, fontSize: 13, fontWeight: "800", lineHeight: 17 },
 });

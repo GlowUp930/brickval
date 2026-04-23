@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import Jimp from "jimp";
 import { anthropic } from "@/lib/anthropic";
+import {
+  buildBrickognizeRecoveryCrops,
+  normalizeBrickognizeDetections,
+  normalizeBrickognizeSearchResponse,
+  type BrickognizeSearchResponse,
+} from "@/lib/identify-nonset";
+import { checkAndIncrementScan } from "@/lib/scan-gate";
 
 const MIN_SCORE = 0.50; // minimum Brickognize confidence we trust when a preferred type exists
 
@@ -16,7 +24,7 @@ Rules:
 - Only include numbers you can justify from the image.
 - Do not guess wildly. Do not include hyphens or suffixes.`;
 
-const BRICKOGNIZE_URL = "https://api.brickognize.com/predict/";
+const BRICKOGNIZE_SEARCH_URL = "https://api.brickognize.com/internal/search/?external_catalogs=bricklink&predict_color=true";
 
 const ACCEPTED_MEDIA_TYPES = [
   "image/jpeg",
@@ -32,63 +40,129 @@ type IdentificationResponse = {
   confidence?: number | null;
   candidates?: Candidate[];
 };
+type NonSetIdentifyResponse = {
+  detections: { id: string; item_type: "minifig" | "part"; score: number }[];
+  scansUsed?: number;
+  isPro?: boolean;
+};
 
 function isAcceptedMediaType(type: string): type is AcceptedMediaType {
   return ACCEPTED_MEDIA_TYPES.includes(type as AcceptedMediaType);
 }
 
-// ── Minifig identification via Brickognize ────────────────────────────────────
+async function identifyNonSet(imageFile: File): Promise<NonSetIdentifyResponse> {
+  async function postBrickognize(image: Blob, filename: string): Promise<Response | null> {
+    const form = new FormData();
+    form.append("query_image", image, filename);
 
-// Return the top Brickognize candidate; prefer minifig types but fallback to any
-async function identifyMinifig(imageFile: File): Promise<{ best: string | null; candidates: Candidate[] }> {
-  const brickognizeForm = new FormData();
-  brickognizeForm.append("query_image", imageFile, "image.jpg");
+    try {
+      return await fetch(BRICKOGNIZE_SEARCH_URL, {
+        method: "POST",
+        headers: { accept: "application/json" },
+        body: form,
+      });
+    } catch (err) {
+      console.error("[identify] Brickognize network error:", err);
+      return null;
+    }
+  }
 
-  let res: Response;
+  const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
+  let searchBlob: Blob = imageFile;
+  let searchWidth = 0;
+  let searchHeight = 0;
+  let sourceImage: Awaited<ReturnType<typeof Jimp.read>> | null = null;
+
   try {
-    res = await fetch(BRICKOGNIZE_URL, {
-      method: "POST",
-      headers: { accept: "application/json" },
-      body: brickognizeForm,
+    sourceImage = await Jimp.read(imageBuffer);
+    if (Math.max(sourceImage.bitmap.width, sourceImage.bitmap.height) > 1024) {
+      sourceImage.scaleToFit(1024, 1024);
+    }
+    searchWidth = sourceImage.bitmap.width;
+    searchHeight = sourceImage.bitmap.height;
+    const fullBuffer = await sourceImage.clone().quality(88).getBufferAsync("image/jpeg");
+    const fullArrayBuffer = fullBuffer.buffer.slice(fullBuffer.byteOffset, fullBuffer.byteOffset + fullBuffer.byteLength) as ArrayBuffer;
+    searchBlob = new Blob([fullArrayBuffer], {
+      type: "image/jpeg",
     });
-  } catch (err) {
-    console.error("[identify] Brickognize network error:", err);
-    return { best: null, candidates: [] };
-  }
-
-  if (!res.ok) {
-    console.warn("[identify] Brickognize returned", res.status);
-    return { best: null, candidates: [] };
-  }
-
-  let data: { items?: { id?: string; external_id?: string; score?: number; name?: string; type?: string }[] };
-  try {
-    data = await res.json();
   } catch {
-    return { best: null, candidates: [] };
+    sourceImage = null;
   }
 
-  const items = (data.items ?? []).map((i) => ({
-    id: i.id ?? i.external_id,
-    type: (i.type ?? "").toLowerCase(),
-    score: i.score ?? 0,
-  })).filter((c) => Boolean(c.id));
+  const searchRes = await postBrickognize(searchBlob, "image.jpg");
+  if (!searchRes?.ok) {
+    if (searchRes) {
+      console.warn("[identify] Brickognize search returned", searchRes.status);
+    }
+    return { detections: [] };
+  }
 
-  const preferred = items.filter((c) => c.type === "fig" || c.type === "minifig");
-  const pool = preferred.length ? preferred : items;
-  const candidates = pool
-    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-    .map((c) => ({ id: c.id!.trim().toLowerCase(), score: c.score }))
-    .filter((c) => c.id.length >= 3 && c.id.length <= 16 && /^[a-z0-9]+$/.test(c.id))
-    .filter((c) => preferred.length ? c.score >= MIN_SCORE : true);
+  let searchData: BrickognizeSearchResponse;
+  try {
+    searchData = (await searchRes.json()) as BrickognizeSearchResponse;
+  } catch {
+    return { detections: [] };
+  }
 
-  return { best: candidates[0]?.id ?? null, candidates };
+  const collectedDetections = [...normalizeBrickognizeSearchResponse(searchData).all];
+  const mergeDetections = () =>
+    normalizeBrickognizeDetections(
+      collectedDetections.map((detection) => ({
+        id: detection.id,
+        type: detection.item_type,
+        score: detection.score,
+      }))
+    ).all;
+
+  if (collectedDetections.length >= 2 || !sourceImage || !searchWidth || !searchHeight) {
+    return { detections: mergeDetections() };
+  }
+
+  const recoveryCrops = buildBrickognizeRecoveryCrops(searchData, searchWidth, searchHeight);
+  if (!recoveryCrops.length) {
+    return { detections: mergeDetections() };
+  }
+
+  for (const crop of recoveryCrops) {
+    const croppedImage = sourceImage
+      .clone()
+      .crop(crop.left, crop.top, crop.width, crop.height)
+      .quality(88);
+
+    const croppedBuffer = await croppedImage.getBufferAsync("image/jpeg");
+    const croppedArrayBuffer = croppedBuffer.buffer.slice(
+      croppedBuffer.byteOffset,
+      croppedBuffer.byteOffset + croppedBuffer.byteLength
+    ) as ArrayBuffer;
+    const cropRes = await postBrickognize(new Blob([croppedArrayBuffer], { type: "image/jpeg" }), "image.jpg");
+
+    if (!cropRes?.ok) {
+      if (cropRes) {
+        console.warn("[identify] Brickognize crop search returned", cropRes.status);
+      }
+      continue;
+    }
+
+    let cropData: BrickognizeSearchResponse;
+    try {
+      cropData = (await cropRes.json()) as BrickognizeSearchResponse;
+    } catch {
+      continue;
+    }
+
+    const cropDetections = normalizeBrickognizeSearchResponse(cropData).all;
+    if (cropDetections.length > 0) {
+      collectedDetections.push(...cropDetections);
+    }
+  }
+
+  return { detections: mergeDetections() };
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  await auth();
+  const { userId } = await auth();
 
   const mode = req.nextUrl.searchParams.get("mode") ?? "set";
 
@@ -121,11 +195,42 @@ export async function POST(req: NextRequest) {
 
   // ── Minifig mode: use Brickognize ─────────────────────────────────────────
   if (mode === "minifig") {
-    const { best, candidates } = await identifyMinifig(imageFile);
+    const identified = await identifyNonSet(imageFile);
+
+    if (!identified.detections.length) {
+      return NextResponse.json({ detections: [] });
+    }
+
+    if (userId) {
+      try {
+        const gate = await checkAndIncrementScan(userId);
+        if (!gate.allowed) {
+          return NextResponse.json(
+            {
+              error: "paywall",
+              message: "You've used all 5 free scans. Upgrade to Brickvalue Pro to continue.",
+              scansUsed: gate.scansUsed,
+            },
+            { status: 402 }
+          );
+        }
+
+        return NextResponse.json({
+          detections: identified.detections,
+          scansUsed: gate.scansUsed,
+          isPro: gate.isPro,
+        });
+      } catch (err) {
+        console.error("[identify] Scan gate error:", err);
+        return NextResponse.json(
+          { error: "internal", message: "Something went wrong. Please try again." },
+          { status: 500 }
+        );
+      }
+    }
+
     return NextResponse.json({
-      set_number: best,
-      confidence: candidates[0]?.score ?? null,
-      candidates: candidates.slice(0, 4),
+      detections: identified.detections,
     });
   }
 

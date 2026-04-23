@@ -40,6 +40,13 @@ export interface BrickLinkItem {
   categoryID: number;
 }
 
+export interface BrickLinkColor {
+  color_id: number;
+  color_name: string;
+  color_code?: string;
+  color_type?: string;
+}
+
 /** Combined price data we expose to the rest of the app */
 export interface BrickLinkMarketData {
   sold_new: BrickLinkPriceGuide | null;
@@ -56,6 +63,15 @@ export interface MinifigMarketData {
   sold_new: BrickLinkPriceGuide | null;
   stock_new: BrickLinkPriceGuide | null;
   item: BrickLinkItem | null;
+}
+
+export interface PartMarketData {
+  sold_used: BrickLinkPriceGuide | null;
+  stock_used: BrickLinkPriceGuide | null;
+  sold_new: BrickLinkPriceGuide | null;
+  stock_new: BrickLinkPriceGuide | null;
+  item: BrickLinkItem | null;
+  color_id: number;
 }
 
 // ── Config ───────────────────────────────────────────────────────────────────
@@ -245,6 +261,26 @@ async function fetchMinifigItem(figNo: string): Promise<BrickLinkItem | null> {
   return brickLinkFetch<BrickLinkItem>(`/items/MINIFIG/${figNo}`);
 }
 
+async function fetchPartPriceGuide(
+  partNo: string,
+  colorId: number,
+  guideType: "sold" | "stock",
+  newOrUsed: "N" | "U"
+): Promise<BrickLinkPriceGuide | null> {
+  const path =
+    `/items/PART/${partNo}/price` +
+    `?color_id=${colorId}` +
+    `&guide_type=${guideType}` +
+    `&new_or_used=${newOrUsed}` +
+    `&currency_code=USD`;
+
+  return brickLinkFetch<BrickLinkPriceGuide>(path);
+}
+
+async function fetchPartItem(partNo: string): Promise<BrickLinkItem | null> {
+  return brickLinkFetch<BrickLinkItem>(`/items/PART/${partNo}`);
+}
+
 /**
  * Get BrickLink market data for a LEGO minifigure.
  * Returns used sold + used stock prices and item info.
@@ -264,6 +300,52 @@ export async function getMinifigMarketData(figNo: string): Promise<MinifigMarket
   ]);
 
   const result: MinifigMarketData = { sold_used: soldUsed, stock_used: stockUsed, sold_new: soldNew, stock_new: stockNew, item };
+
+  if (soldUsed || stockUsed || soldNew || stockNew || item) {
+    await setCached(cacheKey, result, CACHE_TTL_HOURS);
+  }
+  return result;
+}
+
+export async function getBrickLinkColors(): Promise<BrickLinkColor[]> {
+  const cacheKey = "bricklink:colors";
+  const cached = await getCached<BrickLinkColor[]>(cacheKey);
+  if (cached) return cached;
+
+  const colors = await brickLinkFetch<BrickLinkColor[]>("/colors");
+  const result = Array.isArray(colors)
+    ? colors
+        .filter((color) => Number.isFinite(color.color_id) && typeof color.color_name === "string")
+        .sort((a, b) => a.color_name.localeCompare(b.color_name))
+    : [];
+
+  if (result.length) {
+    await setCached(cacheKey, result, CACHE_TTL_HOURS);
+  }
+  return result;
+}
+
+export async function getPartMarketData(partNo: string, colorId: number): Promise<PartMarketData> {
+  const cacheKey = `bricklink-part:${partNo}:${colorId}`;
+  const cached = await getCached<PartMarketData>(cacheKey);
+  if (cached) return cached;
+
+  const [soldUsed, stockUsed, soldNew, stockNew, item] = await Promise.all([
+    fetchPartPriceGuide(partNo, colorId, "sold", "U"),
+    fetchPartPriceGuide(partNo, colorId, "stock", "U"),
+    fetchPartPriceGuide(partNo, colorId, "sold", "N"),
+    fetchPartPriceGuide(partNo, colorId, "stock", "N"),
+    fetchPartItem(partNo),
+  ]);
+
+  const result: PartMarketData = {
+    sold_used: soldUsed,
+    stock_used: stockUsed,
+    sold_new: soldNew,
+    stock_new: stockNew,
+    item,
+    color_id: colorId,
+  };
 
   if (soldUsed || stockUsed || soldNew || stockNew || item) {
     await setCached(cacheKey, result, CACHE_TTL_HOURS);

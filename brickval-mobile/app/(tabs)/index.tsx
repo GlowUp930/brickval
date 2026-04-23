@@ -4,7 +4,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Image,
   ScrollView,
   Pressable,
   useWindowDimensions,
@@ -18,18 +17,17 @@ import {
   getCollection,
   getCollectionValue,
   getItemTotalValue,
+  removeFromCollection,
 } from "../../lib/collection";
-import { QuestionMarkPlaceholder } from "../../components/QuestionMarkPlaceholder";
+import { CollectionSwipeRow } from "../../components/CollectionSwipeRow";
 
 const ACCENT = "#62c79a";
-const LEGO_YELLOW = "#f2c94c";
 const INK = "#f7f4ea";
 const MUTED = "rgba(247,244,234,0.62)";
 const SOFT = "rgba(247,244,234,0.38)";
 const SURFACE = "#121715";
 const PANEL = "#0b0e0d";
 const LINE = "rgba(153,231,189,0.14)";
-const DANGER = "#ff8f8f";
 const HISTORY_TIP_KEY = "brickval_home_history_tip_seen";
 
 const usdFormatter = new Intl.NumberFormat("en-US", {
@@ -55,14 +53,6 @@ function formatRetailComparison(value: number | null) {
   if (value === null) return "No retail comparison";
   if (value >= 0) return `${Math.round(value)}% higher than retail`;
   return `${Math.round(Math.abs(value))}% below retail`;
-}
-
-function formatCondition(value: CollectionItem["condition"]) {
-  return value === "used" ? "Used" : "New / sealed";
-}
-
-function formatConditionTag(value: CollectionItem["condition"]) {
-  return value === "used" ? "USED" : "NEW";
 }
 
 function isoDate(date: Date) {
@@ -97,18 +87,23 @@ function getSmoothPath(points: { x: number; y: number }[]) {
   }, "");
 }
 
-function getHistoricalCollectionSeries(items: CollectionItem[], horizon: Horizon) {
+type HistoryBucket = { date: Date; label: string; total_value_usd: number };
+
+function getHistoricalCollectionSeries(items: CollectionItem[], horizon: Horizon): {
+  date: string;
+  total_value_usd: number;
+}[] {
   const today = new Date();
   const days = HORIZON_DAYS[horizon];
   const start = addDays(today, -days);
   const bucketCount = 8;
   const bucketStep = days / (bucketCount - 1);
-  const buckets = Array.from({ length: bucketCount }, (_, index) => {
+  const buckets: HistoryBucket[] = Array.from({ length: bucketCount }, (_, index) => {
     const date = addDays(start, Math.round(index * bucketStep));
     return { date, label: isoDate(date), total_value_usd: 0 };
   });
 
-  return buckets.map((bucket) => {
+  return buckets.map((bucket): { date: string; total_value_usd: number } => {
     const total = items.reduce((sum, item) => {
       const history = (item.market_history ?? [])
         .filter((point) => point.date)
@@ -151,6 +146,7 @@ export default function HomeDashboard() {
   const totalValue = getCollectionValue(items);
   const setCount = items.reduce((total, item) => total + (item.item_type === "set" ? item.quantity ?? 1 : 0), 0);
   const minifigureCount = items.reduce((total, item) => total + (item.item_type === "minifig" ? item.quantity ?? 1 : 0), 0);
+  const partCount = items.reduce((total, item) => total + (item.item_type === "part" ? item.quantity ?? 1 : 0), 0);
   const topItems = [...items].sort((a, b) => getItemTotalValue(b) - getItemTotalValue(a));
   const displayHistory = getHistoricalCollectionSeries(items, horizon);
   const historyValues = displayHistory.map((point) => point.total_value_usd);
@@ -208,6 +204,16 @@ export default function HomeDashboard() {
     outputRange: [8, 0],
   });
 
+  const handleDeleteItem = async (target: {
+    set_number: string;
+    item_type: CollectionItem["item_type"];
+    condition: CollectionItem["condition"];
+    color_id?: number | null;
+  }) => {
+    const next = await removeFromCollection(target);
+    setItems(next);
+  };
+
   useEffect(() => {
     Animated.timing(popupProgress, {
       toValue: selectedHistoryPoint ? 1 : 0,
@@ -250,7 +256,7 @@ export default function HomeDashboard() {
         <View style={styles.topRail}>
           <View>
             <Text style={styles.brand}>BrickVal <Text style={styles.pro}>INDEX</Text></Text>
-            <Text style={styles.brandMeta}>Sets + minifigures</Text>
+            <Text style={styles.brandMeta}>Sets + minifigures + parts</Text>
           </View>
           <Pressable
             accessibilityRole="button"
@@ -267,7 +273,7 @@ export default function HomeDashboard() {
           <Text style={styles.eyebrow}>Portfolio value</Text>
           <Text style={styles.total}>{usdFormatter.format(totalValue)}</Text>
           <Text style={styles.caption}>
-            Based on sold/listing market values from saved LEGO sets and minifigures
+            Based on sold/listing market values from saved LEGO sets, minifigures, and parts
           </Text>
 
           <View style={styles.statsRow}>
@@ -280,8 +286,8 @@ export default function HomeDashboard() {
               <Text style={styles.statLabel}>Minifigs</Text>
             </View>
             <View style={styles.stat}>
-              <Text style={styles.statValue}>{formatSignedPercent(historyDelta)}</Text>
-              <Text style={styles.statLabel}>{horizon} change</Text>
+              <Text style={styles.statValue}>{partCount}</Text>
+              <Text style={styles.statLabel}>Parts</Text>
             </View>
           </View>
 
@@ -413,9 +419,9 @@ export default function HomeDashboard() {
         {items.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No items yet</Text>
-            <Text style={styles.emptyBody}>
-              Scan a LEGO set or minifigure, then add the result to start tracking value changes.
-            </Text>
+              <Text style={styles.emptyBody}>
+              Scan a LEGO set, minifigure, or part, then add the result to start tracking value changes.
+              </Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Start scanning"
@@ -428,13 +434,11 @@ export default function HomeDashboard() {
         ) : (
           <View style={styles.list}>
             {topItems.map((item, index) => {
-              const itemLabel = item.item_type === "minifig" ? "Minifig" : "Set";
               return (
-                <Pressable
-                  key={`${item.item_type}-${item.set_number}-${item.condition}`}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Open details for ${item.name}. ${formatCondition(item.condition)}.`}
-                  style={styles.item}
+                <CollectionSwipeRow
+                  key={`${item.item_type}-${item.set_number}-${item.condition}-${item.color_id ?? "base"}`}
+                  item={item}
+                  index={index}
                   onPress={() =>
                     router.push({
                       pathname: "/detail/[itemType]/[setNumber]",
@@ -442,50 +446,12 @@ export default function HomeDashboard() {
                         itemType: item.item_type,
                         setNumber: item.set_number,
                         condition: item.condition,
+                        colorId: item.item_type === "part" ? String(item.color_id ?? "") : undefined,
                       },
                     })
                   }
-                >
-                  {item.image_url ? (
-                    <Image source={{ uri: item.image_url }} style={styles.thumb} />
-                  ) : (
-                    <QuestionMarkPlaceholder style={styles.thumb} />
-                  )}
-                  <View style={styles.itemCopy}>
-                    <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
-                    <View style={[styles.itemConditionBadge, item.condition === "used" ? styles.itemConditionBadgeUsed : styles.itemConditionBadgeNew]}>
-                      <Text style={[styles.itemConditionText, item.condition === "used" ? styles.itemConditionTextUsed : styles.itemConditionTextNew]}>
-                        {formatConditionTag(item.condition)}
-                      </Text>
-                    </View>
-                    <Text style={styles.itemMeta} numberOfLines={1}>
-                      #{index + 1} · {itemLabel} {item.set_number} · {item.theme}
-                    </Text>
-                    <Text style={styles.itemSubMeta} numberOfLines={1}>
-                      Qty {item.quantity} · {formatCondition(item.condition)}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.itemDelta,
-                        item.gain_pct === null
-                          ? styles.muted
-                          : item.gain_pct < 0
-                            ? styles.negative
-                            : styles.positive,
-                      ]}
-                    >
-                      {formatRetailComparison(item.gain_pct)}
-                    </Text>
-                  </View>
-                  <View style={styles.itemPriceBlock}>
-                    <Text style={styles.itemValue}>
-                      {item.market_value_usd === null ? "N/A" : usdFormatter.format(getItemTotalValue(item))}
-                    </Text>
-                    <Text style={styles.itemSource}>
-                      Total
-                    </Text>
-                  </View>
-                </Pressable>
+                  onDelete={handleDeleteItem}
+                />
               );
             })}
           </View>
@@ -538,9 +504,6 @@ const styles = StyleSheet.create({
   eyebrow: { color: ACCENT, fontSize: 12, fontWeight: "900", textAlign: "center" },
   total: { color: INK, fontSize: 47, fontWeight: "900", lineHeight: 58, textAlign: "center", letterSpacing: -1.8 },
   caption: { color: MUTED, fontSize: 12, fontWeight: "800", textAlign: "center" },
-  muted: { color: MUTED },
-  positive: { color: ACCENT },
-  negative: { color: DANGER },
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -703,47 +666,4 @@ const styles = StyleSheet.create({
   },
   emptyActionText: { color: "#07100c", fontSize: 14, fontWeight: "900" },
   list: { gap: 12 },
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: LINE,
-    backgroundColor: SURFACE,
-    padding: 13,
-    gap: 12,
-  },
-  thumb: { width: 56, height: 56, borderRadius: 10, backgroundColor: "rgba(247,244,234,0.08)" },
-  itemCopy: { flex: 1, gap: 4, minWidth: 0 },
-  itemName: { color: INK, fontSize: 15, fontWeight: "900", lineHeight: 20 },
-  itemConditionBadge: {
-    alignSelf: "flex-start",
-    minHeight: 22,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    justifyContent: "center",
-    borderWidth: 1,
-  },
-  itemConditionBadgeNew: {
-    borderColor: "rgba(98,199,154,0.34)",
-    backgroundColor: "rgba(98,199,154,0.12)",
-  },
-  itemConditionBadgeUsed: {
-    borderColor: "rgba(242,201,76,0.28)",
-    backgroundColor: "rgba(242,201,76,0.11)",
-  },
-  itemConditionText: { fontSize: 9, fontWeight: "900", letterSpacing: 0.6, textTransform: "uppercase" },
-  itemConditionTextNew: { color: ACCENT },
-  itemConditionTextUsed: { color: LEGO_YELLOW },
-  itemMeta: { color: MUTED, fontSize: 11, fontWeight: "800" },
-  itemSubMeta: { color: SOFT, fontSize: 10, fontWeight: "700" },
-  itemDelta: { fontSize: 11, fontWeight: "900" },
-  itemPriceBlock: { alignItems: "flex-end", gap: 5, maxWidth: 86 },
-  itemValue: { color: INK, fontSize: 15, fontWeight: "900" },
-  itemSource: {
-    color: ACCENT,
-    fontSize: 10,
-    fontWeight: "900",
-    textTransform: "uppercase",
-  },
 });

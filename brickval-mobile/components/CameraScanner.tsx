@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Pressable, StyleSheet, Text, Animated } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { ViewfinderOverlay } from "./ViewfinderOverlay";
 import { tap, success, warn } from "../lib/haptics";
 import type { ScanMode } from "../lib/api";
@@ -15,10 +16,11 @@ interface Props {
   mode: ScanMode;
   onModeChange: (mode: ScanMode) => void;
   onCapture: (photoUri: string) => void;
+  onPhotoPress: () => void;
   onManualPress: () => void;
 }
 
-export function CameraScanner({ enabled, mode, onModeChange, onCapture, onManualPress }: Props) {
+export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoPress, onManualPress }: Props) {
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [torch, setTorch] = useState(false);
@@ -75,10 +77,20 @@ export function CameraScanner({ enabled, mode, onModeChange, onCapture, onManual
     return (
       <View style={styles.permWrap}>
         <Text style={styles.permTitle}>Camera access</Text>
-        <Text style={styles.permBody}>BrickVal needs the camera to scan LEGO sets and minifigures.</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Allow camera access" style={styles.permBtn} onPress={requestPermission}>
-          <Text style={styles.permBtnText}>Allow camera</Text>
-        </Pressable>
+        <Text style={styles.permBody}>BrickVal needs the camera to scan LEGO sets, minifigures, and parts.</Text>
+        <View style={styles.permActions}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Allow camera access" style={styles.permBtn} onPress={requestPermission}>
+            <Text style={styles.permBtnText}>Allow camera</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Use photo from library"
+            style={styles.permBtnSecondary}
+            onPress={onPhotoPress}
+          >
+            <Text style={styles.permBtnSecondaryText}>Use photo</Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
@@ -100,25 +112,48 @@ export function CameraScanner({ enabled, mode, onModeChange, onCapture, onManual
       />
 
       <View style={styles.bottomBar}>
-        {mode === "set" ? (
+        <View style={styles.leftStack}>
+          {mode === "set" ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Got a set number? Enter it manually"
+              onPress={onManualPress}
+              style={styles.toolBtn}
+              hitSlop={12}
+            >
+              <Text style={styles.toolLabel}>Have set number?</Text>
+              <Text style={styles.toolHint}>Type it here</Text>
+            </Pressable>
+          ) : (
+            <View style={styles.toolSpacer} />
+          )}
+
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Got a set number? Enter it manually"
-            onPress={onManualPress}
-            style={styles.toolBtn}
-            hitSlop={12}
+            accessibilityLabel="Use photo from library"
+            onPress={() => {
+              if (!enabled) return;
+              tap();
+              onPhotoPress();
+            }}
+            disabled={!enabled}
+            style={[styles.photoBtn, !enabled && styles.photoBtnDisabled]}
+            hitSlop={10}
           >
-            <Text style={styles.toolLabel}>Have set number?</Text>
-            <Text style={styles.toolHint}>Type it here</Text>
+            <View style={styles.photoIconWrap}>
+              <PhotoStackIcon color={enabled ? INK : MUTED} />
+            </View>
+            <View style={styles.photoCopy}>
+              <Text style={[styles.photoText, !enabled && styles.photoTextDisabled]}>Use photo</Text>
+              <Text style={[styles.photoHint, !enabled && styles.photoTextDisabled]}>From library</Text>
+            </View>
           </Pressable>
-        ) : (
-          <View style={styles.toolSpacer} />
-        )}
+        </View>
 
         <View style={styles.captureStack}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={mode === "minifig" ? "Scan minifigure" : "Scan LEGO set"}
+            accessibilityLabel={mode === "minifig" ? "Scan minifigures and parts" : "Scan LEGO set"}
             onPress={handleCapturePress}
             style={styles.captureWrap}
             hitSlop={12}
@@ -164,17 +199,33 @@ const styles = StyleSheet.create({
   permWrap: { flex: 1, backgroundColor: "#101012", alignItems: "center", justifyContent: "center", padding: 32, gap: 16 },
   permTitle: { color: INK, fontSize: 24, fontWeight: "900" },
   permBody: { color: MUTED, fontSize: 15, textAlign: "center", lineHeight: 23 },
-  permBtn: { backgroundColor: SET_ACCENT, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 8, marginTop: 12 },
+  permActions: { gap: 10, alignItems: "center", marginTop: 12 },
+  permBtn: { minWidth: 180, backgroundColor: SET_ACCENT, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 8 },
   permBtnText: { color: "#101012", fontWeight: "800", fontSize: 15 },
+  permBtnSecondary: {
+    minWidth: 180,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(247,244,234,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  permBtnSecondaryText: { color: INK, fontWeight: "800", fontSize: 15 },
   bottomBar: {
     position: "absolute",
     bottom: 42,
     left: 0,
     right: 0,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
     justifyContent: "space-between",
     paddingHorizontal: 28,
+  },
+  leftStack: {
+    width: 126,
+    gap: 10,
   },
   toolBtn: {
     width: 126,
@@ -222,4 +273,43 @@ const styles = StyleSheet.create({
     opacity: 0.72,
   },
   captureLabel: { color: INK, fontSize: 12, fontWeight: "900" },
+  photoBtn: {
+    height: 62,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(247,244,234,0.18)",
+    backgroundColor: "rgba(247,244,234,0.06)",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    gap: 10,
+  },
+  photoBtnDisabled: { opacity: 0.45 },
+  photoIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(247,244,234,0.08)",
+  },
+  photoCopy: { flex: 1, minWidth: 0 },
+  photoText: { color: INK, fontSize: 14, fontWeight: "900", lineHeight: 18 },
+  photoHint: { color: MUTED, fontSize: 10, fontWeight: "700", lineHeight: 12, marginTop: 1 },
+  photoTextDisabled: { color: MUTED },
 });
+
+function PhotoStackIcon({ color }: { color: string }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 22 22" fill="none">
+      <Rect x="2" y="3" width="14" height="14" rx="3" stroke={color} strokeWidth="1.8" opacity="0.55" />
+      <Rect x="6" y="7" width="14" height="14" rx="3" fill="none" stroke={color} strokeWidth="1.8" />
+      <Circle cx="11" cy="11" r="1.7" fill={color} />
+      <Path
+        d="M7 18L10.2 14.6L12.8 17L15.2 14.8L19 18H7Z"
+        fill={color}
+        opacity="0.92"
+      />
+    </Svg>
+  );
+}

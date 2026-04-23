@@ -33,6 +33,10 @@ const HORIZON_DAYS: Record<Horizon, number> = {
 };
 type HistoryPoint = CollectionItem["market_history"][number];
 type ChartPoint = HistoryPoint & { x: number; y: number; total: number };
+type CollectorField = {
+  label: string;
+  value: string;
+};
 
 function formatCondition(value: CollectionItem["condition"]) {
   return value === "used" ? "Used" : "New / sealed";
@@ -111,10 +115,12 @@ export default function ItemDetailScreen() {
     itemType?: string | string[];
     setNumber?: string | string[];
     condition?: string | string[];
+    colorId?: string | string[];
   }>();
   const itemType = Array.isArray(params.itemType) ? params.itemType[0] : params.itemType;
   const setNumber = Array.isArray(params.setNumber) ? params.setNumber[0] : params.setNumber;
   const conditionParam = Array.isArray(params.condition) ? params.condition[0] : params.condition;
+  const colorIdParam = Array.isArray(params.colorId) ? params.colorId[0] : params.colorId;
   const [items, setItems] = useState<CollectionItem[]>([]);
   const [horizon, setHorizon] = useState<Horizon>("6M");
   const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<number | null>(null);
@@ -136,7 +142,12 @@ export default function ItemDetailScreen() {
     }, [])
   );
 
-  const matchingItems = items.filter((entry) => entry.set_number === setNumber && entry.item_type === itemType);
+  const matchingItems = items.filter((entry) => {
+    if (entry.set_number !== setNumber || entry.item_type !== itemType) return false;
+    if (entry.item_type !== "part") return true;
+    if (!colorIdParam) return true;
+    return String(entry.color_id ?? "") === colorIdParam;
+  });
   const item =
     conditionParam === "used"
       ? matchingItems.find((entry) => entry.condition === "used")
@@ -174,10 +185,14 @@ export default function ItemDetailScreen() {
     ? `${chartLinePath} L ${lastPoint.x} ${chartBottom} L ${firstPoint.x} ${chartBottom} Z`
     : "";
   const chartStep = chartPoints.length > 1 ? chartWidth / (chartPoints.length - 1) : chartWidth;
-  const timelinePoints = chartPoints.filter((point, index) => {
-    if (chartPoints.length <= 5) return true;
-    const stride = Math.max(1, Math.round(chartPoints.length / 4));
-    return index === 0 || index === chartPoints.length - 1 || index % stride === 0;
+  const uniqueTimelinePoints = chartPoints.filter((point, index) => {
+    if (index === 0) return true;
+    return normalizeHistoryDate(point.date) !== normalizeHistoryDate(chartPoints[index - 1].date);
+  });
+  const timelinePoints = uniqueTimelinePoints.filter((point, index) => {
+    if (uniqueTimelinePoints.length <= 5) return true;
+    const stride = Math.max(1, Math.round(uniqueTimelinePoints.length / 4));
+    return index === 0 || index === uniqueTimelinePoints.length - 1 || index % stride === 0;
   });
   const clampTimelineLeft = (x: number) => Math.max(0, Math.min(chartWidth - 52, x - 26));
   const selectedHistoryPoint = selectedHistoryIndex === null ? null : chartPoints[selectedHistoryIndex] ?? null;
@@ -238,6 +253,31 @@ export default function ItemDetailScreen() {
     );
   }
 
+  const collectorFields: CollectorField[] = (
+    item.item_type === "set"
+      ? [
+          { label: "Set ID", value: item.set_number },
+          item.theme ? { label: "Theme", value: item.theme } : null,
+          item.year_released ? { label: "Release year", value: String(item.year_released) } : null,
+          item.pieces ? { label: "Piece count", value: item.pieces.toLocaleString() } : null,
+          item.is_obsolete === null || item.is_obsolete === undefined
+            ? null
+            : { label: "Status", value: item.is_obsolete ? "Retired" : "Current or unknown" },
+        ]
+      : item.item_type === "minifig"
+        ? [
+            { label: "Minifigure ID", value: item.set_number },
+            item.year_released ? { label: "Release year", value: String(item.year_released) } : null,
+            { label: "Category", value: "Minifigure" },
+          ]
+        : [
+            { label: "Part ID", value: item.set_number },
+            item.color_name ? { label: "Color", value: item.color_name } : null,
+            item.year_released ? { label: "Release year", value: String(item.year_released) } : null,
+            { label: "Category", value: "Part" },
+          ]
+  ).filter((field): field is CollectorField => field !== null);
+
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -245,10 +285,14 @@ export default function ItemDetailScreen() {
           <Pressable accessibilityRole="button" accessibilityLabel="Go back" style={styles.backBtn} onPress={() => router.back()}>
             <Text style={styles.backText}>Back</Text>
           </Pressable>
-          <Text style={styles.eyebrow}>{item.item_type === "minifig" ? "Minifigure details" : "Set details"}</Text>
+          <Text style={styles.eyebrow}>
+            {item.item_type === "part" ? "Part details" : item.item_type === "minifig" ? "Minifigure details" : "Set details"}
+          </Text>
           <Text style={styles.title}>{item.name}</Text>
           <Text style={styles.meta}>
-            {item.set_number} · {item.quantity}× · {formatCondition(item.condition)}
+            {item.set_number}
+            {item.item_type === "part" && item.color_name ? ` · ${item.color_name}` : ""}
+            {` · ${item.quantity}× · ${formatCondition(item.condition)}`}
           </Text>
         </View>
 
@@ -271,7 +315,10 @@ export default function ItemDetailScreen() {
           <View style={styles.statsRow}>
             <Stat label="Quantity" value={`${quantity}`} />
             <Stat label="Condition" value={formatCondition(item.condition)} />
-            <Stat label="Retail" value={formatRetailComparison(item.gain_pct)} />
+            <Stat
+              label={item.item_type === "part" ? "Color" : "Retail"}
+              value={item.item_type === "part" ? item.color_name ?? "Unknown" : formatRetailComparison(item.gain_pct)}
+            />
           </View>
         </View>
 
@@ -390,11 +437,16 @@ export default function ItemDetailScreen() {
           </Animated.View>
         </View>
 
-        <View style={styles.noteCard}>
-          <Text style={styles.noteTitle}>What this shows</Text>
-          <Text style={styles.noteBody}>
-            This page uses the saved collection entry from this phone. Quantity multiplies the value, so the total matches what you added to your collection.
-          </Text>
+        <View style={styles.collectorCard}>
+          <Text style={styles.collectorTitle}>Collector Details</Text>
+          <View style={styles.collectorGrid}>
+            {collectorFields.map((field) => (
+              <View key={field.label} style={styles.collectorField}>
+                <Text style={styles.collectorLabel}>{field.label}</Text>
+                <Text style={styles.collectorValue}>{field.value}</Text>
+              </View>
+            ))}
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -554,16 +606,33 @@ const styles = StyleSheet.create({
   horizonText: { color: SOFT, fontSize: 11, fontWeight: "900" },
   horizonTextActive: { color: "#07100c" },
   noSalesText: { color: MUTED, fontSize: 12, fontWeight: "700", lineHeight: 18 },
-  noteCard: {
+  collectorCard: {
     borderRadius: 24,
     borderWidth: 1,
     borderColor: LINE,
-    backgroundColor: PANEL,
+    backgroundColor: "rgba(255,255,255,0.02)",
     padding: 16,
-    gap: 6,
+    gap: 12,
   },
-  noteTitle: { color: INK, fontSize: 14, fontWeight: "900" },
-  noteBody: { color: MUTED, fontSize: 13, lineHeight: 19, fontWeight: "700" },
+  collectorTitle: { color: INK, fontSize: 14, fontWeight: "900" },
+  collectorGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  collectorField: {
+    minWidth: "47%",
+    flexGrow: 1,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(153,231,189,0.1)",
+    backgroundColor: "rgba(255,255,255,0.02)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 4,
+  },
+  collectorLabel: { color: SOFT, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
+  collectorValue: { color: INK, fontSize: 13, lineHeight: 17, fontWeight: "800" },
   empty: {
     marginTop: 60,
     borderRadius: 24,

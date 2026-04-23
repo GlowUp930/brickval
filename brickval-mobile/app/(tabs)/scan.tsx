@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Animated, Easing, View, StyleSheet, Pressable, Text } from "react-native";
+import { Alert, Animated, Easing, View, StyleSheet, Pressable, Text, ScrollView, TextInput, Image } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import * as SecureStore from "expo-secure-store";
 import { router } from "expo-router";
 import { TopBar } from "../../components/TopBar";
@@ -8,14 +9,20 @@ import { ResultCard } from "../../components/ResultCard";
 import { LegoLoaderNative } from "../../components/LegoLoaderNative";
 import { ManualEntrySheet, type ManualEntryHandle } from "../../components/ManualEntrySheet";
 import {
+  fetchPartColors,
   getAuthToken,
   identifySet,
   lookupSet,
   type IdentificationCandidate,
+  type IdentificationDetection,
   type IdentificationResult,
   type LookupDetailResult,
+  type LookupItemType,
+  type PartColorOption,
   type ScanMode,
 } from "../../lib/api";
+import { getDetectionChoiceMessage, shouldPauseForDetectionChoice } from "../../lib/detection-choice";
+import { getBrickLinkPreviewImageUrl } from "../../lib/image-url";
 import { addToCollection, type CollectionCondition } from "../../lib/collection";
 import { success, warn } from "../../lib/haptics";
 import { presentSuperwallUpgrade } from "../../lib/paywall";
@@ -26,10 +33,14 @@ import { setLatestLookupResult } from "../../lib/live-result";
  * the dimmed camera background, and native detail drill-down when needed.
  */
 
-type Status = "idle" | "loading" | "result" | "candidates";
+type Status = "idle" | "loading" | "result" | "candidates" | "detections" | "partColor";
 const GUEST_SCAN_LIMIT = 3;
 const GUEST_SCAN_KEY = "guest_scan_lookups_used";
 const LOW_CONFIDENCE_THRESHOLD = 0.8;
+
+function getResultKey(item: LookupDetailResult) {
+  return `${item.item_type}:${item.set_number}:${item.item_type === "part" ? item.part_info.color_id ?? "none" : "base"}`;
+}
 
 const previewResult: LookupDetailResult = {
   set_number: "75192",
@@ -121,14 +132,21 @@ const previewMinifigResult: LookupDetailResult = {
 };
 
 export default function ScanHome() {
-  const [mode, setMode] = useState<ScanMode>("set");
+  const [mode, setMode] = useState<ScanMode>("minifig");
   const [status, setStatus] = useState<Status>("idle");
-  const [loadingMsg, setLoadingMsg] = useState("Reading set number...");
+  const [loadingMsg, setLoadingMsg] = useState("Finding minifigures and parts...");
   const [result, setResult] = useState<LookupDetailResult | null>(null);
-  const [addedSetNumber, setAddedSetNumber] = useState<string | null>(null);
+  const [addedResultKey, setAddedResultKey] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [candidateOptions, setCandidateOptions] = useState<IdentificationCandidate[]>([]);
   const [candidateMessage, setCandidateMessage] = useState<string>("We found a few possible matches.");
+  const [detections, setDetections] = useState<IdentificationDetection[]>([]);
+  const [partColors, setPartColors] = useState<PartColorOption[]>([]);
+  const [selectedPart, setSelectedPart] = useState<IdentificationDetection | null>(null);
+  const [partColorQuery, setPartColorQuery] = useState("");
+  const [detectionMessage, setDetectionMessage] = useState<string>(
+    "We found LEGO minifigures and parts in this photo. Pick one to view its value."
+  );
   const errorProgress = useRef(new Animated.Value(0)).current;
   const candidateProgress = useRef(new Animated.Value(0)).current;
   const manualRef = useRef<ManualEntryHandle>(null);
@@ -145,7 +163,7 @@ export default function ScanHome() {
   }, [errorMessage, errorProgress]);
 
   useEffect(() => {
-    if (status !== "candidates") {
+    if (!["candidates", "detections", "partColor"].includes(status)) {
       candidateProgress.setValue(0);
       return;
     }
@@ -187,17 +205,46 @@ export default function ScanHome() {
     return { allowed: true, hasToken: false };
   };
 
+  const canStartNonSetScan = async () => {
+    const token = await getAuthToken();
+    if (token) {
+      return { allowed: true, hasToken: true };
+    }
+
+    const guestScansUsed = await getGuestScansUsed();
+    return { allowed: guestScansUsed < GUEST_SCAN_LIMIT, hasToken: false };
+  };
+
+  const consumeNonSetGuestScan = async () => {
+    const token = await getAuthToken();
+    if (token) {
+      return { allowed: true, hasToken: true };
+    }
+
+    const guestScansUsed = await getGuestScansUsed();
+    if (guestScansUsed >= GUEST_SCAN_LIMIT) {
+      return { allowed: false, hasToken: false };
+    }
+
+    await SecureStore.setItemAsync(GUEST_SCAN_KEY, String(guestScansUsed + 1));
+    return { allowed: true, hasToken: false };
+  };
+
   const openAccountForSignIn = () => {
     router.push("/account");
   };
 
-  const beginLookup = async (identifier: string) => {
+  const beginLookup = async (
+    identifier: string,
+    itemType: LookupItemType = mode,
+    options?: { colorId?: number }
+  ) => {
     setLoadingMsg("Fetching market prices...");
-      const data = await lookupSet(identifier, mode);
-      setResult(data);
-      setLatestLookupResult(data);
-      setAddedSetNumber(null);
-      setStatus("result");
+    const data = await lookupSet(identifier, itemType, options);
+    setResult(data);
+    setLatestLookupResult(data);
+    setAddedResultKey(null);
+    setStatus("result");
   };
 
   const maybeShowCandidates = (identification: IdentificationResult) => {
@@ -220,13 +267,127 @@ export default function ScanHome() {
     return true;
   };
 
+  const openDetectionSheet = async (nextDetections: IdentificationDetection[], message: string) => {
+    const access = await consumeNonSetGuestScan();
+    if (!access.allowed) {
+      openAccountForSignIn();
+      setStatus("idle");
+      return;
+    }
+    setDetections(nextDetections);
+    setDetectionMessage(message);
+    setStatus("detections");
+  };
+
+  const openPartColorPicker = async (detection: IdentificationDetection) => {
+    setSelectedPart(detection);
+    setPartColorQuery("");
+    if (partColors.length > 0) {
+      setStatus("partColor");
+      return;
+    }
+
+    setStatus("loading");
+    setLoadingMsg("Loading part colors...");
+    try {
+      const colors = await fetchPartColors();
+      setPartColors(colors);
+      setStatus("partColor");
+    } catch {
+      warn();
+      setErrorMessage("We found the part, but couldn't load the color list. Try again in a moment.");
+      setStatus("idle");
+    }
+  };
+
+  const handleDetectionPick = async (detection: IdentificationDetection) => {
+    setErrorMessage(null);
+    if (detection.item_type === "part") {
+      await openPartColorPicker(detection);
+      return;
+    }
+
+    setDetections([]);
+    setStatus("loading");
+    try {
+      await beginLookup(detection.id, "minifig");
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("404")) {
+        warn();
+        setErrorMessage("We couldn't find market data for that minifigure. Try a different match.");
+        setStatus("idle");
+        return;
+      }
+      warn();
+      setErrorMessage("We found the item, but couldn't fetch market prices. Try again in a moment.");
+      setStatus("idle");
+    }
+  };
+
+  const handlePartColorPick = async (color: PartColorOption) => {
+    if (!selectedPart) return;
+    setDetections([]);
+    setStatus("loading");
+    try {
+      await beginLookup(selectedPart.id, "part", { colorId: color.color_id });
+      setSelectedPart(null);
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("404")) {
+        warn();
+        setErrorMessage("We couldn't find market data for that part and color. Try a different color.");
+        setStatus("idle");
+        return;
+      }
+      warn();
+      setErrorMessage("We found the part, but couldn't fetch market prices. Try again in a moment.");
+      setStatus("idle");
+    }
+  };
+
   const handleCapture = async (photoUri: string) => {
     setErrorMessage(null);
     setCandidateOptions([]);
+    setDetections([]);
+    setSelectedPart(null);
     setStatus("loading");
-    setLoadingMsg(mode === "minifig" ? "Identifying minifigure..." : "Reading set number...");
+    setLoadingMsg(mode === "minifig" ? "Finding minifigures and parts..." : "Reading set number...");
     try {
+      if (mode === "minifig") {
+        const access = await canStartNonSetScan();
+        if (!access.allowed) {
+          setStatus("idle");
+          openAccountForSignIn();
+          return;
+        }
+      }
+
       const identification = await identifySet(photoUri, mode);
+
+      if (mode === "minifig") {
+        if (!identification.detections.length) {
+          warn();
+          setErrorMessage("We couldn't identify the minifigure or part. Try a clearer front-facing shot.");
+          setStatus("idle");
+          return;
+        }
+        if (!shouldPauseForDetectionChoice(identification.detections, LOW_CONFIDENCE_THRESHOLD)) {
+          const access = await consumeNonSetGuestScan();
+          if (!access.allowed) {
+            setStatus("idle");
+            openAccountForSignIn();
+            return;
+          }
+
+          await handleDetectionPick(identification.detections[0]);
+          return;
+        }
+        await openDetectionSheet(
+          identification.detections,
+          getDetectionChoiceMessage(identification.detections, LOW_CONFIDENCE_THRESHOLD)
+        );
+        return;
+      }
+
       const access = await prepareLookupAccess();
       if (!access.allowed) {
         setStatus("idle");
@@ -242,9 +403,7 @@ export default function ScanHome() {
       if (!identification.set_number) {
         warn();
         setErrorMessage(
-          mode === "minifig"
-            ? "We couldn't identify the minifigure. Try a clearer front-facing shot."
-            : "We couldn't find a set number in this photo. Try a clearer shot of the box or enter the set number manually."
+          "We couldn't find a set number in this photo. Try a clearer shot of the box or enter the set number manually."
         );
         setStatus("idle");
         return;
@@ -261,9 +420,7 @@ export default function ScanHome() {
         if (e instanceof Error && e.message.includes("404")) {
           warn();
           setErrorMessage(
-            mode === "minifig"
-              ? "We couldn't find market data for that minifigure. Try a different ID or clearer scan."
-              : "We don't have data for that set number. Double-check it and try again."
+            "We don't have data for that set number. Double-check it and try again."
           );
           setStatus("idle");
           return;
@@ -278,16 +435,50 @@ export default function ScanHome() {
         setStatus("idle");
       }
     } catch (e) {
+      if (e instanceof Error && e.message.includes("402")) {
+        openUpgrade();
+        setStatus("idle");
+        return;
+      }
       warn();
-      setErrorMessage("Something went wrong reading the photo. Try again in a moment or enter it manually.");
+      setErrorMessage(
+        mode === "minifig"
+          ? "Something went wrong reading the photo. Try again in a moment."
+          : "Something went wrong reading the photo. Try again in a moment or enter it manually."
+      );
       setStatus("idle");
       return;
     }
   };
 
+  const handlePhotoPress = async () => {
+    if (status !== "idle") return;
+    setErrorMessage(null);
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      warn();
+      Alert.alert("Photo access needed", "Allow photo library access to use an existing image.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: false,
+      quality: 0.82,
+    });
+
+    if (result.canceled || !result.assets[0]?.uri) {
+      return;
+    }
+
+    success();
+    await handleCapture(result.assets[0].uri);
+  };
+
   const handleManualSubmit = async (identifier: string) => {
     setErrorMessage(null);
     setCandidateOptions([]);
+    setDetections([]);
     try {
       const access = await prepareLookupAccess();
       if (!access.allowed) {
@@ -326,6 +517,7 @@ export default function ScanHome() {
   const handleCandidatePick = async (identifier: string) => {
     setErrorMessage(null);
     setCandidateOptions([]);
+    setDetections([]);
     setStatus("loading");
     try {
       await beginLookup(identifier);
@@ -370,7 +562,7 @@ export default function ScanHome() {
     const preview = mode === "minifig" ? previewMinifigResult : previewResult;
     setResult(preview);
     setLatestLookupResult(preview);
-    setAddedSetNumber(null);
+    setAddedResultKey(null);
     setStatus("result");
   };
 
@@ -379,7 +571,7 @@ export default function ScanHome() {
     options: { quantity: number; condition: CollectionCondition }
   ) => {
     await addToCollection(item, options);
-    setAddedSetNumber(item.set_number);
+    setAddedResultKey(getResultKey(item));
     success();
   };
 
@@ -387,6 +579,14 @@ export default function ScanHome() {
     inputRange: [0, 1],
     outputRange: [-10, 0],
   });
+  const groupedDetections = {
+    minifigs: detections.filter((item) => item.item_type === "minifig"),
+    parts: detections.filter((item) => item.item_type === "part"),
+  };
+  const filteredPartColors = partColors.filter((color) =>
+    color.color_name.toLowerCase().includes(partColorQuery.trim().toLowerCase())
+  );
+  const canReturnToDetectionSheet = detections.length > 1;
 
   return (
     <View style={styles.root}>
@@ -395,6 +595,7 @@ export default function ScanHome() {
         mode={mode}
         onModeChange={setMode}
         onCapture={handleCapture}
+        onPhotoPress={handlePhotoPress}
         onManualPress={() => {
           setErrorMessage(null);
           manualRef.current?.open();
@@ -410,6 +611,98 @@ export default function ScanHome() {
       )}
 
       {status === "loading" && <LegoLoaderNative message={loadingMsg} />}
+
+      {status === "detections" && detections.length > 0 ? (
+        <Animated.View
+          style={[
+            styles.candidateSheet,
+            styles.detectionSheet,
+            {
+              opacity: candidateProgress,
+              transform: [
+                {
+                  translateY: candidateProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [18, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Text style={styles.candidateTitle}>Scan matches</Text>
+          <Text style={styles.candidateBody}>{detectionMessage}</Text>
+          <ScrollView style={styles.detectionScroll} contentContainerStyle={styles.detectionScrollContent} showsVerticalScrollIndicator={false}>
+            {groupedDetections.minifigs.length > 0 ? (
+              <View style={styles.detectionSection}>
+                <Text style={styles.detectionSectionTitle}>Minifigures</Text>
+                {groupedDetections.minifigs.map((candidate) => (
+                  <Pressable
+                    key={`minifig-${candidate.id}`}
+                    accessibilityRole="button"
+                    style={styles.candidateRow}
+                    onPress={() => handleDetectionPick(candidate)}
+                  >
+                    <View style={styles.candidateThumb}>
+                      <Image source={{ uri: getBrickLinkPreviewImageUrl("minifig", candidate.id) }} style={styles.candidateThumbImage} />
+                    </View>
+                    <View style={styles.candidateCopy}>
+                      <Text style={styles.candidateId}>Minifig #{candidate.id}</Text>
+                      <Text style={styles.candidateScore}>{Math.round(candidate.score * 100)}% match</Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+
+            {groupedDetections.parts.length > 0 ? (
+              <View style={styles.detectionSection}>
+                <Text style={styles.detectionSectionTitle}>Parts</Text>
+                {groupedDetections.parts.map((candidate) => (
+                  <Pressable
+                    key={`part-${candidate.id}`}
+                    accessibilityRole="button"
+                    style={styles.candidateRow}
+                    onPress={() => handleDetectionPick(candidate)}
+                  >
+                    <View style={styles.candidateThumb}>
+                      <Image source={{ uri: getBrickLinkPreviewImageUrl("part", candidate.id) }} style={styles.candidateThumbImage} />
+                    </View>
+                    <View style={styles.candidateCopy}>
+                      <Text style={styles.candidateId}>Part #{candidate.id}</Text>
+                      <Text style={styles.candidateScore}>{Math.round(candidate.score * 100)}% match</Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </ScrollView>
+          <View style={styles.candidateActions}>
+            <Pressable
+              accessibilityRole="button"
+              style={styles.candidateSecondary}
+              onPress={() => {
+                setDetections([]);
+                setSelectedPart(null);
+                setStatus("idle");
+              }}
+            >
+              <Text style={styles.candidateSecondaryText}>Try again</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              style={styles.candidatePrimary}
+              onPress={() => {
+                setDetections([]);
+                setSelectedPart(null);
+                setStatus("idle");
+              }}
+            >
+              <Text style={styles.candidatePrimaryText}>Close</Text>
+            </Pressable>
+          </View>
+        </Animated.View>
+      ) : null}
 
       {status === "candidates" && candidateOptions.length > 0 ? (
         <Animated.View
@@ -476,6 +769,83 @@ export default function ScanHome() {
         </Animated.View>
       ) : null}
 
+      {status === "partColor" && selectedPart ? (
+        <Animated.View
+          style={[
+            styles.candidateSheet,
+            styles.colorSheet,
+            {
+              opacity: candidateProgress,
+              transform: [
+                {
+                  translateY: candidateProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [18, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Text style={styles.candidateTitle}>Pick part color</Text>
+          <Text style={styles.candidateBody}>Part #{selectedPart.id} needs a color before BrickVal can price it.</Text>
+          <TextInput
+            value={partColorQuery}
+            onChangeText={setPartColorQuery}
+            placeholder="Search colors"
+            placeholderTextColor="rgba(247,244,234,0.36)"
+            style={styles.colorSearch}
+            autoCorrect={false}
+            autoCapitalize="words"
+          />
+          <ScrollView style={styles.colorScroll} contentContainerStyle={styles.detectionScrollContent} showsVerticalScrollIndicator={false}>
+            {filteredPartColors.map((color) => (
+              <Pressable
+                key={color.color_id}
+                accessibilityRole="button"
+                style={styles.colorRow}
+                onPress={() => handlePartColorPick(color)}
+              >
+                <Text style={styles.colorName}>{color.color_name}</Text>
+                <Text style={styles.colorMeta}>Color #{color.color_id}</Text>
+              </Pressable>
+            ))}
+            {filteredPartColors.length === 0 ? (
+              <Text style={styles.colorEmpty}>No colors match that search.</Text>
+            ) : null}
+          </ScrollView>
+          <View style={styles.candidateActions}>
+            <Pressable
+              accessibilityRole="button"
+              style={styles.candidateSecondary}
+              onPress={() => {
+                setSelectedPart(null);
+                setPartColorQuery("");
+                if (canReturnToDetectionSheet) {
+                  setStatus("detections");
+                } else {
+                  setDetections([]);
+                  setStatus("idle");
+                }
+              }}
+            >
+              <Text style={styles.candidateSecondaryText}>{canReturnToDetectionSheet ? "Back" : "Cancel"}</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              style={styles.candidatePrimary}
+              onPress={() => {
+                setSelectedPart(null);
+                setPartColorQuery("");
+                setStatus("idle");
+              }}
+            >
+              <Text style={styles.candidatePrimaryText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Animated.View>
+      ) : null}
+
       {status === "idle" && errorMessage ? (
         <Animated.View
           accessibilityRole="alert"
@@ -519,7 +889,7 @@ export default function ScanHome() {
         result={status === "result" ? result : null}
         onDismiss={dismissResult}
         onAddToCollection={handleAddToCollection}
-        addedToCollection={!!result && addedSetNumber === result.set_number}
+        addedToCollection={!!result && addedResultKey === getResultKey(result)}
         onViewDetails={() => {
           if (!result) return;
           setLatestLookupResult(result);
@@ -620,6 +990,12 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
   },
+  detectionSheet: {
+    maxHeight: 460,
+  },
+  colorSheet: {
+    maxHeight: 520,
+  },
   candidateTitle: {
     color: "#fff3cf",
     fontSize: 12,
@@ -635,6 +1011,26 @@ const styles = StyleSheet.create({
   candidateList: {
     gap: 8,
   },
+  detectionScroll: {
+    maxHeight: 280,
+  },
+  colorScroll: {
+    maxHeight: 320,
+  },
+  detectionScrollContent: {
+    gap: 12,
+    paddingBottom: 4,
+  },
+  detectionSection: {
+    gap: 8,
+  },
+  detectionSectionTitle: {
+    color: "rgba(247,244,234,0.72)",
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
   candidateRow: {
     minHeight: 56,
     flexDirection: "row",
@@ -646,6 +1042,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.04)",
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  candidateThumb: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  candidateThumbImage: {
+    width: "100%",
+    height: "100%",
   },
   candidateRank: {
     width: 28,
@@ -704,5 +1113,44 @@ const styles = StyleSheet.create({
     color: "#171006",
     fontSize: 12,
     fontWeight: "900",
+  },
+  colorSearch: {
+    minHeight: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    color: "#f7f4ea",
+    paddingHorizontal: 14,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  colorRow: {
+    minHeight: 52,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    justifyContent: "center",
+    gap: 2,
+  },
+  colorName: {
+    color: "#f7f4ea",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  colorMeta: {
+    color: "rgba(247,244,234,0.64)",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  colorEmpty: {
+    color: "rgba(247,244,234,0.64)",
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "center",
+    paddingVertical: 18,
   },
 });

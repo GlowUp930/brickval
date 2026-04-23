@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getEbayMarketData } from "@/lib/ebay";
-import { getBrickLinkMarketData, getMinifigMarketData } from "@/lib/bricklink";
+import { getBrickLinkColors, getBrickLinkMarketData, getMinifigMarketData, getPartMarketData } from "@/lib/bricklink";
 import { getBricksetRrp } from "@/lib/brickset";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
@@ -12,7 +12,7 @@ import type { EbaySale, MinifigInfo, MinifigPricing } from "@/types/market";
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
 
-  let body: { setNumber?: string; mode?: string };
+  let body: { setNumber?: string; mode?: string; colorId?: number | string };
   try {
     body = await req.json();
   } catch {
@@ -26,30 +26,6 @@ export async function POST(req: NextRequest) {
     const figNumber = body.setNumber?.trim().replace(/[^a-z0-9]/gi, "");
     if (!figNumber || figNumber.length < 3) {
       return NextResponse.json({ error: "Invalid figure number" }, { status: 400 });
-    }
-
-    let gate = { allowed: true, scansUsed: 0, isPro: false };
-    if (userId) {
-      try {
-        gate = await checkAndIncrementScan(userId);
-      } catch (err) {
-        console.error("[lookup/minifig] Scan gate error:", err);
-        return NextResponse.json(
-          { error: "internal", message: "Something went wrong. Please try again." },
-          { status: 500 }
-        );
-      }
-
-      if (!gate.allowed) {
-        return NextResponse.json(
-          {
-            error: "paywall",
-            message: "You've used all 5 free scans. Upgrade to Brickvalue Pro to continue.",
-            scansUsed: gate.scansUsed,
-          },
-          { status: 402 }
-        );
-      }
     }
 
     const minifigData = await getMinifigMarketData(figNumber).catch(() => null);
@@ -124,7 +100,105 @@ export async function POST(req: NextRequest) {
       stock_new_details: stockNewDetails,
     };
 
-    return NextResponse.json({ figInfo, pricing, scansUsed: gate.scansUsed, isPro: gate.isPro });
+    return NextResponse.json({ figInfo, pricing });
+  }
+
+  // ── Part mode ─────────────────────────────────────────────────────────────
+  if (mode === "part") {
+    const partNumber = body.setNumber?.trim().replace(/[^a-z0-9]/gi, "").toLowerCase();
+    const colorId = Number(body.colorId);
+
+    if (!partNumber || partNumber.length < 2 || !Number.isFinite(colorId) || colorId < 0) {
+      return NextResponse.json({ error: "Invalid part lookup" }, { status: 400 });
+    }
+
+    const [partData, colors] = await Promise.all([
+      getPartMarketData(partNumber, colorId).catch(() => null),
+      getBrickLinkColors().catch(() => []),
+    ]);
+
+    if (!partData?.item && !partData?.sold_used && !partData?.stock_used && !partData?.sold_new && !partData?.stock_new) {
+      return NextResponse.json(
+        { error: "not_found", message: "We don't have data for this part. Try a different match." },
+        { status: 404 }
+      );
+    }
+
+    const color = colors.find((entry) => entry.color_id === colorId) ?? null;
+    const item = partData.item;
+    const partInfo = {
+      name: item?.name ?? `Part ${partNumber}`,
+      image_url: item?.image_url ?? item?.thumbnail_url ?? null,
+      part_number: partNumber,
+      year_released: item?.year_released ?? null,
+      color_id: colorId,
+      color_name: color?.color_name ?? null,
+    };
+
+    const soldUsed = partData.sold_used;
+    const stockUsed = partData.stock_used;
+    const soldNew = partData.sold_new;
+    const stockNew = partData.stock_new;
+
+    const soldDetails = sortByMostRecentDate((soldNew?.price_detail ?? []).map((d) => ({
+      price_usd: parseFloat(d.unit_price),
+      quantity: d.quantity,
+      date: d.date_ordered,
+      country: d.seller_country_code,
+    })));
+    const soldUsedDetails = sortByMostRecentDate((soldUsed?.price_detail ?? []).map((d) => ({
+      price_usd: parseFloat(d.unit_price),
+      quantity: d.quantity,
+      date: d.date_ordered,
+      country: d.seller_country_code,
+    })));
+    const stockDetails = (stockNew?.price_detail ?? []).map((d) => ({
+      price_usd: parseFloat(d.unit_price),
+      quantity: d.quantity,
+      country: d.seller_country_code,
+    }));
+    const stockUsedDetails = (stockUsed?.price_detail ?? []).map((d) => ({
+      price_usd: parseFloat(d.unit_price),
+      quantity: d.quantity,
+      country: d.seller_country_code,
+    }));
+
+    const newSoldAvg = soldNew?.qty_avg_price ? (parseFloat(soldNew.qty_avg_price) || null) : null;
+    const newStockAvg = stockNew?.qty_avg_price ? (parseFloat(stockNew.qty_avg_price) || null) : null;
+    const usedSoldAvg = soldUsed?.qty_avg_price ? (parseFloat(soldUsed.qty_avg_price) || null) : null;
+    const usedStockAvg = stockUsed?.qty_avg_price ? (parseFloat(stockUsed.qty_avg_price) || null) : null;
+
+    return NextResponse.json({
+      partInfo,
+      pricing: {
+        hero_new_avg_usd: newSoldAvg ?? newStockAvg ?? null,
+        rrp_usd: null,
+        gain_pct: null,
+        bricklink_new_qty: soldNew?.unit_quantity ?? stockNew?.unit_quantity ?? null,
+        data_source:
+          newSoldAvg !== null || usedSoldAvg !== null
+            ? "sold"
+            : newStockAvg !== null || usedStockAvg !== null
+              ? "listing"
+              : null,
+        new_sold_avg_usd: newSoldAvg,
+        new_sold_min_usd: soldNew?.min_price ? (parseFloat(soldNew.min_price) || null) : null,
+        new_sold_max_usd: soldNew?.max_price ? (parseFloat(soldNew.max_price) || null) : null,
+        new_sold_qty: soldNew?.unit_quantity ?? null,
+        new_stock_avg_usd: newStockAvg,
+        new_stock_qty: stockNew?.unit_quantity ?? null,
+        used_sold_avg_usd: usedSoldAvg,
+        used_sold_min_usd: soldUsed?.min_price ? (parseFloat(soldUsed.min_price) || null) : null,
+        used_sold_max_usd: soldUsed?.max_price ? (parseFloat(soldUsed.max_price) || null) : null,
+        used_sold_qty: soldUsed?.unit_quantity ?? null,
+        used_stock_avg_usd: usedStockAvg,
+        used_stock_qty: stockUsed?.unit_quantity ?? null,
+        sold_details: soldDetails,
+        stock_details: stockDetails,
+        sold_used_details: soldUsedDetails,
+        stock_used_details: stockUsedDetails,
+      },
+    });
   }
 
   // ── Set mode ──────────────────────────────────────────────────────────────

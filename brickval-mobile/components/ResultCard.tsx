@@ -158,14 +158,15 @@ export function ResultCard({
   if (!result) return null;
 
   const { pricing } = result;
-  const itemLabel = result.item_type === "minifig" ? "Minifig" : "Set";
+  const itemLabel = result.item_type === "part" ? "Part" : result.item_type === "minifig" ? "Minifig" : "Set";
   const gain = pricing.gain_pct;
+  const partColor = result.item_type === "part" ? result.part_info.color_name ?? "Color required" : null;
   const selectedUnitValue = getConditionMarketValueUsd(result, condition);
   const sourceText =
     pricing.data_source === "sold"
       ? `Sold data${pricing.bricklink_new_qty ? ` · ${pricing.bricklink_new_qty} BrickLink sales` : ""}`
       : pricing.data_source === "listing"
-        ? "Active listing data"
+        ? "Bricklink"
         : "Market source unavailable";
   const confidenceText = pricing.data_source === "sold" ? "Higher confidence" : "Use as a guide";
   const deltaText =
@@ -173,7 +174,9 @@ export function ResultCard({
       ? `${gain >= 0 ? "+" : ""}${gain.toFixed(0)}%`
       : "Not enough data";
   const rrpText =
-    pricing.rrp_usd !== null && pricing.rrp_usd !== undefined
+    result.item_type === "part"
+      ? "Retail estimate not used for parts"
+      : pricing.rrp_usd !== null && pricing.rrp_usd !== undefined
       ? `Retail estimate: ~${Math.round(pricing.rrp_usd).toLocaleString()}`
       : result.item_type === "minifig"
         ? "Retail estimate not used for minifigures"
@@ -244,7 +247,10 @@ export function ResultCard({
                   {result.theme}
                   {result.pieces ? ` · ${result.pieces.toLocaleString()} pieces` : ""}
                 </Text>
-                <Text style={styles.setNo}>{itemLabel} #{result.set_number}</Text>
+                <Text style={styles.setNo}>
+                  {itemLabel} #{result.set_number}
+                  {partColor ? ` · ${partColor}` : ""}
+                </Text>
               </View>
             </View>
 
@@ -254,24 +260,30 @@ export function ResultCard({
                 <Text style={styles.signalValue} numberOfLines={2}>{sourceText}</Text>
               </View>
               <View style={styles.signalItem}>
-                <Text style={styles.signalLabel}>Retail comparison</Text>
-                <Text
-                  style={[
-                    styles.signalValue,
-                    gain === null || gain === undefined
-                      ? styles.signalMuted
+                <Text style={styles.signalLabel}>{result.item_type === "part" ? "Color" : "Retail comparison"}</Text>
+                {result.item_type === "part" ? (
+                  <Text style={styles.signalValue} numberOfLines={2}>
+                    {partColor ?? "Color unknown"}
+                  </Text>
+                ) : (
+                  <Text
+                    style={[
+                      styles.signalValue,
+                      gain === null || gain === undefined
+                        ? styles.signalMuted
+                        : gain >= 0
+                          ? { color: ACCENT }
+                          : { color: "#ff8f8f" },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {gain === null || gain === undefined
+                      ? deltaText
                       : gain >= 0
-                        ? { color: ACCENT }
-                        : { color: "#ff8f8f" },
-                  ]}
-                  numberOfLines={2}
-                >
-                  {gain === null || gain === undefined
-                    ? deltaText
-                    : gain >= 0
-                      ? `${Math.round(gain)}% higher than retail`
-                      : `${Math.round(Math.abs(gain))}% below retail`}
-                </Text>
+                        ? `${Math.round(gain)}% higher than retail`
+                        : `${Math.round(Math.abs(gain))}% below retail`}
+                  </Text>
+                )}
               </View>
             </View>
 

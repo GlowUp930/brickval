@@ -71,6 +71,7 @@ export default function SettingsScreen() {
   const totalValue = getCollectionValue(items);
   const setCount = items.reduce((total, item) => total + (item.item_type === "set" ? item.quantity ?? 1 : 0), 0);
   const minifigureCount = items.reduce((total, item) => total + (item.item_type === "minifig" ? item.quantity ?? 1 : 0), 0);
+  const partCount = items.reduce((total, item) => total + (item.item_type === "part" ? item.quantity ?? 1 : 0), 0);
   const selectedAvatar = getAvatarOption(avatar);
 
   const openAccount = () => {
@@ -137,7 +138,7 @@ export default function SettingsScreen() {
         <View style={styles.header}>
           <Text style={styles.eyebrow}>Settings</Text>
           <Text style={styles.title}>Account vault</Text>
-          <Text style={styles.body}>Manage your BrickVal account, Pro access, and the collection saved on this device.</Text>
+          <Text style={styles.body}>Manage your BrickVal account, Pro access, and the collection of sets, minifigures, and parts saved on this device.</Text>
         </View>
 
         <View style={styles.passportCard}>
@@ -230,11 +231,16 @@ export default function SettingsScreen() {
               <Text style={styles.localLabel}>Sets</Text>
             </View>
             <View style={styles.localDivider} />
-            <View style={styles.localMetric}>
-              <Text style={styles.localValue}>{minifigureCount}</Text>
-              <Text style={styles.localLabel}>Minifigs</Text>
-            </View>
+          <View style={styles.localMetric}>
+            <Text style={styles.localValue}>{minifigureCount}</Text>
+            <Text style={styles.localLabel}>Minifigs</Text>
           </View>
+          <View style={styles.localDivider} />
+          <View style={styles.localMetric}>
+            <Text style={styles.localValue}>{partCount}</Text>
+            <Text style={styles.localLabel}>Parts</Text>
+          </View>
+        </View>
           <SettingsRow
             code="CLR"
             title="Clear local collection"

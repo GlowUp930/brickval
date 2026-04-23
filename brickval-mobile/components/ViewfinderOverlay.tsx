@@ -92,11 +92,11 @@ export function ViewfinderOverlay({ pulse, scanning, mode, onModeChange, showMod
             <Pressable
               accessibilityRole="button"
               accessibilityState={{ selected: mode === "minifig" }}
-              accessibilityLabel="Scan minifigure"
+              accessibilityLabel="Scan minifigures and parts"
               style={[styles.modePill, mode === "minifig" && { backgroundColor: MINIFIG_ACCENT }]}
               onPress={() => onModeChange("minifig")}
             >
-              <Text style={[styles.modeText, mode === "minifig" && styles.modeTextActive]}>Minifigure</Text>
+              <Text style={[styles.modeText, mode === "minifig" && styles.modeTextActive]}>Minifigs & Parts</Text>
             </Pressable>
           </View>
         ) : null}
@@ -138,7 +138,7 @@ export function ViewfinderOverlay({ pulse, scanning, mode, onModeChange, showMod
       {/* Hint */}
       <Animated.View pointerEvents="none" style={[styles.hintWrap, { opacity: hint }]}>
         <Text style={styles.hint}>
-          {mode === "minifig" ? "Center the minifigure, then tap capture." : "Align the box, then tap capture."}
+          {mode === "minifig" ? "Center minifigures or parts, then tap capture." : "Align the box, then tap capture."}
         </Text>
       </Animated.View>
     </View>
@@ -206,9 +206,8 @@ const styles = StyleSheet.create({
   },
   modeText: {
     color: "rgba(247,244,234,0.68)",
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "900",
-    textTransform: "uppercase",
   },
   modeTextActive: { color: "#101012" },
   cornerWrap: {

@@ -1,4 +1,17 @@
 import { getClerkAuthToken } from "./clerk";
+import { normalizeImageUrl } from "./image-url";
+import { normalizeIdentificationDetections } from "./identify-response";
+import {
+  getConditionMarketHistory,
+  getConditionMarketValueUsd,
+  normalizeHistoryDate,
+  type LookupMarketHistoryPoint,
+} from "./lookup-market";
+export {
+  getConditionMarketHistory,
+  getConditionMarketValueUsd,
+  normalizeHistoryDate,
+} from "./lookup-market";
 
 /**
  * Thin client for the Brickvalue.live REST API.
@@ -20,6 +33,7 @@ async function authHeader(): Promise<Record<string, string>> {
  * POST a captured photo to /api/identify and get back a set number.
  */
 export type ScanMode = "set" | "minifig";
+export type LookupItemType = ScanMode | "part";
 export type LookupDataSource = "sold" | "listing" | null;
 
 export interface IdentificationCandidate {
@@ -27,10 +41,22 @@ export interface IdentificationCandidate {
   score: number;
 }
 
+export interface IdentificationDetection {
+  id: string;
+  item_type: "minifig" | "part";
+  score: number;
+}
+
+export interface PartColorOption {
+  color_id: number;
+  color_name: string;
+}
+
 export interface IdentificationResult {
   set_number: string | null;
   confidence: number | null;
   candidates: IdentificationCandidate[];
+  detections: IdentificationDetection[];
 }
 
 export async function identifySet(photoUri: string, mode: ScanMode = "set"): Promise<IdentificationResult> {
@@ -52,11 +78,13 @@ export async function identifySet(photoUri: string, mode: ScanMode = "set"): Pro
     set_number: string | null;
     confidence?: number | null;
     candidates?: IdentificationCandidate[];
+    detections?: IdentificationDetection[];
   };
   return {
     set_number: data.set_number ?? null,
     confidence: typeof data.confidence === "number" ? data.confidence : null,
     candidates: (data.candidates ?? []).slice(0, 4),
+    detections: normalizeIdentificationDetections(mode, data),
   };
 }
 
@@ -64,19 +92,38 @@ export async function identifySet(photoUri: string, mode: ScanMode = "set"): Pro
  * Look up market data for a set number. Returns the same shape the web
  * /result page consumes (ComputedPricing).
  */
-export async function lookupSet(setNumber: string, mode: ScanMode = "set"): Promise<LookupDetailResult> {
+export async function lookupSet(
+  setNumber: string,
+  mode: LookupItemType = "set",
+  options?: { colorId?: number }
+): Promise<LookupDetailResult> {
   const res = await fetch(`${API_BASE}/api/lookup`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...(await authHeader()),
     },
-    body: JSON.stringify({ setNumber, mode }),
+    body: JSON.stringify({ setNumber, mode, colorId: options?.colorId ?? null }),
   });
 
   if (!res.ok) throw new Error(`lookup failed: ${res.status}`);
   const data = await res.json();
-  return mode === "minifig" ? normalizeMinifigResult(data) : normalizeSetResult(data);
+  if (mode === "minifig") return normalizeMinifigResult(data);
+  if (mode === "part") return normalizePartResult(data);
+  return normalizeSetResult(data);
+}
+
+export async function fetchPartColors(): Promise<PartColorOption[]> {
+  const res = await fetch(`${API_BASE}/api/part-colors`, {
+    method: "GET",
+    headers: { ...(await authHeader()) },
+  });
+
+  if (!res.ok) throw new Error(`part-colors failed: ${res.status}`);
+  const data = (await res.json()) as { colors?: PartColorOption[] };
+  return (data.colors ?? []).filter(
+    (color) => Number.isFinite(color.color_id) && typeof color.color_name === "string" && color.color_name.trim().length > 0
+  );
 }
 
 export interface LookupSummaryPricing {
@@ -89,7 +136,7 @@ export interface LookupSummaryPricing {
 
 export interface LookupSummaryResult {
   set_number: string;
-  item_type: ScanMode;
+  item_type: LookupItemType;
   name: string;
   theme: string;
   pieces: number | null;
@@ -98,82 +145,7 @@ export interface LookupSummaryResult {
   pricing: LookupSummaryPricing;
 }
 
-export interface MarketHistoryPoint {
-  date: string;
-  price_usd: number;
-  source: "bricklink" | "ebay";
-}
-
-export function normalizeHistoryDate(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
-
-  const parsed = new Date(trimmed);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toISOString().slice(0, 10);
-}
-
-export function getConditionMarketValueUsd(
-  result: LookupDetailResult,
-  condition: "new_sealed" | "used"
-): number | null {
-  if (result.item_type === "minifig") {
-    return condition === "used"
-      ? result.pricing.used_sold_avg_usd ?? result.pricing.used_stock_avg_usd ?? null
-      : result.pricing.new_sold_avg_usd ?? result.pricing.new_stock_avg_usd ?? null;
-  }
-
-  return condition === "used"
-    ? result.pricing.bricklink_used_avg_usd ??
-        result.pricing.ebay_used_avg_usd ??
-        result.pricing.bricklink_stock_used_avg_usd ??
-        null
-    : result.pricing.bricklink_new_avg_usd ??
-        result.pricing.ebay_new_avg_usd ??
-        result.pricing.bricklink_stock_new_avg_usd ??
-        null;
-}
-
-export function getConditionMarketHistory(
-  result: LookupDetailResult,
-  condition: "new_sealed" | "used"
-): MarketHistoryPoint[] {
-  if (result.item_type === "minifig") {
-    const rows = condition === "used" ? result.pricing.sold_details : result.pricing.sold_new_details;
-    return cleanHistory(
-      rows.map((row) => ({
-        date: row.date ?? "",
-        price_usd: row.price_usd,
-        source: "bricklink" as const,
-      }))
-    );
-  }
-
-  const bricklinkRows =
-    condition === "used" ? result.pricing.bricklink_sold_used_details : result.pricing.bricklink_sold_new_details;
-  const ebayRows = condition === "used" ? result.pricing.ebay_used_sales : result.pricing.ebay_new_sales;
-
-  return cleanHistory([
-    ...bricklinkRows.map((row) => ({
-      date: row.date ?? "",
-      price_usd: row.price_usd,
-      source: "bricklink" as const,
-    })),
-    ...ebayRows.map((row) => ({
-      date: row.sold_date ?? "",
-      price_usd: row.price_usd,
-      source: "ebay" as const,
-    })),
-  ]);
-}
-
-function normalizeImageUrl(value: string | null | undefined): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
+export type MarketHistoryPoint = LookupMarketHistoryPoint;
 
 export interface BrickLinkDetail {
   price_usd: number;
@@ -251,7 +223,37 @@ export interface MinifigLookupDetailResult extends Omit<LookupSummaryResult, "it
   pricing: MinifigDetailPricing;
 }
 
-export type LookupDetailResult = SetLookupDetailResult | MinifigLookupDetailResult;
+export interface PartDetailPricing extends LookupSummaryPricing {
+  used_sold_avg_usd: number | null;
+  used_sold_min_usd: number | null;
+  used_sold_max_usd: number | null;
+  used_sold_qty: number | null;
+  used_stock_avg_usd: number | null;
+  used_stock_qty: number | null;
+  new_sold_avg_usd: number | null;
+  new_sold_min_usd: number | null;
+  new_sold_max_usd: number | null;
+  new_sold_qty: number | null;
+  new_stock_avg_usd: number | null;
+  new_stock_qty: number | null;
+  sold_details: BrickLinkDetail[];
+  stock_details: BrickLinkDetail[];
+  sold_used_details: BrickLinkDetail[];
+  stock_used_details: BrickLinkDetail[];
+}
+
+export interface PartLookupDetailResult extends Omit<LookupSummaryResult, "item_type" | "pricing"> {
+  item_type: "part";
+  part_info: {
+    part_number: string;
+    year_released: number | null;
+    color_id: number | null;
+    color_name: string | null;
+  };
+  pricing: PartDetailPricing;
+}
+
+export type LookupDetailResult = SetLookupDetailResult | MinifigLookupDetailResult | PartLookupDetailResult;
 
 interface MinifigLookupResponse {
   figInfo: {
@@ -277,6 +279,40 @@ interface MinifigLookupResponse {
     stock_details?: BrickLinkDetail[];
     sold_new_details?: BrickLinkDetail[];
     stock_new_details?: BrickLinkDetail[];
+  };
+}
+
+interface PartLookupResponse {
+  partInfo: {
+    name: string;
+    image_url: string | null;
+    part_number: string;
+    year_released: number | null;
+    color_id: number | null;
+    color_name: string | null;
+  };
+  pricing: {
+    hero_new_avg_usd: number | null;
+    rrp_usd: number | null;
+    gain_pct: number | null;
+    bricklink_new_qty: number | null;
+    data_source: LookupDataSource;
+    used_sold_avg_usd: number | null;
+    used_sold_min_usd?: number | null;
+    used_sold_max_usd?: number | null;
+    used_sold_qty: number | null;
+    used_stock_avg_usd: number | null;
+    used_stock_qty: number | null;
+    new_sold_avg_usd: number | null;
+    new_sold_min_usd?: number | null;
+    new_sold_max_usd?: number | null;
+    new_sold_qty: number | null;
+    new_stock_avg_usd: number | null;
+    new_stock_qty: number | null;
+    sold_details?: BrickLinkDetail[];
+    stock_details?: BrickLinkDetail[];
+    sold_used_details?: BrickLinkDetail[];
+    stock_used_details?: BrickLinkDetail[];
   };
 }
 
@@ -324,6 +360,21 @@ function getMinifigMarketHistory(pricing: MinifigLookupResponse["pricing"]): Mar
     price_usd: row.price_usd,
     source: "bricklink",
   })));
+}
+
+function getPartMarketHistory(pricing: PartLookupResponse["pricing"]): MarketHistoryPoint[] {
+  return cleanHistory([
+    ...(pricing.sold_details ?? []).map((row) => ({
+      date: row.date ?? "",
+      price_usd: row.price_usd,
+      source: "bricklink" as const,
+    })),
+    ...(pricing.sold_used_details ?? []).map((row) => ({
+      date: row.date ?? "",
+      price_usd: row.price_usd,
+      source: "bricklink" as const,
+    })),
+  ]);
 }
 
 function normalizeSetResult(data: any): SetLookupDetailResult {
@@ -428,6 +479,60 @@ function normalizeMinifigResult(data: MinifigLookupResponse): MinifigLookupDetai
       stock_details: data.pricing.stock_details ?? [],
       sold_new_details: data.pricing.sold_new_details ?? [],
       stock_new_details: data.pricing.stock_new_details ?? [],
+    },
+  };
+}
+
+function normalizePartResult(data: PartLookupResponse): PartLookupDetailResult {
+  const soldAverage = data.pricing.new_sold_avg_usd ?? data.pricing.used_sold_avg_usd;
+  const stockAverage = data.pricing.new_stock_avg_usd ?? data.pricing.used_stock_avg_usd;
+  const soldQty = data.pricing.new_sold_qty ?? data.pricing.used_sold_qty;
+  const stockQty = data.pricing.new_stock_qty ?? data.pricing.used_stock_qty;
+  const summaryPricing: LookupSummaryPricing = {
+    hero_new_avg_usd: soldAverage ?? stockAverage ?? null,
+    rrp_usd: null,
+    gain_pct: null,
+    bricklink_new_qty: soldQty ?? stockQty ?? null,
+    data_source:
+      soldAverage !== null && soldAverage !== undefined
+        ? "sold"
+        : stockAverage !== null && stockAverage !== undefined
+          ? "listing"
+          : null,
+  };
+
+  return {
+    set_number: data.partInfo.part_number,
+    item_type: "part",
+    name: data.partInfo.name,
+    theme: data.partInfo.color_name ? `Part · ${data.partInfo.color_name}` : "Part",
+    pieces: null,
+    image_url: normalizeImageUrl(data.partInfo.image_url),
+    market_history: getPartMarketHistory(data.pricing),
+    part_info: {
+      part_number: data.partInfo.part_number,
+      year_released: data.partInfo.year_released,
+      color_id: data.partInfo.color_id,
+      color_name: data.partInfo.color_name,
+    },
+    pricing: {
+      ...summaryPricing,
+      used_sold_avg_usd: data.pricing.used_sold_avg_usd,
+      used_sold_min_usd: data.pricing.used_sold_min_usd ?? null,
+      used_sold_max_usd: data.pricing.used_sold_max_usd ?? null,
+      used_sold_qty: data.pricing.used_sold_qty,
+      used_stock_avg_usd: data.pricing.used_stock_avg_usd,
+      used_stock_qty: data.pricing.used_stock_qty,
+      new_sold_avg_usd: data.pricing.new_sold_avg_usd,
+      new_sold_min_usd: data.pricing.new_sold_min_usd ?? null,
+      new_sold_max_usd: data.pricing.new_sold_max_usd ?? null,
+      new_sold_qty: data.pricing.new_sold_qty,
+      new_stock_avg_usd: data.pricing.new_stock_avg_usd,
+      new_stock_qty: data.pricing.new_stock_qty,
+      sold_details: data.pricing.sold_details ?? [],
+      stock_details: data.pricing.stock_details ?? [],
+      sold_used_details: data.pricing.sold_used_details ?? [],
+      stock_used_details: data.pricing.stock_used_details ?? [],
     },
   };
 }
