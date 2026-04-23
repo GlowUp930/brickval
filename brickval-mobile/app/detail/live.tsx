@@ -11,7 +11,7 @@ import {
   useWindowDimensions,
   type GestureResponderEvent,
 } from "react-native";
-import Svg, { Circle, Defs, LinearGradient, Path, Stop } from "react-native-svg";
+import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import { normalizeHistoryDate, type BrickLinkDetail, type EbaySale, type LookupDetailResult } from "../../lib/api";
 import { getLatestLookupResult } from "../../lib/live-result";
 import { QuestionMarkPlaceholder } from "../../components/QuestionMarkPlaceholder";
@@ -200,10 +200,17 @@ export default function LiveDetailScreen() {
     ? `${chartLinePath} L ${lastPoint.x} ${chartBottom} L ${firstPoint.x} ${chartBottom} Z`
     : "";
   const chartStep = chartPoints.length > 1 ? chartWidth / (chartPoints.length - 1) : chartWidth;
-  const timelinePoints = chartPoints.filter((point, index) => {
+  const uniqueTimelinePoints = chartPoints.filter((point, index) => {
     if (index === 0) return true;
     return normalizeHistoryDate(point.date) !== normalizeHistoryDate(chartPoints[index - 1].date);
   });
+  const timelinePoints = uniqueTimelinePoints.length <= 3
+    ? uniqueTimelinePoints
+    : [
+        uniqueTimelinePoints[0],
+        uniqueTimelinePoints[Math.floor((uniqueTimelinePoints.length - 1) / 2)],
+        uniqueTimelinePoints[uniqueTimelinePoints.length - 1],
+      ];
   const selectedHistoryPoint = selectedHistoryIndex === null ? null : chartPoints[selectedHistoryIndex] ?? null;
   const selectedX = selectedHistoryPoint?.x ?? 0;
   const popupWidth = 132;
@@ -337,31 +344,26 @@ export default function LiveDetailScreen() {
                   <Text style={styles.chartPopupLabel}>{formatTimelineLabel(selectedHistoryPoint.date)}</Text>
                   <Text style={styles.chartPopupValue}>{USD_DECIMAL.format(selectedHistoryPoint.price_usd)}</Text>
                 </Animated.View>
+                <View
+                  style={[
+                    styles.selectedPoint,
+                    {
+                      left: selectedX - 4,
+                      top: selectedHistoryPoint.y >= 4 ? selectedHistoryPoint.y - 4 : selectedHistoryPoint.y,
+                    },
+                  ]}
+                />
               </>
             ) : null}
             <Svg width={chartWidth} height={chartHeight} style={StyleSheet.absoluteFill}>
               <Defs>
                 <LinearGradient id="detailFill" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={ACCENT} stopOpacity="0.22" />
+                  <Stop offset="0" stopColor={ACCENT} stopOpacity="0.08" />
                   <Stop offset="1" stopColor={ACCENT} stopOpacity="0" />
                 </LinearGradient>
               </Defs>
               {chartAreaPath ? <Path d={chartAreaPath} fill="url(#detailFill)" /> : null}
-              {chartLinePath ? <Path d={chartLinePath} fill="none" stroke={ACCENT} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" /> : null}
-              {chartPoints.map((point, index) => {
-                const selected = selectedHistoryIndex === index;
-                return (
-                  <Circle
-                    key={`${point.date}-${point.price_usd}`}
-                    cx={point.x}
-                    cy={point.y}
-                    r={selected ? 5 : 3.4}
-                    fill={selected ? INK : ACCENT}
-                    stroke={selected ? ACCENT : PANEL}
-                    strokeWidth={selected ? 2 : 1.4}
-                  />
-                );
-              })}
+              {chartLinePath ? <Path d={chartLinePath} fill="none" stroke={ACCENT} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /> : null}
             </Svg>
           </View>
             <View style={styles.timeline}>
@@ -466,56 +468,54 @@ const styles = StyleSheet.create({
   statLabel: { color: SOFT, fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
   statValue: { color: INK, fontSize: 13, fontWeight: "800" },
   chartCard: {
-    borderRadius: 8,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: LINE,
-    backgroundColor: PANEL,
+    backgroundColor: "rgba(255,255,255,0.015)",
     padding: 16,
     gap: 14,
   },
   chartHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  chartTitle: { color: INK, fontSize: 16, fontWeight: "900" },
+  chartTitle: { color: INK, fontSize: 15, fontWeight: "900", letterSpacing: -0.2 },
   chartMeta: { color: SOFT, fontSize: 12, fontWeight: "700" },
-  chartWrap: { alignSelf: "center", overflow: "hidden" },
-  gridLineTop: { position: "absolute", left: 0, right: 0, top: 18, borderTopWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
-  gridLineMid: { position: "absolute", left: 0, right: 0, top: 92, borderTopWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
-  gridLineBottom: { position: "absolute", left: 0, right: 0, bottom: 26, borderTopWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
+  chartWrap: { alignSelf: "center", overflow: "hidden", position: "relative" },
+  gridLineTop: { position: "absolute", left: 0, right: 0, top: 24, borderTopWidth: 1, borderColor: "rgba(255,255,255,0.04)" },
+  gridLineMid: { position: "absolute", left: 0, right: 0, top: 104, borderTopWidth: 1, borderColor: "rgba(255,255,255,0.05)" },
+  gridLineBottom: { position: "absolute", left: 0, right: 0, bottom: 24, borderTopWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
   chartCursor: {
     position: "absolute",
     top: 20,
     bottom: 20,
     width: 1,
-    backgroundColor: "rgba(247,244,234,0.38)",
+    backgroundColor: "rgba(255,255,255,0.28)",
     zIndex: 2,
   },
   chartPopup: {
     position: "absolute",
     zIndex: 4,
-    width: 132,
-    borderRadius: 18,
-    backgroundColor: INK,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    width: 124,
+    borderRadius: 14,
+    backgroundColor: "rgba(7,9,8,0.94)",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.24,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
   },
   chartPopupLabel: {
-    color: "#253129",
+    color: SOFT,
     fontSize: 9,
     fontWeight: "900",
     textTransform: "uppercase",
   },
   chartPopupValue: {
-    color: "#07100c",
-    fontSize: 16,
+    color: INK,
+    fontSize: 15,
     fontWeight: "900",
     marginTop: 2,
   },
-  timeline: { flexDirection: "row", justifyContent: "space-between", marginTop: -6, paddingHorizontal: 2 },
-  timelineLabel: { flex: 1, color: SOFT, fontSize: 9, fontWeight: "900", textAlign: "center" },
+  timeline: { flexDirection: "row", justifyContent: "space-between", marginTop: -4, paddingHorizontal: 2 },
+  timelineLabel: { flex: 1, color: MUTED, fontSize: 8, fontWeight: "900", textAlign: "center", letterSpacing: 0.2 },
   marketCard: {
     borderRadius: 8,
     borderWidth: 1,
@@ -564,4 +564,14 @@ const styles = StyleSheet.create({
   },
   collectorLabel: { color: SOFT, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
   collectorValue: { color: INK, fontSize: 13, fontWeight: "800", lineHeight: 17 },
+  selectedPoint: {
+    position: "absolute",
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: ACCENT,
+    borderWidth: 2,
+    borderColor: "#0b0f0d",
+    zIndex: 3,
+  },
 });

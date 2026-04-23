@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Easing,
+  AccessibilityInfo,
   View,
   Text,
   StyleSheet,
@@ -11,7 +13,7 @@ import {
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { router, useFocusEffect } from "expo-router";
-import Svg, { Circle, Defs, LinearGradient, Path, Stop } from "react-native-svg";
+import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import {
   CollectionItem,
   getCollection,
@@ -20,6 +22,7 @@ import {
   removeFromCollection,
 } from "../../lib/collection";
 import { CollectionSwipeRow } from "../../components/CollectionSwipeRow";
+import { buildChartAreaPath, interpolateChartLine, sampleChartLine } from "../../lib/chart-motion";
 
 const ACCENT = "#62c79a";
 const INK = "#f7f4ea";
@@ -87,6 +90,30 @@ function getSmoothPath(points: { x: number; y: number }[]) {
   }, "");
 }
 
+function buildChartCoordinates(
+  history: { date: string; total_value_usd: number }[],
+  chartWidth: number,
+  chartHeight: number,
+  chartBottom: number,
+  chartPlotHeight: number
+) {
+  const historyValues = history.map((point) => point.total_value_usd);
+  const minHistoryValue = historyValues.length ? Math.min(...historyValues) : 0;
+  const maxHistoryValue = historyValues.length ? Math.max(...historyValues) : 0;
+  const historyRange = Math.max(maxHistoryValue - minHistoryValue, 1);
+  const hasHistoryMovement = historyValues.some((value) => value !== minHistoryValue);
+  const chartStep = history.length > 1 ? chartWidth / (history.length - 1) : chartWidth;
+  const chartPoints = history.map((point, index) => {
+    const x = history.length > 1 ? index * chartStep : chartWidth / 2;
+    const y = hasHistoryMovement
+      ? chartBottom - ((point.total_value_usd - minHistoryValue) / historyRange) * chartPlotHeight
+      : chartHeight / 2;
+    return { ...point, x, y };
+  });
+
+  return { chartPoints, minHistoryValue, maxHistoryValue, historyRange, hasHistoryMovement };
+}
+
 type HistoryBucket = { date: Date; label: string; total_value_usd: number };
 
 function getHistoricalCollectionSeries(items: CollectionItem[], horizon: Horizon): {
@@ -123,10 +150,28 @@ export default function HomeDashboard() {
   const { width: screenWidth } = useWindowDimensions();
   const [items, setItems] = useState<CollectionItem[]>([]);
   const [horizon, setHorizon] = useState<Horizon>("6M");
+  const [chartHorizon, setChartHorizon] = useState<Horizon>("6M");
   const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<number | null>(null);
   const [showHistoryTip, setShowHistoryTip] = useState(false);
+  const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
   const popupProgress = useRef(new Animated.Value(0)).current;
   const historyTipProgress = useRef(new Animated.Value(0)).current;
+  const morphRafRef = useRef<number | null>(null);
+  const currentMorphShapeRef = useRef<{ x: number; y: number }[]>([]);
+  const morphLineRef = useRef<any>(null);
+  const morphFillRef = useRef<any>(null);
+
+  useEffect(() => {
+    let active = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((value) => {
+      if (active) setReduceMotionEnabled(value);
+    });
+    const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduceMotionEnabled);
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -148,12 +193,7 @@ export default function HomeDashboard() {
   const minifigureCount = items.reduce((total, item) => total + (item.item_type === "minifig" ? item.quantity ?? 1 : 0), 0);
   const partCount = items.reduce((total, item) => total + (item.item_type === "part" ? item.quantity ?? 1 : 0), 0);
   const topItems = [...items].sort((a, b) => getItemTotalValue(b) - getItemTotalValue(a));
-  const displayHistory = getHistoricalCollectionSeries(items, horizon);
-  const historyValues = displayHistory.map((point) => point.total_value_usd);
-  const minHistoryValue = historyValues.length ? Math.min(...historyValues) : 0;
-  const maxHistoryValue = historyValues.length ? Math.max(...historyValues) : 0;
-  const historyRange = Math.max(maxHistoryValue - minHistoryValue, 1);
-  const hasHistoryMovement = historyValues.some((value) => value !== minHistoryValue);
+  const displayHistory = getHistoricalCollectionSeries(items, chartHorizon);
   const firstHistoryValue = displayHistory[0]?.total_value_usd ?? 0;
   const historyDelta = firstHistoryValue > 0 ? ((totalValue - firstHistoryValue) / firstHistoryValue) * 100 : null;
   const topSet = topItems[0];
@@ -166,21 +206,14 @@ export default function HomeDashboard() {
   const chartBottom = chartHeight - 26;
   const chartStep = chartPoints.length > 1 ? chartWidth / (chartPoints.length - 1) : chartWidth;
   const selectedHistoryPoint = selectedHistoryIndex === null ? null : chartPoints[selectedHistoryIndex] ?? null;
-  const chartCoordinates = chartPoints.map((point, index) => {
-    const x = chartPoints.length > 1 ? index * chartStep : chartWidth / 2;
-    const y = hasHistoryMovement
-      ? chartBottom - ((point.total_value_usd - minHistoryValue) / historyRange) * chartPlotHeight
-      : chartHeight / 2;
-    return { ...point, x, y };
-  });
-  const safeChartCoordinates = chartCoordinates.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
-  const chartLinePath = getSmoothPath(safeChartCoordinates);
-  const firstCoordinate = safeChartCoordinates[0];
-  const lastCoordinate = safeChartCoordinates[safeChartCoordinates.length - 1];
-  const chartAreaPath = chartLinePath && firstCoordinate && lastCoordinate
-    ? `${chartLinePath} L ${lastCoordinate.x} ${chartBottom} L ${firstCoordinate.x} ${chartBottom} Z`
-    : "";
-  const selectedCoordinate = selectedHistoryIndex === null ? null : chartCoordinates[selectedHistoryIndex] ?? null;
+  const baseChartCoordinates = buildChartCoordinates(displayHistory.slice(-14), chartWidth, chartHeight, chartBottom, chartPlotHeight);
+  const activeChartCoordinates = sampleChartLine(baseChartCoordinates.chartPoints, chartWidth);
+  const timelinePoints = chartPoints.length <= 3
+    ? chartPoints
+    : [chartPoints[0], chartPoints[Math.floor((chartPoints.length - 1) / 2)], chartPoints[chartPoints.length - 1]];
+  const chartLinePath = getSmoothPath(activeChartCoordinates);
+  const chartAreaPath = buildChartAreaPath(activeChartCoordinates, chartBottom);
+  const selectedCoordinate = selectedHistoryIndex === null ? null : baseChartCoordinates.chartPoints[selectedHistoryIndex] ?? null;
   const selectedX = selectedCoordinate?.x ?? 0;
   const popupWidth = 132;
   const popupLeft = selectedCoordinate ? Math.max(4, Math.min(chartWidth - popupWidth - 4, selectedCoordinate.x - popupWidth / 2)) : 0;
@@ -192,8 +225,46 @@ export default function HomeDashboard() {
     setSelectedHistoryIndex((currentIndex) => (currentIndex === boundedIndex ? currentIndex : boundedIndex));
   };
   const selectHorizon = (option: Horizon) => {
+    if (option === horizon) return;
+    if (reduceMotionEnabled) {
+      setHorizon(option);
+      setChartHorizon(option);
+      setSelectedHistoryIndex(null);
+      return;
+    }
+    if (morphRafRef.current !== null) {
+      cancelAnimationFrame(morphRafRef.current);
+      morphRafRef.current = null;
+    }
+    const nextHistory = getHistoricalCollectionSeries(items, option).slice(-14);
+    const currentShape = currentMorphShapeRef.current.length
+      ? currentMorphShapeRef.current
+      : sampleChartLine(baseChartCoordinates.chartPoints, chartWidth);
+    const nextCoordinates = buildChartCoordinates(nextHistory, chartWidth, chartHeight, chartBottom, chartPlotHeight).chartPoints;
+    const nextShape = sampleChartLine(nextCoordinates, chartWidth);
+    const lineTarget = morphLineRef.current;
+    const fillTarget = morphFillRef.current;
+    const start = performance.now();
+    const duration = 320;
+    const animateFrame = (now: number) => {
+      const eased = Easing.out(Easing.cubic)(Math.min(1, (now - start) / duration));
+      const nextFrame = interpolateChartLine(currentShape, nextShape, eased);
+      currentMorphShapeRef.current = nextFrame;
+      const nextLinePath = getSmoothPath(nextFrame);
+      const nextFillPath = buildChartAreaPath(nextFrame, chartBottom);
+      lineTarget?.setNativeProps?.({ d: nextLinePath });
+      fillTarget?.setNativeProps?.({ d: nextFillPath });
+      if (eased < 1) {
+        morphRafRef.current = requestAnimationFrame(animateFrame);
+        return;
+      }
+      morphRafRef.current = null;
+      currentMorphShapeRef.current = nextShape;
+      setChartHorizon(option);
+    };
     setHorizon(option);
     setSelectedHistoryIndex(null);
+    morphRafRef.current = requestAnimationFrame(animateFrame);
   };
   const popupTranslateY = popupProgress.interpolate({
     inputRange: [0, 1],
@@ -250,6 +321,19 @@ export default function HomeDashboard() {
     return () => clearTimeout(timer);
   }, [showHistoryTip]);
 
+  useEffect(() => {
+    if (morphRafRef.current !== null) return;
+    currentMorphShapeRef.current = sampleChartLine(baseChartCoordinates.chartPoints, chartWidth);
+  }, [baseChartCoordinates.chartPoints, chartWidth]);
+
+  useEffect(() => {
+    return () => {
+      if (morphRafRef.current !== null) {
+        cancelAnimationFrame(morphRafRef.current);
+      }
+    };
+  }, []);
+
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -269,7 +353,6 @@ export default function HomeDashboard() {
         </View>
 
         <View style={styles.hero}>
-          <View style={styles.heroGlow} />
           <Text style={styles.eyebrow}>Portfolio value</Text>
           <Text style={styles.total}>{usdFormatter.format(totalValue)}</Text>
           <Text style={styles.caption}>
@@ -306,7 +389,7 @@ export default function HomeDashboard() {
                   },
                 ]}
               >
-                <Text style={styles.historyTipText}>Tap the line to see value changes over time.</Text>
+                <Text style={styles.historyTipText}>Tap the line to inspect a point.</Text>
               </Animated.View>
             ) : null}
             <View
@@ -340,44 +423,43 @@ export default function HomeDashboard() {
                       {usdFormatter.format(selectedHistoryPoint.total_value_usd)}
                     </Text>
                   </Animated.View>
+                  <View
+                    style={[
+                      styles.selectedPoint,
+                      {
+                        left: selectedX - 4,
+                        top:
+                          selectedCoordinate && selectedCoordinate.y >= 4
+                            ? selectedCoordinate.y - 4
+                            : selectedCoordinate?.y ?? 0,
+                      },
+                    ]}
+                  />
                 </>
               ) : null}
               <Svg width={chartWidth} height={chartHeight} style={StyleSheet.absoluteFill}>
                 <Defs>
                   <LinearGradient id="portfolioFill" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor={ACCENT} stopOpacity="0.2" />
+                    <Stop offset="0" stopColor={ACCENT} stopOpacity="0.08" />
                     <Stop offset="1" stopColor={ACCENT} stopOpacity="0" />
                   </LinearGradient>
                 </Defs>
-                {chartAreaPath ? <Path d={chartAreaPath} fill="url(#portfolioFill)" /> : null}
+                {chartAreaPath ? <Path ref={morphFillRef} d={chartAreaPath} fill="url(#portfolioFill)" /> : null}
                 {chartLinePath ? (
                   <Path
+                    ref={morphLineRef}
                     d={chartLinePath}
                     fill="none"
                     stroke={ACCENT}
-                    strokeWidth={4}
+                    strokeWidth={2.5}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                 ) : null}
-                {safeChartCoordinates.map((point, index) => {
-                const selected = selectedHistoryIndex === index;
-                return (
-                  <Circle
-                    key={point.date}
-                    cx={point.x}
-                    cy={point.y}
-                    r={selected ? 5 : 3.2}
-                    fill={selected ? INK : ACCENT}
-                    stroke={selected ? ACCENT : PANEL}
-                    strokeWidth={selected ? 2 : 1.6}
-                  />
-                );
-              })}
               </Svg>
             </View>
             <View style={[styles.graphTimeline, { width: chartWidth }]}>
-              {chartPoints.map((point) => (
+              {timelinePoints.map((point) => (
                 <Text key={point.date} style={styles.graphTimelineLabel}>
                   {formatTimelineLabel(point.date)}
                 </Text>
@@ -492,15 +574,6 @@ const styles = StyleSheet.create({
     padding: 18,
     overflow: "hidden",
   },
-  heroGlow: {
-    position: "absolute",
-    top: -96,
-    right: -60,
-    width: 210,
-    height: 210,
-    borderRadius: 105,
-    backgroundColor: "rgba(98,199,154,0.13)",
-  },
   eyebrow: { color: ACCENT, fontSize: 12, fontWeight: "900", textAlign: "center" },
   total: { color: INK, fontSize: 47, fontWeight: "900", lineHeight: 58, textAlign: "center", letterSpacing: -1.8 },
   caption: { color: MUTED, fontSize: 12, fontWeight: "800", textAlign: "center" },
@@ -527,13 +600,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
     alignSelf: "flex-start",
     borderRadius: 999,
-    backgroundColor: "rgba(247,244,234,0.12)",
+    backgroundColor: "rgba(255,255,255,0.04)",
     borderWidth: 1,
-    borderColor: "rgba(247,244,234,0.14)",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderColor: "rgba(255,255,255,0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
   },
-  historyTipText: { color: INK, fontSize: 11, fontWeight: "800", lineHeight: 15 },
+  historyTipText: { color: INK, fontSize: 10, fontWeight: "800", lineHeight: 14 },
   horizonRow: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -564,75 +637,84 @@ const styles = StyleSheet.create({
   },
   gridLineTop: {
     position: "absolute",
-    top: 26,
+    top: 24,
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: "rgba(153,231,189,0.08)",
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
   gridLineMid: {
     position: "absolute",
-    top: 104,
+    top: 102,
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: "rgba(153,231,189,0.12)",
+    backgroundColor: "rgba(255,255,255,0.05)",
   },
   gridLineBottom: {
     position: "absolute",
-    bottom: 26,
+    bottom: 24,
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: "rgba(153,231,189,0.2)",
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
   chartCursor: {
     position: "absolute",
     top: 20,
     bottom: 20,
     width: 1,
-    backgroundColor: "rgba(247,244,234,0.38)",
+    backgroundColor: "rgba(255,255,255,0.28)",
     zIndex: 2,
   },
   chartPopup: {
     position: "absolute",
     zIndex: 4,
-    width: 132,
-    borderRadius: 18,
-    backgroundColor: INK,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    width: 124,
+    borderRadius: 14,
+    backgroundColor: "rgba(7,9,8,0.94)",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.24,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
   },
   chartPopupLabel: {
-    color: "#253129",
+    color: SOFT,
     fontSize: 9,
     fontWeight: "900",
     textTransform: "uppercase",
   },
   chartPopupValue: {
-    color: "#07100c",
-    fontSize: 16,
+    color: INK,
+    fontSize: 15,
     fontWeight: "900",
     marginTop: 2,
+  },
+  selectedPoint: {
+    position: "absolute",
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: ACCENT,
+    borderWidth: 2,
+    borderColor: "#0b0f0d",
+    zIndex: 3,
   },
   graphTimeline: {
     alignSelf: "center",
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: -6,
+    marginTop: -4,
     paddingHorizontal: 2,
   },
   graphTimelineLabel: {
-    color: SOFT,
+    color: MUTED,
     flex: 1,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "900",
     textAlign: "center",
+    letterSpacing: 0.2,
   },
   graphFooter: {
     marginTop: 16,
