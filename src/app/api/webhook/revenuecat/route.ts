@@ -37,11 +37,14 @@ const REVOKE_EVENTS = new Set([
 export async function POST(req: NextRequest) {
   // Verify webhook secret
   const secret = process.env.REVENUECAT_WEBHOOK_SECRET;
-  if (secret) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!secret) {
+    console.error("[revenuecat] Missing REVENUECAT_WEBHOOK_SECRET");
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+  }
+
+  const auth = req.headers.get("authorization");
+  if (auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: {
@@ -65,6 +68,13 @@ export async function POST(req: NextRequest) {
 
   const userId = event.app_user_id;
   const eventType = event.type;
+  if (userId.length > 128) {
+    return NextResponse.json({ error: "Invalid user id" }, { status: 400 });
+  }
+
+  if (!event.entitlement_ids?.includes("pro")) {
+    return NextResponse.json({ received: true });
+  }
 
   // CANCELLATION means user cancelled but still has access until period ends.
   // We keep is_pro = true. EXPIRATION is when access actually ends.

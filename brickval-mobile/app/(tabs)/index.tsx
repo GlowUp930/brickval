@@ -21,6 +21,7 @@ import {
   getItemTotalValue,
   removeFromCollection,
 } from "../../lib/collection";
+import { normalizeHistoryDate } from "../../lib/api";
 import { CollectionSwipeRow } from "../../components/CollectionSwipeRow";
 import { buildChartAreaPath, interpolateChartLine, sampleChartLine } from "../../lib/chart-motion";
 
@@ -69,7 +70,9 @@ function addDays(date: Date, days: number) {
 }
 
 function formatTimelineLabel(value: string) {
-  const date = new Date(`${value}T00:00:00Z`);
+  const normalized = normalizeHistoryDate(value);
+  if (!normalized) return "";
+  const date = new Date(`${normalized}T00:00:00Z`);
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 

@@ -46,7 +46,9 @@ function formatRetailComparison(value: number | null) {
 
 function formatDate(value: string | undefined) {
   if (!value) return "Current listing";
-  return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const normalized = normalizeHistoryDate(value);
+  if (!normalized) return "Current listing";
+  return new Date(`${normalized}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function formatTimelineLabel(value: string) {

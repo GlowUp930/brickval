@@ -18,11 +18,14 @@
     },
     "android": {
       "package": "com.brickval.app",
+      "versionCode": 12,
+      "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "CAMERA",
-        "VIBRATE",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "VIBRATE"
+      ],
+      "blockedPermissions": [
+        "android.permission.ACTIVITY_RECOGNITION"
       ]
     },
     "plugins": [
@@ -39,6 +42,7 @@
     ],
     "extra": {
       "enableNativePaywall": true,
+      "internalTestingUnlimitedScans": true,
       "router": {},
       "eas": {
         "projectId": "fa3ae6da-2a21-46f9-84c5-50c0cbe689d6"

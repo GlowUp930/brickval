@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import { getClerkAuthToken } from "./clerk";
 import { normalizeImageUrl } from "./image-url";
 import { normalizeIdentificationDetections } from "./identify-response";
@@ -19,12 +20,15 @@ export {
  */
 
 export const API_BASE = "https://brickvalue.live";
+export const INTERNAL_TESTING_UNLIMITED_SCANS =
+  Constants.expoConfig?.extra?.internalTestingUnlimitedScans === true;
 
 export async function getAuthToken(): Promise<string | null> {
   return getClerkAuthToken();
 }
 
 async function authHeader(): Promise<Record<string, string>> {
+  if (INTERNAL_TESTING_UNLIMITED_SCANS) return {};
   const token = await getAuthToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }

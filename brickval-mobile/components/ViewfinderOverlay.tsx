@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -7,15 +7,18 @@ import {
   Dimensions,
   Animated,
   Easing,
+  LayoutChangeEvent,
 } from "react-native";
+import Svg, { Defs, Mask, Rect } from "react-native-svg";
 import type { ScanMode } from "../lib/api";
 
 const SET_ACCENT = "#f2c94c";
 const MINIFIG_ACCENT = "#8ed1ff";
 const INK = "#f7f4ea";
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
-const FRAME_W = SCREEN_W * 0.78;
-const FRAME_H = FRAME_W * 1.25; // 4:5 portrait — fits a LEGO box nicely
+const { width: INITIAL_SCREEN_W } = Dimensions.get("window");
+const INITIAL_FRAME_W = INITIAL_SCREEN_W * 0.78;
+const INITIAL_FRAME_H = INITIAL_FRAME_W * 1.25; // 4:5 portrait - fits a LEGO box nicely
+const FRAME_RADIUS = 12;
 
 interface Props {
   pulse: number; // 0..1, how close stability is to firing
@@ -29,6 +32,14 @@ export function ViewfinderOverlay({ pulse, scanning, mode, onModeChange, showMod
   const sweep = useRef(new Animated.Value(0)).current;
   const hint = useRef(new Animated.Value(1)).current;
   const activeAccent = mode === "minifig" ? MINIFIG_ACCENT : SET_ACCENT;
+  const [layout, setLayout] = useState({
+    width: INITIAL_SCREEN_W,
+    height: INITIAL_FRAME_H / 0.52,
+  });
+  const frameW = layout.width * 0.78;
+  const frameH = frameW * 1.25;
+  const frameTop = Math.max(0, (layout.height - frameH) / 2);
+  const frameSide = Math.max(0, (layout.width - frameW) / 2);
 
   useEffect(() => {
     if (scanning) {
@@ -58,21 +69,47 @@ export function ViewfinderOverlay({ pulse, scanning, mode, onModeChange, showMod
 
   const sweepTranslateY = sweep.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, FRAME_H - 4],
+    outputRange: [0, frameH - 4],
   });
 
   // Corner brackets glow brighter as pulse increases
   const cornerOpacity = 0.55 + pulse * 0.45;
 
-  return (
-    <View pointerEvents="box-none" style={styles.container}>
-      {/* Dim overlay around the frame */}
-      <View pointerEvents="none" style={styles.dimTop} />
-      <View pointerEvents="none" style={styles.dimBottom} />
-      <View pointerEvents="none" style={styles.dimLeft} />
-      <View pointerEvents="none" style={styles.dimRight} />
+  const handleLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    if (width > 0 && height > 0 && (width !== layout.width || height !== layout.height)) {
+      setLayout({ width, height });
+    }
+  };
 
-      <View pointerEvents="box-none" style={styles.frame}>
+  return (
+    <View pointerEvents="box-none" style={styles.container} onLayout={handleLayout}>
+      <Svg pointerEvents="none" width={layout.width} height={layout.height} style={StyleSheet.absoluteFill}>
+        <Defs>
+          <Mask id="viewfinderCutout">
+            <Rect x={0} y={0} width={layout.width} height={layout.height} fill="white" />
+            <Rect
+              x={frameSide}
+              y={frameTop}
+              width={frameW}
+              height={frameH}
+              rx={FRAME_RADIUS}
+              ry={FRAME_RADIUS}
+              fill="black"
+            />
+          </Mask>
+        </Defs>
+        <Rect
+          x={0}
+          y={0}
+          width={layout.width}
+          height={layout.height}
+          fill="rgba(8,8,9,0.48)"
+          mask="url(#viewfinderCutout)"
+        />
+      </Svg>
+
+      <View pointerEvents="box-none" style={[styles.frame, { width: frameW, height: frameH }]}>
         {showModeSwitch ? (
           <View
             style={[
@@ -83,7 +120,7 @@ export function ViewfinderOverlay({ pulse, scanning, mode, onModeChange, showMod
             <Pressable
               accessibilityRole="button"
               accessibilityState={{ selected: mode === "set" }}
-              accessibilityLabel="Scan LEGO set"
+              accessibilityLabel="Set number entry"
               style={[styles.modePill, mode === "set" && { backgroundColor: SET_ACCENT }]}
               onPress={() => onModeChange("set")}
             >
@@ -138,7 +175,9 @@ export function ViewfinderOverlay({ pulse, scanning, mode, onModeChange, showMod
       {/* Hint */}
       <Animated.View pointerEvents="none" style={[styles.hintWrap, { opacity: hint }]}>
         <Text style={styles.hint}>
-          {mode === "minifig" ? "Center minifigures or parts, then tap capture." : "Align the box, then tap capture."}
+          {mode === "minifig"
+            ? "Center minifigures or parts, then tap capture."
+            : "Set mode uses manual entry. Tap Enter set number below."}
         </Text>
       </Animated.View>
     </View>
@@ -151,39 +190,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  dimTop: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: (SCREEN_H - FRAME_H) / 2,
-    backgroundColor: "rgba(8,8,9,0.48)",
-  },
-  dimBottom: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: (SCREEN_H - FRAME_H) / 2,
-    backgroundColor: "rgba(8,8,9,0.48)",
-  },
-  dimLeft: {
-    position: "absolute",
-    top: (SCREEN_H - FRAME_H) / 2,
-    bottom: (SCREEN_H - FRAME_H) / 2,
-    left: 0,
-    width: (SCREEN_W - FRAME_W) / 2,
-    backgroundColor: "rgba(8,8,9,0.48)",
-  },
-  dimRight: {
-    position: "absolute",
-    top: (SCREEN_H - FRAME_H) / 2,
-    bottom: (SCREEN_H - FRAME_H) / 2,
-    right: 0,
-    width: (SCREEN_W - FRAME_W) / 2,
-    backgroundColor: "rgba(8,8,9,0.48)",
-  },
-  frame: { width: FRAME_W, height: FRAME_H },
+  frame: {},
   modeSwitch: {
     position: "absolute",
     top: -50,
@@ -218,22 +225,22 @@ const styles = StyleSheet.create({
   cornerTl: {
     borderTopWidth: 3,
     borderLeftWidth: 3,
-    borderTopLeftRadius: 12,
+    borderTopLeftRadius: FRAME_RADIUS,
   },
   cornerTr: {
     borderTopWidth: 3,
     borderRightWidth: 3,
-    borderTopRightRadius: 12,
+    borderTopRightRadius: FRAME_RADIUS,
   },
   cornerBl: {
     borderBottomWidth: 3,
     borderLeftWidth: 3,
-    borderBottomLeftRadius: 12,
+    borderBottomLeftRadius: FRAME_RADIUS,
   },
   cornerBr: {
     borderBottomWidth: 3,
     borderRightWidth: 3,
-    borderBottomRightRadius: 12,
+    borderBottomRightRadius: FRAME_RADIUS,
   },
   scanline: {
     position: "absolute",

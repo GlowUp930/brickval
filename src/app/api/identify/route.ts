@@ -4,6 +4,7 @@ import Jimp from "jimp";
 import { anthropic } from "@/lib/anthropic";
 import {
   buildBrickognizeRecoveryCrops,
+  analyzeBrickognizeSearchResponse,
   normalizeBrickognizeDetections,
   normalizeBrickognizeSearchResponse,
   type BrickognizeSearchResponse,
@@ -25,12 +26,12 @@ Rules:
 - Do not guess wildly. Do not include hyphens or suffixes.`;
 
 const BRICKOGNIZE_SEARCH_URL = "https://api.brickognize.com/internal/search/?external_catalogs=bricklink&predict_color=true";
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 const ACCEPTED_MEDIA_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
-  "image/gif",
 ] as const;
 
 type AcceptedMediaType = (typeof ACCEPTED_MEDIA_TYPES)[number];
@@ -67,29 +68,7 @@ async function identifyNonSet(imageFile: File): Promise<NonSetIdentifyResponse> 
     }
   }
 
-  const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
-  let searchBlob: Blob = imageFile;
-  let searchWidth = 0;
-  let searchHeight = 0;
-  let sourceImage: Awaited<ReturnType<typeof Jimp.read>> | null = null;
-
-  try {
-    sourceImage = await Jimp.read(imageBuffer);
-    if (Math.max(sourceImage.bitmap.width, sourceImage.bitmap.height) > 1024) {
-      sourceImage.scaleToFit(1024, 1024);
-    }
-    searchWidth = sourceImage.bitmap.width;
-    searchHeight = sourceImage.bitmap.height;
-    const fullBuffer = await sourceImage.clone().quality(88).getBufferAsync("image/jpeg");
-    const fullArrayBuffer = fullBuffer.buffer.slice(fullBuffer.byteOffset, fullBuffer.byteOffset + fullBuffer.byteLength) as ArrayBuffer;
-    searchBlob = new Blob([fullArrayBuffer], {
-      type: "image/jpeg",
-    });
-  } catch {
-    sourceImage = null;
-  }
-
-  const searchRes = await postBrickognize(searchBlob, "image.jpg");
+  const searchRes = await postBrickognize(imageFile, imageFile.name || "image.jpg");
   if (!searchRes?.ok) {
     if (searchRes) {
       console.warn("[identify] Brickognize search returned", searchRes.status);
@@ -104,7 +83,8 @@ async function identifyNonSet(imageFile: File): Promise<NonSetIdentifyResponse> 
     return { detections: [] };
   }
 
-  const collectedDetections = [...normalizeBrickognizeSearchResponse(searchData).all];
+  const analysis = analyzeBrickognizeSearchResponse(searchData);
+  const collectedDetections = [...analysis.detections.all];
   const mergeDetections = () =>
     normalizeBrickognizeDetections(
       collectedDetections.map((detection) => ({
@@ -114,11 +94,34 @@ async function identifyNonSet(imageFile: File): Promise<NonSetIdentifyResponse> 
       }))
     ).all;
 
-  if (collectedDetections.length >= 2 || !sourceImage || !searchWidth || !searchHeight) {
+  if (
+    collectedDetections.length >= 2 ||
+    (collectedDetections.length === 1 && (analysis.topScore ?? 0) >= 0.88)
+  ) {
     return { detections: mergeDetections() };
   }
 
-  const recoveryCrops = buildBrickognizeRecoveryCrops(searchData, searchWidth, searchHeight);
+  const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
+  let sourceImage: Awaited<ReturnType<typeof Jimp.read>> | null = null;
+  let searchWidth = 0;
+  let searchHeight = 0;
+
+  try {
+    sourceImage = await Jimp.read(imageBuffer);
+    if (Math.max(sourceImage.bitmap.width, sourceImage.bitmap.height) > 1024) {
+      sourceImage.scaleToFit(1024, 1024);
+    }
+    searchWidth = sourceImage.bitmap.width;
+    searchHeight = sourceImage.bitmap.height;
+  } catch {
+    sourceImage = null;
+  }
+
+  if (!sourceImage || !searchWidth || !searchHeight) {
+    return { detections: mergeDetections() };
+  }
+
+  const recoveryCrops = buildBrickognizeRecoveryCrops(searchData, searchWidth, searchHeight).slice(0, 3);
   if (!recoveryCrops.length) {
     return { detections: mergeDetections() };
   }
@@ -165,6 +168,9 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth();
 
   const mode = req.nextUrl.searchParams.get("mode") ?? "set";
+  if (mode !== "set" && mode !== "minifig") {
+    return NextResponse.json({ error: "Invalid scan mode" }, { status: 400 });
+  }
 
   let formData: FormData;
   try {
@@ -180,6 +186,16 @@ export async function POST(req: NextRequest) {
 
   if (!imageFile) {
     return NextResponse.json({ error: "No image provided" }, { status: 400 });
+  }
+
+  if (imageFile.size > MAX_IMAGE_BYTES) {
+    return NextResponse.json(
+      {
+        error: "Image too large",
+        message: "Please upload a smaller image and try again.",
+      },
+      { status: 413 }
+    );
   }
 
   const mediaType = imageFile.type;

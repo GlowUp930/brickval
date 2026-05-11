@@ -12,6 +12,7 @@ import {
   fetchPartColors,
   getAuthToken,
   identifySet,
+  INTERNAL_TESTING_UNLIMITED_SCANS,
   lookupSet,
   type IdentificationCandidate,
   type IdentificationDetection,
@@ -191,6 +192,10 @@ export default function ScanHome() {
   };
 
   const prepareLookupAccess = async () => {
+    if (INTERNAL_TESTING_UNLIMITED_SCANS) {
+      return { allowed: true, hasToken: false };
+    }
+
     const token = await getAuthToken();
     if (token) {
       return { allowed: true, hasToken: true };
@@ -206,6 +211,10 @@ export default function ScanHome() {
   };
 
   const canStartNonSetScan = async () => {
+    if (INTERNAL_TESTING_UNLIMITED_SCANS) {
+      return { allowed: true, hasToken: false };
+    }
+
     const token = await getAuthToken();
     if (token) {
       return { allowed: true, hasToken: true };
@@ -216,6 +225,10 @@ export default function ScanHome() {
   };
 
   const consumeNonSetGuestScan = async () => {
+    if (INTERNAL_TESTING_UNLIMITED_SCANS) {
+      return { allowed: true, hasToken: false };
+    }
+
     const token = await getAuthToken();
     if (token) {
       return { allowed: true, hasToken: true };
@@ -233,6 +246,8 @@ export default function ScanHome() {
   const openAccountForSignIn = () => {
     router.push("/account");
   };
+
+  const yieldToRender = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
   const beginLookup = async (
     identifier: string,
@@ -309,6 +324,8 @@ export default function ScanHome() {
 
     setDetections([]);
     setStatus("loading");
+    setLoadingMsg(`Found minifigure #${detection.id}`);
+    await yieldToRender();
     try {
       await beginLookup(detection.id, "minifig");
     } catch (e) {
@@ -328,6 +345,8 @@ export default function ScanHome() {
     if (!selectedPart) return;
     setDetections([]);
     setStatus("loading");
+    setLoadingMsg(`Found part #${selectedPart.id}`);
+    await yieldToRender();
     try {
       await beginLookup(selectedPart.id, "part", { colorId: color.color_id });
       setSelectedPart(null);
@@ -349,91 +368,44 @@ export default function ScanHome() {
     setCandidateOptions([]);
     setDetections([]);
     setSelectedPart(null);
+    if (mode === "set") {
+      manualRef.current?.open();
+      return;
+    }
     setStatus("loading");
-    setLoadingMsg(mode === "minifig" ? "Finding minifigures and parts..." : "Reading set number...");
+    setLoadingMsg("Finding minifigures and parts...");
     try {
-      if (mode === "minifig") {
-        const access = await canStartNonSetScan();
-        if (!access.allowed) {
-          setStatus("idle");
-          openAccountForSignIn();
-          return;
-        }
-      }
-
-      const identification = await identifySet(photoUri, mode);
-
-      if (mode === "minifig") {
-        if (!identification.detections.length) {
-          warn();
-          setErrorMessage("We couldn't identify the minifigure or part. Try a clearer front-facing shot.");
-          setStatus("idle");
-          return;
-        }
-        if (!shouldPauseForDetectionChoice(identification.detections, LOW_CONFIDENCE_THRESHOLD)) {
-          const access = await consumeNonSetGuestScan();
-          if (!access.allowed) {
-            setStatus("idle");
-            openAccountForSignIn();
-            return;
-          }
-
-          await handleDetectionPick(identification.detections[0]);
-          return;
-        }
-        await openDetectionSheet(
-          identification.detections,
-          getDetectionChoiceMessage(identification.detections, LOW_CONFIDENCE_THRESHOLD)
-        );
-        return;
-      }
-
-      const access = await prepareLookupAccess();
+      const access = await canStartNonSetScan();
       if (!access.allowed) {
         setStatus("idle");
         openAccountForSignIn();
         return;
       }
 
-      if (maybeShowCandidates(identification)) {
-        setStatus("candidates");
-        return;
-      }
+      const identification = await identifySet(photoUri, mode);
 
-      if (!identification.set_number) {
+      if (!identification.detections.length) {
         warn();
-        setErrorMessage(
-          "We couldn't find a set number in this photo. Try a clearer shot of the box or enter the set number manually."
-        );
+        setErrorMessage("We couldn't identify the minifigure or part. Try a clearer front-facing shot.");
         setStatus("idle");
         return;
       }
-
-      try {
-        await beginLookup(identification.set_number);
-      } catch (e) {
-        if (e instanceof Error && e.message.includes("401")) {
+      if (!shouldPauseForDetectionChoice(identification.detections, LOW_CONFIDENCE_THRESHOLD)) {
+        const consume = await consumeNonSetGuestScan();
+        if (!consume.allowed) {
+          setStatus("idle");
           openAccountForSignIn();
-          setStatus("idle");
           return;
         }
-        if (e instanceof Error && e.message.includes("404")) {
-          warn();
-          setErrorMessage(
-            "We don't have data for that set number. Double-check it and try again."
-          );
-          setStatus("idle");
-          return;
-        }
-        if (e instanceof Error && e.message.includes("402")) {
-          openUpgrade();
-          setStatus("idle");
-          return;
-        }
-        warn();
-        setErrorMessage("We found the item number, but couldn't fetch market prices. Try again in a moment.");
-        setStatus("idle");
+
+        await handleDetectionPick(identification.detections[0]);
+        return;
       }
+      await openDetectionSheet(
+        identification.detections,
+        getDetectionChoiceMessage(identification.detections, LOW_CONFIDENCE_THRESHOLD)
+      );
+      return;
     } catch (e) {
       if (e instanceof Error && e.message.includes("402")) {
         openUpgrade();
@@ -453,6 +425,10 @@ export default function ScanHome() {
 
   const handlePhotoPress = async () => {
     if (status !== "idle") return;
+    if (mode === "set") {
+      manualRef.current?.open();
+      return;
+    }
     setErrorMessage(null);
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -486,6 +462,8 @@ export default function ScanHome() {
         return;
       }
       setStatus("loading");
+      setLoadingMsg(`Looking up set #${identifier}`);
+      await yieldToRender();
       await beginLookup(identifier);
     } catch (e) {
       if (e instanceof Error && e.message.includes("401")) {

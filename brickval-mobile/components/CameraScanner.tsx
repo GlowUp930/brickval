@@ -73,11 +73,51 @@ export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoP
   }, [enabled]);
 
   if (!permission) return <View style={styles.black} />;
+  if (mode === "set") {
+    return (
+      <View style={styles.setRoot}>
+        <View style={styles.setModeSwitch}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ selected: mode === "set" }}
+            accessibilityLabel="Set number entry"
+            style={[styles.setModePill, styles.setModePillActive]}
+          >
+            <Text style={[styles.setModeText, styles.setModeTextActive]}>Set</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ selected: false }}
+            accessibilityLabel="Switch to minifigures and parts"
+            style={styles.setModePill}
+            onPress={() => onModeChange("minifig")}
+          >
+          <Text style={styles.setModeText}>Minifigs & Parts</Text>
+          </Pressable>
+        </View>
+        <View style={styles.setPanel}>
+          <Text style={styles.setTitle}>Set mode is manual only</Text>
+          <Text style={styles.setBody}>
+            Enter the LEGO set number to look it up. Camera scanning is disabled here.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Enter set number"
+            onPress={onManualPress}
+            style={styles.setButton}
+            hitSlop={12}
+          >
+            <Text style={styles.setButtonText}>Enter set number</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
   if (!permission.granted) {
     return (
       <View style={styles.permWrap}>
         <Text style={styles.permTitle}>Camera access</Text>
-        <Text style={styles.permBody}>BrickVal needs the camera to scan LEGO sets, minifigures, and parts.</Text>
+        <Text style={styles.permBody}>BrickVal needs the camera to scan minifigures and parts.</Text>
         <View style={styles.permActions}>
           <Pressable accessibilityRole="button" accessibilityLabel="Allow camera access" style={styles.permBtn} onPress={requestPermission}>
             <Text style={styles.permBtnText}>Allow camera</Text>
@@ -113,21 +153,7 @@ export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoP
 
       <View style={styles.bottomBar}>
         <View style={styles.leftStack}>
-          {mode === "set" ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Got a set number? Enter it manually"
-              onPress={onManualPress}
-              style={styles.toolBtn}
-              hitSlop={12}
-            >
-              <Text style={styles.toolLabel}>Have set number?</Text>
-              <Text style={styles.toolHint}>Type it here</Text>
-            </Pressable>
-          ) : (
-            <View style={styles.toolSpacer} />
-          )}
-
+          <View style={styles.toolSpacer} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Use photo from library"
@@ -153,7 +179,7 @@ export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoP
         <View style={styles.captureStack}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={mode === "minifig" ? "Scan minifigures and parts" : "Scan LEGO set"}
+            accessibilityLabel="Scan minifigures and parts"
             onPress={handleCapturePress}
             style={styles.captureWrap}
             hitSlop={12}
@@ -196,6 +222,30 @@ export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoP
 
 const styles = StyleSheet.create({
   black: { flex: 1, backgroundColor: "#101012" },
+  setRoot: { flex: 1, backgroundColor: "#101012", alignItems: "center", justifyContent: "center", paddingHorizontal: 18, gap: 18 },
+  setModeSwitch: {
+    flexDirection: "row",
+    gap: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(242,201,76,0.34)",
+    backgroundColor: "rgba(16,16,18,0.76)",
+    padding: 4,
+  },
+  setModePill: {
+    minHeight: 28,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  setModePillActive: { backgroundColor: SET_ACCENT },
+  setModeText: {
+    color: "rgba(247,244,234,0.68)",
+    fontSize: 9,
+    fontWeight: "900",
+  },
+  setModeTextActive: { color: "#101012" },
   permWrap: { flex: 1, backgroundColor: "#101012", alignItems: "center", justifyContent: "center", padding: 32, gap: 16 },
   permTitle: { color: INK, fontSize: 24, fontWeight: "900" },
   permBody: { color: MUTED, fontSize: 15, textAlign: "center", lineHeight: 23 },
@@ -297,6 +347,41 @@ const styles = StyleSheet.create({
   photoText: { color: INK, fontSize: 14, fontWeight: "900", lineHeight: 18 },
   photoHint: { color: MUTED, fontSize: 10, fontWeight: "700", lineHeight: 12, marginTop: 1 },
   photoTextDisabled: { color: MUTED },
+  setPanel: {
+    width: "100%",
+    maxWidth: 340,
+    gap: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(16,16,18,0.88)",
+    padding: 16,
+  },
+  setTitle: {
+    color: "#fff3cf",
+    fontSize: 13,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  setBody: {
+    color: INK,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "700",
+  },
+  setButton: {
+    minHeight: 46,
+    borderRadius: 14,
+    backgroundColor: SET_ACCENT,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  setButtonText: {
+    color: "#101012",
+    fontSize: 14,
+    fontWeight: "900",
+  },
 });
 
 function PhotoStackIcon({ color }: { color: string }) {

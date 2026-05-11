@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { router, useFocusEffect } from "expo-router";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { AuthView } from "@clerk/expo/native";
 import { useAuth, useClerk, useUser } from "@clerk/expo";
 import { API_BASE } from "../lib/api";
@@ -169,8 +169,16 @@ function ConfiguredAccountScreen() {
   };
 
   return (
-    <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 18 : 0}
+    >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+      >
         <Pressable accessibilityRole="button" style={styles.backBtn} onPress={() => router.back()}>
           <Text style={styles.backText}>Back</Text>
         </Pressable>
@@ -241,7 +249,7 @@ function ConfiguredAccountScreen() {
           </View>
         ) : null}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -312,7 +320,7 @@ const styles = StyleSheet.create({
   cardMeta: { color: ACCENT, fontSize: 14, fontWeight: "800" },
   section: { gap: 10 },
   authShell: {
-    height: 560,
+    minHeight: 640,
     borderRadius: 20,
     overflow: "hidden",
     borderWidth: 1,

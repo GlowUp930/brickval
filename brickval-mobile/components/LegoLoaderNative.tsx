@@ -26,8 +26,14 @@ export function LegoLoaderNative({ message = "Looking up..." }: { message?: stri
 
   if (message.includes("Reading set number")) {
     stages = ["Reading the box", "Matching the set", "Preparing the reveal"];
+  } else if (message.includes("Looking up set")) {
+    stages = ["Checking the number", "Fetching market prices", "Preparing the reveal"];
   } else if (message.includes("Fetching market prices")) {
     stages = ["Checking sold prices", "Comparing live listings", "Preparing the reveal"];
+  } else if (message.includes("Found minifigure")) {
+    stages = ["Found the figure", "Checking demand", "Preparing the reveal"];
+  } else if (message.includes("Found part")) {
+    stages = ["Found the part", "Checking color data", "Preparing the reveal"];
   } else if (message.includes("Finding minifigures")) {
     stages = ["Finding the figure", "Checking demand", "Preparing the reveal"];
   } else if (message.includes("Loading part colors")) {

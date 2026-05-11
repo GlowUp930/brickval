@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { getCached, setCached } from "@/lib/cache";
 import { getEbayMarketData } from "@/lib/ebay";
 import { getBrickLinkColors, getBrickLinkMarketData, getMinifigMarketData, getPartMarketData } from "@/lib/bricklink";
 import { getBricksetRrp } from "@/lib/brickset";
@@ -7,7 +8,17 @@ import { getExchangeRates } from "@/lib/frankfurter";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { computePricing } from "@/lib/compute-pricing";
 import { sortByMostRecentDate } from "@/lib/sort-transactions";
-import type { EbaySale, MinifigInfo, MinifigPricing } from "@/types/market";
+import type { ComputedPricing, EbaySale, MinifigInfo, MinifigPricing, SetInfo } from "@/types/market";
+
+const LOOKUP_CACHE_TTL_HOURS = 24;
+
+function lookupCacheKey(mode: string, identifier: string, colorId?: number | string) {
+  return mode === "part"
+    ? `lookup:part:${identifier}:${colorId ?? "none"}`
+    : mode === "minifig"
+      ? `lookup:minifig:${identifier}`
+      : `lookup:set:${identifier}`;
+}
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
@@ -26,6 +37,12 @@ export async function POST(req: NextRequest) {
     const figNumber = body.setNumber?.trim().replace(/[^a-z0-9]/gi, "");
     if (!figNumber || figNumber.length < 3) {
       return NextResponse.json({ error: "Invalid figure number" }, { status: 400 });
+    }
+
+    const cacheKey = lookupCacheKey(mode, figNumber);
+    const cached = await getCached<{ figInfo: MinifigInfo; pricing: MinifigPricing }>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
     }
 
     const minifigData = await getMinifigMarketData(figNumber).catch(() => null);
@@ -100,7 +117,9 @@ export async function POST(req: NextRequest) {
       stock_new_details: stockNewDetails,
     };
 
-    return NextResponse.json({ figInfo, pricing });
+    const payload = { figInfo, pricing };
+    await setCached(cacheKey, payload, LOOKUP_CACHE_TTL_HOURS);
+    return NextResponse.json(payload);
   }
 
   // ── Part mode ─────────────────────────────────────────────────────────────
@@ -110,6 +129,12 @@ export async function POST(req: NextRequest) {
 
     if (!partNumber || partNumber.length < 2 || !Number.isFinite(colorId) || colorId < 0) {
       return NextResponse.json({ error: "Invalid part lookup" }, { status: 400 });
+    }
+
+    const cacheKey = lookupCacheKey(mode, partNumber, colorId);
+    const cached = await getCached<{ partInfo: unknown; pricing: unknown }>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached);
     }
 
     const [partData, colors] = await Promise.all([
@@ -168,7 +193,7 @@ export async function POST(req: NextRequest) {
     const usedSoldAvg = soldUsed?.qty_avg_price ? (parseFloat(soldUsed.qty_avg_price) || null) : null;
     const usedStockAvg = stockUsed?.qty_avg_price ? (parseFloat(stockUsed.qty_avg_price) || null) : null;
 
-    return NextResponse.json({
+    const payload = {
       partInfo,
       pricing: {
         hero_new_avg_usd: newSoldAvg ?? newStockAvg ?? null,
@@ -198,7 +223,9 @@ export async function POST(req: NextRequest) {
         sold_used_details: soldUsedDetails,
         stock_used_details: stockUsedDetails,
       },
-    });
+    };
+    await setCached(cacheKey, payload, LOOKUP_CACHE_TTL_HOURS);
+    return NextResponse.json(payload);
   }
 
   // ── Set mode ──────────────────────────────────────────────────────────────
@@ -233,6 +260,16 @@ export async function POST(req: NextRequest) {
         { status: 402 }
       );
     }
+  }
+
+  const cacheKey = lookupCacheKey(mode, setNumber);
+  const cached = await getCached<{ setInfo: SetInfo | null; pricing: ComputedPricing }>(cacheKey);
+  if (cached) {
+    return NextResponse.json({
+      ...cached,
+      scansUsed: gate.scansUsed,
+      isPro: gate.isPro,
+    });
   }
 
   // Fetch exchange rates first (fast — Supabase-cached)
@@ -305,9 +342,14 @@ export async function POST(req: NextRequest) {
         }
       : null);
 
-  return NextResponse.json({
+  const payload = {
     setInfo: resolvedSetInfo,
     pricing,
+  };
+  await setCached(cacheKey, payload, LOOKUP_CACHE_TTL_HOURS);
+
+  return NextResponse.json({
+    ...payload,
     scansUsed: gate.scansUsed,
     isPro: gate.isPro,
   });
