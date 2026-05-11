@@ -1,11 +1,39 @@
 import Constants from "expo-constants";
+import { Platform } from "react-native";
 
 const SUPERWALL_UPGRADE_PLACEMENT = "brickval_upgrade";
+const PRO_ENTITLEMENT_ID = "pro";
 const REVENUECAT_GOOGLE_KEY = "goog_NUvLtaesNxERCcRAffebyZByADU";
+const REVENUECAT_IOS_KEY =
+  process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ??
+  (Constants.expoConfig?.extra?.revenueCatIosKey as string | undefined) ??
+  "";
 const SUPERWALL_ANDROID_KEY = "pk_Op2uaWA1p5uPdvwtEWtWr";
+const SUPERWALL_IOS_KEY =
+  process.env.EXPO_PUBLIC_SUPERWALL_IOS_KEY ??
+  (Constants.expoConfig?.extra?.superwallIosKey as string | undefined) ??
+  "";
 const isExpoGo = Constants.appOwnership === "expo";
 const shouldInitNativePaywall = Constants.expoConfig?.extra?.enableNativePaywall === true;
 let didInitializeNativePaywall = false;
+
+function getNativePaywallConfig() {
+  if (Platform.OS === "android") {
+    return {
+      revenueCatKey: REVENUECAT_GOOGLE_KEY,
+      superwallKey: SUPERWALL_ANDROID_KEY,
+    };
+  }
+
+  if (Platform.OS === "ios" && REVENUECAT_IOS_KEY && SUPERWALL_IOS_KEY) {
+    return {
+      revenueCatKey: REVENUECAT_IOS_KEY,
+      superwallKey: SUPERWALL_IOS_KEY,
+    };
+  }
+
+  return null;
+}
 
 function loadSuperwallSdk() {
   if (isExpoGo || !shouldInitNativePaywall) return null;
@@ -36,39 +64,46 @@ function loadPurchasesSdk() {
 export function initializeNativePaywall(): void {
   if (didInitializeNativePaywall) return;
 
+  const config = getNativePaywallConfig();
+  if (!config) return;
+
   const Purchases = loadPurchasesSdk();
   const sdk = loadSuperwallSdk();
   if (!Purchases?.configure || !sdk?.Superwall?.configure) return;
 
   try {
-    Purchases.configure({ apiKey: REVENUECAT_GOOGLE_KEY });
+    Purchases.configure({ apiKey: config.revenueCatKey });
+
+    const purchaseProduct = async (productId: string) => {
+      try {
+        const offerings = await Purchases.getOfferings();
+        const pkg = offerings.current?.availablePackages.find(
+          (item: any) => item.product.identifier === productId
+        );
+        if (!pkg) return { type: "cancelled" };
+        const result = await Purchases.purchasePackage(pkg);
+        const isPro = !!result.customerInfo.entitlements.active[PRO_ENTITLEMENT_ID];
+        await syncSuperwallSubscriptionState(isPro);
+        return isPro ? { type: "purchased" } : { type: "cancelled" };
+      } catch (error: any) {
+        if (error?.userCancelled) return { type: "cancelled" };
+        return { type: "failed", message: error?.message ?? "Purchase failed" };
+      }
+    };
 
     sdk.Superwall.configure({
-      apiKey: SUPERWALL_ANDROID_KEY,
+      apiKey: config.superwallKey,
       purchaseController: {
-        async purchaseFromAppStore() {
-          return { type: "cancelled" };
+        async purchaseFromAppStore(productId: string) {
+          return purchaseProduct(productId);
         },
         async purchaseFromGooglePlay(productId: string) {
-          try {
-            const offerings = await Purchases.getOfferings();
-            const pkg = offerings.current?.availablePackages.find(
-              (item: any) => item.product.identifier === productId
-            );
-            if (!pkg) return { type: "cancelled" };
-            const result = await Purchases.purchasePackage(pkg);
-            const isPro = !!result.customerInfo.entitlements.active["pro"];
-            await syncSuperwallSubscriptionState(isPro);
-            return isPro ? { type: "purchased" } : { type: "cancelled" };
-          } catch (error: any) {
-            if (error?.userCancelled) return { type: "cancelled" };
-            return { type: "failed", message: error?.message ?? "Purchase failed" };
-          }
+          return purchaseProduct(productId);
         },
         async restorePurchases() {
           try {
             const info = await Purchases.restorePurchases();
-            const isPro = !!info.entitlements.active["pro"];
+            const isPro = !!info.entitlements.active[PRO_ENTITLEMENT_ID];
             await syncSuperwallSubscriptionState(isPro);
             return isPro
               ? { type: "restored" }
@@ -81,7 +116,7 @@ export function initializeNativePaywall(): void {
     });
 
     Purchases.addCustomerInfoUpdateListener?.((info: any) => {
-      const isPro = !!info.entitlements.active["pro"];
+      const isPro = !!info.entitlements.active[PRO_ENTITLEMENT_ID];
       void syncSuperwallSubscriptionState(isPro);
     });
 
@@ -148,7 +183,7 @@ export async function getNativeProStatus(): Promise<boolean | null> {
 
   try {
     const info = await Purchases.getCustomerInfo();
-    return !!info.entitlements.active["pro"];
+    return !!info.entitlements.active[PRO_ENTITLEMENT_ID];
   } catch (error) {
     console.warn("Failed to read RevenueCat status", error);
     return null;
@@ -162,7 +197,7 @@ export async function restoreNativePurchases(): Promise<boolean | null> {
 
   try {
     const info = await Purchases.restorePurchases();
-    const isPro = !!info.entitlements.active["pro"];
+    const isPro = !!info.entitlements.active[PRO_ENTITLEMENT_ID];
     await syncSuperwallSubscriptionState(isPro);
     return isPro;
   } catch (error) {

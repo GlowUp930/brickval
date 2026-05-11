@@ -76,7 +76,7 @@ function ConfiguredAccountScreen() {
 
     const shown = await presentSuperwallUpgrade();
     if (!shown) {
-      setErrorMessage("Upgrade is unavailable in this build. Use an EAS Android build with native paywall enabled.");
+      setErrorMessage("Upgrade is unavailable in this build. Use a native build with purchases enabled.");
       return;
     }
 
@@ -104,7 +104,7 @@ function ConfiguredAccountScreen() {
       Alert.alert(
         restored ? "BrickVal Pro restored" : "No purchase found",
         restored
-          ? "Your Google Play purchase is active on this device."
+          ? "Your BrickVal Pro purchase is active on this device."
           : "We could not find an active BrickVal Pro purchase for this account."
       );
     } finally {

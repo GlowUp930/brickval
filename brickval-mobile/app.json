@@ -11,9 +11,11 @@
     },
     "ios": {
       "supportsTablet": false,
+      "buildNumber": "12",
       "bundleIdentifier": "com.brickval.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "Brickvalue uses your camera to scan LEGO sets and look up market prices."
+        "NSCameraUsageDescription": "BrickVal uses your camera to scan minifigures and parts.",
+        "NSPhotoLibraryUsageDescription": "BrickVal lets you choose a photo to identify minifigures and parts."
       }
     },
     "android": {
@@ -35,7 +37,13 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Brickvalue uses your camera to scan LEGO sets and look up market prices."
+          "cameraPermission": "BrickVal uses your camera to scan minifigures and parts."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "BrickVal lets you choose a photo to identify minifigures and parts."
         }
       ],
       "expo-web-browser"

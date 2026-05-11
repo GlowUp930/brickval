@@ -87,7 +87,7 @@ export default function SettingsScreen() {
 
     const shown = await presentSuperwallUpgrade();
     if (!shown) {
-      Alert.alert("Upgrade unavailable", "Use an EAS Android build with the native paywall enabled.");
+      Alert.alert("Upgrade unavailable", "Use a native build with purchases enabled.");
     }
   };
 
@@ -100,14 +100,14 @@ export default function SettingsScreen() {
 
     const restored = await restoreNativePurchases();
     if (restored === null) {
-      Alert.alert("Restore unavailable", "Use an EAS Android build with RevenueCat enabled.");
+      Alert.alert("Restore unavailable", "Use a native build with purchases enabled.");
       return;
     }
 
     Alert.alert(
       restored ? "BrickVal Pro restored" : "No purchase found",
       restored
-        ? "Your Google Play purchase is active on this device."
+        ? "Your BrickVal Pro purchase is active on this device."
         : "We could not find an active BrickVal Pro purchase for this account."
     );
   };
@@ -203,14 +203,14 @@ export default function SettingsScreen() {
           <SettingsRow
             code="PRO"
             title="BrickVal Pro"
-            meta="Native Android upgrade flow"
+            meta="Native upgrade flow"
             accent={ACCENT}
             onPress={() => void openUpgrade()}
           />
           <SettingsRow
             code="RST"
             title="Restore purchases"
-            meta="Re-check Google Play access for this account"
+            meta="Re-check native Pro access for this account"
             accent={LEGO_BLUE}
             onPress={() => void handleRestorePurchases()}
           />

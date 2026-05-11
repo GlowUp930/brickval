@@ -8,25 +8,46 @@
       "developmentClient": true,
       "distribution": "internal"
     },
+    "ios-development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "resourceClass": "m-medium"
+      }
+    },
     "preview": {
       "android": {
         "buildType": "apk"
       },
       "distribution": "internal"
     },
+    "ios-testflight": {
+      "autoIncrement": true,
+      "distribution": "store",
+      "ios": {
+        "resourceClass": "m-medium"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
+      },
+      "ios": {
+        "resourceClass": "m-medium"
       }
     }
   },
   "submit": {
+    "ios-testflight": {
+      "ios": {}
+    },
     "production": {
       "android": {
         "serviceAccountKeyPath": "/Users/holamchan/.config/brickval/play-service-account.json",
         "track": "internal"
-      }
+      },
+      "ios": {}
     }
   }
 }

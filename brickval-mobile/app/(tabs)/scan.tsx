@@ -181,7 +181,7 @@ export default function ScanHome() {
   const openUpgrade = async () => {
     const shown = await presentSuperwallUpgrade();
     if (!shown) {
-      Alert.alert("Upgrade unavailable", "Use an EAS Android build with the native paywall enabled.");
+      Alert.alert("Upgrade unavailable", "Use a native build with purchases enabled.");
     }
   };
 
