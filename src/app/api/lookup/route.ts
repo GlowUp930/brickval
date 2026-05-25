@@ -21,7 +21,13 @@ function lookupCacheKey(mode: string, identifier: string, colorId?: number | str
 }
 
 export async function POST(req: NextRequest) {
-  const { userId } = await auth();
+  let userId: string | null = null;
+  try {
+    const session = await auth();
+    userId = session.userId;
+  } catch (error) {
+    console.warn("[lookup] Auth unavailable; continuing as guest.", error);
+  }
 
   let body: { setNumber?: string; mode?: string; colorId?: number | string };
   try {
