@@ -273,8 +273,7 @@ export async function POST(req: NextRequest) {
   if (cached) {
     return NextResponse.json({
       ...cached,
-      scansUsed: gate.scansUsed,
-      isPro: gate.isPro,
+      ...(userId ? { scansUsed: gate.scansUsed, isPro: gate.isPro } : {}),
     });
   }
 
@@ -356,7 +355,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     ...payload,
-    scansUsed: gate.scansUsed,
-    isPro: gate.isPro,
+    ...(userId ? { scansUsed: gate.scansUsed, isPro: gate.isPro } : {}),
   });
 }

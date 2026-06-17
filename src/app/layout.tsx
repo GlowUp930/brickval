@@ -4,6 +4,11 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
+const siteUrl = "https://brickvalue.live";
+const siteTitle = "BrickVal - LEGO Set Value Scanner";
+const siteDescription =
+  "Check what your LEGO sets are worth with BrickVal. Scan a LEGO box or enter a set number to see USD market value, BrickLink data, eBay signals, and retirement status.";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -29,9 +34,42 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Brickvalue.live — LEGO Set Value Scanner",
-  description:
-    "Point your camera at any LEGO set and instantly know what it's worth in USD.",
+  metadataBase: new URL(siteUrl),
+  applicationName: "BrickVal",
+  creator: "BrickVal",
+  publisher: "BrickVal",
+  title: {
+    default: siteTitle,
+    template: "%s | BrickVal",
+  },
+  description: siteDescription,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: siteTitle,
+    description: siteDescription,
+    url: siteUrl,
+    siteName: "BrickVal",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary",
+    title: siteTitle,
+    description: siteDescription,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
 };
 
 export default function RootLayout({

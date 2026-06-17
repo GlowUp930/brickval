@@ -5,6 +5,11 @@ import { DeleteAccountForm } from "./DeleteAccountForm";
 
 export const metadata: Metadata = {
   title: "Delete Your Account — Brickvalue.live",
+  description:
+    "Delete your BrickVal account and understand what account data, scan counters, and subscription status will be removed.",
+  alternates: {
+    canonical: "/delete-account",
+  },
 };
 
 export default function DeleteAccountPage() {

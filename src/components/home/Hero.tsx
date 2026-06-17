@@ -33,6 +33,44 @@ const appScreens = [
 ];
 
 const STUDS = Array.from({ length: 10 });
+const siteUrl = "https://brickvalue.live";
+
+const structuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "BrickVal",
+    alternateName: "Brickvalue.live",
+    url: siteUrl,
+    applicationCategory: "UtilitiesApplication",
+    operatingSystem: "iOS, Android, Web",
+    description:
+      "BrickVal helps LEGO collectors scan a LEGO box or enter a set number to estimate current USD market value using BrickLink and eBay market data.",
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "USD",
+      availability: "https://schema.org/InStock",
+    },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "BrickVal",
+    url: siteUrl,
+    email: "privacy@brickvalue.live",
+    description:
+      "BrickVal builds tools for LEGO collectors to identify sets and check current market value.",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "BrickVal",
+    alternateName: "Brickvalue.live",
+    url: siteUrl,
+    description:
+      "A LEGO set value scanner for checking USD market prices, retirement status, and resale signals.",
+  },
+];
 
 function StudRow() {
   return (
@@ -66,7 +104,12 @@ export function Hero() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col" style={{ background: "var(--background)" }}>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <main className="min-h-screen flex flex-col" style={{ background: "var(--background)" }}>
 
       {/* ── Navbar ── */}
       <motion.nav
@@ -115,7 +158,7 @@ export function Hero() {
               className="w-1.5 h-1.5 rounded-full inline-block animate-pulse"
               style={{ background: "var(--accent)" }}
             />
-            AI-powered LEGO scanner
+            LEGO set value checker
           </motion.div>
 
           {/* Headline */}
@@ -126,9 +169,8 @@ export function Hero() {
             className="text-4xl sm:text-5xl font-black leading-[1.05] tracking-tight"
             style={{ color: "var(--foreground)" }}
           >
-            Know what your<br />
-            <span style={{ color: "var(--accent)" }}>LEGO sets</span><br />
-            are worth.
+            LEGO Set<br />
+            <span style={{ color: "var(--accent)" }}>Value Scanner</span>
           </motion.h1>
 
           {/* Subtitle */}
@@ -139,7 +181,7 @@ export function Hero() {
             className="text-base leading-relaxed max-w-sm"
             style={{ color: "var(--muted)" }}
           >
-            Scan the box with your phone. Get the current market value and retirement status in seconds.
+            Check what a LEGO set is worth in USD. Scan the box or enter a set number to see market value, retirement status, and resale signals.
           </motion.p>
 
           {/* CTAs */}
@@ -408,7 +450,7 @@ export function Hero() {
             className="text-3xl font-bold mb-6"
             style={{ color: "var(--foreground)" }}
           >
-            Accurate Pricing You Can Trust
+            LEGO price data from real marketplaces
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -418,7 +460,7 @@ export function Hero() {
             className="text-lg max-w-2xl mx-auto mb-12"
             style={{ color: "var(--muted)" }}
           >
-            We aggregate real-time market data from the most reliable sources in the secondary market to give you the true value of your LEGO sets.
+            BrickVal combines BrickLink and eBay market signals so collectors can estimate what LEGO sets are worth before they buy, sell, or catalog a collection.
           </motion.p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -461,6 +503,54 @@ export function Hero() {
                 We analyze completed sales data from eBay, one of the world&apos;s largest online marketplaces, to provide realistic aftermarket valuations.
               </p>
             </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Search Answers ── */}
+      <section className="border-t px-6 py-20" style={{ borderColor: "var(--border)", background: "var(--background)" }}>
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] mb-4" style={{ color: "var(--muted)" }}>
+              LEGO value answers
+            </p>
+            <h2 className="text-3xl font-black tracking-tight" style={{ color: "var(--foreground)" }}>
+              Built for collectors who need a fast price check
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              {
+                title: "What does BrickVal do?",
+                body: "BrickVal scans a LEGO box image or accepts a set number, identifies the set, and returns an estimated USD market value.",
+              },
+              {
+                title: "Where does the price come from?",
+                body: "Pricing uses BrickLink market data and eBay resale signals, with BrickLink sold prices prioritized where available.",
+              },
+              {
+                title: "Who is it for?",
+                body: "BrickVal is for LEGO collectors, resellers, and buyers who want to check value before cataloging, listing, negotiating, or buying.",
+              },
+              {
+                title: "Why USD pricing?",
+                body: "The app shows USD market value by default so pricing is consistent across sets, sources, and collection totals.",
+              },
+            ].map((item) => (
+              <article
+                key={item.title}
+                className="rounded-2xl p-6"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+              >
+                <h3 className="text-lg font-black mb-3" style={{ color: "var(--foreground)" }}>
+                  {item.title}
+                </h3>
+                <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
+                  {item.body}
+                </p>
+              </article>
+            ))}
           </div>
         </div>
       </section>
@@ -702,10 +792,18 @@ export function Hero() {
 
       {/* ── Footer ── */}
       <footer className="border-t px-6 py-6 text-center" style={{ borderColor: "var(--border)" }}>
-        <p className="text-xs" style={{ color: "var(--muted)" }}>
-          © 2026 BrickVal · Prices sourced from BrickLink + eBay
-        </p>
+        <div className="flex flex-col items-center gap-3">
+          <p className="text-xs" style={{ color: "var(--muted)" }}>
+            © 2026 BrickVal · Prices sourced from BrickLink + eBay
+          </p>
+          <nav className="flex items-center gap-4 text-xs" aria-label="Footer">
+            <Link href="/privacy" style={{ color: "var(--muted)" }}>Privacy</Link>
+            <Link href="/terms" style={{ color: "var(--muted)" }}>Terms</Link>
+            <Link href="/delete-account" style={{ color: "var(--muted)" }}>Delete account</Link>
+          </nav>
+        </div>
       </footer>
-    </main>
+      </main>
+    </>
   );
 }

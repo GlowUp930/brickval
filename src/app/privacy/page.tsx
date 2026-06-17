@@ -4,6 +4,11 @@ import { Logo } from "@/components/Logo";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Brickvalue.live",
+  description:
+    "Read how BrickVal handles account data, scanned LEGO photos, market lookup data, purchases, analytics, and account deletion.",
+  alternates: {
+    canonical: "/privacy",
+  },
 };
 
 export default function PrivacyPage() {
@@ -21,7 +26,7 @@ export default function PrivacyPage() {
         Privacy Policy
       </h1>
       <p className="text-sm mb-6" style={{ color: "var(--muted)" }}>
-        Last updated: April 6, 2026
+        Last updated: June 5, 2026
       </p>
 
       <div className="flex flex-col gap-6 text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
@@ -40,7 +45,7 @@ export default function PrivacyPage() {
               <strong style={{ color: "var(--foreground)" }}>Scan history:</strong> We track the number of scans you have used (a counter, not the images or results).
             </li>
             <li>
-              <strong style={{ color: "var(--foreground)" }}>Payment information:</strong> Handled entirely by Stripe (web) or Google Play (Android). We never see or store your card details.
+              <strong style={{ color: "var(--foreground)" }}>Payment information:</strong> Handled by Apple App Store purchases on iOS, Google Play on Android, Stripe on web, RevenueCat for purchase status, and Superwall for paywall presentation. We never see or store your card details.
             </li>
           </ul>
         </section>
@@ -52,7 +57,7 @@ export default function PrivacyPage() {
           <ul className="list-disc pl-5 flex flex-col gap-1.5">
             <li>To identify LEGO sets from your photos using AI (Anthropic Claude Vision).</li>
             <li>To look up market prices from BrickLink and eBay.</li>
-            <li>To manage your subscription and scan limits.</li>
+            <li>To manage your Pro access, subscriptions, purchases, restores, and scan limits.</li>
             <li>To improve the service (anonymous, aggregated usage analytics via Vercel Analytics).</li>
           </ul>
         </section>
@@ -65,6 +70,9 @@ export default function PrivacyPage() {
             <li><strong style={{ color: "var(--foreground)" }}>Clerk</strong> — authentication</li>
             <li><strong style={{ color: "var(--foreground)" }}>Anthropic (Claude)</strong> — AI-powered set identification</li>
             <li><strong style={{ color: "var(--foreground)" }}>BrickLink &amp; eBay</strong> — market pricing data</li>
+            <li><strong style={{ color: "var(--foreground)" }}>Apple App Store</strong> — iOS purchase processing</li>
+            <li><strong style={{ color: "var(--foreground)" }}>RevenueCat</strong> — subscription and entitlement status</li>
+            <li><strong style={{ color: "var(--foreground)" }}>Superwall</strong> — native paywall presentation</li>
             <li><strong style={{ color: "var(--foreground)" }}>Stripe</strong> — web payment processing</li>
             <li><strong style={{ color: "var(--foreground)" }}>Google Play</strong> — Android payment processing</li>
             <li><strong style={{ color: "var(--foreground)" }}>Supabase</strong> — database hosting</li>
@@ -77,7 +85,7 @@ export default function PrivacyPage() {
             Data Retention
           </h2>
           <p>
-            Scanned images are processed in memory and discarded immediately after identification. API response caches are stored for 24 hours to improve performance, then automatically deleted. Your account data is retained as long as your account is active.
+            Scanned images are processed for identification and are not kept as user photos after the scan completes. API response caches are stored for 24 hours to improve performance, then automatically deleted. Your account data and purchase entitlement status are retained as long as your account is active.
           </p>
         </section>
 

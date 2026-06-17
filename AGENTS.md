@@ -4,9 +4,12 @@
 **All development happens on `Codex/stripe-appurl-fix-ihFVU` only.**
 Do NOT push to or edit the `Codex/loveable-design-practices-ihFVU` branch.
 
+## Default Focus
+If a task does not explicitly say otherwise, assume we are working on the iOS version of BrickVal inside the shared Expo app.
+
 ## What we're building
-Android-first native mobile app: scan a LEGO set photo → get its current **USD** market value (not AUD).
-The immediate launch target is an Android APK built from `brickval-mobile` with Expo/EAS. iOS is planned later using the existing bundle identifier.
+Native mobile app: scan a LEGO set photo → get its current **USD** market value (not AUD).
+Current default scope is iOS publish-readiness using the shared Expo app and bundle identifier `com.brickval.app`. Android APK support remains part of the same app.
 The existing Next.js app remains the hosted API/web backend at `brickvalue.live`. Build only what is in the plan. No extras, no abstractions.
 
 ### What's working
@@ -15,6 +18,7 @@ The existing Next.js app remains the hosted API/web backend at `brickvalue.live`
 - ✅ Native first-launch onboarding flow with local goal pick
 - ✅ Local on-device collection list with portfolio-style total value dashboard
 - ✅ Curved historical market-value chart with dynamic tooltip and timeline labels from saved item transaction history
+- ✅ Home tab now reflects active Pro state with an unlimited-scans status banner instead of the free-plan inventory prompt
 - ✅ Native scan mode switch for LEGO sets vs minifigures
 - ✅ Fullscreen native camera scanner with stability detection and manual shutter
 - ✅ Manual set number entry sheet for LEGO sets only
@@ -24,13 +28,15 @@ The existing Next.js app remains the hosted API/web backend at `brickvalue.live`
 - ✅ API bridge from the native app to hosted `/api/identify` and `/api/lookup`
 - ✅ Native Superwall placement trigger for the upgrade flow
 - ✅ Clerk auth token handoff now includes the Clerk user id for native identity sync
+- ✅ Native account login is now working across email, Google, and Apple sign-in
+- ✅ iOS production build now patches CocoaPods modular headers for Clerk Google Sign-In so EAS pod install succeeds with the native paywall stack
 - ✅ Android APK preview build profile via EAS
-- ✅ Future iOS identifiers already present in Expo config
+- ✅ iOS bundle identifier is present in Expo config for the shared native app
 - ✅ Hosted backend still supports Codex Vision set number detection, BrickLink, eBay, Brickset, Frankfurter, Supabase cache, Clerk, and Stripe webhook flow
 
 ### What's NOT working / stubbed
-- ⏸️ iOS app is future work; do not prioritize it until Android APK launch is stable
-- ⏸️ Native paywall now opens a live Superwall placement, but the dashboard campaign still needs to be kept in sync with the app placement name
+- ⏸️ Native paywall now opens a live Superwall placement with localized StoreKit pricing variables, but the dashboard campaign still needs to stay in sync with the app placement name and product state in App Store Connect
+- ⏸️ Paywall flow still needs final on-device verification through purchase completion after the recent pricing-template fix
 - ⏸️ Collection storage is local-device only for the MVP; backend sync is future work
 - ⏸️ eBay Marketplace Insights: awaiting Application Growth Check approval, falls back to Browse API (active listings)
 - ⏸️ No native test coverage configured
@@ -41,7 +47,7 @@ The existing Next.js app remains the hosted API/web backend at `brickvalue.live`
 - React Native SVG for the native Home value chart
 - React Native WebView for hosted account, upgrade, and full result screens
 - RevenueCat + Superwall native modules for native subscription paywall flow
-- EAS builds: Android APK for preview/internal launch, Android app bundle for production
+- EAS builds: Android APK for preview/internal launch, Android app bundle for production, and iOS production/TestFlight builds
 - Next.js hosted backend at `brickvalue.live` for server-side API calls and web fallback screens
 - Codex Sonnet Vision API for set identification
 - eBay API, BrickLink API, Brickset API, Frankfurter API, Supabase cache, Clerk, and Stripe remain backend concerns
@@ -114,6 +120,9 @@ STRIPE_WEBHOOK_SECRET
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY           ← server-only, never expose to client
+
+# Sentry Error Tracking
+SENTRY_DSN              ← set in app.json extra.sentryDsn, used by lib/sentry.ts
 
 # App
 NEXT_PUBLIC_APP_URL
@@ -250,7 +259,8 @@ This is not optional — it is in the success criteria.
 ## Integration Status
 - Native app: Android APK preview build profile exists in `brickval-mobile/eas.json`.
 - Native app: WebView modal opens hosted account, upgrade, and full result screens on `brickvalue.live`.
-- Native paywall: RevenueCat + Superwall modules are configured in `brickval-mobile/app/_layout.tsx`; the `brickval_upgrade` placement is wired from the app, and the dashboard campaign controls the live paywall shown to users. Lifetime purchase still uses the hosted Stripe upgrade page as the fallback path.
+- Native paywall: RevenueCat + Superwall modules are configured in `brickval-mobile/app/_layout.tsx`; the `brickval_upgrade` placement is wired from the app, and the dashboard campaign controls the live paywall shown to users. The active paywall template now uses localized StoreKit-backed product variables instead of fixed USD strings. Lifetime purchase still uses the hosted Stripe upgrade page as the fallback path.
+- iOS native build fix: `brickval-mobile/plugins/withGoogleStaticSwiftPods.js` injects modular headers for `GoogleUtilities` and `RecaptchaInterop` during prebuild so Clerk Google Sign-In can coexist with static Swift pods on EAS iOS builds.
 - Backend scan gate: `src/lib/scan-gate.ts` is STUBBED — returns `allowed: true` for all users.
   Real backend scan limits + Stripe paywall still need final wiring.
 - eBay API: OAuth active (Browse API working). EPN partner.
