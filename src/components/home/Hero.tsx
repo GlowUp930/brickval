@@ -5,12 +5,6 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { joinWaitlist, createLifetimeCheckout } from "@/app/waitlist-action";
 
-const steps = [
-  { icon: "📷", title: "Take a photo", desc: "Point your camera at any LEGO box" },
-  { icon: "🤖", title: "AI reads it", desc: "Claude Vision finds the set number" },
-  { icon: "💰", title: "See the value", desc: "USD market price, retirement status, and deal score — instantly" },
-];
-
 const appScreens = [
   {
     label: "Collection",
@@ -72,6 +66,56 @@ const structuredData = [
   },
 ];
 
+const launchPlatforms = [
+  {
+    name: "Betalist",
+    svg: (
+      <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6">
+        <circle cx="16" cy="16" r="14" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M10 16h5l-1.5-5h3l-3.5 9 3-4h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    name: "TinyLaunch",
+    svg: (
+      <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6">
+        <path d="M16 4l-4 8h3l-1 7 6-9h-3.5L19 4h-3z" fill="currentColor" />
+        <circle cx="20" cy="24" r="2" fill="currentColor" opacity="0.4" />
+        <circle cx="12" cy="26" r="1.5" fill="currentColor" opacity="0.25" />
+      </svg>
+    ),
+  },
+  {
+    name: "Brickset",
+    svg: (
+      <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6">
+        <rect x="3" y="7" width="11" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+        <rect x="18" y="7" width="11" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+        <rect x="8" y="18" width="11" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+        <rect x="3" y="9" width="2" height="2" rx="0.8" fill="currentColor" opacity="0.3" />
+        <rect x="9" y="9" width="2" height="2" rx="0.8" fill="currentColor" opacity="0.3" />
+        <rect x="20" y="9" width="2" height="2" rx="0.8" fill="currentColor" opacity="0.3" />
+        <rect x="26" y="9" width="2" height="2" rx="0.8" fill="currentColor" opacity="0.3" />
+        <rect x="10" y="20" width="2" height="2" rx="0.8" fill="currentColor" opacity="0.3" />
+        <rect x="16" y="20" width="2" height="2" rx="0.8" fill="currentColor" opacity="0.3" />
+      </svg>
+    ),
+  },
+];
+
+const AppleLogo = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+  </svg>
+);
+
+const PlayIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="w-10 h-10">
+    <path d="M8 5.14v14l11-7-11-7z" />
+  </svg>
+);
+
 function StudRow() {
   return (
     <div className="flex items-center justify-center gap-3 py-1">
@@ -93,6 +137,7 @@ export function Hero() {
   const [activeTab, setActiveTab] = useState<"notify" | "lifetime">("notify");
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "duplicate" | "error">("idle");
+  const [demoPlatform, setDemoPlatform] = useState<"ios" | "web">("ios");
 
   async function handleWaitlist() {
     if (!email || status === "loading") return;
@@ -139,33 +184,29 @@ export function Hero() {
         </Link>
       </motion.nav>
 
-      {/* ── Hero Section ── */}
+      {/* ── Hero (iOS launch) ── */}
       <section className="relative flex-1 flex flex-col items-center justify-center px-6 pt-28 pb-16 text-center max-w-lg mx-auto w-full overflow-hidden">
-        {/* Background layers */}
         <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
         <div className="absolute inset-0 bg-radial-fade pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col items-center gap-8">
-          {/* Badge */}
+        <div className="relative z-10 flex flex-col items-center gap-6">
+          {/* Launch badge */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest"
-            style={{ background: "var(--surface-2)", color: "var(--accent)", border: "1px solid var(--border)" }}
+            transition={{ delay: 0.15, duration: 0.6 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider"
+            style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.3)" }}
           >
-            <span
-              className="w-1.5 h-1.5 rounded-full inline-block animate-pulse"
-              style={{ background: "var(--accent)" }}
-            />
-            LEGO set value checker
+            <span className="w-1.5 h-1.5 rounded-full inline-block animate-pulse" style={{ background: "#22c55e" }} />
+            Launching June 21
           </motion.div>
 
           {/* Headline */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35, duration: 0.7 }}
+            transition={{ delay: 0.3, duration: 0.7 }}
             className="text-4xl sm:text-5xl font-black leading-[1.05] tracking-tight"
             style={{ color: "var(--foreground)" }}
           >
@@ -177,62 +218,215 @@ export function Hero() {
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.6 }}
+            transition={{ delay: 0.45, duration: 0.6 }}
             className="text-base leading-relaxed max-w-sm"
             style={{ color: "var(--muted)" }}
           >
-            Check what a LEGO set is worth in USD. Scan the box or enter a set number to see market value, retirement status, and resale signals.
+            Scan any LEGO box. Get USD market value, retirement status, and resale signals in seconds.
           </motion.p>
 
-          {/* CTAs */}
+          {/* Primary CTA: App Store */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.65, duration: 0.6 }}
-            className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-sm"
+            transition={{ delay: 0.6, duration: 0.6 }}
+            className="flex flex-col items-center gap-3"
           >
+            {/* TODO: replace with real App Store link when available */}
+            <a
+              href="https://apps.apple.com/app/idXXXXXXXX"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 px-6 py-3.5 rounded-xl font-semibold transition-all active:scale-[0.98]"
+              style={{ background: "white", color: "black" }}
+            >
+              <AppleLogo />
+              <div className="text-left leading-tight">
+                <div className="text-[9px] uppercase tracking-wide opacity-70">Download on the</div>
+                <div className="text-base font-bold leading-tight">App Store</div>
+              </div>
+            </a>
+
             <Link
               href="/scan"
-              className="w-full sm:flex-1 text-center font-black py-4 px-6 rounded-2xl text-lg transition-all active:scale-95 hover:glow-accent-sm"
-              style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+              className="text-sm font-medium transition-colors"
+              style={{ color: "var(--muted)" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
+              onMouseLeave={e => (e.currentTarget.style.color = "var(--muted)")}
             >
-              Scan a set — free
+              or try on web
             </Link>
-            <button
-              onClick={() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })}
-              className="w-full sm:flex-1 font-bold py-4 px-6 rounded-2xl text-lg transition-all active:scale-95"
-              style={{
-                background: "transparent",
-                color: "var(--foreground)",
-                border: "1px solid var(--border)",
-              }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--accent)")}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border)")}
-            >
-              Get early access ↓
-            </button>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── Platform Badges ── */}
+      <section className="px-6 py-10" style={{ background: "var(--background)" }}>
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="max-w-lg mx-auto flex flex-col items-center gap-4"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--muted)" }}>
+            Launching on
+          </p>
+          <div className="flex items-center gap-8">
+            {launchPlatforms.map((platform) => (
+              <div
+                key={platform.name}
+                className="flex items-center gap-2.5"
+                style={{ color: "var(--muted)" }}
+              >
+                {platform.svg}
+                <span className="text-sm font-semibold">{platform.name}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ── Demo Showcase ── */}
+      <section className="border-t px-6 py-20" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-10"
+          >
+            <h2 className="text-3xl sm:text-4xl font-black tracking-tight" style={{ color: "var(--foreground)" }}>
+              See it in action
+            </h2>
           </motion.div>
 
-          {/* Trust badges */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.85, duration: 0.6 }}
-            className="flex items-center gap-6"
-            style={{ color: "var(--muted)" }}
-          >
-            <div className="flex items-center gap-1.5 text-sm">
-              <span>⚡</span><span>Instant results</span>
+          {/* Segmented control */}
+          <div className="flex justify-center mb-10">
+            <div
+              className="inline-flex rounded-full p-1 gap-0.5"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
+            >
+              <button
+                onClick={() => setDemoPlatform("ios")}
+                className="px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-200"
+                style={{
+                  background: demoPlatform === "ios" ? "var(--foreground)" : "transparent",
+                  color: demoPlatform === "ios" ? "var(--background)" : "var(--muted)",
+                  boxShadow: demoPlatform === "ios" ? "0 2px 12px rgba(0,0,0,0.3)" : "none",
+                }}
+              >
+                iPhone
+              </button>
+              <button
+                onClick={() => setDemoPlatform("web")}
+                className="px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-200"
+                style={{
+                  background: demoPlatform === "web" ? "var(--foreground)" : "transparent",
+                  color: demoPlatform === "web" ? "var(--background)" : "var(--muted)",
+                  boxShadow: demoPlatform === "web" ? "0 2px 12px rgba(0,0,0,0.3)" : "none",
+                }}
+              >
+                Desktop
+              </button>
             </div>
-            <div className="w-px h-4" style={{ background: "var(--border)" }} />
-            <div className="flex items-center gap-1.5 text-sm">
-              <span>🤖</span><span>AI-powered</span>
-            </div>
-            <div className="w-px h-4" style={{ background: "var(--border)" }} />
-            <div className="flex items-center gap-1.5 text-sm">
-              <span>💵</span><span>USD prices</span>
-            </div>
-          </motion.div>
+          </div>
+
+          {/* Preview cards */}
+          <AnimatePresence mode="wait">
+            {demoPlatform === "ios" ? (
+              <motion.div
+                key="ios"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col md:flex-row items-center gap-8 md:gap-12 justify-center"
+              >
+                {/* iPhone frame + video placeholder */}
+                <div className="relative w-[220px] h-[450px] rounded-[2.5rem] overflow-hidden flex-shrink-0"
+                  style={{
+                    background: "var(--background)",
+                    border: "3px solid var(--border)",
+                    boxShadow: "0 24px 80px -12px rgba(0,0,0,0.6)",
+                  }}
+                >
+                  {/* Notch */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 rounded-b-2xl z-10" style={{ background: "var(--surface-2)" }} />
+                  {/* Content */}
+                  <div className="h-full flex flex-col items-center justify-center gap-4 px-6 pt-10">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center"
+                      style={{ background: "rgba(255,255,255,0.08)" }}
+                    >
+                      <PlayIcon />
+                    </div>
+                    <p className="text-xs text-center leading-relaxed" style={{ color: "var(--muted)" }}>
+                      Mobile app demo
+                    </p>
+                  </div>
+                </div>
+
+                {/* Side copy */}
+                <div className="text-center md:text-left max-w-xs">
+                  <h3 className="text-xl font-black mb-3" style={{ color: "var(--foreground)" }}>
+                    Take it anywhere
+                  </h3>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
+                    Scan LEGO sets on the go. Point your camera, get instant USD market value, and build your collection - all from your iPhone.
+                  </p>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="web"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col items-center gap-8"
+              >
+                {/* Desktop browser frame */}
+                <div className="w-full max-w-xl rounded-2xl overflow-hidden flex-shrink-0"
+                  style={{
+                    background: "var(--background)",
+                    border: "2px solid var(--border)",
+                    boxShadow: "0 24px 80px -12px rgba(0,0,0,0.6)",
+                  }}
+                >
+                  {/* Browser chrome */}
+                  <div className="flex items-center gap-2 px-4 py-3" style={{ background: "var(--surface-2)", borderBottom: "1px solid var(--border)" }}>
+                    <span className="w-3 h-3 rounded-full" style={{ background: "#ef4444" }} />
+                    <span className="w-3 h-3 rounded-full" style={{ background: "#f59e0b" }} />
+                    <span className="w-3 h-3 rounded-full" style={{ background: "#22c55e" }} />
+                    <span className="flex-1 mx-4 h-6 rounded-md text-[10px] flex items-center px-3" style={{ background: "var(--surface)", color: "var(--muted)" }}>
+                      brickvalue.live/scan
+                    </span>
+                  </div>
+                  {/* Content */}
+                  <div className="h-64 flex flex-col items-center justify-center gap-4">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center"
+                      style={{ background: "rgba(255,255,255,0.08)" }}
+                    >
+                      <PlayIcon />
+                    </div>
+                    <p className="text-xs" style={{ color: "var(--muted)" }}>
+                      Web app demo
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-center max-w-xs">
+                  <h3 className="text-xl font-black mb-3" style={{ color: "var(--foreground)" }}>
+                    Scan on desktop or at home
+                  </h3>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
+                    Upload a photo or enter a set number. Full market breakdown, transaction history, and price comparison on the big screen.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </section>
 
@@ -308,125 +502,6 @@ export function Hero() {
               </motion.div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ── How it works ── */}
-      <section className="border-t px-6 py-20" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-        <div className="max-w-3xl mx-auto">
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="text-xs font-semibold uppercase tracking-[0.2em] text-center mb-12"
-            style={{ color: "var(--muted)" }}
-          >
-            How it works
-          </motion.p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-            {steps.map((step, i) => (
-              <motion.div
-                key={step.title}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.15, duration: 0.5 }}
-                className="flex flex-col items-center gap-4 text-center group"
-              >
-                <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl transition-all group-hover:glow-accent-sm"
-                  style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
-                >
-                  {step.icon}
-                </div>
-                <div>
-                  <p className="font-bold mb-1" style={{ color: "var(--foreground)" }}>{step.title}</p>
-                  <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>{step.desc}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* ── Mini result demo ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.5, duration: 0.6 }}
-            className="mt-14 flex flex-col items-center gap-4"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--muted)" }}>
-              Here&apos;s what you get
-            </p>
-            <div
-              className="w-full max-w-sm rounded-3xl overflow-hidden"
-              style={{ background: "var(--background)", border: "1px solid var(--border)", boxShadow: "0 8px 40px -12px rgba(0,0,0,0.6)" }}
-            >
-              {/* Set image area */}
-              <div className="relative h-28 flex items-center justify-center overflow-hidden" style={{ background: "var(--surface)" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="https://img.bricklink.com/ItemImage/SN/0/75192-1.png"
-                  alt="LEGO Millennium Falcon 75192"
-                  className="h-full w-full object-contain"
-                  style={{ padding: "8px" }}
-                />
-                <div className="absolute inset-x-0 bottom-0 h-8 pointer-events-none"
-                  style={{ background: "linear-gradient(to bottom, transparent, var(--background))" }} />
-              </div>
-
-              {/* Identity */}
-              <div className="px-4 pt-1 pb-3 text-center">
-                <p className="font-bold text-sm" style={{ color: "var(--foreground)" }}>Millennium Falcon</p>
-                <p className="text-[11px] mb-2" style={{ color: "var(--muted)" }}>#75192 · 2017</p>
-                <div className="flex items-center justify-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
-                    style={{ background: "rgba(239,68,68,0.10)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.25)" }}>
-                    Retired
-                  </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
-                    style={{ background: "rgba(167,139,250,0.12)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.28)" }}>
-                    💎 Retired &amp; Appreciating
-                  </span>
-                </div>
-              </div>
-
-              {/* Price card */}
-              <div className="mx-3 mb-3 rounded-2xl p-4 text-center"
-                style={{ border: "1px solid var(--border)", background: "linear-gradient(to bottom, rgba(245,197,24,0.05), transparent)" }}>
-                <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--accent)" }}>
-                  BrickLink Avg Sold · New / Sealed
-                </p>
-                <p className="text-4xl font-bold tabular-nums leading-none" style={{ color: "var(--foreground)" }}>$289</p>
-                <p className="text-[11px] mt-1" style={{ color: "var(--muted)" }}>Based on 42 real sales · last 6 months</p>
-                <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
-                  <span className="text-xs font-bold px-3 py-1.5 rounded-full"
-                    style={{ background: "rgba(34,197,94,0.18)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.30)" }}>
-                    +43% vs retail
-                  </span>
-                  <span className="text-xs" style={{ color: "var(--muted)" }}>RRP: ~$200</span>
-                </div>
-              </div>
-
-              {/* Sample transaction rows */}
-              <div className="mx-3 mb-3 rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-                {[
-                  { label: "BrickLink sold · US", date: "12 Mar 2026", price: "$295" },
-                  { label: "BrickLink sold · DE", date: "8 Mar 2026", price: "$281" },
-                ].map((row, i) => (
-                  <div key={i} className="flex items-center gap-3 px-3 py-3"
-                    style={{ background: "var(--surface)", borderBottom: i === 0 ? "1px solid var(--border)" : "none" }}>
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: "var(--accent)" }} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>{row.label}</p>
-                      <p className="text-[10px]" style={{ color: "var(--muted)" }}>{row.date}</p>
-                    </div>
-                    <span className="text-xs font-black tabular-nums" style={{ color: "var(--accent)" }}>{row.price}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
         </div>
       </section>
 
@@ -635,7 +710,7 @@ export function Hero() {
                         Be First To Know When We Launch
                       </h2>
                       <p className="text-base leading-relaxed" style={{ color: "var(--muted)" }}>
-                        Get notified the moment BrickVal goes live —
+                        Get notified the moment BrickVal goes live -
                         with priority access and early-bird pricing.
                       </p>
                     </div>
@@ -653,7 +728,7 @@ export function Hero() {
                             className="py-4 px-6 rounded-2xl text-center font-bold"
                             style={{ background: "rgba(34,197,94,0.12)", color: "var(--green)", border: "1px solid rgba(34,197,94,0.3)" }}
                           >
-                            You&apos;re locked in! We&apos;ll be in touch. 🎉
+                            You&apos;re locked in! We&apos;ll be in touch.
                           </motion.div>
                         ) : status === "duplicate" ? (
                           <motion.div
@@ -665,7 +740,7 @@ export function Hero() {
                             className="py-4 px-6 rounded-2xl text-center font-bold"
                             style={{ background: "rgba(245,197,24,0.1)", color: "var(--accent)", border: "1px solid rgba(245,197,24,0.3)" }}
                           >
-                            You&apos;re already on the list! 🧱
+                            You&apos;re already on the list!
                           </motion.div>
                         ) : (
                           <motion.div
@@ -696,7 +771,7 @@ export function Hero() {
                               className="px-7 py-3.5 rounded-xl font-black text-base transition-all active:scale-95 disabled:opacity-60"
                               style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
                             >
-                              {status === "loading" ? "Snapping…" : "Snap in →"}
+                              {status === "loading" ? "Snapping..." : "Snap in"}
                             </button>
                           </motion.div>
                         )}
@@ -709,7 +784,7 @@ export function Hero() {
                     </div>
 
                     <p className="text-xs" style={{ color: "var(--muted)" }}>
-                      🔒 No spam · Unsubscribe anytime
+                      No spam - Unsubscribe anytime
                     </p>
                   </motion.div>
                 ) : (
@@ -767,12 +842,12 @@ export function Hero() {
                         className="w-full font-black py-4 px-6 rounded-2xl text-lg transition-all active:scale-[0.98]"
                         style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
                       >
-                        Get Lifetime Access →
+                        Get Lifetime Access
                       </button>
                     </form>
 
                     <p className="text-xs" style={{ color: "var(--muted)" }}>
-                      🔒 Billed once at launch · No recurring charges
+                      Billed once at launch - No recurring charges
                     </p>
                   </motion.div>
                 )}

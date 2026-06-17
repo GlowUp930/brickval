@@ -17,14 +17,17 @@ const forbiddenPageMarkers = [
 ];
 
 const requiredHeroMarkers = [
-  "Get early access",
+  "Launching June 21",
+  "Download on the",
+  "or try on web",
   "App preview",
   "Built for fast LEGO valuation",
+  "Launching on",
+  "See it in action",
   "Be First To Know When We Launch",
-  "USD prices",
   "Lifetime Deal",
-  "BrickLink Avg Sold",
-  "Sample transaction rows",
+  "LEGO price data from real marketplaces",
+  "Built for collectors who need a fast price check",
 ];
 
 const failures = [];
