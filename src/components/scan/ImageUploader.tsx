@@ -69,12 +69,22 @@ export function ImageUploader({ mode, onManualEntry }: Props) {
     const formData = new FormData();
     formData.append("image", compressed, "scan.jpg");
 
-    let data: { set_number: string | null; candidates?: Candidate[]; error?: string; message?: string };
+    let data: { set_number: string | null; candidates?: Candidate[]; detections?: { id: string; score: number }[]; error?: string; message?: string };
     try {
       const res = await fetch(`/api/identify?mode=${mode}`, { method: "POST", body: formData });
       data = await res.json();
       if (!res.ok) { setError(data.message ?? "Something went wrong. Please try again."); setIsLoading(false); return; }
     } catch { setError("Network error. Check your connection and try again."); setIsLoading(false); return; }
+
+    // ── Minifig mode: normalize detections into candidates ──
+    if (mode === "minifig" && !data.candidates?.length && (data.detections?.length ?? 0) > 0) {
+      const minifigDetections = (data.detections ?? []).filter(d => d.id);
+      if (minifigDetections.length === 1) {
+        data.set_number = minifigDetections[0].id;
+      } else {
+        data.candidates = minifigDetections.map(d => ({ id: d.id, score: d.score }));
+      }
+    }
 
     if (!data.set_number) {
       if (mode === "minifig" && (data.candidates?.length ?? 0) > 0) {
