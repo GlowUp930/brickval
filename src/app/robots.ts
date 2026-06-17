@@ -13,7 +13,6 @@ export default function robots(): MetadataRoute.Robots {
           "/api/",
           "/bulk",
           "/onboarding",
-          "/result/",
           "/scan",
           "/upgrade",
         ],
