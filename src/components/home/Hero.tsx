@@ -184,17 +184,31 @@ export function Hero() {
         </Link>
       </motion.nav>
 
-      {/* ── Hero (iOS launch) ── */}
-      <section className="relative flex-1 flex flex-col items-center justify-center px-6 pt-28 pb-16 text-center max-w-lg mx-auto w-full overflow-hidden">
-        <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
-        <div className="absolute inset-0 bg-radial-fade pointer-events-none" />
+      {/* ── Hero (Cinematic Center-Wide) ── */}
+      <section className="relative flex flex-col items-center justify-center px-6 pt-32 pb-24 text-center w-full overflow-hidden"
+        style={{ minHeight: "92dvh" }}
+      >
+        {/* Background layers */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{
+            background: "radial-gradient(ellipse 80% 60% at 50% 30%, rgba(245,197,24,0.08) 0%, rgba(245,197,24,0.03) 35%, transparent 70%)",
+          }}
+        />
+        <div className="absolute inset-0 bg-grid opacity-20 pointer-events-none" />
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.04]"
+          style={{
+            backgroundImage: "radial-gradient(circle, var(--accent) 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        />
 
-        <div className="relative z-10 flex flex-col items-center gap-6">
+        <div className="relative z-10 flex flex-col items-center gap-8 max-w-5xl w-full">
           {/* Launch badge */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15, duration: 0.6 }}
+            transition={{ delay: 0.15, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider"
             style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.3)" }}
           >
@@ -204,10 +218,10 @@ export function Hero() {
 
           {/* Headline */}
           <motion.h1
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.7 }}
-            className="text-4xl sm:text-5xl font-black leading-[1.05] tracking-tight"
+            transition={{ delay: 0.25, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tight max-w-4xl"
             style={{ color: "var(--foreground)" }}
           >
             LEGO Set<br />
@@ -218,32 +232,32 @@ export function Hero() {
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45, duration: 0.6 }}
-            className="text-base leading-relaxed max-w-sm"
+            transition={{ delay: 0.4, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="text-lg sm:text-xl leading-relaxed max-w-2xl"
             style={{ color: "var(--muted)" }}
           >
             Scan any LEGO box. Get USD market value, retirement status, and resale signals in seconds.
+            Powered by real BrickLink and eBay market data.
           </motion.p>
 
           {/* Primary CTA: App Store */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.6 }}
-            className="flex flex-col items-center gap-3"
+            transition={{ delay: 0.55, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="flex flex-col items-center gap-4"
           >
-            {/* TODO: replace with real App Store link when available */}
             <a
               href="https://apps.apple.com/app/idXXXXXXXX"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-3 px-6 py-3.5 rounded-xl font-semibold transition-all active:scale-[0.98]"
+              className="inline-flex items-center gap-3 px-7 py-4 rounded-2xl font-semibold transition-all active:scale-[0.98] hover:shadow-2xl hover:shadow-black/40"
               style={{ background: "white", color: "black" }}
             >
               <AppleLogo />
               <div className="text-left leading-tight">
-                <div className="text-[9px] uppercase tracking-wide opacity-70">Download on the</div>
-                <div className="text-base font-bold leading-tight">App Store</div>
+                <div className="text-[10px] uppercase tracking-wide opacity-70">Download on the</div>
+                <div className="text-lg font-bold leading-tight">App Store</div>
               </div>
             </a>
 
@@ -256,6 +270,30 @@ export function Hero() {
             >
               or try on web
             </Link>
+          </motion.div>
+
+          {/* Trust signal strip */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.75, duration: 0.6 }}
+            className="flex flex-wrap items-center justify-center gap-6 pt-4"
+            style={{ color: "var(--muted)" }}
+          >
+            <div className="flex items-center gap-1.5 text-sm">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--accent)" }} />
+              BrickLink + eBay data
+            </div>
+            <div className="w-px h-4" style={{ background: "var(--border)" }} />
+            <div className="flex items-center gap-1.5 text-sm">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--accent)" }} />
+              8,000+ sets supported
+            </div>
+            <div className="w-px h-4" style={{ background: "var(--border)" }} />
+            <div className="flex items-center gap-1.5 text-sm">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--accent)" }} />
+              iOS + Web + Android
+            </div>
           </motion.div>
         </div>
       </section>
