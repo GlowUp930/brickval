@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Logo } from "@/components/Logo";
 import type { MinifigInfo, MinifigPricing, BrickLinkDetail } from "@/types/market";
+import { BrandMark } from "@/components/BrandMark";
 
 // ── Count-up hook ─────────────────────────────────────────────────────────────
 function useCountUp(target: number, durationMs = 900): number {
@@ -238,7 +238,7 @@ export default function MinifigResultPage() {
       ? `${displayName} — ${usd.format(heroUsd)} market value`
       : displayName;
     if (typeof navigator !== "undefined" && navigator.share) {
-      try { await navigator.share({ title: "Brickvalue.live", text, url }); return; }
+      try { await navigator.share({ title: "BrickVal", text, url }); return; }
       catch { /* cancelled */ }
     }
     try {
@@ -302,7 +302,7 @@ export default function MinifigResultPage() {
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </Link>
-        <Logo size="sm" />
+        <BrandMark iconClassName="h-6 w-6" textClassName="text-sm" />
         <div className="w-9" />
       </header>
 

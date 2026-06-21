@@ -1,42 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { ImageUploader } from "@/components/scan/ImageUploader";
 import { ManualEntry } from "@/components/scan/ManualEntry";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Logo } from "@/components/Logo";
+import { BrandMark } from "@/components/BrandMark";
 
 export default function ScanPage() {
   const [showManual, setShowManual] = useState(false);
   const [mode, setMode] = useState<"set" | "minifig">("set");
-  const [ready, setReady] = useState(false);
   const authEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
-  const router = useRouter();
-
-  // Redirect to onboarding if user hasn't completed it yet
-  useEffect(() => {
-    if (!localStorage.getItem("onboarded")) {
-      router.replace("/onboarding");
-    } else {
-      setReady(true);
-    }
-  }, [router]);
-
-  if (!ready) return null;
 
   return (
     <main className="min-h-screen flex flex-col" style={{ background: "var(--background)" }}>
 
-      {/* Header — minimal, Cal.ai style */}
+      {/* Header */}
       <header
-        className="flex items-center justify-between px-5 py-4 border-b backdrop-blur-xl"
-        style={{ borderColor: "var(--border)", background: "rgba(13,13,15,0.85)" }}
+        className="flex items-center justify-between px-5 py-4 border-b"
+        style={{ borderColor: "var(--border)", background: "var(--surface)" }}
       >
-        <Link href="/">
-          <Logo size="sm" />
+        <Link href="/" className="inline-flex items-center">
+          <BrandMark iconClassName="h-7 w-7" textClassName="text-sm" />
         </Link>
         {authEnabled ? (
           <UserButton />
@@ -56,15 +42,18 @@ export default function ScanPage() {
             className="w-full rounded-3xl p-6 flex flex-col gap-4 text-center"
             style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
           >
-            <h1 className="text-2xl font-black" style={{ color: "var(--foreground)" }}>
+            <h1 className="text-2xl font-bold" style={{ color: "var(--foreground)" }}>
               Preview build
             </h1>
             <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
               Sign-in keys are not configured in this environment yet, so scanning is disabled here.
             </p>
+            <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
+              Add the Clerk preview environment variables to test the full scan flow.
+            </p>
             <Link
               href="/"
-              className="inline-flex items-center justify-center rounded-full px-5 py-3 font-bold"
+              className="inline-flex items-center justify-center rounded-2xl px-5 py-3 font-semibold"
               style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
             >
               Back to home
@@ -72,33 +61,34 @@ export default function ScanPage() {
           </motion.div>
         ) : (
           <>
+
             {/* Title */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-center"
             >
-              <h1 className="text-3xl font-black mb-2" style={{ color: "var(--foreground)" }}>
+              <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--foreground)" }}>
                 {mode === "set" ? "Scan a Set" : "Scan a Minifig"}
               </h1>
               <p className="text-sm" style={{ color: "var(--muted)" }}>
                 {mode === "set"
-                  ? "Take a photo of the box or enter the set number."
-                  : "Take a photo of your LEGO minifigure."}
+                  ? "Take a photo of the box or enter the set number manually."
+                  : "Take a photo of your LEGO minifigure to get its current market value."}
               </p>
             </motion.div>
 
-            {/* Mode toggle — pill style */}
+            {/* Mode toggle */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 }}
-              className="flex w-full rounded-full p-1 gap-1"
+              className="flex w-full rounded-xl p-1 gap-1"
               style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
             >
               <button
                 onClick={() => setMode("set")}
-                className="flex-1 py-2.5 rounded-full text-sm font-bold transition-all"
+                className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
                 style={mode === "set"
                   ? { background: "var(--accent)", color: "var(--accent-fg)" }
                   : { color: "var(--muted)" }}
@@ -107,7 +97,7 @@ export default function ScanPage() {
               </button>
               <button
                 onClick={() => setMode("minifig")}
-                className="flex-1 py-2.5 rounded-full text-sm font-bold transition-all"
+                className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
                 style={mode === "minifig"
                   ? { background: "var(--accent)", color: "var(--accent-fg)" }
                   : { color: "var(--muted)" }}
@@ -127,7 +117,7 @@ export default function ScanPage() {
               <ImageUploader mode={mode} onManualEntry={() => setShowManual(true)} />
             </motion.div>
 
-            {/* Divider + Manual entry — set mode only */}
+            {/* Divider + Manual entry — only shown for set mode */}
             {mode === "set" && (
               <>
                 <div className="flex items-center gap-4 w-full">

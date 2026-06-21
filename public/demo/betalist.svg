@@ -1,0 +1,6 @@
+<svg width="336" height="72" viewBox="0 0 336 72" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="betalistTitle">
+  <title id="betalistTitle">BetaList</title>
+  <rect width="336" height="72" rx="20" fill="none"/>
+  <path d="M35 21H61C71.2 21 77.5 26.1 77.5 34.2C77.5 38.9 75.2 42.6 71.3 44.6C76.1 46.4 79 50.6 79 56C79 65.2 72.1 71 61.2 71H35V21ZM59.8 40.6C63.8 40.6 66.1 38.4 66.1 35.1C66.1 31.8 63.8 29.8 59.8 29.8H46.3V40.6H59.8ZM60.7 62.1C65.2 62.1 67.7 59.8 67.7 56C67.7 52.3 65.1 50.1 60.5 50.1H46.3V62.1H60.7Z" fill="#F4F0E6"/>
+  <text x="94" y="52" fill="#F4F0E6" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" letter-spacing="0">BetaList</text>
+</svg>
