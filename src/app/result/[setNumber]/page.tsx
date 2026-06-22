@@ -8,6 +8,7 @@ import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { computePricing } from "@/lib/compute-pricing";
 import { PriceReveal } from "@/components/result/PriceReveal";
 import Link from "next/link";
+import { BrandMark } from "@/components/BrandMark";
 
 interface Props {
   params: Promise<{ setNumber: string }>;
@@ -119,17 +120,7 @@ export default async function ResultPage({ params }: Props) {
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </Link>
-        <div className="flex items-center gap-2">
-          <div
-            className="w-6 h-6 rounded-md flex items-center justify-center"
-            style={{ background: "var(--accent)" }}
-          >
-            <span className="font-bold text-[10px]" style={{ color: "var(--accent-fg)" }}>B</span>
-          </div>
-          <span className="text-sm font-bold tracking-tight" style={{ color: "var(--foreground)" }}>
-            BrickVal
-          </span>
-        </div>
+        <BrandMark iconClassName="h-6 w-6" textClassName="text-sm" />
         <div className="w-9" />
       </header>
 

@@ -6,6 +6,7 @@ import { ManualEntry } from "@/components/scan/ManualEntry";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { BrandMark } from "@/components/BrandMark";
 
 export default function ScanPage() {
   const [showManual, setShowManual] = useState(false);
@@ -20,14 +21,8 @@ export default function ScanPage() {
         className="flex items-center justify-between px-5 py-4 border-b"
         style={{ borderColor: "var(--border)", background: "var(--surface)" }}
       >
-        <Link href="/" className="flex items-center gap-2">
-          <div
-            className="w-7 h-7 rounded-md flex items-center justify-center"
-            style={{ background: "var(--accent)" }}
-          >
-            <span className="font-bold text-xs" style={{ color: "var(--accent-fg)" }}>B</span>
-          </div>
-          <span className="font-bold tracking-tight" style={{ color: "var(--foreground)" }}>BrickVal</span>
+        <Link href="/" className="inline-flex items-center">
+          <BrandMark iconClassName="h-7 w-7" textClassName="text-sm" />
         </Link>
         {authEnabled ? (
           <UserButton />
