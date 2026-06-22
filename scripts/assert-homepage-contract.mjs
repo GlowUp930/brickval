@@ -7,7 +7,7 @@ const hero = readFileSync(join(root, "src/components/home/Hero.tsx"), "utf8");
 
 const requiredPageMarkers = [
   'import { Hero } from "@/components/home/Hero"',
-  "return <Hero />",
+  "<Hero />",
 ];
 
 const forbiddenPageMarkers = [
@@ -17,13 +17,14 @@ const forbiddenPageMarkers = [
 ];
 
 const requiredHeroMarkers = [
-  "Launching June 21",
   "Download on the",
-  "or try on web",
-  "Launching on",
-  "Be First To Know",
-  "Lifetime Deal",
-  "Real market data",
+  "iOS app launches 21 June 2026",
+  "Pre-order the iOS app",
+  "Try web app",
+  "Photo scan",
+  "USD values",
+  "As seen in",
+  "iOS app demo",
 ];
 
 const failures = [];

@@ -129,7 +129,8 @@ Every section must have a distinct layout from adjacent sections. Layout familie
 - Max 4 text elements: (1) badge, (2) headline, (3) subtext, (4) CTAs
 - Headline max 2 lines on desktop
 - Subtext max 20 words / 4 lines
-- NO trust strip, stats, logos, or social proof inside hero
+- No trust strip, stats, logos, or social proof inside the core hero copy block
+- Launch-platform banners belong below the hero copy block, not inline with the headline
 - NO eyebrow above headline
 - Hero needs a real visual (gradient + texture + pattern counts)
 - CTAs: 1 primary + max 1 secondary
@@ -152,12 +153,14 @@ Every section must have a distinct layout from adjacent sections. Layout familie
 
 ## Content Requirements
 
-- "Launching June 21" launch badge in hero
+- "iOS app launches 21 June 2026" launch badge in hero
 - "Download on the" App Store CTA
-- "or try on web" secondary CTA
-- "Launching on" badge in platform section (max 1 eyebrow)
-- "See it in action" heading
-- "Lifetime Deal" tab in waitlist section
+- "Try web app" secondary CTA
+- Demo video section with autoplay-on-scroll and no play button
+- "See the iOS app before launch" or equivalent demo heading
+- Launch-platform banner ("As seen in") with BetaList, TinyLaunch, and Uneed logos
+- Mobile version of the launch-platform banner must collapse to contained static badges
+- Hero feature strip with Photo scan, Manual lookup, and USD values
 - "Be First To Know" waitlist heading
 - Android "coming soon" mention (no specific date)
 
