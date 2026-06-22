@@ -1,21 +1,25 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Manrope } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const display = Bricolage_Grotesque({
+  variable: "--font-display",
   subsets: ["latin"],
+  display: "swap",
+  weight: ["700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const body = Manrope({
+  variable: "--font-body",
   subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
-  title: "BrickVal — LEGO Set Value Scanner",
+  title: "BrickVal - LEGO Set Value Scanner",
   description:
     "Point your camera at any LEGO set and instantly know what it's worth in USD.",
 };
@@ -28,7 +32,7 @@ export default function RootLayout({
   const appShell = (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${display.variable} ${body.variable} antialiased`}
       >
         {children}
         <Analytics />
