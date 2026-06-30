@@ -12,6 +12,7 @@ import {
   type GestureResponderEvent,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { Paths, File } from "expo-file-system";
 import { router, useFocusEffect } from "expo-router";
 import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import {
