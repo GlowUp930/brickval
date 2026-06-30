@@ -1,0 +1,84 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e6]:
+        - link "Logo" [ref=e8] [cursor=pointer]:
+          - /url: /
+          - img "Logo" [ref=e9]
+        - generic [ref=e35]:
+          - link "new-construction Teams" [ref=e37] [cursor=pointer]:
+            - /url: /select-organization
+            - img "new-construction" [ref=e38]
+            - generic [ref=e43]: Teams
+          - generic [ref=e44]:
+            - link "book Docs" [ref=e45] [cursor=pointer]:
+              - /url: https://docs.superwall.com?utm_source=superwall&utm_medium=dashboard&utm_campaign=sidebar
+              - img "book" [ref=e46]
+              - generic [ref=e49]: Docs
+            - link "news Blog" [ref=e50] [cursor=pointer]:
+              - /url: /blog
+              - img "news" [ref=e51]
+              - generic [ref=e56]: Blog
+            - link "AI Experiments" [ref=e57] [cursor=pointer]:
+              - /url: https://paywallexperiments.com?utm_source=superwall&utm_medium=dashboard&utm_campaign=sidebar
+              - img [ref=e58]
+              - generic [ref=e63]: AI Experiments
+            - link "Paywall Inspo" [ref=e64] [cursor=pointer]:
+              - /url: https://paywallscreens.com?utm_source=superwall&utm_medium=dashboard&utm_campaign=sidebar
+              - img [ref=e65]
+              - generic [ref=e68]: Paywall Inspo
+        - generic [ref=e75] [cursor=pointer]:
+          - img "log-out" [ref=e78]
+          - generic [ref=e82]:
+            - heading "GlowUp930" [level=2] [ref=e83]
+            - heading "garychan930@outlook.com" [level=2] [ref=e84]
+      - main [ref=e90]:
+        - generic [ref=e92]:
+          - generic [ref=e94]:
+            - img "waving-hand" [ref=e96]
+            - generic [ref=e104]:
+              - paragraph [ref=e106]: Welcome, GlowUp930
+              - paragraph [ref=e107]: Select an app to continue
+          - generic [ref=e108]:
+            - generic [ref=e110]:
+              - img [ref=e111]
+              - textbox "Search Apps" [active] [ref=e115]
+            - generic [ref=e118]:
+              - generic [ref=e121] [cursor=pointer]:
+                - generic [ref=e122]:
+                  - img [ref=e124]
+                  - img [ref=e127]
+                  - img [ref=e131]
+                - generic [ref=e136]:
+                  - generic [ref=e139]: BrickValue
+                  - generic [ref=e141]:
+                    - generic [ref=e143]: Brickvalue.live
+                    - img [ref=e144]
+              - generic [ref=e147] [cursor=pointer]:
+                - generic [ref=e148]:
+                  - img [ref=e150]
+                  - img [ref=e153]
+                  - img [ref=e157]
+                - generic [ref=e160]:
+                  - generic [ref=e163]: Brickvalue.live
+                  - generic [ref=e164]:
+                    - generic [ref=e166]: Brickvalue.live
+                    - img [ref=e167]
+              - generic [ref=e170] [cursor=pointer]:
+                - generic [ref=e171]:
+                  - img [ref=e173]
+                  - img [ref=e176]
+                  - img [ref=e180]
+                - generic [ref=e183]:
+                  - generic [ref=e186]: Brickvalue
+                  - generic [ref=e188]:
+                    - generic [ref=e190]: Brickvalue.live
+                    - img [ref=e191]
+    - region "Notifications alt+T"
+    - region "Notifications Alt+T"
+  - alert [ref=e120]
+  - iframe [ref=e194]:
+    
+  - iframe [ref=e195]:
+    - button "Open chat" [ref=f33e3] [cursor=pointer]:
+      - img [ref=f33e4]

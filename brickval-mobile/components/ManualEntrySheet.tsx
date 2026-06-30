@@ -15,7 +15,7 @@ import type { ScanMode } from "../lib/api";
 
 const GOLD = "#f5c518";
 const { height: SCREEN_H } = Dimensions.get("window");
-const SHEET_H = Math.min(480, Math.round(SCREEN_H * 0.72));
+const SHEET_H = Math.min(340, Math.round(SCREEN_H * 0.44));
 
 export interface ManualEntryHandle {
   open: () => void;
@@ -79,7 +79,7 @@ export const ManualEntrySheet = forwardRef<ManualEntryHandle, Props>(
         />
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 18 : 0}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
           style={styles.kav}
           pointerEvents="box-none"
         >
@@ -112,8 +112,6 @@ export const ManualEntrySheet = forwardRef<ManualEntryHandle, Props>(
               maxLength={mode === "minifig" ? 16 : 8}
               style={styles.input}
               autoFocus
-              returnKeyType="go"
-              onSubmitEditing={submit}
             />
             {error ? <Text style={styles.error}>{error}</Text> : null}
             <Pressable
@@ -138,12 +136,12 @@ const styles = StyleSheet.create({
   kav: { flex: 1, justifyContent: "flex-end" },
   sheet: {
     backgroundColor: "#15151a",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    gap: 14,
-    minHeight: SHEET_H,
-    paddingBottom: 30,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingHorizontal: 22,
+    paddingTop: 14,
+    paddingBottom: 18,
+    gap: 12,
   },
   handle: {
     width: 40,
@@ -151,17 +149,17 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: GOLD,
     alignSelf: "center",
-    marginBottom: 6,
+    marginBottom: 10,
   },
-  title: { color: "white", fontSize: 22, fontWeight: "900" },
-  subtitle: { color: "rgba(255,255,255,0.55)", fontSize: 13 },
+  title: { color: "white", fontSize: 24, fontWeight: "900", lineHeight: 29 },
+  subtitle: { color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 19 },
   input: {
     backgroundColor: "rgba(255,255,255,0.06)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",
-    borderRadius: 14,
+    borderRadius: 12,
     paddingHorizontal: 18,
-    paddingVertical: 16,
+    paddingVertical: 14,
     color: "white",
     fontSize: 22,
     fontWeight: "800",
@@ -176,9 +174,9 @@ const styles = StyleSheet.create({
   btn: {
     backgroundColor: GOLD,
     borderRadius: 999,
-    paddingVertical: 16,
+    paddingVertical: 15,
     alignItems: "center",
-    marginTop: 4,
+    marginTop: 2,
   },
   btnDisabled: { opacity: 0.4 },
   btnText: { color: "#0d0d0f", fontWeight: "800", fontSize: 15 },

@@ -1,0 +1,185 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e6]:
+        - link "Logo" [ref=e8] [cursor=pointer]:
+          - /url: /
+          - img "Logo" [ref=e9]
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - generic [ref=e202] [cursor=pointer]:
+              - generic [ref=e203]:
+                - img [ref=e205]
+                - img [ref=e208]
+              - generic [ref=e210]:
+                - heading "Brickvalue" [level=2] [ref=e211]
+                - heading "Brickvalue.live" [level=2] [ref=e212]
+              - img "caret-sm-up" [ref=e215]
+            - generic [ref=e219] [cursor=pointer]:
+              - button [ref=e220]:
+                - img [ref=e221]
+              - button [ref=e226]:
+                - img [ref=e228]
+              - button [ref=e236]:
+                - img [ref=e237]
+                - img
+          - generic [ref=e35]:
+            - link "lightning Quickstart" [ref=e240] [cursor=pointer]:
+              - /url: /applications/45804/quickstart
+              - img "lightning" [ref=e241]
+              - generic [ref=e245]: Quickstart
+            - link "phone-toolbar Paywalls & Flows" [ref=e37] [cursor=pointer]:
+              - /url: /applications/45804/paywalls
+              - img "phone-toolbar" [ref=e38]
+              - generic [ref=e42]: Paywalls & Flows
+            - link "spaceship Templates" [ref=e44] [cursor=pointer]:
+              - /url: /applications/45804/templates
+              - img "spaceship" [ref=e45]
+              - generic [ref=e54]: Templates
+            - link "split Campaigns" [ref=e56] [cursor=pointer]:
+              - /url: /applications/45804/rules
+              - img "split" [ref=e57]
+              - generic [ref=e63]: Campaigns
+            - link "edit-curves Charts" [ref=e65] [cursor=pointer]:
+              - /url: /applications/45804/charts/v2
+              - img "edit-curves" [ref=e66]
+              - generic [ref=e71]: Charts
+            - link "Demand Score BETA" [ref=e247] [cursor=pointer]:
+              - /url: /applications/45804/demand-score
+              - img [ref=e248]
+              - generic [ref=e250]:
+                - generic [ref=e251]: Demand Score
+                - generic [ref=e252]: BETA
+            - link "tag Products" [ref=e73] [cursor=pointer]:
+              - /url: /applications/45804/products/v2
+              - img "tag" [ref=e74]
+              - generic [ref=e78]: Products
+            - link "assets Assets" [ref=e80] [cursor=pointer]:
+              - /url: /applications/45804/assets
+              - img "assets" [ref=e81]
+              - generic [ref=e87]: Assets
+            - link "Surveys" [ref=e254] [cursor=pointer]:
+              - /url: /applications/45804/surveys
+              - img [ref=e255]
+              - generic [ref=e260]: Surveys
+            - link "users-wm Users" [ref=e89] [cursor=pointer]:
+              - /url: /applications/45804/users/v2
+              - img "users-wm" [ref=e90]
+              - generic [ref=e95]: Users
+            - link "Integrations" [ref=e262] [cursor=pointer]:
+              - /url: /applications/45804/integrations
+              - img [ref=e263]
+              - generic [ref=e266]: Integrations
+            - link "settings-gear Settings" [ref=e97] [cursor=pointer]:
+              - /url: /applications/45804/settings
+              - img "settings-gear" [ref=e98]
+              - generic [ref=e103]: Settings
+            - generic [ref=e104]:
+              - link "book Docs" [ref=e105] [cursor=pointer]:
+                - /url: https://docs.superwall.com?utm_source=superwall&utm_medium=dashboard&utm_campaign=sidebar
+                - img "book" [ref=e106]
+                - generic [ref=e109]: Docs
+              - link "news Blog" [ref=e110] [cursor=pointer]:
+                - /url: /blog
+                - img "news" [ref=e111]
+                - generic [ref=e116]: Blog
+              - link "AI Experiments" [ref=e117] [cursor=pointer]:
+                - /url: https://paywallexperiments.com?utm_source=superwall&utm_medium=dashboard&utm_campaign=sidebar
+                - img [ref=e118]
+                - generic [ref=e123]: AI Experiments
+              - link "Paywall Inspo" [ref=e124] [cursor=pointer]:
+                - /url: https://paywallscreens.com?utm_source=superwall&utm_medium=dashboard&utm_campaign=sidebar
+                - img [ref=e125]
+                - generic [ref=e128]: Paywall Inspo
+        - generic [ref=e135] [cursor=pointer]:
+          - img "log-out" [ref=e138]
+          - generic [ref=e142]:
+            - heading "GlowUp930" [level=2] [ref=e143]
+            - heading "garychan930@outlook.com" [level=2] [ref=e144]
+      - generic [ref=e148]:
+        - generic [ref=e150]:
+          - heading "Products & Entitlements" [level=1] [ref=e152]
+          - paragraph [ref=e154]: Manage your products and entitlements.
+        - generic [ref=e156]:
+          - generic [ref=e160]:
+            - generic [ref=e162]:
+              - generic [ref=e163] [cursor=pointer]:
+                - generic [ref=e164]:
+                  - img [ref=e165]
+                  - text: Products
+                - generic [ref=e168]:
+                  - img [ref=e169]
+                  - text: Products
+              - generic [ref=e173] [cursor=pointer]:
+                - generic [ref=e174]:
+                  - img [ref=e175]
+                  - text: Entitlements
+                - generic [ref=e178]:
+                  - img [ref=e179]
+                  - text: Entitlements
+            - generic [ref=e184]:
+              - generic:
+                - img "search"
+              - searchbox "Search products..." [ref=e185]
+            - button "Add Product" [ref=e188] [cursor=pointer]:
+              - generic [ref=e190]:
+                - img
+                - text: Add Product
+          - generic [ref=e269]:
+            - generic [ref=e271]:
+              - generic [ref=e273] [cursor=pointer]: Store Product ID
+              - generic [ref=e275] [cursor=pointer]: Trial Period
+              - generic [ref=e277] [cursor=pointer]: Trial Price
+              - generic [ref=e279] [cursor=pointer]: Price
+              - generic [ref=e281] [cursor=pointer]: Subscription Period
+              - generic [ref=e283] [cursor=pointer]: Entitlements
+              - generic [ref=e285] [cursor=pointer]: Store
+              - generic [ref=e287] [cursor=pointer]: Status
+            - generic [ref=e289]:
+              - generic [ref=e290] [cursor=pointer]:
+                - generic [ref=e291]: com.brickval.app.pro.monthly
+                - generic [ref=e292]: None
+                - generic [ref=e294]:
+                  - generic [ref=e295]: $
+                  - text: "0"
+                - generic [ref=e297]:
+                  - generic [ref=e298]: $
+                  - text: "6.99"
+                - generic [ref=e299]: Month
+                - generic [ref=e302]: pro
+                - generic [ref=e304]: App Store
+                - generic [ref=e308]: Pending
+                - generic [ref=e310]:
+                  - button [ref=e311]:
+                    - img [ref=e312]
+                  - button [ref=e315]:
+                    - img [ref=e316]
+              - generic [ref=e320] [cursor=pointer]:
+                - generic [ref=e321]: com.brickval.app.pro.yearly
+                - generic [ref=e322]: None
+                - generic [ref=e324]:
+                  - generic [ref=e325]: $
+                  - text: "0"
+                - generic [ref=e327]:
+                  - generic [ref=e328]: $
+                  - text: "39.99"
+                - generic [ref=e329]: Year
+                - generic [ref=e332]: pro
+                - generic [ref=e334]: App Store
+                - generic [ref=e338]: Pending
+                - generic [ref=e340]:
+                  - button [ref=e341]:
+                    - img [ref=e342]
+                  - button [ref=e345]:
+                    - img [ref=e346]
+        - generic [ref=e351]:
+          - img [ref=e353]
+          - generic [ref=e357]: All products imported from App Store Connect
+    - region "Notifications alt+T"
+    - region "Notifications Alt+T"
+  - alert [ref=e200]: Products & Entitlements
+  - iframe [ref=e358]:
+    
+  - iframe [ref=e359]:
+    - button "Open chat" [ref=f4e3] [cursor=pointer]:
+      - img [ref=f4e4]

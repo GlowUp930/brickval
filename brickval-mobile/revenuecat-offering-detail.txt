@@ -1,0 +1,283 @@
+- generic [ref=e2]:
+  - region "Notifications alt+T"
+  - link "skip to content" [ref=e3] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - link "Home" [ref=e6] [cursor=pointer]:
+        - /url: /projects/fef5330a/overview
+        - img "Home" [ref=e7]
+      - button "Brickvalue․live" [ref=e10] [cursor=pointer]:
+        - generic [ref=e11]:
+          - generic [ref=e13]: B
+          - generic [ref=e14]: Brickvalue․live
+        - img [ref=e16]
+      - generic [ref=e19]:
+        - img [ref=e21]
+        - combobox "Search…" [ref=e23]
+        - generic [ref=e25]: ⌘K
+        - group
+      - link "Ask Rico" [ref=e26] [cursor=pointer]:
+        - /url: /projects/fef5330a/rico
+        - img [ref=e27]
+      - link "Help" [ref=e29] [cursor=pointer]:
+        - /url: /settings/support
+        - img [ref=e30]
+      - link "What's new" [ref=e32] [cursor=pointer]:
+        - /url: /whats-new
+        - img [ref=e33]
+      - link "Account" [ref=e35] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e36]
+    - generic [ref=e38]:
+      - navigation [ref=e39]:
+        - generic [ref=e40]:
+          - link "Overview" [ref=e41] [cursor=pointer]:
+            - /url: /projects/fef5330a/overview
+            - img [ref=e42]
+            - generic [ref=e44]: Overview
+          - link "Analytics" [ref=e45] [cursor=pointer]:
+            - /url: /projects/fef5330a/charts
+            - img [ref=e46]
+            - generic [ref=e48]:
+              - text: Analytics
+              - img [ref=e50]
+          - link "Customers" [ref=e52] [cursor=pointer]:
+            - /url: /projects/fef5330a/customer-lists
+            - img [ref=e53]
+            - generic [ref=e55]: Customers
+          - link "Product catalog" [ref=e56] [cursor=pointer]:
+            - /url: /projects/fef5330a/product-catalog
+            - img [ref=e57]
+            - generic [ref=e59]:
+              - text: Product catalog
+              - img [ref=e61]
+          - link "Paywalls" [ref=e63] [cursor=pointer]:
+            - /url: /projects/fef5330a/paywalls
+            - img [ref=e64]
+            - generic [ref=e66]: Paywalls
+          - link "Targeting" [ref=e67] [cursor=pointer]:
+            - /url: /projects/fef5330a/targeting
+            - img [ref=e68]
+            - generic [ref=e70]: Targeting
+          - link "Experiments" [ref=e71] [cursor=pointer]:
+            - /url: /projects/fef5330a/experiments
+            - img [ref=e72]
+            - generic [ref=e74]: Experiments
+          - link "Funnels" [ref=e75] [cursor=pointer]:
+            - /url: /projects/fef5330a/funnels
+            - img [ref=e76]
+            - generic [ref=e78]: Funnels
+          - link "Ads" [ref=e79] [cursor=pointer]:
+            - /url: /projects/fef5330a/ads
+            - img [ref=e80]
+            - generic [ref=e82]: Ads
+          - link "Lifecycle" [ref=e83] [cursor=pointer]:
+            - /url: /projects/fef5330a/lifecycle/customer-center
+            - img [ref=e84]
+            - generic [ref=e86]:
+              - text: Lifecycle
+              - img [ref=e88]
+        - separator [ref=e90]
+        - generic [ref=e91]:
+          - link "Apps" [ref=e92] [cursor=pointer]:
+            - /url: /projects/fef5330a/apps
+            - img [ref=e93]
+            - generic [ref=e95]: Apps
+          - link "Web" [ref=e96] [cursor=pointer]:
+            - /url: /projects/fef5330a/web
+            - img [ref=e97]
+            - generic [ref=e99]: Web
+          - link "API keys" [ref=e100] [cursor=pointer]:
+            - /url: /projects/fef5330a/api-keys
+            - img [ref=e101]
+            - generic [ref=e103]: API keys
+          - link "Integrations" [ref=e104] [cursor=pointer]:
+            - /url: /projects/fef5330a/integrations
+            - img [ref=e105]
+            - generic [ref=e107]: Integrations
+          - link "Project settings" [ref=e108] [cursor=pointer]:
+            - /url: /projects/fef5330a/settings
+            - img [ref=e109]
+            - generic [ref=e111]: Project settings
+        - button "Collapse navigation" [ref=e112] [cursor=pointer]:
+          - img [ref=e113]
+      - main [ref=e116]:
+        - generic [ref=e187]:
+          - navigation [ref=e190]:
+            - list [ref=e191]:
+              - listitem [ref=e192]:
+                - link "Brickvalue․live" [ref=e193] [cursor=pointer]:
+                  - /url: /projects/fef5330a
+              - listitem [ref=e194]: /
+              - listitem [ref=e195]:
+                - link "Product catalog" [ref=e196] [cursor=pointer]:
+                  - /url: /projects/fef5330a/product-catalog
+              - listitem [ref=e197]: /
+              - listitem [ref=e198]:
+                - link "Offerings" [ref=e199] [cursor=pointer]:
+                  - /url: /projects/fef5330a/product-catalog/offerings
+              - listitem [ref=e200]: /
+              - listitem [ref=e201]:
+                - link "default" [ref=e202] [cursor=pointer]:
+                  - /url: /projects/fef5330a/product-catalog/offerings/ofrng49e2cea87a
+          - generic [ref=e204]:
+            - generic [ref=e205]:
+              - heading "default" [level=2] [ref=e207]
+              - generic [ref=e209]:
+                - generic "This is the default offering. To delete it, make another offering the default." [ref=e211]:
+                  - button "Delete" [disabled]:
+                    - generic:
+                      - img
+                    - text: Delete
+                - button "Edit" [ref=e213] [cursor=pointer]:
+                  - img [ref=e215]
+                  - text: Edit
+            - generic [ref=e217]:
+              - table [ref=e218]:
+                - row "Identifier default" [ref=e219]:
+                  - generic [ref=e220]:
+                    - rowheader "Identifier" [ref=e221]:
+                      - generic [ref=e222]: Identifier
+                    - cell "default" [ref=e223]:
+                      - generic [ref=e225]: default
+                - row "Display Name The standard set of packages" [ref=e226]:
+                  - generic [ref=e227]:
+                    - rowheader "Display Name" [ref=e228]:
+                      - generic [ref=e229]: Display Name
+                    - cell "The standard set of packages" [ref=e230]:
+                      - paragraph [ref=e231]: The standard set of packages
+                - row "Created 2026-04-06, 12:32 p.m. UTC" [ref=e232]:
+                  - generic [ref=e233]:
+                    - rowheader "Created" [ref=e234]:
+                      - generic [ref=e235]: Created
+                    - cell "2026-04-06, 12:32 p.m. UTC" [ref=e236]:
+                      - paragraph [ref=e237]: 2026-04-06, 12:32 p.m. UTC
+                - row "Paywall Add Paywall" [ref=e238]:
+                  - generic [ref=e239]:
+                    - rowheader "Paywall" [ref=e240]:
+                      - generic [ref=e241]: Paywall
+                    - cell "Add Paywall" [ref=e242]:
+                      - link "Add Paywall" [ref=e243] [cursor=pointer]:
+                        - /url: /projects/fef5330a/paywalls/ofrng49e2cea87a/new
+                - row "Web Purchase Link Go to Web Purchase Links" [ref=e244]:
+                  - generic [ref=e245]:
+                    - rowheader "Web Purchase Link" [ref=e246]:
+                      - generic [ref=e247]: Web Purchase Link
+                    - cell "Go to Web Purchase Links" [ref=e248]:
+                      - link "Go to Web Purchase Links" [ref=e249] [cursor=pointer]:
+                        - /url: /projects/fef5330a/purchase-links
+                - row "Targeting Add Rules" [ref=e250]:
+                  - generic [ref=e251]:
+                    - rowheader "Targeting" [ref=e252]:
+                      - generic [ref=e253]: Targeting
+                    - cell "Add Rules" [ref=e254]:
+                      - link "Add Rules" [ref=e255] [cursor=pointer]:
+                        - /url: /projects/fef5330a/targeting/new
+              - generic [ref=e256]:
+                - tablist [ref=e259]:
+                  - tab "Packages" [selected] [ref=e260] [cursor=pointer]:
+                    - paragraph [ref=e262]: Packages
+                  - tab "Metadata" [ref=e263] [cursor=pointer]:
+                    - paragraph [ref=e265]: Metadata
+                  - tab "Paywall" [ref=e266] [cursor=pointer]:
+                    - paragraph [ref=e268]: Paywall
+                - tabpanel "Packages" [ref=e271]:
+                  - paragraph [ref=e272]:
+                    - text: Use packages to set up which products to offer in each of your apps across platforms.
+                    - link "Learn more." [ref=e273] [cursor=pointer]:
+                      - /url: https://www.revenuecat.com/docs/getting-started/entitlements#adding-packages
+                  - generic [ref=e274]:
+                    - generic [ref=e275]:
+                      - generic [ref=e276]:
+                        - heading "Monthly" [level=4] [ref=e277]
+                        - generic [ref=e278]:
+                          - paragraph [ref=e279]: $rc_monthly
+                          - button "copy package identifier" [ref=e280] [cursor=pointer]:
+                            - img [ref=e281]
+                      - table [ref=e284]:
+                        - row "Test Store Monthly monthly copy product identifier" [ref=e285]:
+                          - generic [ref=e286]:
+                            - generic "Test Store" [ref=e287]:
+                              - img [ref=e289]
+                            - generic [ref=e292]:
+                              - link "Monthly" [ref=e293] [cursor=pointer]:
+                                - /url: /projects/fef5330a/product-catalog/products/prod35b5f06538
+                                - paragraph [ref=e294]: Monthly
+                              - generic [ref=e295]:
+                                - generic [ref=e296]: monthly
+                                - button "copy product identifier" [ref=e297] [cursor=pointer]:
+                                  - img [ref=e298]
+                        - row "Brickvalue․live (App Store) BrickVal Pro Monthly com.brickval.app.pro.monthly copy product identifier" [ref=e300]:
+                          - generic [ref=e301]:
+                            - generic "Brickvalue․live (App Store)" [ref=e302]:
+                              - img [ref=e304]
+                            - generic [ref=e307]:
+                              - link "BrickVal Pro Monthly" [ref=e308] [cursor=pointer]:
+                                - /url: /projects/fef5330a/product-catalog/products/prod045b265793
+                                - paragraph [ref=e309]: BrickVal Pro Monthly
+                              - generic [ref=e310]:
+                                - generic [ref=e311]: com.brickval.app.pro.monthly
+                                - button "copy product identifier" [ref=e312] [cursor=pointer]:
+                                  - img [ref=e313]
+                    - generic [ref=e315]:
+                      - generic [ref=e316]:
+                        - heading "Yearly" [level=4] [ref=e317]
+                        - generic [ref=e318]:
+                          - paragraph [ref=e319]: $rc_annual
+                          - button "copy package identifier" [ref=e320] [cursor=pointer]:
+                            - img [ref=e321]
+                      - table [ref=e324]:
+                        - row "Test Store Yearly yearly copy product identifier" [ref=e325]:
+                          - generic [ref=e326]:
+                            - generic "Test Store" [ref=e327]:
+                              - img [ref=e329]
+                            - generic [ref=e332]:
+                              - link "Yearly" [ref=e333] [cursor=pointer]:
+                                - /url: /projects/fef5330a/product-catalog/products/prode2a9be446a
+                                - paragraph [ref=e334]: Yearly
+                              - generic [ref=e335]:
+                                - generic [ref=e336]: yearly
+                                - button "copy product identifier" [ref=e337] [cursor=pointer]:
+                                  - img [ref=e338]
+                        - row "Brickvalue․live (App Store) BrickVal Pro Yearly com.brickval.app.pro.yearly copy product identifier" [ref=e340]:
+                          - generic [ref=e341]:
+                            - generic "Brickvalue․live (App Store)" [ref=e342]:
+                              - img [ref=e344]
+                            - generic [ref=e347]:
+                              - link "BrickVal Pro Yearly" [ref=e348] [cursor=pointer]:
+                                - /url: /projects/fef5330a/product-catalog/products/prodffe221bc86
+                                - paragraph [ref=e349]: BrickVal Pro Yearly
+                              - generic [ref=e350]:
+                                - generic [ref=e351]: com.brickval.app.pro.yearly
+                                - button "copy product identifier" [ref=e352] [cursor=pointer]:
+                                  - img [ref=e353]
+                    - generic [ref=e355]:
+                      - generic [ref=e356]:
+                        - heading "Lifetime" [level=4] [ref=e357]
+                        - generic [ref=e358]:
+                          - paragraph [ref=e359]: $rc_lifetime
+                          - button "copy package identifier" [ref=e360] [cursor=pointer]:
+                            - img [ref=e361]
+                      - table [ref=e364]:
+                        - row "Test Store Lifetime lifetime copy product identifier" [ref=e365]:
+                          - generic [ref=e366]:
+                            - generic "Test Store" [ref=e367]:
+                              - img [ref=e369]
+                            - generic [ref=e372]:
+                              - link "Lifetime" [ref=e373] [cursor=pointer]:
+                                - /url: /projects/fef5330a/product-catalog/products/prod818b424ba4
+                                - paragraph [ref=e374]: Lifetime
+                              - generic [ref=e375]:
+                                - generic [ref=e376]: lifetime
+                                - button "copy product identifier" [ref=e377] [cursor=pointer]:
+                                  - img [ref=e378]
+              - generic [ref=e385]:
+                - generic [ref=e386]:
+                  - paragraph [ref=e387]: REST API Identifier
+                  - button "info" [ref=e388] [cursor=pointer]:
+                    - img "info" [ref=e389]
+                - generic [ref=e391]:
+                  - paragraph [ref=e393]: ofrng49e2cea87a
+                  - button "copy text" [ref=e394] [cursor=pointer]:
+                    - img [ref=e395]

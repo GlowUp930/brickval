@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getCached, setCached } from "@/lib/cache";
 import { getEbayMarketData } from "@/lib/ebay";
-import { getBrickLinkColors, getBrickLinkMarketData, getMinifigMarketData, getPartMarketData } from "@/lib/bricklink";
+import { getBrickLinkColors, getBrickLinkMarketData, getPartMarketData } from "@/lib/bricklink";
 import { getBricksetRrp } from "@/lib/brickset";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { computePricing } from "@/lib/compute-pricing";
+import { buildMinifigLookupPayload, sanitizeMinifigNumber, type MinifigLookupPayload } from "@/lib/minifig-lookup";
 import { sortByMostRecentDate } from "@/lib/sort-transactions";
-import type { ComputedPricing, EbaySale, MinifigInfo, MinifigPricing, SetInfo } from "@/types/market";
+import type { ComputedPricing, EbaySale, SetInfo } from "@/types/market";
 
 const LOOKUP_CACHE_TTL_HOURS = 24;
 
@@ -40,90 +41,25 @@ export async function POST(req: NextRequest) {
 
   // ── Minifig mode ──────────────────────────────────────────────────────────
   if (mode === "minifig") {
-    const figNumber = body.setNumber?.trim().replace(/[^a-z0-9]/gi, "");
-    if (!figNumber || figNumber.length < 3) {
+    const figNumber = sanitizeMinifigNumber(body.setNumber);
+    if (!figNumber) {
       return NextResponse.json({ error: "Invalid figure number" }, { status: 400 });
     }
 
     const cacheKey = lookupCacheKey(mode, figNumber);
-    const cached = await getCached<{ figInfo: MinifigInfo; pricing: MinifigPricing }>(cacheKey);
+    const cached = await getCached<MinifigLookupPayload>(cacheKey);
     if (cached) {
       return NextResponse.json(cached);
     }
 
-    const minifigData = await getMinifigMarketData(figNumber).catch(() => null);
-
-    if (!minifigData?.item && !minifigData?.sold_used && !minifigData?.stock_used && !minifigData?.sold_new && !minifigData?.stock_new) {
+    const payload = await buildMinifigLookupPayload(figNumber);
+    if (!payload) {
       return NextResponse.json(
         { error: "not_found", message: "We don't have data for this minifigure. Check the ID and try again." },
         { status: 404 }
       );
     }
 
-    const item = minifigData.item;
-    const rawName = item?.name ?? figNumber;
-    const decodedName = rawName
-      .replace(/&#(\d+);/g, (_: string, dec: string) => String.fromCharCode(parseInt(dec, 10)))
-      .replace(/&#x([0-9a-f]+);/gi, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)))
-      .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"').replace(/&apos;/g, "'");
-    const figInfo: MinifigInfo = {
-      name: decodedName,
-      image_url: item?.image_url ?? item?.thumbnail_url ?? null,
-      fig_number: figNumber,
-      year_released: item?.year_released ?? null,
-    };
-
-    const soldUsed = minifigData.sold_used;
-    const stockUsed = minifigData.stock_used;
-    const soldNew = minifigData.sold_new;
-    const stockNew = minifigData.stock_new;
-
-    const soldDetails = sortByMostRecentDate((soldUsed?.price_detail ?? []).map((d) => ({
-      price_usd: parseFloat(d.unit_price),
-      quantity: d.quantity,
-      date: d.date_ordered,
-      country: d.seller_country_code,
-    })));
-    const stockDetails = (stockUsed?.price_detail ?? []).map((d) => ({
-      price_usd: parseFloat(d.unit_price),
-      quantity: d.quantity,
-      country: d.seller_country_code,
-    }));
-
-    const soldNewDetails = sortByMostRecentDate((soldNew?.price_detail ?? []).map((d) => ({
-      price_usd: parseFloat(d.unit_price),
-      quantity: d.quantity,
-      date: d.date_ordered,
-      country: d.seller_country_code,
-    })));
-    const stockNewDetails = (stockNew?.price_detail ?? []).map((d) => ({
-      price_usd: parseFloat(d.unit_price),
-      quantity: d.quantity,
-      country: d.seller_country_code,
-    }));
-
-    // Use `|| null` so "0.0000" strings from BrickLink parse as null, not 0
-    const pricing: MinifigPricing = {
-      used_sold_avg_usd: soldUsed?.qty_avg_price ? (parseFloat(soldUsed.qty_avg_price) || null) : null,
-      used_sold_min_usd: soldUsed?.min_price ? (parseFloat(soldUsed.min_price) || null) : null,
-      used_sold_max_usd: soldUsed?.max_price ? (parseFloat(soldUsed.max_price) || null) : null,
-      used_sold_qty: soldUsed?.unit_quantity || null,
-      used_stock_avg_usd: stockUsed?.qty_avg_price ? (parseFloat(stockUsed.qty_avg_price) || null) : null,
-      used_stock_qty: stockUsed?.unit_quantity || null,
-      new_sold_avg_usd: soldNew?.qty_avg_price ? (parseFloat(soldNew.qty_avg_price) || null) : null,
-      new_sold_min_usd: soldNew?.min_price ? (parseFloat(soldNew.min_price) || null) : null,
-      new_sold_max_usd: soldNew?.max_price ? (parseFloat(soldNew.max_price) || null) : null,
-      new_sold_qty: soldNew?.unit_quantity || null,
-      new_stock_avg_usd: stockNew?.qty_avg_price ? (parseFloat(stockNew.qty_avg_price) || null) : null,
-      new_stock_qty: stockNew?.unit_quantity || null,
-      sold_details: soldDetails,
-      stock_details: stockDetails,
-      sold_new_details: soldNewDetails,
-      stock_new_details: stockNewDetails,
-    };
-
-    const payload = { figInfo, pricing };
     await setCached(cacheKey, payload, LOOKUP_CACHE_TTL_HOURS);
     return NextResponse.json(payload);
   }

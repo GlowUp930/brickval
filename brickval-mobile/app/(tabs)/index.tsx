@@ -21,6 +21,7 @@ import {
   getItemTotalValue,
   removeFromCollection,
 } from "../../lib/collection";
+import { getNativeProStatus } from "../../lib/paywall";
 import { normalizeHistoryDate } from "../../lib/api";
 import { CollectionSwipeRow } from "../../components/CollectionSwipeRow";
 import { buildChartAreaPath, interpolateChartLine, sampleChartLine } from "../../lib/chart-motion";
@@ -157,8 +158,10 @@ export default function HomeDashboard() {
   const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<number | null>(null);
   const [showHistoryTip, setShowHistoryTip] = useState(false);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
+  const [proStatus, setProStatus] = useState<boolean | null>(null);
   const popupProgress = useRef(new Animated.Value(0)).current;
   const historyTipProgress = useRef(new Animated.Value(0)).current;
+  const proBannerProgress = useRef(new Animated.Value(0)).current;
   const morphRafRef = useRef<number | null>(null);
   const currentMorphShapeRef = useRef<{ x: number; y: number }[]>([]);
   const morphLineRef = useRef<any>(null);
@@ -180,9 +183,13 @@ export default function HomeDashboard() {
     useCallback(() => {
       let active = true;
       async function loadCollection() {
-        const collection = await getCollection();
+        const [collection, nextProStatus] = await Promise.all([
+          getCollection(),
+          getNativeProStatus(),
+        ]);
         if (!active) return;
         setItems(collection);
+        setProStatus(nextProStatus);
       }
       loadCollection();
       return () => {
@@ -277,6 +284,10 @@ export default function HomeDashboard() {
     inputRange: [0, 1],
     outputRange: [8, 0],
   });
+  const proBannerTranslateY = proBannerProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [10, 0],
+  });
 
   const handleDeleteItem = async (target: {
     set_number: string;
@@ -299,10 +310,14 @@ export default function HomeDashboard() {
   useEffect(() => {
     let cancelled = false;
     async function loadHistoryTip() {
-      const seen = await SecureStore.getItemAsync(HISTORY_TIP_KEY);
-      if (cancelled || seen) return;
-      await SecureStore.setItemAsync(HISTORY_TIP_KEY, "1");
-      setShowHistoryTip(true);
+      try {
+        const seen = await SecureStore.getItemAsync(HISTORY_TIP_KEY);
+        if (cancelled || seen) return;
+        await SecureStore.setItemAsync(HISTORY_TIP_KEY, "1");
+        setShowHistoryTip(true);
+      } catch (error) {
+        console.warn("History tip storage unavailable.", error);
+      }
     }
     loadHistoryTip();
     return () => {
@@ -323,6 +338,15 @@ export default function HomeDashboard() {
     const timer = setTimeout(() => setShowHistoryTip(false), 4200);
     return () => clearTimeout(timer);
   }, [showHistoryTip]);
+
+  useEffect(() => {
+    Animated.timing(proBannerProgress, {
+      toValue: proStatus ? 1 : 0,
+      duration: reduceMotionEnabled ? 0 : 260,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [proBannerProgress, proStatus, reduceMotionEnabled]);
 
   useEffect(() => {
     if (morphRafRef.current !== null) return;
@@ -500,6 +524,34 @@ export default function HomeDashboard() {
           <Text style={styles.sectionTitle}>Saved inventory</Text>
           <Text style={styles.sectionMeta}>{items.length} total</Text>
         </View>
+        {proStatus ? (
+          <Animated.View
+            accessibilityLabel="BrickVal Pro active. Unlimited scans are enabled."
+            style={[
+              styles.collectionLimit,
+              styles.collectionLimitPro,
+              {
+                opacity: reduceMotionEnabled ? 1 : proBannerProgress,
+                transform: reduceMotionEnabled ? [] : [{ translateY: proBannerTranslateY }],
+              },
+            ]}
+          >
+            <View style={styles.proStatusTop}>
+              <Text style={[styles.collectionLimitLabel, styles.collectionLimitLabelPro]}>BrickVal Pro</Text>
+              <View style={styles.proStatusPill}>
+                <Text style={styles.proStatusPillText}>Active</Text>
+              </View>
+            </View>
+            <Text style={[styles.collectionLimitText, styles.collectionLimitTextPro]}>
+              Unlimited scans are on. Keep checking LEGO values without the free-plan limit.
+            </Text>
+          </Animated.View>
+        ) : (
+          <View style={styles.collectionLimit}>
+            <Text style={styles.collectionLimitLabel}>Free plan</Text>
+            <Text style={styles.collectionLimitText}>Save up to 10 LEGO items. Pro unlocks unlimited collection space.</Text>
+          </View>
+        )}
 
         {items.length === 0 ? (
           <View style={styles.empty}>
@@ -731,6 +783,39 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
   sectionTitle: { color: INK, fontSize: 20, fontWeight: "900" },
   sectionMeta: { color: MUTED, fontSize: 12, fontWeight: "700" },
+  collectionLimit: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: LINE,
+    backgroundColor: "rgba(247,244,234,0.03)",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 4,
+  },
+  collectionLimitPro: {
+    borderColor: "rgba(98,199,154,0.34)",
+    backgroundColor: "rgba(98,199,154,0.1)",
+    gap: 8,
+  },
+  proStatusTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  proStatusPill: {
+    minHeight: 28,
+    borderRadius: 999,
+    backgroundColor: ACCENT,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  proStatusPillText: { color: "#07100c", fontSize: 10, fontWeight: "900" },
+  collectionLimitLabel: { color: SOFT, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
+  collectionLimitLabelPro: { color: ACCENT },
+  collectionLimitText: { color: MUTED, fontSize: 12, lineHeight: 17, fontWeight: "700" },
+  collectionLimitTextPro: { color: INK, fontSize: 13, lineHeight: 18 },
   empty: {
     borderRadius: 12,
     borderWidth: 1,

@@ -1,0 +1,300 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - log
+    - log
+  - generic [ref=e6]:
+    - link "Skip to main content" [ref=e7] [cursor=pointer]:
+      - /url: "#main"
+    - generic [ref=e8]:
+      - navigation "Primary Navigation" [ref=e9]:
+        - button "Toggle organization menu" [ref=e11] [cursor=pointer]:
+          - img [ref=e14]:
+            - generic [ref=e16]: A
+        - list [ref=e17]:
+          - listitem [ref=e18]:
+            - link "Issues" [ref=e19] [cursor=pointer]:
+              - /url: /issues/
+              - img [ref=e21]
+              - generic [ref=e23]: Issues
+          - listitem [ref=e24]:
+            - link "Explore" [ref=e25] [cursor=pointer]:
+              - /url: /explore/traces/
+              - img [ref=e27]
+              - generic [ref=e29]: Explore
+          - listitem [ref=e30]:
+            - link "Dashboards" [ref=e31] [cursor=pointer]:
+              - /url: /dashboards/
+              - img [ref=e33]
+              - generic [ref=e35]: Dashboards
+          - listitem [ref=e36]:
+            - link "Monitors" [ref=e37] [cursor=pointer]:
+              - /url: /monitors/
+              - img [ref=e39]
+              - generic [ref=e41]: Monitors
+          - listitem [ref=e42]:
+            - link "Settings" [ref=e43] [cursor=pointer]:
+              - /url: /settings/organization/
+              - img [ref=e45]
+              - generic [ref=e47]: Settings
+        - generic [ref=e48]:
+          - generic [ref=e51]:
+            - button "Onboarding" [ref=e52] [cursor=pointer]:
+              - img [ref=e56]:
+                - generic [ref=e60]: "4"
+            - button "Try Business" [ref=e62] [cursor=pointer]:
+              - img [ref=e65]
+            - button "Configure Seer" [ref=e67] [cursor=pointer]:
+              - img [ref=e70]
+            - button "What's New" [ref=e73] [cursor=pointer]:
+              - img [ref=e76]
+            - button "Help" [ref=e79] [cursor=pointer]:
+              - img [ref=e82]
+          - button "garychan930@outlook.com" [ref=e87] [cursor=pointer]:
+            - img [ref=e90]:
+              - generic [ref=e92]: G
+      - navigation "Secondary Navigation" [ref=e95]:
+        - generic [ref=e96]:
+          - generic [ref=e97]: Projects
+          - button "Collapse" [ref=e99] [cursor=pointer]:
+            - img [ref=e102]
+        - generic [ref=e104]:
+          - list [ref=e108]:
+            - listitem [ref=e109]:
+              - link "All Projects" [ref=e110] [cursor=pointer]:
+                - /url: /projects/
+                - generic [ref=e111]: All Projects
+          - separator [ref=e113]
+          - generic [ref=e114]:
+            - button "Projects" [ref=e115] [cursor=pointer]:
+              - generic [ref=e116]:
+                - generic [ref=e117]: Projects
+                - img [ref=e119]
+            - list [ref=e123]:
+              - listitem [ref=e124]:
+                - link "areyouok-ios" [ref=e125] [cursor=pointer]:
+                  - /url: /projects/areyouok-ios/
+                  - img [ref=e127]
+                  - generic [ref=e128]: areyouok-ios
+    - generic [ref=e130]:
+      - generic [ref=e131]:
+        - generic [ref=e132]: Create a new project in 3 steps
+        - generic [ref=e133]:
+          - button "Search" [ref=e134] [cursor=pointer]:
+            - generic [ref=e135]:
+              - img [ref=e137]
+              - generic [ref=e139]:
+                - text: Search
+                - generic [ref=e140]:
+                  - generic "⌘" [ref=e141]:
+                    - img [ref=e142]
+                  - generic [ref=e144]: K
+          - button "Ask Seer" [ref=e145] [cursor=pointer]:
+            - generic [ref=e146]:
+              - img [ref=e148]
+              - generic [ref=e151]:
+                - generic [ref=e152]: Ask Seer
+                - generic [ref=e154]:
+                  - generic "⌘" [ref=e155]:
+                    - img [ref=e156]
+                  - generic [ref=e158]: /
+          - button "Give Feedback" [ref=e160] [cursor=pointer]:
+            - img [ref=e163]
+      - main [ref=e165]:
+        - list [ref=e171]:
+          - paragraph [ref=e172]:
+            - text: Set up a separate project for each part of your application (for example, your API server and frontend client), to quickly pinpoint which part of your application errors are coming from.
+            - link "Read the docs" [ref=e173] [cursor=pointer]:
+              - /url: https://docs.sentry.io/product/sentry-basics/integrate-frontend/create-new-project/
+            - text: .
+          - listitem [ref=e174]: Choose your platform
+          - generic [ref=e175]:
+            - generic [ref=e178]:
+              - tablist [ref=e179]:
+                - tab "Popular" [selected] [ref=e180] [cursor=pointer]:
+                  - generic [ref=e181]: Popular
+                - tab "Browser" [ref=e182] [cursor=pointer]:
+                  - generic [ref=e183]: Browser
+                - tab "Server" [ref=e184] [cursor=pointer]:
+                  - generic [ref=e185]: Server
+                - tab "Mobile" [ref=e186] [cursor=pointer]:
+                  - generic [ref=e187]: Mobile
+                - tab "Desktop" [ref=e188] [cursor=pointer]:
+                  - generic [ref=e189]: Desktop
+              - button "More tabs" [ref=e192] [cursor=pointer]:
+                - img [ref=e195]
+            - generic [ref=e198]:
+              - generic:
+                - img
+              - textbox "Filter Platforms" [ref=e199]
+          - generic [ref=e200]:
+            - generic [ref=e202] [cursor=pointer]:
+              - generic [ref=e203]:
+                - img [ref=e204]
+                - img [ref=e205]
+              - heading "Next.js" [level=3] [ref=e206]
+            - generic [ref=e208] [cursor=pointer]:
+              - generic [ref=e209]:
+                - img [ref=e210]
+                - img [ref=e211]
+              - heading "React" [level=3] [ref=e212]
+            - generic [ref=e214] [cursor=pointer]:
+              - img [ref=e215]
+              - heading "React Native" [level=3] [ref=e216]
+            - generic [ref=e218] [cursor=pointer]:
+              - img [ref=e219]
+              - heading "Node.js" [level=3] [ref=e220]
+            - generic [ref=e222] [cursor=pointer]:
+              - generic [ref=e223]:
+                - img [ref=e224]
+                - img [ref=e225]
+              - heading "Laravel" [level=3] [ref=e226]
+            - generic [ref=e228] [cursor=pointer]:
+              - generic [ref=e229]:
+                - img [ref=e230]
+                - img [ref=e231]
+              - heading "FastAPI" [level=3] [ref=e232]
+            - generic [ref=e234] [cursor=pointer]:
+              - img [ref=e235]
+              - heading "Flutter" [level=3] [ref=e236]
+            - generic [ref=e238] [cursor=pointer]:
+              - generic [ref=e239]:
+                - img [ref=e240]
+                - img [ref=e241]
+              - heading "Django" [level=3] [ref=e242]
+            - generic [ref=e244] [cursor=pointer]:
+              - img [ref=e245]
+              - heading "Python" [level=3] [ref=e246]
+            - generic [ref=e248] [cursor=pointer]:
+              - generic [ref=e249]:
+                - img [ref=e250]
+                - img [ref=e251]
+              - heading "Express" [level=3] [ref=e252]
+            - generic [ref=e254] [cursor=pointer]:
+              - img [ref=e255]
+              - heading "Browser JavaScript" [level=3] [ref=e256]
+            - generic [ref=e258] [cursor=pointer]:
+              - img [ref=e259]
+              - heading "PHP" [level=3] [ref=e260]
+            - generic [ref=e262] [cursor=pointer]:
+              - generic [ref=e263]:
+                - img [ref=e264]
+                - img [ref=e265]
+              - heading "Rails" [level=3] [ref=e266]
+            - generic [ref=e268] [cursor=pointer]:
+              - img [ref=e269]
+              - heading "iOS" [level=3] [ref=e270]
+            - generic [ref=e272] [cursor=pointer]:
+              - generic [ref=e273]:
+                - img [ref=e274]
+                - img [ref=e275]
+              - heading "Nest.js" [level=3] [ref=e276]
+            - generic [ref=e278] [cursor=pointer]:
+              - generic [ref=e279]:
+                - img [ref=e280]
+                - img [ref=e281]
+              - heading "Flask" [level=3] [ref=e282]
+            - generic [ref=e284] [cursor=pointer]:
+              - generic [ref=e285]:
+                - img [ref=e286]
+                - img [ref=e287]
+              - heading "Vue" [level=3] [ref=e288]
+            - generic [ref=e290] [cursor=pointer]:
+              - img [ref=e291]
+              - heading "ASP.NET Core" [level=3] [ref=e292]
+            - generic [ref=e294] [cursor=pointer]:
+              - generic [ref=e295]:
+                - img [ref=e296]
+                - img [ref=e297]
+              - heading "Nuxt" [level=3] [ref=e298]
+            - generic [ref=e300] [cursor=pointer]:
+              - generic [ref=e301]:
+                - img [ref=e302]
+                - img [ref=e303]
+              - heading ".NET MAUI" [level=3] [ref=e304]
+            - generic [ref=e306] [cursor=pointer]:
+              - generic [ref=e307]:
+                - img [ref=e308]
+                - img [ref=e309]
+              - heading "Angular" [level=3] [ref=e310]
+            - generic [ref=e312] [cursor=pointer]:
+              - img [ref=e313]
+              - heading "Android" [level=3] [ref=e314]
+            - generic [ref=e316] [cursor=pointer]:
+              - generic [ref=e317]:
+                - img [ref=e318]
+                - img [ref=e319]
+              - heading "Spring Boot" [level=3] [ref=e320]
+            - generic [ref=e322] [cursor=pointer]:
+              - generic [ref=e323]:
+                - img [ref=e324]
+                - img [ref=e325]
+              - heading "Symfony" [level=3] [ref=e326]
+            - generic [ref=e328] [cursor=pointer]:
+              - generic [ref=e329]:
+                - img [ref=e330]
+                - img [ref=e331]
+              - heading "Cloudflare Workers" [level=3] [ref=e332]
+            - generic [ref=e334] [cursor=pointer]:
+              - img [ref=e335]
+              - heading "Electron" [level=3] [ref=e336]
+            - generic [ref=e338] [cursor=pointer]:
+              - img [ref=e339]
+              - heading "Unity" [level=3] [ref=e340]
+            - generic [ref=e342] [cursor=pointer]:
+              - generic [ref=e343]:
+                - img [ref=e344]
+                - img [ref=e345]
+              - heading "Remix" [level=3] [ref=e346]
+          - listitem [ref=e347]: Set your alert frequency
+          - generic [ref=e348]:
+            - radiogroup "Options for creating an alert" [ref=e349]:
+              - generic [ref=e350] [cursor=pointer]:
+                - radio "Alert me on high priority issues" [checked] [ref=e351]
+                - generic [ref=e353]: Alert me on high priority issues
+              - generic [ref=e354] [cursor=pointer]:
+                - radio "When there are more than 10 occurrences of a unique error in one minute" [ref=e355]
+                - generic [ref=e357]:
+                  - text: When there are more than
+                  - spinbutton [ref=e359]: "10"
+                  - generic [ref=e363]:
+                    - generic [ref=e364]:
+                      - generic [ref=e367]: occurrences of
+                      - textbox [ref=e370]
+                    - img [ref=e373]
+                  - text: a unique error in
+                  - generic [ref=e378]:
+                    - generic [ref=e379]:
+                      - generic [ref=e382]: one minute
+                      - textbox [ref=e385]
+                    - img [ref=e388]
+              - generic [ref=e390] [cursor=pointer]:
+                - radio "I'll create my own alerts later" [ref=e391]
+                - generic [ref=e393]: I'll create my own alerts later
+            - generic [ref=e397]:
+              - generic [ref=e398]:
+                - checkbox "Notify via email" [checked] [disabled] [ref=e399]
+                - generic:
+                  - img
+              - generic [ref=e400]: Notify via email
+            - button "Connect to messaging" [ref=e402] [cursor=pointer]:
+              - generic [ref=e403]: Connect to messaging
+          - listitem [ref=e412]: Name your project and assign it a team
+          - generic [ref=e413]:
+            - generic [ref=e414]:
+              - generic [ref=e415]: Project slug
+              - generic [ref=e416]:
+                - img [ref=e417]
+                - textbox "project-slug" [ref=e418]
+            - generic [ref=e419]:
+              - generic [ref=e420]: Team
+              - generic [ref=e424]:
+                - generic [ref=e425] [cursor=pointer]:
+                  - generic [ref=e427]:
+                    - generic "areyouok" [ref=e429]:
+                      - img [ref=e430]:
+                        - generic [ref=e432]: A
+                    - generic [ref=e433]: "#areyouok"
+                  - textbox "Select a Team" [ref=e436]
+                - img [ref=e439] [cursor=pointer]
+            - button "Create Project" [disabled] [ref=e443]:
+              - generic [ref=e444]: Create Project

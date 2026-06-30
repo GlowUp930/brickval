@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 1: The 5 Levers of Polished UI</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f8f9fb;
+    --surface: #ffffff;
+    --border: #e5e7eb;
+    --text: #11181c;
+    --text-secondary: #687076;
+    --primary: #0066ff;
+    --primary-light: #e8f0ff;
+    --accent: #f59e0b;
+    --radius: 12px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 40px 20px;
+  }
+
+  .container {
+    max-width: 780px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .header {
+    margin-bottom: 48px;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--primary);
+    background: var(--primary-light);
+    padding: 4px 10px;
+    border-radius: 100px;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 12px;
+  }
+
+  .subtitle {
+    font-size: 18px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .mission-link {
+    margin-top: 12px;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .mission-link a {
+    color: var(--primary);
+    text-decoration: none;
+  }
+
+  .mission-link a:hover { text-decoration: underline; }
+
+  /* Section */
+  h2 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-top: 56px;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 28px;
+    margin-bottom: 8px;
+  }
+
+  p {
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+
+  /* Lever card */
+  .lever {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s;
+  }
+
+  .lever:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  .lever-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  .lever h3 {
+    margin-top: 0;
+  }
+
+  .lever p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Before/after demo boxes */
+  .demo-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0;
+  }
+
+  @media (max-width: 600px) {
+    .demo-pair { grid-template-columns: 1fr; }
+  }
+
+  .demo-box {
+    border-radius: 10px;
+    padding: 20px;
+    font-size: 14px;
+  }
+
+  .demo-box.before {
+    background: #fff;
+    border: 1px dashed #d0d5dd;
+  }
+
+  .demo-box.after {
+    background: #fff;
+    border: 1px solid var(--primary);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .demo-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .demo-label.bad { color: #dc2626; }
+  .demo-label.good { color: #16a34a; }
+
+  /* Code blocks */
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: #f1f3f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: #1a1d23;
+    color: #e4e7ec;
+    padding: 16px 20px;
+    border-radius: 10px;
+    overflow-x: auto;
+    line-height: 1.5;
+    margin: 16px 0;
+  }
+
+  pre .comment { color: #6b7280; }
+
+  /* Tip boxes */
+  .tip {
+    background: #fefce8;
+    border-left: 3px solid var(--accent);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    margin: 16px 0;
+  }
+
+  .tip strong { color: #92400e; }
+
+  .callout {
+    background: var(--primary-light);
+    border-left: 3px solid var(--primary);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    margin: 16px 0;
+  }
+
+  .callout strong { color: var(--primary); }
+
+  /* Prompt template */
+  .prompt-box {
+    background: #1a1d23;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 20px 0;
+    position: relative;
+  }
+
+  .prompt-box .prompt-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #9ca3af;
+    margin-bottom: 8px;
+  }
+
+  .prompt-box code {
+    display: block;
+    background: none;
+    color: #e4e7ec;
+    font-size: 13px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    padding: 0;
+  }
+
+  /* Toggle practice */
+  .practice-card {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 32px 0;
+  }
+
+  .practice-card h3 { margin-top: 0; }
+
+  .practice-question {
+    font-weight: 500;
+    margin-bottom: 12px;
+  }
+
+  .practice-answer {
+    display: none;
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: #f0fdf4;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+
+  .practice-answer.show { display: block; }
+
+  button.reveal {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  button.reveal:hover { opacity: 0.9; }
+
+  /* Footer */
+  .footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .footer a { color: var(--primary); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  .next-steps {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 20px 0;
+  }
+
+  .next-step-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    font-size: 14px;
+    text-decoration: none;
+    color: var(--text);
+    transition: box-shadow 0.2s;
+  }
+
+  .next-step-card:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  .next-step-card .step-title {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .next-step-card .step-desc {
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="badge">Lesson 1</div>
+    <h1>The 5 Levers of Polished&nbsp;UI</h1>
+    <p class="subtitle">
+      The concrete, learnable differences between a "default" UI and something that feels premium.
+      These five levers are the <strong>minimum viable design knowledge</strong> for vibe coding.
+    </p>
+    <p class="mission-link">
+      ← <a href="../MISSION.md">Why this matters for BrickVal</a>
+    </p>
+  </div>
+
+  <!-- Intro -->
+  <p>
+    When you look at <strong>getbrickify.app</strong> or <strong>cal.ai</strong>, your first reaction is "that looks good."
+    But <em>why</em>? It's not magic. It's five specific things, each of which you can learn in five minutes.
+  </p>
+
+  <div class="callout">
+    <strong>A note on "vibe coding":</strong> AI tools are great at implementing design once you know <em>what to ask for</em>.
+    The goal of this lesson isn't to make you a designer — it's to give you the vocabulary to direct AI effectively.
+  </div>
+
+  <!-- Lever 1 -->
+  <h2>Lever 1: Spacing</h2>
+
+  <div class="lever">
+    <div class="lever-number">1</div>
+    <h3>Whitespace is the cheapest way to look expensive</h3>
+    <p>
+      The #1 difference between amateur and professional UIs: <strong>not enough space</strong>.
+      Beginners cram everything together. Pros breathe.
+    </p>
+
+    <div class="demo-pair">
+      <div class="demo-box before">
+        <span class="demo-label bad">Before — Tight</span>
+        <div style="display:flex;flex-direction:column;gap:0;padding:8px;border:1px solid #eee;border-radius:6px;">
+          <div style="font-weight:600;font-size:13px;">BrickVal</div>
+          <div style="font-size:11px;color:#666;">Your collection</div>
+          <div style="margin-top:4px;display:flex;gap:4px;">
+            <span style="font-size:10px;background:#eee;padding:2px 6px;border-radius:4px;">75192</span>
+            <span style="font-size:10px;background:#eee;padding:2px 6px;border-radius:4px;">10294</span>
+          </div>
+        </div>
+      </div>
+      <div class="demo-box after">
+        <span class="demo-label good">After — Breathed</span>
+        <div style="display:flex;flex-direction:column;gap:8px;padding:16px;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+          <div style="font-weight:700;font-size:15px;letter-spacing:-0.01em;">BrickVal</div>
+          <div style="font-size:13px;color:#687076;">Your collection</div>
+          <div style="display:flex;gap:6px;">
+            <span style="font-size:11px;font-weight:500;background:#f1f3f5;padding:4px 10px;border-radius:6px;">75192</span>
+            <span style="font-size:11px;font-weight:500;background:#f1f3f5;padding:4px 10px;border-radius:6px;">10294</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h4>The system</h4>
+    <p>
+      Use a consistent spacing scale. Tailwind's default scale is perfect — it's all based on <code>0.25rem</code> (4px) increments.
+    </p>
+
+    <pre>
+<span class="comment">&lt;!-- Bad: arbitrary spacing --&gt;</span>
+&lt;div style="padding: 10px; margin-top: 7px;"&gt;
+
+<span class="comment">&lt;!-- Good: consistent 4px scale --&gt;</span>
+&lt;div class="p-4 mt-2 gap-3"&gt;
+<span class="comment">  <!-- p-4 = 16px, mt-2 = 8px, gap-3 = 12px --></span></pre>
+
+    <div class="tip">
+      <strong>Rule of thumb:</strong> When in doubt, add <code>4px</code> of space. Then add <code>4px</code> more.
+      Most beginners use about half the spacing professionals do.
+    </div>
+  </div>
+
+  <!-- Lever 2 -->
+  <h2>Lever 2: Color</h2>
+
+  <div class="lever">
+    <div class="lever-number">2</div>
+    <h3>A limited palette is a strong palette</h3>
+    <p>
+      Great UIs use 2–3 colors max (plus neutrals). Pure black (<code>#000000</code>) is almost never used on the web — it creates harsh contrast.
+      Notice that cal.ai and Brickify both use muted, off-black text and soft neutrals.
+    </p>
+
+    <pre>
+<span class="comment">/* Bad: pure black on white */</span>
+color: #000000;
+background: #ffffff;
+border: 1px solid #cccccc;
+
+<span class="comment">/* Good: intentional off-whites and off-blacks */</span>
+color: #11181c;        <span class="comment">/* near-black text */</span>
+background: #ffffff;
+border: 1px solid #e5e7eb;
+color: #687076;        <span class="comment">/* secondary text */</span></pre>
+
+    <div class="tip">
+      <strong>For BrickVal:</strong> Stick to Tailwind's blue-600 (<code>#2563eb</code>) as primary,
+      gray-50/gray-100 for surfaces, gray-900 for headings, and gray-500 for body.
+      This alone will make your UI 3x more consistent.
+    </div>
+  </div>
+
+  <!-- Lever 3 -->
+  <h2>Lever 3: Typography</h2>
+
+  <div class="lever">
+    <div class="lever-number">3</div>
+    <h3>Hierarchy through size, weight, and color — not clutter</h3>
+    <p>
+      Three tools to create hierarchy: <strong>size</strong>, <strong>weight</strong>, and <strong>color</strong>.
+      Only use Underlines for links. Only use italics for quotations. Keep line height between <code>1.5</code> (body) and <code>1.1</code> (headings).
+    </p>
+
+    <pre>
+<span class="comment">/* A simple type scale */</span>
+h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; }
+h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2;  }
+h3 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3;  }
+p  { font-size: 16px; font-weight: 400; line-height: 1.6; }
+.small { font-size: 14px; color: #687076; }</pre>
+
+    <div class="demo-pair">
+      <div class="demo-box before">
+        <span class="demo-label bad">Before — Flat</span>
+        <div>
+          <div style="font-size:16px;font-weight:400;">Value: $450</div>
+          <div style="font-size:14px;font-weight:400;color:#666;">Based on 12 recent sales</div>
+        </div>
+      </div>
+      <div class="demo-box after">
+        <span class="demo-label good">After — Hierarchical</span>
+        <div>
+          <div style="font-size:32px;font-weight:700;letter-spacing:-0.02em;line-height:1.1;">$450</div>
+          <div style="font-size:14px;color:#687076;margin-top:4px;">Based on 12 recent sales</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tip">
+      <strong>Font pairing for BrickVal:</strong> Use <strong>Inter</strong> (clean, modern, works at all sizes) for everything.
+      It's already the default in most Tailwind setups. One font is fine — don't add a second until you have a reason.
+    </div>
+  </div>
+
+  <!-- Lever 4 -->
+  <h2>Lever 4: Borders &amp; Shadows</h2>
+
+  <div class="lever">
+    <div class="lever-number">4</div>
+    <h3>Subtle depth without the 2014 skeuomorphism</h3>
+    <p>
+      Modern UIs use <strong>barely-there</strong> borders and shadows. The goal is to separate surfaces,
+      not to make them pop off the screen. Notice how cal.ai uses extremely subtle borders on cards and near-invisible shadows.
+    </p>
+
+    <pre>
+<span class="comment">/* Bad: harsh */</span>
+border: 2px solid #000;
+border-radius: 4px;
+box-shadow: 5px 5px 10px rgba(0,0,0,0.2);
+
+<span class="comment">/* Good: subtle */</span>
+border: 1px solid #e5e7eb;
+border-radius: 12px;
+box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+
+<span class="comment">/* Elevated card (hover) */</span>
+box-shadow: 0 4px 12px rgba(0,0,0,0.08);</pre>
+
+    <div class="demo-pair">
+      <div class="demo-box before">
+        <span class="demo-label bad">Before — Harsh</span>
+        <div style="border:2px solid #333;border-radius:4px;padding:12px;">
+          <div style="font-weight:600;font-size:14px;">LEGO 75192</div>
+        </div>
+      </div>
+      <div class="demo-box after">
+        <span class="demo-label good">After — Subtle</span>
+        <div style="border:1px solid #e5e7eb;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+          <div style="font-weight:600;font-size:14px;">LEGO 75192</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tip">
+      <strong>Border radius:</strong> <code>8px–12px</code> for cards, <code>6px</code> for buttons,
+      <code>100px</code> for badges/pills. Consistent radius = coherent design.
+    </div>
+  </div>
+
+  <!-- Lever 5 -->
+  <h2>Lever 5: Animation</h2>
+
+  <div class="lever">
+    <div class="lever-number">5</div>
+    <h3>Motion with purpose, not decoration</h3>
+    <p>
+      The best animations are ones users barely notice — but would miss if removed.
+      They serve a purpose: guiding attention, confirming actions, or adding delight to loading states.
+    </p>
+
+    <p>
+      <strong>The three easiest wins:</strong>
+    </p>
+
+    <ol style="margin-left:20px;margin-bottom:12px;">
+      <li><strong>Fade in + slide up</strong> for content appearing on screen (300ms, ease-out)</li>
+      <li><strong>Scale on press</strong> for buttons (95% → 100%, 100ms)</li>
+      <li><strong>Staggered reveals</strong> for lists (each item fades in 50ms apart)</li>
+    </ol>
+
+    <pre>
+<span class="comment">/* CSS-only: fade in + slide up */</span>
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.element {
+  animation: fadeUp 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+<span class="comment">/* Framer Motion: staggered list */</span>
+&lt;AnimatePresence&gt;
+  {items.map((item, i) => (
+    &lt;motion.div
+      key={item.id}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: i * 0.05, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+    &gt;
+      {item.name}
+    &lt;/motion.div&gt;
+  ))}
+&lt;/AnimatePresence&gt;</pre>
+
+    <div class="tip">
+      <strong>Easing cheat sheet:</strong> Never use <code>ease-in</code> (feels like falling).
+      Use <code>ease-out</code> for things entering, <code>ease-in-out</code> for things moving between states.
+      The cubic-bezier <code>[0.16, 1, 0.3, 1]</code> is a great "snappy" ease-out.
+    </div>
+  </div>
+
+  <!-- Putting it together -->
+  <h2>Putting It Together: Prompt Template</h2>
+
+  <p>
+    When you ask an AI to build a UI component, include your design constraints in the prompt.
+    Here's a template you can adapt:
+  </p>
+
+  <div class="prompt-box">
+    <div class="prompt-label">AI Prompt Template</div>
+    <code>Build a [component name] for BrickVal with these design rules:
+- Spacing: Use a 4px spacing scale (Tailwind defaults)
+- Colors: primary=blue-600, surface=white, text=gray-900, secondary=gray-500, border=gray-200
+- Typography: Inter font, 32/24/18/16/14 type scale, 1.5 line height body
+- Borders: 1px solid, 10px border radius on cards, 6px on buttons
+- Shadows: 0 1px 3px for cards, 0 4px 12px for elevated
+- Animation: Fade-up entrance (300ms ease-out), scale press on buttons</code>
+  </div>
+
+  <div class="callout">
+    <strong>Try it now:</strong> Open your AI coding tool and use this template to build a BrickVal "collection card."
+    Compare the output to what you'd get without the template.
+  </div>
+
+  <!-- Practice -->
+  <h2>Quick Check</h2>
+
+  <div class="practice-card">
+    <div class="practice-question">
+      🎯 A user reports your BrickVal settings screen "looks cheap."
+      Name three specific things you'd check/adjust based on these 5 levers.
+    </div>
+    <button class="reveal" onclick="document.getElementById('answer1').classList.toggle('show')">Reveal Answer</button>
+    <div id="answer1" class="practice-answer">
+      <strong>Any three of:</strong><br>
+      1. <strong>Spacing:</strong> Are elements cramped? Double padding/margins everywhere.<br>
+      2. <strong>Color:</strong> Is there pure black <code>#000</code>? Replace with <code>#11181c</code>. Too many colors? Cut to 3.<br>
+      3. <strong>Typography:</strong> One font size used everywhere? Apply the type scale. Too many font families? Use just Inter.<br>
+      4. <strong>Borders/Shadows:</strong> 2px solid borders? Make them 1px subtle. Wrong border radius? Standardise on 10px/6px.<br>
+      5. <strong>Animation:</strong> Things appear instantly? Add a 300ms fade-up.
+    </div>
+  </div>
+
+  <!-- Next steps -->
+  <h2>What's Next?</h2>
+
+  <div class="next-steps">
+    <a href="#" class="next-step-card" onclick="event.preventDefault();alert('Coming soon in Lesson 2')">
+      <span class="step-title">→ Color Systems &amp; Palettes</span>
+      <span class="step-desc">How to pick colors, build a palette, and use semantic tokens with Tailwind.</span>
+    </a>
+    <a href="#" class="next-step-card" onclick="event.preventDefault();alert('Coming soon in Lesson 3')">
+      <span class="step-title">→ Micro-interactions with Framer Motion</span>
+      <span class="step-desc">Button press, card hover, list stagger — the animations that feel pro.</span>
+    </a>
+    <a href="#" class="next-step-card" onclick="event.preventDefault();alert('Coming soon — check the reference/ folder')">
+      <span class="step-title">→ Reference: Design Cheat Sheet</span>
+      <span class="step-desc">Printable one-pager with all the values from this lesson.</span>
+    </a>
+    <a href="../RESOURCES.md" class="next-step-card">
+      <span class="step-title">→ Resource Library</span>
+      <span class="step-desc">Free tools, books, and communities collected for this mission.</span>
+    </a>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p><strong>One thing.</strong> One lesson. One win.</p>
+    <p>
+      If anything was unclear, ask followup questions —
+      the agent is your teacher and can go deeper on any lever.
+    </p>
+    <p>
+      References: <a href="https://www.refactoringui.com/">Refactoring UI</a> ·
+      <a href="https://tailwindcss.com/docs/customizing-spacing">Tailwind Spacing</a> ·
+      <a href="https://easings.net/">Easings</a> ·
+      <a href="https://www.framer.com/motion/">Framer Motion</a>
+    </p>
+  </div>
+
+</div>
+
+<script>
+  // Enable all practice buttons
+  document.querySelectorAll('.reveal').forEach(btn => {
+    if (!btn._listener) {
+      btn._listener = true;
+    }
+  });
+</script>
+
+</body>
+</html>

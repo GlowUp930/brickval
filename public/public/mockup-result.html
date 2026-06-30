@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>BrickVal – Result Page Draft</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#0d0d0f; --surface:#18181c; --surface-2:#222228; --border:#2a2a32;
+    --fg:#f0f0f5; --muted:#6b6b7a; --accent:#f5c518; --accent-fg:#0d0d0f;
+    --green:#22c55e; --red:#ef4444; --purple:#a78bfa;
+  }
+  html,body { background:var(--bg); color:var(--fg); font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif; -webkit-font-smoothing:antialiased; min-height:100vh; }
+  .page { max-width:390px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; }
+
+  /* Draft banner */
+  .draft-banner { position:fixed; top:0; left:50%; transform:translateX(-50%); z-index:100; background:var(--purple); color:#fff; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:4px 14px; border-radius:0 0 10px 10px; pointer-events:none; max-width:390px; width:100%; text-align:center; }
+
+  /* Header */
+  header { display:flex; align-items:center; justify-content:space-between; padding:44px 16px 12px; border-bottom:1px solid var(--border); position:sticky; top:0; background:rgba(13,13,15,0.92); backdrop-filter:blur(12px); z-index:10; }
+  .back-btn { font-size:13px; font-weight:600; color:var(--muted); text-decoration:none; }
+  .logo { font-size:15px; font-weight:900; letter-spacing:-.03em; display:flex; align-items:center; gap:6px; }
+  .header-spacer { width:56px; }
+
+  /* Hero image */
+  .hero-image-wrap { position:relative; width:100%; height:220px; overflow:hidden; }
+  .hero-image-wrap img { width:100%; height:100%; object-fit:contain; background:var(--surface); }
+  .hero-fade { position:absolute; bottom:0; left:0; right:0; height:100px; background:linear-gradient(to bottom,transparent,var(--bg)); pointer-events:none; }
+  .theme-badge { position:absolute; top:12px; left:12px; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; padding:4px 10px; border-radius:999px; background:var(--accent); color:var(--accent-fg); }
+
+  /* Identity */
+  .identity { padding:4px 16px 16px; display:flex; flex-direction:column; gap:6px; }
+  .identity h1 { font-size:26px; font-weight:900; line-height:1.15; letter-spacing:-.02em; }
+  .identity .meta { font-size:13px; color:var(--muted); }
+  .pill { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; align-self:flex-start; }
+  .pill-red { background:rgba(239,68,68,.12); color:#ef4444; border:1px solid rgba(239,68,68,.25); }
+
+  /* Tabs */
+  .tabs { display:flex; gap:4px; margin:0 16px 12px; background:var(--surface-2); border-radius:12px; padding:4px; }
+  .tab-btn { flex:1; padding:8px; border-radius:8px; border:none; font-size:13px; font-weight:700; cursor:pointer; transition:all .15s; }
+  .tab-btn.active { background:var(--accent); color:var(--accent-fg); }
+  .tab-btn:not(.active) { background:transparent; color:var(--muted); }
+
+  /* Timeframe */
+  .timeframe-row { display:flex; gap:6px; margin:0 16px 16px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .timeframe-row::-webkit-scrollbar { display:none; }
+  .tf-btn { flex-shrink:0; padding:5px 13px; border-radius:999px; border:1px solid var(--border); background:var(--surface); color:var(--muted); font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; }
+  .tf-btn.active { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
+
+  /* Hero card */
+  .hero-card { margin:0 16px 16px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:20px; position:relative; overflow:hidden; }
+  .hero-card::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at top right,rgba(245,197,24,.07),transparent 60%); pointer-events:none; }
+  .hero-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-bottom:4px; }
+  .hero-price-row { display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; }
+  .hero-price { font-size:60px; font-weight:900; line-height:1; letter-spacing:-.04em; color:var(--accent); font-variant-numeric:tabular-nums; }
+  .volume-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(245,197,24,.12); color:var(--accent); border:1px solid rgba(245,197,24,.25); font-size:12px; font-weight:700; padding:5px 10px; border-radius:999px; margin-bottom:6px; }
+  .trend-row { display:flex; align-items:center; gap:8px; margin-top:10px; }
+  .trend-badge { display:inline-flex; align-items:center; gap:5px; padding:5px 11px; border-radius:999px; font-size:12px; font-weight:700; }
+  .trend-up { background:rgba(34,197,94,.14); color:#22c55e; border:1px solid rgba(34,197,94,.28); }
+  .trend-label { font-size:12px; color:var(--muted); }
+  .rrp-line { margin-top:8px; font-size:12px; color:var(--muted); }
+  .rrp-gain { color:var(--green); font-weight:700; }
+
+  /* Section header */
+  .section-header { display:flex; justify-content:space-between; align-items:center; margin:0 16px 10px; }
+  .section-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); }
+  .section-action { font-size:11px; font-weight:600; color:var(--accent); cursor:pointer; }
+
+  /* Price distribution */
+  .dist-card { margin:0 16px 16px; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px; }
+  .dist-track { position:relative; height:6px; background:var(--surface-2); border-radius:999px; margin:16px 0 20px; }
+  .dist-iqr { position:absolute; top:0; height:6px; background:rgba(245,197,24,.35); border-radius:999px; }
+  .dist-median-line { position:absolute; top:-5px; width:3px; height:16px; background:var(--accent); border-radius:2px; transform:translateX(-50%); }
+  .dist-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:4px; }
+  .dist-col { display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .dist-val { font-size:12px; font-weight:800; color:var(--fg); letter-spacing:-.02em; }
+  .dist-key { font-size:9px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; text-align:center; }
+  .dist-col.is-median .dist-val { color:var(--accent); font-size:15px; }
+  .dist-col.is-median .dist-key { color:var(--accent); }
+  .dist-hint { font-size:11px; color:var(--muted); margin-top:12px; text-align:center; border-top:1px solid var(--border); padding-top:10px; }
+  .dist-hint strong { color:var(--fg); }
+
+  /* Deal calculator */
+  .calc-card { margin:0 16px 16px; background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+  .calc-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px 10px; border-bottom:1px solid var(--border); }
+  .calc-title { font-size:13px; font-weight:800; display:flex; align-items:center; gap:7px; }
+  .calc-icon { width:26px; height:26px; background:rgba(245,197,24,.15); border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:13px; }
+  .paid-badge { font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; background:linear-gradient(135deg,#f5c518,#ff9500); color:#000; padding:3px 7px; border-radius:999px; }
+  .calc-body { padding:14px 16px 16px; display:flex; flex-direction:column; gap:12px; }
+  .calc-input-label { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; display:block; margin-bottom:6px; }
+  .calc-input { width:100%; background:var(--surface-2); border:1.5px solid var(--border); border-radius:10px; padding:10px 14px; font-size:20px; font-weight:800; color:var(--fg); letter-spacing:-.02em; font-variant-numeric:tabular-nums; outline:none; transition:border-color .15s; }
+  .calc-input:focus { border-color:var(--accent); }
+  .calc-condition-row { display:flex; gap:6px; }
+  .cond-btn { flex:1; padding:8px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface-2); color:var(--muted); font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; }
+  .cond-btn.active { border-color:var(--accent); color:var(--accent); background:rgba(245,197,24,.08); }
+  .calc-result { background:var(--surface-2); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .calc-result-row { display:flex; justify-content:space-between; align-items:center; }
+  .calc-result-row.divider { border-top:1px solid var(--border); padding-top:8px; margin-top:2px; }
+  .calc-result-key { font-size:12px; color:var(--muted); }
+  .calc-result-val { font-size:14px; font-weight:800; letter-spacing:-.02em; }
+  .val-green { color:var(--green); }
+  .val-accent { color:var(--accent); }
+  .val-red { color:var(--red); }
+  .val-muted { color:var(--muted); }
+  .calc-verdict { margin-top:2px; padding:10px 14px; border-radius:10px; font-size:13px; font-weight:700; display:flex; align-items:center; gap:8px; }
+
+  /* Source banner */
+  .source-banner { margin:0 16px 12px; border-radius:12px; padding:10px 14px; display:flex; align-items:flex-start; gap:10px; font-size:12px; line-height:1.5; color:var(--muted); }
+  .source-banner.green { background:rgba(34,197,94,.07); border:1px solid rgba(34,197,94,.18); }
+  .source-icon { font-size:14px; flex-shrink:0; margin-top:1px; }
+
+  /* Transaction list */
+  .list-card { margin:0 16px 16px; background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+  .list-header { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--border); background:var(--surface-2); }
+  .filter-chip { display:flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:var(--green); background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.2); border-radius:999px; padding:3px 9px; }
+  .list-meta { font-size:11px; color:var(--muted); }
+  .sale-row { display:flex; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid var(--border); text-decoration:none; transition:background .1s; cursor:pointer; }
+  .sale-row:last-child { border-bottom:none; }
+  .sale-row:hover { background:var(--surface-2); }
+  .sale-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); flex-shrink:0; }
+  .sale-info { flex:1; min-width:0; }
+  .sale-title { font-size:13px; font-weight:600; color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sale-date { font-size:11px; color:var(--muted); margin-top:1px; }
+  .sale-right { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+  .sale-price { font-size:14px; font-weight:900; color:var(--accent); letter-spacing:-.02em; }
+  .sale-arrow { color:var(--muted); font-size:14px; }
+  .sale-row.outlier { opacity:.38; }
+  .sale-row.outlier .sale-title { text-decoration:line-through; }
+  .sale-row.outlier .sale-price { color:var(--muted); }
+  .show-more-btn { width:100%; padding:11px 14px; background:none; border:none; border-top:1px solid var(--border); font-size:12px; font-weight:700; color:var(--accent); cursor:pointer; }
+
+  /* BrickLink section */
+  .bl-card { margin:0 16px 16px; background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+  .bl-header { display:flex; align-items:center; justify-content:space-between; padding:11px 14px; border-bottom:1px solid var(--border); background:var(--surface-2); }
+  .bl-logo-row { display:flex; align-items:center; gap:8px; }
+  .bl-logo-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); }
+  .bl-title-text { font-size:12px; font-weight:800; color:var(--fg); }
+  .bl-sub { font-size:10px; color:var(--muted); }
+  .bl-stats-grid { display:grid; grid-template-columns:1fr 1fr; }
+  .bl-stat { padding:14px; border-bottom:1px solid var(--border); border-right:1px solid var(--border); }
+  .bl-stat:nth-child(2n) { border-right:none; }
+  .bl-stat:nth-last-child(-n+2) { border-bottom:none; }
+  .bl-stat-label { font-size:10px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.07em; }
+  .bl-stat-val { font-size:20px; font-weight:900; color:var(--fg); letter-spacing:-.03em; margin-top:4px; }
+  .bl-stat-val.accent { color:var(--accent); }
+  .bl-stat-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+
+  /* Annotation borders for draft review */
+  .new-feature { position:relative; border:1.5px dashed rgba(167,139,250,.4); border-radius:18px; padding:8px; margin:0 8px 12px; }
+  .new-feature::before { content:attr(data-tag); position:absolute; top:-10px; right:10px; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:var(--purple); background:var(--bg); padding:0 6px; white-space:nowrap; }
+
+  /* Attribution */
+  .attribution { text-align:center; font-size:11px; color:var(--muted); padding:4px 16px 32px; }
+  .scan-cta { display:block; margin:0 16px 24px; text-align:center; font-size:15px; font-weight:800; padding:14px; border-radius:16px; background:var(--surface); color:var(--fg); border:2px solid var(--border); cursor:pointer; text-decoration:none; transition:border-color .15s; }
+  .scan-cta:hover { border-color:var(--accent); color:var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="draft-banner">⚡ VISUAL DRAFT — Review Only · Not Deployed</div>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <header>
+    <a class="back-btn" href="#">← Back</a>
+    <div class="logo">🧱 <span>BrickVal</span></div>
+    <div class="header-spacer"></div>
+  </header>
+
+  <!-- HERO IMAGE -->
+  <div class="hero-image-wrap">
+    <img src="https://images.brickset.com/sets/images/75192-1.jpg" alt="LEGO Millennium Falcon" onerror="this.style.display='none'">
+    <div class="hero-fade"></div>
+    <span class="theme-badge">LEGO Star Wars</span>
+  </div>
+
+  <!-- IDENTITY -->
+  <div class="identity">
+    <h1>Millennium Falcon</h1>
+    <p class="meta">#75192 · 7,541 pcs · 2017</p>
+    <span class="pill pill-red">🔴 Retired</span>
+  </div>
+
+  <!-- CONDITION TABS (existing) -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(this)">New / Sealed</button>
+    <button class="tab-btn" onclick="switchTab(this)">Used</button>
+  </div>
+
+  <!-- TIMEFRAME SELECTOR — NEW PHASE 1 -->
+  <div class="new-feature" data-tag="🆕 Phase 1 · Timeframe Selector">
+    <div class="timeframe-row" style="margin:0">
+      <button class="tf-btn" onclick="switchTF(this)">7D</button>
+      <button class="tf-btn" onclick="switchTF(this)">30D</button>
+      <button class="tf-btn active" onclick="switchTF(this)">90D</button>
+      <button class="tf-btn" onclick="switchTF(this)">6M</button>
+      <button class="tf-btn" onclick="switchTF(this)">1Y</button>
+    </div>
+  </div>
+
+  <!-- HERO PRICE — MEDIAN + VOLUME — UPDATED -->
+  <div class="new-feature" data-tag="🆕 Phase 1 · Median Price + Volume Badge">
+    <div class="hero-card" style="margin:0">
+      <p class="hero-label">Median Sold Price · 90D</p>
+      <div class="hero-price-row">
+        <p class="hero-price" id="heroPrice">$0</p>
+        <span class="volume-badge">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 9.5L3.5 6.5L5.5 8L8 4.5L10 6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          64 sales
+        </span>
+      </div>
+      <div class="trend-row">
+        <span class="trend-badge trend-up">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 7L5 2L9 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          +$42 (+5.3%)
+        </span>
+        <span class="trend-label">in the last 30 days</span>
+      </div>
+      <p class="rrp-line">RRP: ~$849.99 · <span class="rrp-gain">−1.8% below RRP</span></p>
+    </div>
+  </div>
+
+  <!-- PRICE DISTRIBUTION — NEW PHASE 2 -->
+  <div class="new-feature" data-tag="🆕 Phase 2 · Price Distribution Snapshot">
+    <div class="section-header" style="margin:4px 0 8px">
+      <span class="section-title">Price Distribution · 90D</span>
+    </div>
+    <div class="dist-card" style="margin:0">
+      <div class="dist-track">
+        <div class="dist-iqr" style="left:25%;width:38%"></div>
+        <div class="dist-median-line" style="left:50%"></div>
+      </div>
+      <div class="dist-grid">
+        <div class="dist-col">
+          <span class="dist-val">$480</span>
+          <span class="dist-key">Lowest</span>
+        </div>
+        <div class="dist-col">
+          <span class="dist-val">$740</span>
+          <span class="dist-key">25th %</span>
+        </div>
+        <div class="dist-col is-median">
+          <span class="dist-val">$835</span>
+          <span class="dist-key">Median</span>
+        </div>
+        <div class="dist-col">
+          <span class="dist-val">$940</span>
+          <span class="dist-key">75th %</span>
+        </div>
+        <div class="dist-col">
+          <span class="dist-val">$1,999</span>
+          <span class="dist-key">Highest</span>
+        </div>
+      </div>
+      <p class="dist-hint">
+        Middle 50% of sales: <strong>$740</strong> → <strong>$940</strong>
+      </p>
+    </div>
+  </div>
+
+  <!-- DEAL CALCULATOR — NEW PHASE 2 / PAID -->
+  <div class="new-feature" data-tag="🆕 Phase 2 · Deal Calculator — Paid Feature">
+    <div class="calc-card" style="margin:0">
+      <div class="calc-header">
+        <div class="calc-title">
+          <div class="calc-icon">🧮</div>
+          Deal Calculator
+        </div>
+        <span class="paid-badge">✦ Pro</span>
+      </div>
+      <div class="calc-body">
+        <div>
+          <label class="calc-input-label" for="buyPrice">Your Buy Price (USD)</label>
+          <input class="calc-input" id="buyPrice" type="number" placeholder="e.g. 760" value="760" oninput="updateCalc(this.value)">
+        </div>
+        <div>
+          <span class="calc-input-label" style="display:block;margin-bottom:6px">Condition</span>
+          <div class="calc-condition-row">
+            <button class="cond-btn active" onclick="switchCond(this)">New / Sealed</button>
+            <button class="cond-btn" onclick="switchCond(this)">Used</button>
+          </div>
+        </div>
+        <div class="calc-result">
+          <div class="calc-result-row">
+            <span class="calc-result-key">Market Median</span>
+            <span class="calc-result-val val-accent">$835</span>
+          </div>
+          <div class="calc-result-row">
+            <span class="calc-result-key">Your Buy Price</span>
+            <span class="calc-result-val val-muted" id="displayBuy">$760</span>
+          </div>
+          <div class="calc-result-row divider">
+            <span class="calc-result-key">vs. Market</span>
+            <span class="calc-result-val val-green" id="vsMarket">9% below market</span>
+          </div>
+          <div class="calc-result-row">
+            <span class="calc-result-key">Est. Resale</span>
+            <span class="calc-result-val val-accent" id="estResale">~$835</span>
+          </div>
+          <div class="calc-result-row">
+            <span class="calc-result-key">Est. Margin after fees (13%)</span>
+            <span class="calc-result-val val-green" id="estMargin">~$167 (+22%)</span>
+          </div>
+        </div>
+        <div class="calc-verdict" id="calcVerdict" style="background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.22);color:var(--green)">
+          <span id="verdictEmoji">✅</span>
+          <span id="verdictText">Good deal — 9% below median. Strong flip potential.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA SOURCE BANNER -->
+  <div class="source-banner green">
+    <span class="source-icon">✅</span>
+    <p>Sold prices from BrickLink (last 6 months · 64 verified sales). eBay listings shown below for reference.</p>
+  </div>
+
+  <!-- SPARKLINE + VOLUME BARS — UPDATED -->
+  <div class="new-feature" data-tag="🆕 Phase 2 · Volume Bars on Chart">
+    <div class="section-header" style="margin:4px 0 8px">
+      <span class="section-title">Recent Transactions · 90D</span>
+      <span class="section-action">See all →</span>
+    </div>
+    <svg viewBox="0 0 358 165" style="width:100%;height:165px;display:block" aria-hidden="true">
+      <defs>
+        <linearGradient id="lg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#f5c518" stop-opacity="0.20"/>
+          <stop offset="100%" stop-color="#f5c518" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <!-- volume bars -->
+      <rect x="52"  y="138" width="16" height="8"  rx="2" fill="rgba(245,197,24,0.18)"/>
+      <rect x="83"  y="132" width="16" height="14" rx="2" fill="rgba(245,197,24,0.20)"/>
+      <rect x="114" y="126" width="16" height="20" rx="2" fill="rgba(245,197,24,0.22)"/>
+      <rect x="145" y="130" width="16" height="16" rx="2" fill="rgba(245,197,24,0.20)"/>
+      <rect x="176" y="128" width="16" height="18" rx="2" fill="rgba(245,197,24,0.20)"/>
+      <rect x="207" y="122" width="16" height="24" rx="2" fill="rgba(245,197,24,0.25)"/>
+      <rect x="238" y="130" width="16" height="16" rx="2" fill="rgba(245,197,24,0.22)"/>
+      <rect x="269" y="124" width="16" height="22" rx="2" fill="rgba(245,197,24,0.25)"/>
+      <rect x="300" y="118" width="16" height="28" rx="2" fill="rgba(245,197,24,0.28)"/>
+      <rect x="331" y="112" width="16" height="34" rx="2" fill="rgba(245,197,24,0.32)"/>
+      <!-- grid -->
+      <line x1="52" y1="20" x2="350" y2="20" stroke="rgba(255,255,255,0.05)" stroke-dasharray="3 4"/>
+      <line x1="52" y1="50" x2="350" y2="50" stroke="rgba(255,255,255,0.05)" stroke-dasharray="3 4"/>
+      <line x1="52" y1="80" x2="350" y2="80" stroke="rgba(255,255,255,0.05)" stroke-dasharray="3 4"/>
+      <line x1="52" y1="110" x2="350" y2="110" stroke="rgba(255,255,255,0.08)"/>
+      <!-- y labels -->
+      <text x="46" y="24"  text-anchor="end" font-size="9" fill="rgba(255,255,255,0.28)" font-family="system-ui">$1k</text>
+      <text x="46" y="54"  text-anchor="end" font-size="9" fill="rgba(255,255,255,0.28)" font-family="system-ui">$900</text>
+      <text x="46" y="84"  text-anchor="end" font-size="9" fill="rgba(255,255,255,0.28)" font-family="system-ui">$835</text>
+      <text x="46" y="114" text-anchor="end" font-size="9" fill="rgba(255,255,255,0.28)" font-family="system-ui">$700</text>
+      <!-- x labels -->
+      <text x="52"  y="158" text-anchor="start" font-size="9" fill="rgba(255,255,255,0.25)" font-family="system-ui">23 Dec</text>
+      <text x="350" y="158" text-anchor="end"   font-size="9" fill="rgba(255,255,255,0.25)" font-family="system-ui">21 Mar</text>
+      <text x="201" y="158" text-anchor="middle" font-size="8" fill="rgba(245,197,24,0.35)" font-family="system-ui">VOL</text>
+      <!-- area -->
+      <polygon points="52,88 83,70 114,58 145,74 176,66 207,52 238,70 269,56 300,46 340,40 350,110 52,110" fill="url(#lg)"/>
+      <!-- line -->
+      <polyline points="52,88 83,70 114,58 145,74 176,66 207,52 238,70 269,56 300,46 340,40" fill="none" stroke="#f5c518" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- dots -->
+      <circle cx="52"  cy="88" r="2.8" fill="#f5c518"/>
+      <circle cx="83"  cy="70" r="2.8" fill="#f5c518"/>
+      <circle cx="114" cy="58" r="2.8" fill="#f5c518"/>
+      <circle cx="145" cy="74" r="2.8" fill="#f5c518"/>
+      <circle cx="176" cy="66" r="2.8" fill="#f5c518"/>
+      <circle cx="207" cy="52" r="2.8" fill="#f5c518"/>
+      <circle cx="238" cy="70" r="2.8" fill="#f5c518"/>
+      <circle cx="269" cy="56" r="2.8" fill="#f5c518"/>
+      <circle cx="300" cy="46" r="2.8" fill="#f5c518"/>
+      <circle cx="340" cy="40" r="3.5" fill="#f5c518" stroke="rgba(245,197,24,0.35)" stroke-width="5"/>
+      <!-- median reference -->
+      <line x1="52" y1="84" x2="295" y2="84" stroke="rgba(245,197,24,0.30)" stroke-dasharray="4 4" stroke-width="1"/>
+      <text x="298" y="88" font-size="8" fill="rgba(245,197,24,0.65)" font-family="system-ui">MED</text>
+    </svg>
+  </div>
+
+  <!-- TRANSACTION LIST — CLEANED / FILTERED -->
+  <div class="new-feature" data-tag="🆕 Phase 1 · Cleaned Rows + Outlier Filtering">
+    <div class="list-card" style="margin:0">
+      <div class="list-header">
+        <span class="filter-chip">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 2.5h8M2.5 5h5M4 7.5h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Verified full sets only
+        </span>
+        <span class="list-meta">8 of 64 shown</span>
+      </div>
+      <div class="sale-row">
+        <span class="sale-dot"></span>
+        <div class="sale-info">
+          <p class="sale-title">LEGO Star Wars 75192 Millennium Falcon</p>
+          <p class="sale-date">18 Mar 2026</p>
+        </div>
+        <div class="sale-right">
+          <span class="sale-price">$872</span>
+          <span class="sale-arrow">›</span>
+        </div>
+      </div>
+      <div class="sale-row">
+        <span class="sale-dot"></span>
+        <div class="sale-info">
+          <p class="sale-title">LEGO 75192 UCS Millennium Falcon SEALED</p>
+          <p class="sale-date">14 Mar 2026</p>
+        </div>
+        <div class="sale-right">
+          <span class="sale-price">$840</span>
+          <span class="sale-arrow">›</span>
+        </div>
+      </div>
+      <div class="sale-row">
+        <span class="sale-dot"></span>
+        <div class="sale-info">
+          <p class="sale-title">Lego Star Wars Millennium Falcon 75192 NEW</p>
+          <p class="sale-date">10 Mar 2026</p>
+        </div>
+        <div class="sale-right">
+          <span class="sale-price">$835</span>
+          <span class="sale-arrow">›</span>
+        </div>
+      </div>
+      <div class="sale-row">
+        <span class="sale-dot"></span>
+        <div class="sale-info">
+          <p class="sale-title">LEGO 75192 Millennium Falcon UCS Factory Sealed</p>
+          <p class="sale-date">3 Mar 2026</p>
+        </div>
+        <div class="sale-right">
+          <span class="sale-price">$820</span>
+          <span class="sale-arrow">›</span>
+        </div>
+      </div>
+      <div class="sale-row">
+        <span class="sale-dot"></span>
+        <div class="sale-info">
+          <p class="sale-title">LEGO Star Wars 75192 Millennium Falcon NEW</p>
+          <p class="sale-date">25 Feb 2026</p>
+        </div>
+        <div class="sale-right">
+          <span class="sale-price">$798</span>
+          <span class="sale-arrow">›</span>
+        </div>
+      </div>
+      <!-- Outlier — greyed/filtered example -->
+      <div class="sale-row outlier" title="Filtered: incomplete set">
+        <span class="sale-dot" style="background:var(--muted)"></span>
+        <div class="sale-info">
+          <p class="sale-title">75192 incomplete no box missing figs</p>
+          <p class="sale-date">Filtered · incomplete set</p>
+        </div>
+        <div class="sale-right">
+          <span class="sale-price">$233</span>
+          <span class="sale-arrow">›</span>
+        </div>
+      </div>
+      <button class="show-more-btn">Show all 64 transactions →</button>
+    </div>
+  </div>
+
+  <!-- BRICKLINK LISTINGS — USER IDEA -->
+  <div class="new-feature" data-tag="💡 User Idea · BrickLink Listings">
+    <div class="section-header" style="margin:4px 0 8px">
+      <span class="section-title">BrickLink Market Data</span>
+      <span class="bl-sub" style="font-size:10px;color:var(--muted)">Last 6 months</span>
+    </div>
+    <div class="bl-card" style="margin:0">
+      <div class="bl-header">
+        <div class="bl-logo-row">
+          <div class="bl-logo-dot"></div>
+          <div>
+            <div class="bl-title-text">BrickLink Price Guide</div>
+            <div class="bl-sub">Sold + Listed · USD</div>
+          </div>
+        </div>
+        <span class="pill" style="background:rgba(34,197,94,.10);color:var(--green);border:1px solid rgba(34,197,94,.22);font-size:10px;padding:3px 8px">64 sold</span>
+      </div>
+      <div class="bl-stats-grid">
+        <div class="bl-stat">
+          <div class="bl-stat-label">Avg Sold · New</div>
+          <div class="bl-stat-val accent">$835</div>
+          <div class="bl-stat-sub">64 sales</div>
+        </div>
+        <div class="bl-stat">
+          <div class="bl-stat-label">Avg Sold · Used</div>
+          <div class="bl-stat-val">$523</div>
+          <div class="bl-stat-sub">24 sales</div>
+        </div>
+        <div class="bl-stat">
+          <div class="bl-stat-label">Listed · New</div>
+          <div class="bl-stat-val">$920</div>
+          <div class="bl-stat-sub">Current avg</div>
+        </div>
+        <div class="bl-stat">
+          <div class="bl-stat-label">Listed · Used</div>
+          <div class="bl-stat-val">$580</div>
+          <div class="bl-stat-sub">Current avg</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="attribution">Source: BrickLink (sold) + eBay (listings) · USD · Refreshed every 24h</p>
+  <a class="scan-cta" href="#">Scan another set</a>
+
+</div>
+
+<script>
+  const MEDIAN = 835;
+  const FEE = 0.13;
+
+  function switchTab(btn) {
+    btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+  }
+  function switchTF(btn) {
+    btn.closest('.timeframe-row').querySelectorAll('.tf-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+  }
+  function switchCond(btn) {
+    btn.closest('.calc-condition-row').querySelectorAll('.cond-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+  }
+
+  function updateCalc(raw) {
+    var buy = parseFloat(raw) || 0;
+    if (buy <= 0) return;
+    var diff = buy - MEDIAN;
+    var pctRaw = (diff / MEDIAN) * 100;
+    var pct = Math.abs(pctRaw).toFixed(1);
+    var fees = MEDIAN * FEE;
+    var margin = MEDIAN - fees - buy;
+    var marginPct = ((margin / buy) * 100).toFixed(0);
+
+    document.getElementById('displayBuy').textContent = '$' + Math.round(buy).toLocaleString();
+
+    var vsEl = document.getElementById('vsMarket');
+    if (diff < 0) {
+      vsEl.textContent = pct + '% below market';
+      vsEl.className = 'calc-result-val val-green';
+    } else {
+      vsEl.textContent = pct + '% above market';
+      vsEl.className = 'calc-result-val val-red';
+    }
+
+    document.getElementById('estResale').textContent = '~$' + MEDIAN;
+
+    var marginEl = document.getElementById('estMargin');
+    if (margin > 0) {
+      marginEl.textContent = '~$' + Math.round(margin) + ' (+' + Math.abs(marginPct) + '%)';
+      marginEl.className = 'calc-result-val val-green';
+    } else {
+      marginEl.textContent = '~$' + Math.round(margin) + ' (loss)';
+      marginEl.className = 'calc-result-val val-red';
+    }
+
+    var v = document.getElementById('calcVerdict');
+    var emojiEl = document.getElementById('verdictEmoji');
+    var textEl = document.getElementById('verdictText');
+    var goodDeal = diff < 0 && pctRaw < -4;
+
+    if (goodDeal && margin > 0) {
+      v.style.background = 'rgba(34,197,94,.10)';
+      v.style.borderColor = 'rgba(34,197,94,.22)';
+      v.style.color = 'var(--green)';
+      emojiEl.textContent = '✅';
+      textEl.textContent = 'Good deal — ' + pct + '% below median. Strong flip potential.';
+    } else if (margin > 0) {
+      v.style.background = 'rgba(245,197,24,.10)';
+      v.style.borderColor = 'rgba(245,197,24,.22)';
+      v.style.color = 'var(--accent)';
+      emojiEl.textContent = '⚠️';
+      textEl.textContent = 'Narrow margin — ~$' + Math.round(margin) + ' est. after fees.';
+    } else {
+      v.style.background = 'rgba(239,68,68,.10)';
+      v.style.borderColor = 'rgba(239,68,68,.22)';
+      v.style.color = 'var(--red)';
+      emojiEl.textContent = '❌';
+      textEl.textContent = 'Above break-even. You\'d lose ~$' + Math.abs(Math.round(margin)) + ' after fees.';
+    }
+  }
+
+  // Price count-up animation
+  (function() {
+    var el = document.getElementById('heroPrice');
+    var target = 835;
+    var duration = 900;
+    var start = performance.now();
+    function tick(now) {
+      var p = Math.min((now - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = '$' + Math.round(eased * target).toLocaleString();
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  })();
+</script>
+</body>
+</html>

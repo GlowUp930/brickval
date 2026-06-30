@@ -1,0 +1,296 @@
+- generic [ref=e2]:
+  - region "Notifications alt+T"
+  - link "skip to content" [ref=e3] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - link "Home" [ref=e6] [cursor=pointer]:
+        - /url: /projects/fef5330a/overview
+        - img "Home" [ref=e7]
+      - button "Brickvalue․live" [active] [ref=e10] [cursor=pointer]:
+        - generic [ref=e11]:
+          - generic [ref=e13]: B
+          - generic [ref=e14]: Brickvalue․live
+        - img [ref=e16]
+      - generic [ref=e19]:
+        - img [ref=e21]
+        - combobox "Search…" [ref=e23]
+        - generic [ref=e25]: ⌘K
+        - group
+      - link "Ask Rico" [ref=e26] [cursor=pointer]:
+        - /url: /projects/fef5330a/rico
+        - img [ref=e27]
+      - link "Help" [ref=e29] [cursor=pointer]:
+        - /url: /settings/support
+        - img [ref=e30]
+      - link "What's new" [ref=e32] [cursor=pointer]:
+        - /url: /whats-new
+        - img [ref=e33]
+      - link "Account" [ref=e35] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e36]
+    - generic [ref=e38]:
+      - navigation [ref=e39]:
+        - generic [ref=e40]:
+          - link "Overview" [ref=e41] [cursor=pointer]:
+            - /url: /projects/fef5330a/overview
+            - img [ref=e42]
+            - generic [ref=e44]: Overview
+          - link "Analytics" [ref=e45] [cursor=pointer]:
+            - /url: /projects/fef5330a/charts
+            - img [ref=e46]
+            - generic [ref=e48]:
+              - text: Analytics
+              - img [ref=e50]
+          - link "Customers" [ref=e52] [cursor=pointer]:
+            - /url: /projects/fef5330a/customer-lists
+            - img [ref=e53]
+            - generic [ref=e55]: Customers
+          - link "Product catalog" [ref=e56] [cursor=pointer]:
+            - /url: /projects/fef5330a/product-catalog
+            - img [ref=e57]
+            - generic [ref=e59]:
+              - text: Product catalog
+              - img [ref=e61]
+          - link "Paywalls" [ref=e63] [cursor=pointer]:
+            - /url: /projects/fef5330a/paywalls
+            - img [ref=e64]
+            - generic [ref=e66]: Paywalls
+          - link "Targeting" [ref=e67] [cursor=pointer]:
+            - /url: /projects/fef5330a/targeting
+            - img [ref=e68]
+            - generic [ref=e70]: Targeting
+          - link "Experiments" [ref=e71] [cursor=pointer]:
+            - /url: /projects/fef5330a/experiments
+            - img [ref=e72]
+            - generic [ref=e74]: Experiments
+          - link "Funnels" [ref=e75] [cursor=pointer]:
+            - /url: /projects/fef5330a/funnels
+            - img [ref=e76]
+            - generic [ref=e78]: Funnels
+          - link "Ads" [ref=e79] [cursor=pointer]:
+            - /url: /projects/fef5330a/ads
+            - img [ref=e80]
+            - generic [ref=e82]: Ads
+          - link "Lifecycle" [ref=e83] [cursor=pointer]:
+            - /url: /projects/fef5330a/lifecycle/customer-center
+            - img [ref=e84]
+            - generic [ref=e86]:
+              - text: Lifecycle
+              - img [ref=e88]
+        - separator [ref=e90]
+        - generic [ref=e91]:
+          - link "Apps" [ref=e92] [cursor=pointer]:
+            - /url: /projects/fef5330a/apps
+            - img [ref=e93]
+            - generic [ref=e95]: Apps
+          - link "Web" [ref=e96] [cursor=pointer]:
+            - /url: /projects/fef5330a/web
+            - img [ref=e97]
+            - generic [ref=e99]: Web
+          - link "API keys" [ref=e100] [cursor=pointer]:
+            - /url: /projects/fef5330a/api-keys
+            - img [ref=e101]
+            - generic [ref=e103]: API keys
+          - link "Integrations" [ref=e104] [cursor=pointer]:
+            - /url: /projects/fef5330a/integrations
+            - img [ref=e105]
+            - generic [ref=e107]: Integrations
+          - link "Project settings" [ref=e108] [cursor=pointer]:
+            - /url: /projects/fef5330a/settings
+            - img [ref=e109]
+            - generic [ref=e111]: Project settings
+        - button "Collapse navigation" [ref=e112] [cursor=pointer]:
+          - img [ref=e113]
+      - main [ref=e116]:
+        - generic [ref=e120]:
+          - generic [ref=e121]:
+            - heading "Overview" [level=2] [ref=e123]
+            - generic [ref=e125]:
+              - generic [ref=e126]:
+                - switch "Sandbox data" [ref=e127] [cursor=pointer]
+                - text: Sandbox data
+              - generic [ref=e129]:
+                - generic [ref=e130]:
+                  - switch "Charts v3 BETA" [checked] [ref=e131] [cursor=pointer]
+                  - generic [ref=e133]:
+                    - text: Charts v3
+                    - generic [ref=e134]: BETA
+                - button "info" [ref=e135] [cursor=pointer]:
+                  - img "info" [ref=e136]
+          - generic [ref=e138]:
+            - generic [ref=e140]:
+              - generic [ref=e142]:
+                - img [ref=e143]
+                - text: BETA
+              - textbox "How's this month compared to last month?" [ref=e145]
+              - generic [ref=e146]:
+                - button "Send message" [disabled]:
+                  - img
+              - group
+            - generic [ref=e147]:
+              - generic [ref=e148]:
+                - generic [ref=e149]:
+                  - generic [ref=e150]:
+                    - progressbar [ref=e151]:
+                      - img [ref=e152]
+                    - progressbar [ref=e154]:
+                      - img [ref=e155]
+                  - generic [ref=e157]:
+                    - generic [ref=e158]:
+                      - heading "Let's get you ready to start using RevenueCat." [level=4] [ref=e159]
+                      - paragraph [ref=e160]: (2 of 6)
+                    - paragraph [ref=e161]: There are a few more things required before you can start selling inside your app.
+                  - generic [ref=e162]:
+                    - button "Mark all as done" [ref=e163] [cursor=pointer]
+                    - button "Show completed" [ref=e164] [cursor=pointer]
+                - generic [ref=e165]:
+                  - generic [ref=e173]:
+                    - img "Integrate the SDK" [ref=e175]
+                    - generic [ref=e176]:
+                      - generic [ref=e177]:
+                        - generic [ref=e178]:
+                          - heading "Integrate the SDK" [level=3] [ref=e179]
+                          - link "info" [ref=e181] [cursor=pointer]:
+                            - /url: https://www.revenuecat.com/docs/getting-started/installation
+                            - img "info" [ref=e182]
+                        - paragraph [ref=e184]: Add RevenueCat to your app. Copy your API key, use the sample code, or set up with AI prompts.
+                      - generic [ref=e186]:
+                        - link "Install SDK" [ref=e188] [cursor=pointer]:
+                          - /url: /projects/fef5330a/get-started/install-sdk
+                        - button "Mark as done" [ref=e189] [cursor=pointer]
+                  - generic [ref=e197]:
+                    - img "Create your first paywall" [ref=e199]
+                    - generic [ref=e200]:
+                      - generic [ref=e201]:
+                        - generic [ref=e202]:
+                          - heading "Create your first paywall" [level=3] [ref=e203]
+                          - link "info" [ref=e205] [cursor=pointer]:
+                            - /url: https://www.revenuecat.com/docs/tools/paywalls
+                            - img "info" [ref=e206]
+                        - paragraph [ref=e208]: Set up a paywall to start selling in your app. Use RevenueCat’s visual editor to design a paywall, or build your own using our docs.
+                      - generic [ref=e210]:
+                        - generic [ref=e211]:
+                          - button "New paywall" [ref=e212] [cursor=pointer]:
+                            - text: New paywall
+                            - img [ref=e215]
+                          - button "Code it" [ref=e217] [cursor=pointer]
+                        - button "Mark as done" [ref=e218] [cursor=pointer]
+                  - generic [ref=e226]:
+                    - img "Make your first purchase" [ref=e228]
+                    - generic [ref=e229]:
+                      - generic [ref=e230]:
+                        - heading "Make your first purchase" [level=3] [ref=e232]
+                        - paragraph [ref=e233]: Test your setup by making a purchase in your app. Tap the purchase button on your Paywall or trigger a purchase directly in code.
+                      - generic [ref=e235]:
+                        - generic [ref=e236]:
+                          - button "Present a Paywall" [ref=e237] [cursor=pointer]
+                          - button "Purchase in code" [ref=e238] [cursor=pointer]
+                        - button "Mark as done" [ref=e239] [cursor=pointer]
+                  - generic [ref=e247]:
+                    - img "Secure your sandbox access" [ref=e249]
+                    - generic [ref=e250]:
+                      - generic [ref=e251]:
+                        - generic [ref=e252]:
+                          - heading "Secure your sandbox access" [level=3] [ref=e253]
+                          - link "info" [ref=e255] [cursor=pointer]:
+                            - /url: https://www.revenuecat.com/docs/projects/sandbox-access
+                            - img "info" [ref=e256]
+                        - paragraph [ref=e258]: Test Store purchases run in a sandbox. The sandbox allow list lets you control who can make test purchases and helps keep entitlements and virtual currencies secure.
+                      - generic [ref=e260]:
+                        - link "Configure sandbox access" [ref=e262] [cursor=pointer]:
+                          - /url: /projects/fef5330a/settings#scroll=sandbox-access
+                        - button "Mark as done" [ref=e263] [cursor=pointer]
+              - generic [ref=e264]:
+                - link "Active Trials 0 In total" [ref=e265] [cursor=pointer]:
+                  - /url: /projects/fef5330a/charts/trials_v3?range=Last%2028%20days%3A2026-05-15%3A2026-06-11
+                  - generic [ref=e266]:
+                    - generic [ref=e268]:
+                      - heading "Active Trials" [level=2] [ref=e269]
+                      - img [ref=e270]
+                    - generic [ref=e273]:
+                      - heading "0" [level=3] [ref=e274]
+                      - generic [ref=e275]:
+                        - paragraph [ref=e276]: In total
+                        - img [ref=e278]
+                    - img [ref=e284]
+                - link "Active Subscriptions 0 In total" [ref=e285] [cursor=pointer]:
+                  - /url: /projects/fef5330a/charts/actives_v3?range=Last%2028%20days%3A2026-05-15%3A2026-06-11
+                  - generic [ref=e286]:
+                    - generic [ref=e288]:
+                      - heading "Active Subscriptions" [level=2] [ref=e289]
+                      - img [ref=e290]
+                    - generic [ref=e293]:
+                      - heading "0" [level=3] [ref=e294]
+                      - generic [ref=e295]:
+                        - paragraph [ref=e296]: In total
+                        - img [ref=e298]
+                    - img [ref=e304]
+                - link "MRR US$0 Monthly Recurring Revenue" [ref=e305] [cursor=pointer]:
+                  - /url: /projects/fef5330a/charts/mrr_v3?range=Last%2028%20days%3A2026-05-15%3A2026-06-11
+                  - generic [ref=e306]:
+                    - generic [ref=e308]:
+                      - heading "MRR" [level=2] [ref=e309]
+                      - img [ref=e310]
+                    - generic [ref=e313]:
+                      - heading "US$0" [level=3] [ref=e314]
+                      - generic [ref=e315]:
+                        - paragraph [ref=e316]: Monthly Recurring Revenue
+                        - img [ref=e318]
+                    - img [ref=e324]
+                - link "Revenue US$0 Last 28 days" [ref=e325] [cursor=pointer]:
+                  - /url: /projects/fef5330a/charts/revenue_v3?range=Last%2028%20days%3A2026-05-15%3A2026-06-11
+                  - generic [ref=e326]:
+                    - generic [ref=e328]:
+                      - heading "Revenue" [level=2] [ref=e329]
+                      - img [ref=e330]
+                    - generic [ref=e333]:
+                      - heading "US$0" [level=3] [ref=e334]
+                      - generic [ref=e335]:
+                        - paragraph [ref=e336]: Last 28 days
+                        - img [ref=e338]
+                    - img [ref=e344]
+                - link "New Customers 41 Last 28 days" [ref=e345] [cursor=pointer]:
+                  - /url: /projects/fef5330a/charts/customers_new_v3?range=Last%2028%20days%3A2026-05-15%3A2026-06-11
+                  - generic [ref=e346]:
+                    - generic [ref=e348]:
+                      - heading "New Customers" [level=2] [ref=e349]
+                      - img [ref=e350]
+                    - generic [ref=e353]:
+                      - heading "41" [level=3] [ref=e354]
+                      - generic [ref=e355]:
+                        - paragraph [ref=e356]: Last 28 days
+                        - img [ref=e358]
+                    - img [ref=e364]
+                - link "Active Customers 46 Last 28 days" [ref=e370] [cursor=pointer]:
+                  - /url: /projects/fef5330a/charts/customers_active_v3?range=Last%2028%20days%3A2026-05-15%3A2026-06-11
+                  - generic [ref=e371]:
+                    - generic [ref=e373]:
+                      - heading "Active Customers" [level=2] [ref=e374]
+                      - img [ref=e375]
+                    - generic [ref=e378]:
+                      - heading "46" [level=3] [ref=e379]
+                      - generic [ref=e380]:
+                        - paragraph [ref=e381]: Last 28 days
+                        - img [ref=e383]
+                    - img [ref=e389]
+              - generic [ref=e395]:
+                - heading "Recent transactions" [level=3] [ref=e396]:
+                  - generic [ref=e397]: Recent transactions
+                - table [ref=e404]:
+                  - row "Customer ID show customer IDs Store Product Purchased Expires Revenue Type" [ref=e405]:
+                    - columnheader "Customer ID show customer IDs" [ref=e406]:
+                      - generic [ref=e407]:
+                        - text: Customer ID
+                        - button "show customer IDs" [ref=e408] [cursor=pointer]:
+                          - img [ref=e409]
+                    - columnheader "Store" [ref=e411]
+                    - columnheader "Product" [ref=e412]
+                    - columnheader "Purchased" [ref=e413]
+                    - columnheader "Expires" [ref=e414]
+                    - columnheader "Revenue" [ref=e415]:
+                      - generic [ref=e416]: Revenue
+                    - columnheader "Type" [ref=e417]
+                  - row "No live transactions to show" [ref=e418]:
+                    - cell "No live transactions to show" [ref=e419]:
+                      - paragraph [ref=e420]: No live transactions to show

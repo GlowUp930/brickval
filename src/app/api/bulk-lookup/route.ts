@@ -1,16 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { getCached, setCached } from "@/lib/cache";
 import { getEbayMarketData } from "@/lib/ebay";
 import { getBrickLinkMarketData } from "@/lib/bricklink";
 import { getBricksetRrp } from "@/lib/brickset";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { computePricing } from "@/lib/compute-pricing";
+import {
+  buildMinifigLookupPayload,
+  sanitizeBulkMinifigNumbers,
+  type MinifigLookupPayload,
+} from "@/lib/minifig-lookup";
 import type { EbaySale, SetInfo, ComputedPricing } from "@/types/market";
+
+const LOOKUP_CACHE_TTL_HOURS = 24;
 
 type BulkLookupRow =
   | { setNumber: string; setInfo: SetInfo | null; pricing: ComputedPricing; error?: never }
   | { setNumber: string; error: "not_found"; setInfo?: never; pricing?: never };
+
+type BulkMinifigLookupRow =
+  | { figNumber: string; result: MinifigLookupPayload; error?: never }
+  | { figNumber: string; error: "not_found"; result?: never };
 
 async function lookupOne(
   setNumber: string,
@@ -55,33 +67,58 @@ async function lookupOne(
   return { setNumber, setInfo, pricing };
 }
 
+async function lookupOneMinifig(figNumber: string): Promise<BulkMinifigLookupRow> {
+  const cacheKey = `lookup:minifig:${figNumber}`;
+  const cached = await getCached<MinifigLookupPayload>(cacheKey);
+  if (cached) return { figNumber, result: cached };
+
+  const payload = await buildMinifigLookupPayload(figNumber);
+  if (!payload) return { figNumber, error: "not_found" };
+
+  await setCached(cacheKey, payload, LOOKUP_CACHE_TTL_HOURS);
+  return { figNumber, result: payload };
+}
+
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { setNumbers?: unknown };
+  let body: { setNumbers?: unknown; figNumbers?: unknown; mode?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (!Array.isArray(body.setNumbers) || body.setNumbers.length === 0) {
+  const mode = body.mode === "minifig" ? "minifig" : "set";
+  if (mode === "set" && (!Array.isArray(body.setNumbers) || body.setNumbers.length === 0)) {
     return NextResponse.json({ error: "No set numbers provided" }, { status: 400 });
   }
 
   // Sanitize: strip non-digits, require >=4 digits, deduplicate, cap at 20
   const seen = new Set<string>();
-  const setNumbers: string[] = (body.setNumbers as unknown[])
+  const rawSetNumbers = Array.isArray(body.setNumbers) ? body.setNumbers : [];
+  const setNumbers: string[] = rawSetNumbers
     .map((s) => String(s).trim().replace(/[^0-9]/g, ""))
     .filter((s) => s.length >= 4)
     .filter((s) => { if (seen.has(s)) return false; seen.add(s); return true; })
     .slice(0, 20);
 
-  if (setNumbers.length === 0) {
+  const rawFigNumbers = Array.isArray(body.figNumbers)
+    ? body.figNumbers
+    : Array.isArray(body.setNumbers)
+      ? body.setNumbers
+      : [];
+  const figNumbers = sanitizeBulkMinifigNumbers(rawFigNumbers);
+
+  if (mode === "set" && setNumbers.length === 0) {
     return NextResponse.json({ error: "No valid set numbers" }, { status: 400 });
+  }
+
+  if (mode === "minifig" && figNumbers.length === 0) {
+    return NextResponse.json({ error: "No valid minifigure numbers" }, { status: 400 });
   }
 
   // Gate: one check per bulk job (stubbed — returns allowed: true)
@@ -105,6 +142,19 @@ export async function POST(req: NextRequest) {
       },
       { status: 402 }
     );
+  }
+
+  if (mode === "minifig") {
+    const BATCH_SIZE = 3;
+    const results: BulkMinifigLookupRow[] = [];
+
+    for (let i = 0; i < figNumbers.length; i += BATCH_SIZE) {
+      const batch = figNumbers.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.all(batch.map((figNumber) => lookupOneMinifig(figNumber)));
+      results.push(...batchResults);
+    }
+
+    return NextResponse.json({ mode: "minifig", results });
   }
 
   // Fetch exchange rates once — shared across all lookups

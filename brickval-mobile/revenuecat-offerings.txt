@@ -1,0 +1,155 @@
+- generic [ref=e2]:
+  - region "Notifications alt+T"
+  - link "skip to content" [ref=e3] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - link "Home" [ref=e6] [cursor=pointer]:
+        - /url: /projects/fef5330a/overview
+        - img "Home" [ref=e7]
+      - button "Brickvalue․live" [ref=e10] [cursor=pointer]:
+        - generic [ref=e11]:
+          - generic [ref=e13]: B
+          - generic [ref=e14]: Brickvalue․live
+        - img [ref=e16]
+      - generic [ref=e19]:
+        - img [ref=e21]
+        - combobox "Search…" [ref=e23]
+        - generic [ref=e25]: ⌘K
+        - group
+      - link "Ask Rico" [ref=e26] [cursor=pointer]:
+        - /url: /projects/fef5330a/rico
+        - img [ref=e27]
+      - link "Help" [ref=e29] [cursor=pointer]:
+        - /url: /settings/support
+        - img [ref=e30]
+      - link "What's new" [ref=e32] [cursor=pointer]:
+        - /url: /whats-new
+        - img [ref=e33]
+      - link "Account" [ref=e35] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e36]
+    - generic [ref=e38]:
+      - navigation [ref=e39]:
+        - generic [ref=e40]:
+          - link "Overview" [ref=e41] [cursor=pointer]:
+            - /url: /projects/fef5330a/overview
+            - img [ref=e42]
+            - generic [ref=e44]: Overview
+          - link "Analytics" [ref=e45] [cursor=pointer]:
+            - /url: /projects/fef5330a/charts
+            - img [ref=e46]
+            - generic [ref=e48]:
+              - text: Analytics
+              - img [ref=e50]
+          - link "Customers" [ref=e52] [cursor=pointer]:
+            - /url: /projects/fef5330a/customer-lists
+            - img [ref=e53]
+            - generic [ref=e55]: Customers
+          - link "Product catalog" [ref=e56] [cursor=pointer]:
+            - /url: /projects/fef5330a/product-catalog
+            - img [ref=e57]
+            - generic [ref=e59]:
+              - text: Product catalog
+              - img [ref=e61]
+          - link "Paywalls" [ref=e63] [cursor=pointer]:
+            - /url: /projects/fef5330a/paywalls
+            - img [ref=e64]
+            - generic [ref=e66]: Paywalls
+          - link "Targeting" [ref=e67] [cursor=pointer]:
+            - /url: /projects/fef5330a/targeting
+            - img [ref=e68]
+            - generic [ref=e70]: Targeting
+          - link "Experiments" [ref=e71] [cursor=pointer]:
+            - /url: /projects/fef5330a/experiments
+            - img [ref=e72]
+            - generic [ref=e74]: Experiments
+          - link "Funnels" [ref=e75] [cursor=pointer]:
+            - /url: /projects/fef5330a/funnels
+            - img [ref=e76]
+            - generic [ref=e78]: Funnels
+          - link "Ads" [ref=e79] [cursor=pointer]:
+            - /url: /projects/fef5330a/ads
+            - img [ref=e80]
+            - generic [ref=e82]: Ads
+          - link "Lifecycle" [ref=e83] [cursor=pointer]:
+            - /url: /projects/fef5330a/lifecycle/customer-center
+            - img [ref=e84]
+            - generic [ref=e86]:
+              - text: Lifecycle
+              - img [ref=e88]
+        - separator [ref=e90]
+        - generic [ref=e91]:
+          - link "Apps" [ref=e92] [cursor=pointer]:
+            - /url: /projects/fef5330a/apps
+            - img [ref=e93]
+            - generic [ref=e95]: Apps
+          - link "Web" [ref=e96] [cursor=pointer]:
+            - /url: /projects/fef5330a/web
+            - img [ref=e97]
+            - generic [ref=e99]: Web
+          - link "API keys" [ref=e100] [cursor=pointer]:
+            - /url: /projects/fef5330a/api-keys
+            - img [ref=e101]
+            - generic [ref=e103]: API keys
+          - link "Integrations" [ref=e104] [cursor=pointer]:
+            - /url: /projects/fef5330a/integrations
+            - img [ref=e105]
+            - generic [ref=e107]: Integrations
+          - link "Project settings" [ref=e108] [cursor=pointer]:
+            - /url: /projects/fef5330a/settings
+            - img [ref=e109]
+            - generic [ref=e111]: Project settings
+        - button "Collapse navigation" [ref=e112] [cursor=pointer]:
+          - img [ref=e113]
+      - main [ref=e116]:
+        - generic [ref=e120]:
+          - generic [ref=e121]:
+            - heading "Offerings" [level=2] [ref=e123]
+            - link "New offering" [ref=e125] [cursor=pointer]:
+              - /url: /projects/fef5330a/product-catalog/offerings/new
+              - img [ref=e127]
+              - text: New offering
+          - generic [ref=e129]:
+            - generic [ref=e130]:
+              - text: Offerings are the selection of products that are "offered" to a customer on your paywall.
+              - text: They're an optional, but recommended feature of RevenueCat that can make it easier to change and experiment with your paywalls.
+              - link "info" [ref=e132] [cursor=pointer]:
+                - /url: https://www.revenuecat.com/docs/offerings/overview
+                - img "info" [ref=e133]
+            - generic [ref=e135]:
+              - text: Offerings can also be used to test different pricing combinations as variants in an experiment.
+              - link "Learn more" [ref=e136] [cursor=pointer]:
+                - /url: https://www.revenuecat.com/docs/experiments-overview-v1
+              - text: .
+            - tablist "Filter offerings by state" [ref=e138]:
+              - tab "All" [ref=e139] [cursor=pointer]:
+                - generic [ref=e141]: All
+              - tab "Active" [selected] [ref=e142] [cursor=pointer]:
+                - generic [ref=e145]: Active
+              - tab "Inactive" [ref=e146] [cursor=pointer]:
+                - generic [ref=e148]: Inactive
+            - table [ref=e154]:
+              - row "Identifier Display name Packages Created Actions" [ref=e155]:
+                - columnheader "Identifier" [ref=e156]
+                - columnheader "Display name" [ref=e157]
+                - columnheader "Packages" [ref=e158]
+                - columnheader "Created" [ref=e159]
+                - columnheader "Actions" [ref=e160]
+              - row "default copy text The standard set of packages copy text 3 packages Apr 6, 2026 More" [ref=e161]:
+                - cell "default copy text" [ref=e162]:
+                  - img [ref=e164]
+                  - link "default" [ref=e168] [cursor=pointer]:
+                    - /url: /projects/fef5330a/product-catalog/offerings/ofrng49e2cea87a
+                  - button "copy text" [ref=e169] [cursor=pointer]:
+                    - img [ref=e170]
+                - cell "The standard set of packages copy text" [ref=e172]:
+                  - generic [ref=e174]: The standard set of packages
+                  - button "copy text" [ref=e175] [cursor=pointer]:
+                    - img [ref=e176]
+                - cell "3 packages" [ref=e178]
+                - cell "Apr 6, 2026" [ref=e179]:
+                  - generic "Apr 6, 2026" [ref=e180]
+                - cell "More" [ref=e181]:
+                  - button "More" [ref=e182] [cursor=pointer]:
+                    - img [ref=e183]

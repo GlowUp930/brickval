@@ -2,8 +2,9 @@
   "expo": {
     "name": "Brickvalue",
     "slug": "brickvalue",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
+<<<<<<< HEAD
     "icon": "./assets/brickval-loader-logo.png",
     "userInterfaceStyle": "dark",
     "scheme": "brickval",
@@ -14,12 +15,18 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.brickval.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "Brickvalue uses your camera to scan LEGO sets and look up market prices."
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Brickvalue uses your camera to scan LEGO sets, minifigures, and parts for market prices.",
+        "NSPhotoLibraryUsageDescription": "Brickvalue lets you choose an existing LEGO photo to scan for market prices."
       }
     },
     "android": {
       "package": "com.brickval.app",
-      "versionCode": 12,
+      "versionCode": 16,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0d0d0f"
+      },
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "CAMERA",
@@ -36,14 +43,29 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Brickvalue uses your camera to scan LEGO sets and look up market prices."
+          "cameraPermission": "Brickvalue uses your camera to scan LEGO sets, minifigures, and parts for market prices.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
         }
       ],
-      "expo-web-browser"
+      "./plugins/withGoogleStaticSwiftPods",
+      "expo-apple-authentication",
+      "expo-web-browser",
+      [
+        "@sentry/react-native",
+        {
+          "enableSourceMaps": false
+        }
+      ]
     ],
     "extra": {
       "enableNativePaywall": true,
-      "internalTestingUnlimitedScans": true,
+      "sentryDsn": "https://090473fce0a7b2a6947f8af474887152@o4511534041792512.ingest.us.sentry.io/4511545349832704",
+      "internalTestingUnlimitedScans": false,
+      "revenueCatAndroidApiKey": "goog_NUvLtaesNxERCcRAffebyZByADU",
+      "revenueCatIosApiKey": "appl_LPwGHJLYLXKvQaIIrNuVvQHfSew",
+      "superwallAndroidApiKey": "pk_Op2uaWA1p5uPdvwtEWtWr",
+      "superwallIosApiKey": "pk_pfEzrmAEOGnFMjw3HDyr8",
       "router": {},
       "eas": {
         "projectId": "fa3ae6da-2a21-46f9-84c5-50c0cbe689d6"

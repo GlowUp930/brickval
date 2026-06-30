@@ -6,13 +6,25 @@ const ONBOARDING_COMPLETE_KEY = "has_completed_onboarding";
 const PRIMARY_GOAL_KEY = "primary_goal";
 
 export async function hasCompletedOnboarding() {
-  return (await SecureStore.getItemAsync(ONBOARDING_COMPLETE_KEY)) === "true";
+  try {
+    return (await SecureStore.getItemAsync(ONBOARDING_COMPLETE_KEY)) === "true";
+  } catch {
+    return false;
+  }
 }
 
 export async function setCompletedOnboarding() {
-  await SecureStore.setItemAsync(ONBOARDING_COMPLETE_KEY, "true");
+  try {
+    await SecureStore.setItemAsync(ONBOARDING_COMPLETE_KEY, "true");
+  } catch (error) {
+    console.warn("Failed to save onboarding completion", error);
+  }
 }
 
 export async function setPrimaryGoal(goal: PrimaryGoal) {
-  await SecureStore.setItemAsync(PRIMARY_GOAL_KEY, goal);
+  try {
+    await SecureStore.setItemAsync(PRIMARY_GOAL_KEY, goal);
+  } catch (error) {
+    console.warn("Failed to save onboarding goal", error);
+  }
 }

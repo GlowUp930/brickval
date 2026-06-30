@@ -28,7 +28,6 @@ export async function getAuthToken(): Promise<string | null> {
 }
 
 async function authHeader(): Promise<Record<string, string>> {
-  if (INTERNAL_TESTING_UNLIMITED_SCANS) return {};
   const token = await getAuthToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
@@ -61,6 +60,8 @@ export interface IdentificationResult {
   confidence: number | null;
   candidates: IdentificationCandidate[];
   detections: IdentificationDetection[];
+  scansUsed?: number;
+  isPro?: boolean;
 }
 
 export async function identifySet(photoUri: string, mode: ScanMode = "set"): Promise<IdentificationResult> {
@@ -83,12 +84,16 @@ export async function identifySet(photoUri: string, mode: ScanMode = "set"): Pro
     confidence?: number | null;
     candidates?: IdentificationCandidate[];
     detections?: IdentificationDetection[];
+    scansUsed?: number;
+    isPro?: boolean;
   };
   return {
     set_number: data.set_number ?? null,
     confidence: typeof data.confidence === "number" ? data.confidence : null,
     candidates: (data.candidates ?? []).slice(0, 4),
     detections: normalizeIdentificationDetections(mode, data),
+    scansUsed: typeof data.scansUsed === "number" ? data.scansUsed : undefined,
+    isPro: typeof data.isPro === "boolean" ? data.isPro : undefined,
   };
 }
 
@@ -112,9 +117,57 @@ export async function lookupSet(
 
   if (!res.ok) throw new Error(`lookup failed: ${res.status}`);
   const data = await res.json();
-  if (mode === "minifig") return normalizeMinifigResult(data);
-  if (mode === "part") return normalizePartResult(data);
-  return normalizeSetResult(data);
+  if (mode === "minifig") return withScanMeta(normalizeMinifigResult(data), data);
+  if (mode === "part") return withScanMeta(normalizePartResult(data), data);
+  return withScanMeta(normalizeSetResult(data), data);
+}
+
+export interface BulkMinifigLookupRow {
+  figNumber: string;
+  result: MinifigLookupDetailResult | null;
+  error: "not_found" | null;
+}
+
+export async function bulkLookupMinifigs(figNumbers: string[]): Promise<BulkMinifigLookupRow[]> {
+  const res = await fetch(`${API_BASE}/api/bulk-lookup`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(await authHeader()),
+    },
+    body: JSON.stringify({ mode: "minifig", figNumbers }),
+  });
+
+  if (!res.ok) throw new Error(`bulk minifig lookup failed: ${res.status}`);
+  const data = (await res.json()) as {
+    results?: Array<{
+      figNumber?: string;
+      result?: MinifigLookupResponse;
+      error?: "not_found";
+    }>;
+  };
+
+  const rows: BulkMinifigLookupRow[] = [];
+  for (const row of data.results ?? []) {
+    const figNumber = typeof row.figNumber === "string" ? row.figNumber : "";
+    if (!figNumber) continue;
+    if (row.result) {
+      rows.push({ figNumber, result: normalizeMinifigResult(row.result), error: null });
+    } else {
+      rows.push({ figNumber, result: null, error: row.error ?? "not_found" });
+    }
+  }
+  return rows;
+}
+
+function withScanMeta<T extends LookupDetailResult>(result: T, data: any): T {
+  if (typeof data.scansUsed === "number") {
+    result.scansUsed = data.scansUsed;
+  }
+  if (typeof data.isPro === "boolean") {
+    result.isPro = data.isPro;
+  }
+  return result;
 }
 
 export async function fetchPartColors(): Promise<PartColorOption[]> {
@@ -147,6 +200,8 @@ export interface LookupSummaryResult {
   image_url: string | null;
   market_history: MarketHistoryPoint[];
   pricing: LookupSummaryPricing;
+  scansUsed?: number;
+  isPro?: boolean;
 }
 
 export type MarketHistoryPoint = LookupMarketHistoryPoint;

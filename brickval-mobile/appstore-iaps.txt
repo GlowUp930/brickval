@@ -1,0 +1,187 @@
+- generic [ref=e1]:
+  - banner "App Store Connect" [ref=e3]:
+    - generic [ref=e4]:
+      - heading "App Store Connect" [level=1] [ref=e6]:
+        - link "App Store Connect" [ref=e7] [cursor=pointer]:
+          - /url: /
+      - navigation "全球" [ref=e8]:
+        - list [ref=e10]:
+          - listitem [ref=e11]:
+            - link "App" [ref=e12] [cursor=pointer]:
+              - /url: /apps
+          - listitem [ref=e13]:
+            - link "趨勢" [ref=e14] [cursor=pointer]:
+              - /url: /trends
+          - listitem [ref=e15]:
+            - link "報告" [ref=e16] [cursor=pointer]:
+              - /url: /itc/payments_and_financial_reports
+          - listitem [ref=e17]:
+            - link "商務" [ref=e18] [cursor=pointer]:
+              - /url: /business
+          - listitem [ref=e19]:
+            - link "使用者與存取權限" [ref=e20] [cursor=pointer]:
+              - /url: /access/users
+      - button "Ho lam Chan HO LAM CHAN Account name menu" [ref=e22] [cursor=pointer]:
+        - generic:
+          - generic: Ho lam Chan
+          - generic: HO LAM CHAN
+          - img [ref=e23]
+  - generic [ref=e28]:
+    - button "App 選單，已選取BrickValue" [ref=e33] [cursor=pointer]:
+      - generic [ref=e34]:
+        - generic "BrickValue" [ref=e35]:
+          - img "BrickValue" [ref=e36]
+        - generic [ref=e37]: BrickValue
+      - img [ref=e39]
+    - navigation "App" [ref=e42]:
+      - list [ref=e43]:
+        - listitem [ref=e44]:
+          - link "發佈" [ref=e45] [cursor=pointer]:
+            - /url: /apps/6771715475/distribution
+        - listitem [ref=e46]:
+          - link "分析" [ref=e47] [cursor=pointer]:
+            - /url: /apps/6771715475/analytics
+        - listitem [ref=e48]:
+          - link "TestFlight" [ref=e49] [cursor=pointer]:
+            - /url: /teams/2e454f4c-2b39-4bb5-a5ac-abb47f8405c5/apps/6771715475/testflight
+        - listitem [ref=e50]:
+          - link "Xcode Cloud" [ref=e51] [cursor=pointer]:
+            - /url: /teams/2e454f4c-2b39-4bb5-a5ac-abb47f8405c5/apps/6771715475/ci
+  - main [ref=e56]:
+    - generic [ref=e61]:
+      - navigation "發佈" [ref=e63]:
+        - list [ref=e64]:
+          - listitem [ref=e65]:
+            - generic [ref=e66]:
+              - heading "iOS App" [level=2] [ref=e68]
+              - list [ref=e69]:
+                - listitem [ref=e70]:
+                  - link "1.0 已拒絕" [ref=e71] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/ios/version/inflight
+                    - generic [ref=e72]:
+                      - img [ref=e73]
+                      - text: 1.0 已拒絕
+            - button "新增平台" [ref=e75] [cursor=pointer]
+          - listitem [ref=e76]:
+            - separator [ref=e77]
+          - listitem [ref=e78]:
+            - heading "一般資訊" [level=2] [ref=e80]
+            - list [ref=e81]:
+              - listitem [ref=e82]:
+                - link "App 資訊" [ref=e83] [cursor=pointer]:
+                  - /url: /apps/6771715475/distribution/info
+                  - generic [ref=e84]: App 資訊
+              - listitem [ref=e85]:
+                - link "App 審查" [ref=e86] [cursor=pointer]:
+                  - /url: /apps/6771715475/distribution/reviewsubmissions
+                  - generic [ref=e88]:
+                    - img [ref=e89]
+                    - text: App 審查
+              - listitem [ref=e91]:
+                - link "版本記錄" [ref=e92] [cursor=pointer]:
+                  - /url: /apps/6771715475/distribution/activity/ios/versions
+                  - generic [ref=e93]: 版本記錄
+          - listitem [ref=e94]:
+            - separator [ref=e95]
+          - listitem [ref=e96]:
+            - heading "App Store" [level=2] [ref=e98]
+            - generic [ref=e99]:
+              - heading "信任與安全" [level=3] [ref=e101]
+              - list [ref=e102]:
+                - listitem [ref=e103]:
+                  - link "App 隱私權" [ref=e104] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/privacy
+                    - generic [ref=e105]: App 隱私權
+                - listitem [ref=e106]:
+                  - link "App 輔助使用" [ref=e107] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/accessibility
+                    - generic [ref=e108]: App 輔助使用
+                - listitem [ref=e109]:
+                  - link "評分與評論" [ref=e110] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/ratings/ios
+                    - generic [ref=e111]: 評分與評論
+            - generic [ref=e112]:
+              - heading "成長與行銷" [level=3] [ref=e114]
+              - list [ref=e115]:
+                - listitem [ref=e116]:
+                  - link "App 內活動" [ref=e117] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/events
+                    - generic [ref=e118]: App 內活動
+                - listitem [ref=e119]:
+                  - link "自訂產品頁面" [ref=e120] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/productpages
+                    - generic [ref=e121]: 自訂產品頁面
+                - listitem [ref=e122]:
+                  - link "產品頁面最佳化" [ref=e123] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/optimization
+                    - generic [ref=e124]: 產品頁面最佳化
+                - listitem [ref=e125]:
+                  - link "促銷代碼" [ref=e126] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/promo_codes/generate
+                    - generic [ref=e127]: 促銷代碼
+                - listitem [ref=e128]:
+                  - link "Game Center" [ref=e129] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/gamecenter
+                    - generic [ref=e130]: Game Center
+            - generic [ref=e131]:
+              - heading "營利" [level=3] [ref=e133]
+              - list [ref=e134]:
+                - listitem [ref=e135]:
+                  - link "定價與供應狀況" [ref=e136] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/pricing
+                    - generic [ref=e137]: 定價與供應狀況
+                - listitem [ref=e138]:
+                  - link "App 內購買項目" [active] [ref=e139] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/iaps
+                    - generic [ref=e140]: App 內購買項目
+                - listitem [ref=e141]:
+                  - link "訂閱" [ref=e142] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/subscriptions
+                    - generic [ref=e143]: 訂閱
+            - generic [ref=e144]:
+              - heading "精選" [level=3] [ref=e146]
+              - list [ref=e147]:
+                - listitem [ref=e148]:
+                  - link "推選項目" [ref=e149] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/nominations
+                    - generic [ref=e150]: 推選項目
+      - generic [ref=e553]:
+        - generic [ref=e556]:
+          - heading "App 內購買項目" [level=2] [ref=e558]
+          - button "建立 App 內購買項目" [ref=e559] [cursor=pointer]:
+            - img [ref=e560]
+        - generic [ref=e563]:
+          - generic [ref=e564]:
+            - img [ref=e565]
+            - paragraph [ref=e567]:
+              - generic [ref=e568]:
+                - text: 首個 App 內購買項目必須以新的 App 版本提交。請先建立 App 內購買項目，然後從版本頁面的「App 內購買項目和訂閱項目」區段中選取該項目，再將版本提交至「App 審查」。
+                - text: 在上傳二進位檔並提交首個 App 內購買項目供審查後，你即可從「App 內購買項目」區段中繼續提交其他 App 內購買項目。
+                - link "進一步瞭解" [ref=e569] [cursor=pointer]:
+                  - /url: https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-for-review
+          - generic [ref=e571]:
+            - paragraph [ref=e572]:
+              - generic [ref=e573]:
+                - text: App 內購買項目讓客戶透過存取 App Store 的方式購買你在 App 中提供的內容、功能或服務，此方式可以安全地處理 App 使用者所支付的款項。
+                - link "進一步瞭解" [ref=e574] [cursor=pointer]:
+                  - /url: https://developer.apple.com/help/app-store-connect/configure-in-app-purchase-settings/overview-for-configuring-in-app-purchases
+            - button "建立" [ref=e575] [cursor=pointer]
+  - contentinfo [ref=e538]:
+    - generic [ref=e539]:
+      - list [ref=e540]:
+        - listitem [ref=e541]:
+          - link "App Store Connect" [ref=e542] [cursor=pointer]:
+            - /url: /apps
+      - list [ref=e543]:
+        - listitem [ref=e544]: Copyright © 2026 Apple Inc. 保留一切權利。 |
+        - listitem [ref=e545]:
+          - link "服務條款" [ref=e546] [cursor=pointer]:
+            - /url: /WebObjects/iTunesConnect.woa/wa/termsOfService
+          - text: "|"
+        - listitem [ref=e547]:
+          - link "隱私權政策" [ref=e548] [cursor=pointer]:
+            - /url: https://www.apple.com/legal/privacy
+          - text: "|"
+        - listitem [ref=e549]:
+          - link "聯絡我們" [ref=e550] [cursor=pointer]:
+            - /url: /contact-us

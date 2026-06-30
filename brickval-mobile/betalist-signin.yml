@@ -1,0 +1,216 @@
+- generic [active] [ref=e1]:
+  - button "Feedback" [ref=e3] [cursor=pointer]:
+    - img [ref=e4]
+    - generic [ref=e6]: Feedback
+  - generic [ref=e9]:
+    - strong [ref=e11]:
+      - text: Software Alternatives, Accelerators &
+      - link "Startups" [ref=e12] [cursor=pointer]:
+        - /url: /startups
+    - generic [ref=e13]:
+      - link "Register" [ref=e14] [cursor=pointer]:
+        - /url: /register
+      - text: "|"
+      - link "Login" [ref=e15] [cursor=pointer]:
+        - /url: /login
+  - navigation [ref=e16]:
+    - generic [ref=e17]:
+      - link "SaaSHub logo" [ref=e19] [cursor=pointer]:
+        - /url: /
+        - img "SaaSHub logo" [ref=e20]
+      - generic [ref=e21]:
+        - link "Tools & Categories" [ref=e23] [cursor=pointer]:
+          - /url: /categories
+          - text: Tools & Categories
+          - img [ref=e24]
+        - link "Feature My Product" [ref=e26] [cursor=pointer]:
+          - /url: /featured-products
+          - img [ref=e27]
+          - text: Feature My Product
+        - link "Submit Product" [ref=e30] [cursor=pointer]:
+          - /url: /services/submit
+  - heading "Submit a Product" [level=1] [ref=e34]
+  - generic [ref=e36]:
+    - generic [ref=e37]:
+      - heading "Successful submission advice" [level=2] [ref=e38]
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - generic [ref=e41]: Follow the guidelines
+          - generic [ref=e42]: Please read the guidelines below before submitting your product.
+        - generic [ref=e43]:
+          - generic [ref=e44]: Add Categories
+          - generic [ref=e45]: List a few relevant categories. You may check your competitors' categories for inspiration.
+        - generic [ref=e46]:
+          - generic [ref=e47]: List Competitors
+          - generic [ref=e48]: The submission will be slowed down and put to the bottom of the queue if there are not listed competitors.
+        - generic [ref=e49]:
+          - generic [ref=e50]: Verify the product
+          - generic [ref=e51]: Verifying your product will give it a higher priority. You will need an email address on the product's domain.
+    - generic [ref=e52]:
+      - generic [ref=e53]:
+        - generic [ref=e55]: Website URL
+        - generic [ref=e58]:
+          - textbox "https://" [ref=e59]
+          - generic [ref=e60]: A URL to the product website or a product page on your company's website.
+      - generic [ref=e66]:
+        - text: Please note that all submitted products go through an approval process.
+        - list [ref=e67]:
+          - listitem [ref=e68]:
+            - strong [ref=e69]: "These types of products are not accepted:"
+            - list [ref=e70]:
+              - listitem [ref=e71]: Software development agencies.
+              - listitem [ref=e72]: Landing pages with an email form for a waiting list.
+              - listitem [ref=e73]: Products that are not released yet will be rejected immediately.
+              - listitem [ref=e74]: Products using free subdomains (e.g. my-cool-app.vercel.com; myproduct.saasify.com).
+              - listitem [ref=e75]: Products that are not in English.
+        - paragraph [ref=e76]: We are accepting these types of products
+        - list [ref=e77]:
+          - listitem [ref=e78]: SaaS, IaaS & PaaS products and services.
+          - listitem [ref=e79]: Most software products and apps.
+          - listitem [ref=e80]: Mobile apps (with decent websites).
+          - listitem [ref=e81]: Websites and services that are leaders in a specific niche (e.g. Airbnb).
+        - paragraph [ref=e82]: Sometimes we could be a bit too liberal or relaxed when approving products. However, we preserve the right to reject or remove products even if they have been approved already.
+        - paragraph [ref=e83]:
+          - text: By continuing you agree with the
+          - strong [ref=e84]: terms of service
+          - text: and
+          - strong [ref=e85]: privacy policy
+          - text: of the website.
+      - button "Continue" [ref=e92] [cursor=pointer]
+  - contentinfo [ref=e94]:
+    - generic [ref=e95]:
+      - generic [ref=e96]:
+        - generic [ref=e97]:
+          - generic [ref=e98]:
+            - paragraph [ref=e99]: About
+            - generic [ref=e100]:
+              - paragraph [ref=e101]: SaaSHub is an independent software marketplace. Our goal is to be objective, simple and your first stop when researching for a new service to help you grow your business. We will help you find alternatives and reviews of the products you already use.
+              - paragraph [ref=e102]: Helping software professionals since 2014.
+          - generic [ref=e103]:
+            - paragraph [ref=e104]: Company
+            - list [ref=e105]:
+              - listitem [ref=e106]:
+                - link "Product Promotion" [ref=e107] [cursor=pointer]:
+                  - /url: /featured-products
+              - listitem [ref=e108]:
+                - link "Contacts" [ref=e109] [cursor=pointer]:
+                  - /url: /site/email
+              - listitem [ref=e110]:
+                - link "Discuss" [ref=e111] [cursor=pointer]:
+                  - /url: /community/ds-29t8uq-saashub-meta
+              - listitem [ref=e112]:
+                - link "About" [ref=e113] [cursor=pointer]:
+                  - /url: /about
+              - listitem [ref=e114]:
+                - link "API" [ref=e115] [cursor=pointer]:
+                  - /url: /site/api
+        - generic [ref=e116]:
+          - paragraph [ref=e117]: Sitemap
+          - list [ref=e118]:
+            - listitem [ref=e119]:
+              - link "Browse Categories" [ref=e120] [cursor=pointer]:
+                - /url: /categories
+            - listitem [ref=e121]:
+              - link "Compare Software" [ref=e122] [cursor=pointer]:
+                - /url: /compare
+            - listitem [ref=e123]:
+              - link "Chrome Extension" [ref=e124] [cursor=pointer]:
+                - /url: https://chrome.google.com/webstore/detail/alternative-to-by-saashub/bfllfmelefabahclnehpdocekedapcbj
+            - listitem [ref=e125]:
+              - link "Status Pages!" [ref=e126] [cursor=pointer]:
+                - /url: /status-pages
+            - listitem [ref=e127]:
+              - link "Funding News" [ref=e128] [cursor=pointer]:
+                - /url: /funding
+            - listitem [ref=e129]:
+              - link "Submit List" [ref=e130] [cursor=pointer]:
+                - /url: /submit/list
+            - listitem [ref=e131]:
+              - link "Newsletter" [ref=e132] [cursor=pointer]:
+                - /url: /newsletter
+        - generic [ref=e133]:
+          - paragraph [ref=e134]: Big Tech Alternatives
+          - list [ref=e135]:
+            - listitem [ref=e136]:
+              - link "Tech Radar" [ref=e137] [cursor=pointer]:
+                - /url: /tech-radar
+            - listitem [ref=e138]:
+              - link "Replace Facebook" [ref=e139] [cursor=pointer]:
+                - /url: /replace-facebook
+            - listitem [ref=e140]:
+              - link "Google Alternatives" [ref=e141] [cursor=pointer]:
+                - /url: /all-google-alternatives
+            - listitem [ref=e142]:
+              - link "Atlassian Alternatives" [ref=e143] [cursor=pointer]:
+                - /url: /all-atlassian-alternatives
+            - listitem [ref=e144]:
+              - link "Product Graveyard" [ref=e145] [cursor=pointer]:
+                - /url: /product-graveyard
+            - listitem [ref=e146]:
+              - link "Google Graveyard" [ref=e147] [cursor=pointer]:
+                - /url: /google-graveyard
+            - listitem [ref=e148]:
+              - link "Replace Google Domains" [ref=e149] [cursor=pointer]:
+                - /url: /replace-google-domains
+            - listitem [ref=e150]:
+              - link "EU Alternatives" [ref=e151] [cursor=pointer]:
+                - /url: /eu
+      - generic [ref=e152]:
+        - paragraph [ref=e153]: Verticals & Popular Categories
+        - generic [ref=e154]:
+          - link "AI" [ref=e156] [cursor=pointer]:
+            - /url: /v/ai
+          - link "No-Code" [ref=e158] [cursor=pointer]:
+            - /url: /v/nocode
+          - link "Developer Tools" [ref=e160] [cursor=pointer]:
+            - /url: /v/dev
+          - link "Design Tools" [ref=e162] [cursor=pointer]:
+            - /url: /v/design
+          - link "API" [ref=e164] [cursor=pointer]:
+            - /url: /v/api
+        - generic [ref=e165]:
+          - link "CRM" [ref=e167] [cursor=pointer]:
+            - /url: /best-crm-software
+          - link "Help Desk" [ref=e169] [cursor=pointer]:
+            - /url: /best-help-desk-software
+          - link "Productivity" [ref=e171] [cursor=pointer]:
+            - /url: /best-productivity-software
+          - link "Marketing" [ref=e173] [cursor=pointer]:
+            - /url: /best-marketing-software
+          - link "Accounting" [ref=e175] [cursor=pointer]:
+            - /url: /best-accounting-software
+          - link "eCommerce" [ref=e177] [cursor=pointer]:
+            - /url: /best-ecommerce-software
+          - link "HR" [ref=e179] [cursor=pointer]:
+            - /url: /best-hr-software
+          - link "Writing Tools" [ref=e181] [cursor=pointer]:
+            - /url: /best-writing-tools-software
+          - link "Project Management" [ref=e183] [cursor=pointer]:
+            - /url: /best-project-management-software
+          - link "Monitoring Tools" [ref=e185] [cursor=pointer]:
+            - /url: /best-monitoring-tools-software
+          - link "Finance" [ref=e187] [cursor=pointer]:
+            - /url: /best-finance-software
+          - link "Education" [ref=e189] [cursor=pointer]:
+            - /url: /best-education-software
+      - list [ref=e191]:
+        - listitem [ref=e192]:
+          - generic [ref=e193]: SaaSHub
+        - listitem [ref=e194]:
+          - text: "|"
+          - link "Privacy Policy" [ref=e195] [cursor=pointer]:
+            - /url: /site/privacy
+        - listitem [ref=e196]:
+          - text: "|"
+          - link "Terms" [ref=e197] [cursor=pointer]:
+            - /url: /site/terms
+        - listitem [ref=e198]:
+          - text: "|"
+          - generic [ref=e199]: Accelerated by
+          - link "Bunny.net" [ref=e200] [cursor=pointer]:
+            - /url: https://bunny.net?ref=9sa3wl8vst
+        - listitem [ref=e201]:
+          - text: "|"
+          - generic [ref=e202]: "Recommends:"
+          - link "Spin The Wheel" [ref=e203] [cursor=pointer]:
+            - /url: https://www.spinthewheelofnames.com

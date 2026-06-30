@@ -7,6 +7,7 @@ import {
   normalizeCondition,
   normalizeQuantity,
   removeCollectionItem,
+  upsertCollectionItem,
 } from "./collection-core";
 import { normalizeImageUrl } from "./image-url";
 import {
@@ -16,6 +17,7 @@ import {
 } from "./api";
 
 const COLLECTION_KEY = "brickval_collection";
+let fallbackCollection: CollectionItem[] = [];
 
 export type {
   CollectionCondition,
@@ -30,11 +32,18 @@ export interface AddToCollectionOptions {
 }
 
 export async function getCollection(): Promise<CollectionItem[]> {
-  const raw = await SecureStore.getItemAsync(COLLECTION_KEY);
+  let raw: string | null = null;
+  try {
+    raw = await SecureStore.getItemAsync(COLLECTION_KEY);
+  } catch (error) {
+    console.warn("Collection storage unavailable; using session collection.", error);
+    return fallbackCollection;
+  }
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.map(normalizeCollectionItem) : [];
+    fallbackCollection = Array.isArray(parsed) ? parsed.map(normalizeCollectionItem) : [];
+    return fallbackCollection;
   } catch {
     return [];
   }
@@ -71,33 +80,43 @@ export async function addToCollection(
     market_history: getConditionMarketHistory(result, condition),
     added_at: new Date().toISOString(),
   };
-  const next = [
-    item,
-    ...existing.filter(
-      (entry) =>
-        entry.set_number !== item.set_number ||
-        entry.item_type !== item.item_type ||
-        entry.condition !== item.condition ||
-        (entry.item_type === "part" && (entry.color_id ?? null) !== (item.color_id ?? null))
-    ),
-  ];
-  await SecureStore.setItemAsync(COLLECTION_KEY, JSON.stringify(next));
+  const next = upsertCollectionItem(existing, item);
+  fallbackCollection = next;
+  try {
+    await SecureStore.setItemAsync(COLLECTION_KEY, JSON.stringify(next));
+  } catch (error) {
+    console.warn("Collection storage could not be saved; keeping session collection.", error);
+  }
   return next;
 }
 
 export async function removeFromCollection(target: CollectionItemIdentifier): Promise<CollectionItem[]> {
   const existing = await getCollection();
   const next = removeCollectionItem(existing, target);
+  fallbackCollection = next;
   if (next.length === 0) {
-    await SecureStore.deleteItemAsync(COLLECTION_KEY);
+    try {
+      await SecureStore.deleteItemAsync(COLLECTION_KEY);
+    } catch (error) {
+      console.warn("Collection storage could not be cleared; keeping session collection.", error);
+    }
     return next;
   }
-  await SecureStore.setItemAsync(COLLECTION_KEY, JSON.stringify(next));
+  try {
+    await SecureStore.setItemAsync(COLLECTION_KEY, JSON.stringify(next));
+  } catch (error) {
+    console.warn("Collection storage could not be saved; keeping session collection.", error);
+  }
   return next;
 }
 
 export async function clearCollection(): Promise<void> {
-  await SecureStore.deleteItemAsync(COLLECTION_KEY);
+  fallbackCollection = [];
+  try {
+    await SecureStore.deleteItemAsync(COLLECTION_KEY);
+  } catch (error) {
+    console.warn("Collection storage could not be cleared; keeping session collection.", error);
+  }
 }
 
 export function getCollectionValue(items: CollectionItem[]): number {

@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { Alert, Animated, Easing, View, StyleSheet, Pressable, Text, ScrollView, TextInput, Image } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Alert, Animated, Easing, View, StyleSheet, Pressable, Text, ScrollView, TextInput, Image, Modal } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import * as SecureStore from "expo-secure-store";
 import { router } from "expo-router";
 import { TopBar } from "../../components/TopBar";
 import { CameraScanner } from "../../components/CameraScanner";
@@ -9,10 +8,10 @@ import { ResultCard } from "../../components/ResultCard";
 import { LegoLoaderNative } from "../../components/LegoLoaderNative";
 import { ManualEntrySheet, type ManualEntryHandle } from "../../components/ManualEntrySheet";
 import {
+  bulkLookupMinifigs,
   fetchPartColors,
   getAuthToken,
   identifySet,
-  INTERNAL_TESTING_UNLIMITED_SCANS,
   lookupSet,
   type IdentificationCandidate,
   type IdentificationDetection,
@@ -22,12 +21,27 @@ import {
   type PartColorOption,
   type ScanMode,
 } from "../../lib/api";
-import { getDetectionChoiceMessage, shouldPauseForDetectionChoice } from "../../lib/detection-choice";
+import {
+  getBatchableMinifigIds,
+  getDetectionChoiceMessage,
+  getDetectionReviewSummary,
+  getDetectionReviewTitle,
+  shouldPauseForDetectionChoice,
+  toggleBulkMinifigSelection,
+} from "../../lib/detection-choice";
 import { getBrickLinkPreviewImageUrl } from "../../lib/image-url";
-import { addToCollection, type CollectionCondition } from "../../lib/collection";
+import { addToCollection, getCollection, type CollectionCondition } from "../../lib/collection";
 import { success, warn } from "../../lib/haptics";
-import { presentSuperwallUpgrade } from "../../lib/paywall";
+import { getNativeProStatus } from "../../lib/paywall";
 import { setLatestLookupResult } from "../../lib/live-result";
+import {
+  getGuestScansUsed,
+  setGuestScansUsed,
+  prepareLookupAccess,
+  GUEST_SCAN_LIMIT,
+} from "../../lib/guest-scan-limits";
+import { useUpgrade } from "../../lib/useUpgrade";
+import { PrePurchaseDisclosure } from "../../components/PrePurchaseDisclosure";
 
 /**
  * Native scan screen — fullscreen camera, manual capture, result sheet over
@@ -35,8 +49,7 @@ import { setLatestLookupResult } from "../../lib/live-result";
  */
 
 type Status = "idle" | "loading" | "result" | "candidates" | "detections" | "partColor";
-const GUEST_SCAN_LIMIT = 3;
-const GUEST_SCAN_KEY = "guest_scan_lookups_used";
+const FREE_COLLECTION_LIMIT = 10;
 const LOW_CONFIDENCE_THRESHOLD = 0.8;
 
 function getResultKey(item: LookupDetailResult) {
@@ -145,12 +158,33 @@ export default function ScanHome() {
   const [partColors, setPartColors] = useState<PartColorOption[]>([]);
   const [selectedPart, setSelectedPart] = useState<IdentificationDetection | null>(null);
   const [partColorQuery, setPartColorQuery] = useState("");
+  const [selectedBulkMinifigIds, setSelectedBulkMinifigIds] = useState<string[]>([]);
+  const [bulkMinifigQueue, setBulkMinifigQueue] = useState<string[]>([]);
+  const [bulkMinifigResultQueue, setBulkMinifigResultQueue] = useState<LookupDetailResult[]>([]);
+  const [guestScansUsed, setGuestScansUsedState] = useState(0);
+  const [collectionLimitPromptVisible, setCollectionLimitPromptVisible] = useState(false);
   const [detectionMessage, setDetectionMessage] = useState<string>(
     "We found LEGO minifigures and parts in this photo. Pick one to view its value."
   );
   const errorProgress = useRef(new Animated.Value(0)).current;
   const candidateProgress = useRef(new Animated.Value(0)).current;
+  const collectionLimitProgress = useRef(new Animated.Value(0)).current;
+  const collectionLimitPromptTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const manualRef = useRef<ManualEntryHandle>(null);
+  const pendingGuestScan = useRef(false);
+  const pendingServerScansUsed = useRef<number | null>(null);
+  const promptedOnCurrentResult = useRef(false);
+  const { triggerUpgrade, openAccountForUpgrade, openAccountForSignIn, showDisclosure, handleDisclosureContinue, handleDisclosureDismiss } = useUpgrade();
+
+  const syncGuestScansUsed = async () => {
+    const count = await getGuestScansUsed();
+    setGuestScansUsedState(count);
+    return count;
+  };
+  const commitGuestScansUsed = async (nextScansUsed: number) => {
+    const count = await setGuestScansUsed(nextScansUsed);
+    setGuestScansUsedState(count);
+  };
 
   useEffect(() => {
     if (!errorMessage) return;
@@ -178,74 +212,64 @@ export default function ScanHome() {
     }).start();
   }, [candidateProgress, status]);
 
-  const openUpgrade = async () => {
-    const shown = await presentSuperwallUpgrade();
-    if (!shown) {
-      Alert.alert("Upgrade unavailable", "Use an EAS Android build with the native paywall enabled.");
-    }
-  };
+  useEffect(() => {
+    void syncGuestScansUsed();
+  }, []);
 
-  const getGuestScansUsed = async () => {
-    const raw = await SecureStore.getItemAsync(GUEST_SCAN_KEY);
-    const parsed = Number(raw ?? 0);
-    return Number.isFinite(parsed) ? parsed : 0;
-  };
+  useEffect(() => {
+    return () => {
+      if (collectionLimitPromptTimer.current) {
+        clearTimeout(collectionLimitPromptTimer.current);
+      }
+    };
+  }, []);
 
-  const prepareLookupAccess = async () => {
-    if (INTERNAL_TESTING_UNLIMITED_SCANS) {
-      return { allowed: true, hasToken: false };
-    }
-
-    const token = await getAuthToken();
-    if (token) {
-      return { allowed: true, hasToken: true };
+  const hideCollectionLimitPrompt = useCallback(() => {
+    if (collectionLimitPromptTimer.current) {
+      clearTimeout(collectionLimitPromptTimer.current);
+      collectionLimitPromptTimer.current = null;
     }
 
-    const guestScansUsed = await getGuestScansUsed();
-    if (guestScansUsed >= GUEST_SCAN_LIMIT) {
-      return { allowed: false, hasToken: false };
+    Animated.timing(collectionLimitProgress, {
+      toValue: 0,
+      duration: 220,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) {
+        setCollectionLimitPromptVisible(false);
+      }
+    });
+  }, [collectionLimitProgress]);
+
+  const showCollectionLimitPrompt = useCallback(() => {
+    if (collectionLimitPromptTimer.current) {
+      clearTimeout(collectionLimitPromptTimer.current);
     }
 
-    await SecureStore.setItemAsync(GUEST_SCAN_KEY, String(guestScansUsed + 1));
-    return { allowed: true, hasToken: false };
-  };
+    setCollectionLimitPromptVisible(true);
+    collectionLimitProgress.stopAnimation();
+    Animated.timing(collectionLimitProgress, {
+      toValue: 1,
+      duration: 240,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
 
-  const canStartNonSetScan = async () => {
-    if (INTERNAL_TESTING_UNLIMITED_SCANS) {
-      return { allowed: true, hasToken: false };
-    }
+    collectionLimitPromptTimer.current = setTimeout(() => {
+      hideCollectionLimitPrompt();
+    }, 3800);
+  }, [collectionLimitProgress, hideCollectionLimitPrompt]);
 
-    const token = await getAuthToken();
-    if (token) {
-      return { allowed: true, hasToken: true };
-    }
+  const handleCollectionLimitSignIn = useCallback(() => {
+    hideCollectionLimitPrompt();
+    openAccountForSignIn();
+  }, [hideCollectionLimitPrompt, openAccountForSignIn]);
 
-    const guestScansUsed = await getGuestScansUsed();
-    return { allowed: guestScansUsed < GUEST_SCAN_LIMIT, hasToken: false };
-  };
-
-  const consumeNonSetGuestScan = async () => {
-    if (INTERNAL_TESTING_UNLIMITED_SCANS) {
-      return { allowed: true, hasToken: false };
-    }
-
-    const token = await getAuthToken();
-    if (token) {
-      return { allowed: true, hasToken: true };
-    }
-
-    const guestScansUsed = await getGuestScansUsed();
-    if (guestScansUsed >= GUEST_SCAN_LIMIT) {
-      return { allowed: false, hasToken: false };
-    }
-
-    await SecureStore.setItemAsync(GUEST_SCAN_KEY, String(guestScansUsed + 1));
-    return { allowed: true, hasToken: false };
-  };
-
-  const openAccountForSignIn = () => {
-    router.push("/account");
-  };
+  const handleCollectionLimitUpgrade = useCallback(() => {
+    hideCollectionLimitPrompt();
+    void triggerUpgrade();
+  }, [hideCollectionLimitPrompt, triggerUpgrade]);
 
   const yieldToRender = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
@@ -260,6 +284,40 @@ export default function ScanHome() {
     setLatestLookupResult(data);
     setAddedResultKey(null);
     setStatus("result");
+    promptedOnCurrentResult.current = false;
+    let nextScansUsed: number | null = null;
+    if (typeof data.scansUsed === "number" && (await getAuthToken())) {
+      nextScansUsed = data.scansUsed;
+      setGuestScansUsedState(data.scansUsed);
+    } else if (pendingServerScansUsed.current !== null) {
+      nextScansUsed = pendingServerScansUsed.current;
+      setGuestScansUsedState(pendingServerScansUsed.current);
+    } else if (pendingGuestScan.current) {
+      const latestGuestScansUsed = await syncGuestScansUsed();
+      nextScansUsed = latestGuestScansUsed + 1;
+      await commitGuestScansUsed(nextScansUsed);
+    }
+    pendingGuestScan.current = false;
+    pendingServerScansUsed.current = null;
+
+    if (
+      !promptedOnCurrentResult.current &&
+      nextScansUsed !== null &&
+      nextScansUsed >= GUEST_SCAN_LIMIT &&
+      !data.isPro
+    ) {
+      promptedOnCurrentResult.current = true;
+      const token = await getAuthToken();
+      if (token) {
+        setTimeout(() => {
+          void triggerUpgrade();
+        }, 900);
+      } else {
+        setTimeout(() => {
+          openAccountForUpgrade();
+        }, 900);
+      }
+    }
   };
 
   const maybeShowCandidates = (identification: IdentificationResult) => {
@@ -283,13 +341,17 @@ export default function ScanHome() {
   };
 
   const openDetectionSheet = async (nextDetections: IdentificationDetection[], message: string) => {
-    const access = await consumeNonSetGuestScan();
+    const access = await prepareLookupAccess();
     if (!access.allowed) {
-      openAccountForSignIn();
+      openAccountForUpgrade();
       setStatus("idle");
       return;
     }
+    if (!access.hasToken) {
+      pendingGuestScan.current = true;
+    }
     setDetections(nextDetections);
+    setSelectedBulkMinifigIds(getBatchableMinifigIds(nextDetections));
     setDetectionMessage(message);
     setStatus("detections");
   };
@@ -315,30 +377,120 @@ export default function ScanHome() {
     }
   };
 
-  const handleDetectionPick = async (detection: IdentificationDetection) => {
-    setErrorMessage(null);
-    if (detection.item_type === "part") {
-      await openPartColorPicker(detection);
-      return;
+  const priceMinifigDetection = async (id: string, options?: { preserveReview: boolean }) => {
+    if (!options?.preserveReview) {
+      setDetections([]);
+      setSelectedBulkMinifigIds([]);
+      setBulkMinifigResultQueue([]);
     }
-
-    setDetections([]);
     setStatus("loading");
-    setLoadingMsg(`Found minifigure #${detection.id}`);
+    setLoadingMsg(`Found minifigure #${id}`);
     await yieldToRender();
     try {
-      await beginLookup(detection.id, "minifig");
+      await beginLookup(id, "minifig");
     } catch (e) {
       if (e instanceof Error && e.message.includes("404")) {
+        pendingGuestScan.current = false;
+        pendingServerScansUsed.current = null;
         warn();
         setErrorMessage("We couldn't find market data for that minifigure. Try a different match.");
         setStatus("idle");
         return;
       }
+      pendingGuestScan.current = false;
+      pendingServerScansUsed.current = null;
       warn();
       setErrorMessage("We found the item, but couldn't fetch market prices. Try again in a moment.");
       setStatus("idle");
     }
+  };
+
+  const handleDetectionPick = async (detection: IdentificationDetection) => {
+    setErrorMessage(null);
+    setBulkMinifigQueue([]);
+    setBulkMinifigResultQueue([]);
+    if (detection.item_type === "part") {
+      await openPartColorPicker(detection);
+      return;
+    }
+
+    await priceMinifigDetection(detection.id);
+  };
+
+  const handleBulkMinifigToggle = (id: string) => {
+    setSelectedBulkMinifigIds((current) => toggleBulkMinifigSelection(current, id));
+  };
+
+  const handleBulkMinifigPricing = async () => {
+    if (selectedBulkMinifigIds.length === 0) return;
+    setStatus("loading");
+    setLoadingMsg(`Fetching prices for ${selectedBulkMinifigIds.length} minifigures...`);
+    await yieldToRender();
+
+    try {
+      const rows = await bulkLookupMinifigs(selectedBulkMinifigIds);
+      const pricedResults = rows
+        .map((row) => row.result)
+        .filter((row): row is NonNullable<typeof row> => row !== null);
+
+      if (pricedResults.length === 0) {
+        pendingGuestScan.current = false;
+        pendingServerScansUsed.current = null;
+        warn();
+        setErrorMessage("We found the minifigures, but couldn't fetch market prices. Try again in a moment.");
+        setStatus("idle");
+        return;
+      }
+
+      if (pendingGuestScan.current) {
+        const latestGuestScansUsed = await syncGuestScansUsed();
+        await commitGuestScansUsed(latestGuestScansUsed + 1);
+      }
+      pendingGuestScan.current = false;
+      pendingServerScansUsed.current = null;
+
+      const [firstResult, ...remainingResults] = pricedResults;
+      setBulkMinifigQueue([]);
+      setBulkMinifigResultQueue(remainingResults);
+      setResult(firstResult);
+      setLatestLookupResult(firstResult);
+      setAddedResultKey(null);
+      promptedOnCurrentResult.current = false;
+      setStatus("result");
+    } catch {
+      pendingGuestScan.current = false;
+      pendingServerScansUsed.current = null;
+      warn();
+      setErrorMessage("We found the minifigures, but couldn't fetch market prices. Try again in a moment.");
+      setStatus("idle");
+    }
+  };
+
+  const advanceBulkMinifigQueue = async () => {
+    const [nextResult, ...remainingResults] = bulkMinifigResultQueue;
+    if (nextResult) {
+      promptedOnCurrentResult.current = false;
+      setResult(nextResult);
+      setLatestLookupResult(nextResult);
+      setAddedResultKey(null);
+      setBulkMinifigResultQueue(remainingResults);
+      setStatus("result");
+      return;
+    }
+
+    const [nextId, ...remainingIds] = bulkMinifigQueue;
+    if (!nextId) {
+      promptedOnCurrentResult.current = false;
+      setResult(null);
+      setStatus("idle");
+      return;
+    }
+
+    promptedOnCurrentResult.current = false;
+    setResult(null);
+    setAddedResultKey(null);
+    setBulkMinifigQueue(remainingIds);
+    await priceMinifigDetection(nextId, { preserveReview: true });
   };
 
   const handlePartColorPick = async (color: PartColorOption) => {
@@ -352,11 +504,15 @@ export default function ScanHome() {
       setSelectedPart(null);
     } catch (e) {
       if (e instanceof Error && e.message.includes("404")) {
+        pendingGuestScan.current = false;
+        pendingServerScansUsed.current = null;
         warn();
         setErrorMessage("We couldn't find market data for that part and color. Try a different color.");
         setStatus("idle");
         return;
       }
+      pendingGuestScan.current = false;
+      pendingServerScansUsed.current = null;
       warn();
       setErrorMessage("We found the part, but couldn't fetch market prices. Try again in a moment.");
       setStatus("idle");
@@ -368,6 +524,9 @@ export default function ScanHome() {
     setCandidateOptions([]);
     setDetections([]);
     setSelectedPart(null);
+    setSelectedBulkMinifigIds([]);
+    setBulkMinifigQueue([]);
+    setBulkMinifigResultQueue([]);
     if (mode === "set") {
       manualRef.current?.open();
       return;
@@ -375,27 +534,34 @@ export default function ScanHome() {
     setStatus("loading");
     setLoadingMsg("Finding minifigures and parts...");
     try {
-      const access = await canStartNonSetScan();
+      const access = await prepareLookupAccess();
       if (!access.allowed) {
         setStatus("idle");
-        openAccountForSignIn();
+        openAccountForUpgrade();
         return;
       }
 
       const identification = await identifySet(photoUri, mode);
+      if (typeof identification.scansUsed === "number") {
+        pendingServerScansUsed.current = identification.scansUsed;
+      }
 
       if (!identification.detections.length) {
         warn();
+        pendingServerScansUsed.current = null;
         setErrorMessage("We couldn't identify the minifigure or part. Try a clearer front-facing shot.");
         setStatus("idle");
         return;
       }
       if (!shouldPauseForDetectionChoice(identification.detections, LOW_CONFIDENCE_THRESHOLD)) {
-        const consume = await consumeNonSetGuestScan();
+        const consume = await prepareLookupAccess();
         if (!consume.allowed) {
           setStatus("idle");
-          openAccountForSignIn();
+          openAccountForUpgrade();
           return;
+        }
+        if (!consume.hasToken) {
+          pendingGuestScan.current = true;
         }
 
         await handleDetectionPick(identification.detections[0]);
@@ -408,10 +574,14 @@ export default function ScanHome() {
       return;
     } catch (e) {
       if (e instanceof Error && e.message.includes("402")) {
-        openUpgrade();
+        pendingGuestScan.current = false;
+        pendingServerScansUsed.current = null;
+        triggerUpgrade();
         setStatus("idle");
         return;
       }
+      pendingGuestScan.current = false;
+      pendingServerScansUsed.current = null;
       warn();
       setErrorMessage(
         mode === "minifig"
@@ -455,11 +625,17 @@ export default function ScanHome() {
     setErrorMessage(null);
     setCandidateOptions([]);
     setDetections([]);
+    setSelectedBulkMinifigIds([]);
+    setBulkMinifigQueue([]);
+    setBulkMinifigResultQueue([]);
     try {
       const access = await prepareLookupAccess();
       if (!access.allowed) {
-        openAccountForSignIn();
+        openAccountForUpgrade();
         return;
+      }
+      if (!access.hasToken) {
+        pendingGuestScan.current = true;
       }
       setStatus("loading");
       setLoadingMsg(`Looking up set #${identifier}`);
@@ -467,11 +643,15 @@ export default function ScanHome() {
       await beginLookup(identifier);
     } catch (e) {
       if (e instanceof Error && e.message.includes("401")) {
+        pendingGuestScan.current = false;
+        pendingServerScansUsed.current = null;
         openAccountForSignIn();
         setStatus("idle");
         return;
       }
       if (e instanceof Error && e.message.includes("404")) {
+        pendingGuestScan.current = false;
+        pendingServerScansUsed.current = null;
         warn();
         setErrorMessage(
           mode === "minifig"
@@ -482,10 +662,14 @@ export default function ScanHome() {
         return;
       }
       if (e instanceof Error && e.message.includes("402")) {
-        openUpgrade();
+        pendingGuestScan.current = false;
+        pendingServerScansUsed.current = null;
+        triggerUpgrade();
         setStatus("idle");
         return;
       }
+      pendingGuestScan.current = false;
+      pendingServerScansUsed.current = null;
       warn();
       setErrorMessage("We found the item number, but couldn't fetch market prices. Try again in a moment.");
       setStatus("idle");
@@ -496,16 +680,23 @@ export default function ScanHome() {
     setErrorMessage(null);
     setCandidateOptions([]);
     setDetections([]);
+    setSelectedBulkMinifigIds([]);
+    setBulkMinifigQueue([]);
+    setBulkMinifigResultQueue([]);
     setStatus("loading");
     try {
       await beginLookup(identifier);
     } catch (e) {
       if (e instanceof Error && e.message.includes("401")) {
+        pendingGuestScan.current = false;
+        pendingServerScansUsed.current = null;
         openAccountForSignIn();
         setStatus("idle");
         return;
       }
       if (e instanceof Error && e.message.includes("404")) {
+        pendingGuestScan.current = false;
+        pendingServerScansUsed.current = null;
         warn();
         setErrorMessage(
           mode === "minifig"
@@ -516,10 +707,14 @@ export default function ScanHome() {
         return;
       }
       if (e instanceof Error && e.message.includes("402")) {
-        openUpgrade();
+        pendingGuestScan.current = false;
+        pendingServerScansUsed.current = null;
+        triggerUpgrade();
         setStatus("idle");
         return;
       }
+      pendingGuestScan.current = false;
+      pendingServerScansUsed.current = null;
       warn();
       setErrorMessage(
         mode === "minifig"
@@ -531,12 +726,20 @@ export default function ScanHome() {
   };
 
   const dismissResult = () => {
+    if (bulkMinifigResultQueue.length > 0 || bulkMinifigQueue.length > 0) {
+      void advanceBulkMinifigQueue();
+      return;
+    }
+    promptedOnCurrentResult.current = false;
     setResult(null);
     setStatus("idle");
   };
 
   const showPreviewResult = () => {
     setErrorMessage(null);
+    promptedOnCurrentResult.current = false;
+    setBulkMinifigQueue([]);
+    setBulkMinifigResultQueue([]);
     const preview = mode === "minifig" ? previewMinifigResult : previewResult;
     setResult(preview);
     setLatestLookupResult(preview);
@@ -548,19 +751,44 @@ export default function ScanHome() {
     item: LookupDetailResult,
     options: { quantity: number; condition: CollectionCondition }
   ) => {
+    const existing = await getCollection();
+    const currentCollectionQuantity = existing.reduce((total, entry) => total + (entry.quantity ?? 1), 0);
+    const nextCollectionQuantity = currentCollectionQuantity + options.quantity;
+
+    if (nextCollectionQuantity > FREE_COLLECTION_LIMIT) {
+      const isPro = await getNativeProStatus();
+      if (!isPro) {
+        showCollectionLimitPrompt();
+        return;
+      }
+    }
+
     await addToCollection(item, options);
     setAddedResultKey(getResultKey(item));
     success();
+
+    if (item.item_type === "minifig" && (bulkMinifigResultQueue.length > 0 || bulkMinifigQueue.length > 0)) {
+      setTimeout(() => {
+        void advanceBulkMinifigQueue();
+      }, 450);
+    }
   };
 
   const errorTranslateY = errorProgress.interpolate({
     inputRange: [0, 1],
     outputRange: [-10, 0],
   });
+  const collectionLimitTranslateY = collectionLimitProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [16, 0],
+  });
   const groupedDetections = {
     minifigs: detections.filter((item) => item.item_type === "minifig"),
     parts: detections.filter((item) => item.item_type === "part"),
   };
+  const batchableMinifigCount = groupedDetections.minifigs.length;
+  const detectionReviewTitle = getDetectionReviewTitle(detections);
+  const detectionReviewSummary = getDetectionReviewSummary(detections);
   const filteredPartColors = partColors.filter((color) =>
     color.color_name.toLowerCase().includes(partColorQuery.trim().toLowerCase())
   );
@@ -608,28 +836,43 @@ export default function ScanHome() {
             },
           ]}
         >
-          <Text style={styles.candidateTitle}>Scan matches</Text>
+          <View style={styles.bulkReviewHeader}>
+            <View style={styles.bulkReviewCopy}>
+              <Text style={styles.candidateTitle}>{detectionReviewTitle}</Text>
+              <Text style={styles.bulkReviewSummary}>{detectionReviewSummary}</Text>
+            </View>
+            <View style={styles.bulkReviewBadge}>
+              <Text style={styles.bulkReviewBadgeText}>{detections.length}</Text>
+            </View>
+          </View>
           <Text style={styles.candidateBody}>{detectionMessage}</Text>
           <ScrollView style={styles.detectionScroll} contentContainerStyle={styles.detectionScrollContent} showsVerticalScrollIndicator={false}>
             {groupedDetections.minifigs.length > 0 ? (
               <View style={styles.detectionSection}>
                 <Text style={styles.detectionSectionTitle}>Minifigures</Text>
-                {groupedDetections.minifigs.map((candidate) => (
-                  <Pressable
-                    key={`minifig-${candidate.id}`}
-                    accessibilityRole="button"
-                    style={styles.candidateRow}
-                    onPress={() => handleDetectionPick(candidate)}
-                  >
-                    <View style={styles.candidateThumb}>
-                      <Image source={{ uri: getBrickLinkPreviewImageUrl("minifig", candidate.id) }} style={styles.candidateThumbImage} />
-                    </View>
-                    <View style={styles.candidateCopy}>
-                      <Text style={styles.candidateId}>Minifig #{candidate.id}</Text>
-                      <Text style={styles.candidateScore}>{Math.round(candidate.score * 100)}% match</Text>
-                    </View>
-                  </Pressable>
-                ))}
+                {groupedDetections.minifigs.map((candidate) => {
+                  const selected = selectedBulkMinifigIds.includes(candidate.id);
+                  return (
+                    <Pressable
+                      key={`minifig-${candidate.id}`}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: selected }}
+                      style={[styles.candidateRow, selected && styles.candidateRowSelected]}
+                      onPress={() => handleBulkMinifigToggle(candidate.id)}
+                    >
+                      <View style={styles.candidateThumb}>
+                        <Image source={{ uri: getBrickLinkPreviewImageUrl("minifig", candidate.id) }} style={styles.candidateThumbImage} />
+                      </View>
+                      <View style={styles.candidateCopy}>
+                        <Text style={styles.candidateId}>Minifig #{candidate.id}</Text>
+                        <Text style={styles.candidateScore}>{Math.round(candidate.score * 100)}% match</Text>
+                      </View>
+                      <View style={[styles.bulkCheck, selected && styles.bulkCheckSelected]}>
+                        <Text style={[styles.bulkCheckText, selected && styles.bulkCheckTextSelected]}>{selected ? "✓" : ""}</Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
               </View>
             ) : null}
 
@@ -650,6 +893,7 @@ export default function ScanHome() {
                       <Text style={styles.candidateId}>Part #{candidate.id}</Text>
                       <Text style={styles.candidateScore}>{Math.round(candidate.score * 100)}% match</Text>
                     </View>
+                    <Text style={styles.priceThisText}>Price</Text>
                   </Pressable>
                 ))}
               </View>
@@ -662,6 +906,9 @@ export default function ScanHome() {
               onPress={() => {
                 setDetections([]);
                 setSelectedPart(null);
+                setSelectedBulkMinifigIds([]);
+                setBulkMinifigQueue([]);
+                setBulkMinifigResultQueue([]);
                 setStatus("idle");
               }}
             >
@@ -669,14 +916,30 @@ export default function ScanHome() {
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              style={styles.candidatePrimary}
+              accessibilityState={{ disabled: batchableMinifigCount > 0 && selectedBulkMinifigIds.length === 0 }}
+              style={[
+                styles.candidatePrimary,
+                batchableMinifigCount > 0 && selectedBulkMinifigIds.length === 0 && styles.candidatePrimaryDisabled,
+              ]}
+              disabled={batchableMinifigCount > 0 && selectedBulkMinifigIds.length === 0}
               onPress={() => {
+                if (batchableMinifigCount > 0) {
+                  void handleBulkMinifigPricing();
+                  return;
+                }
                 setDetections([]);
                 setSelectedPart(null);
+                setSelectedBulkMinifigIds([]);
+                setBulkMinifigQueue([]);
+                setBulkMinifigResultQueue([]);
                 setStatus("idle");
               }}
             >
-              <Text style={styles.candidatePrimaryText}>Close</Text>
+              <Text style={styles.candidatePrimaryText}>
+                {batchableMinifigCount > 0
+                  ? `Price ${selectedBulkMinifigIds.length} selected`
+                  : "Close"}
+              </Text>
             </Pressable>
           </View>
         </Animated.View>
@@ -875,7 +1138,53 @@ export default function ScanHome() {
         }}
       />
 
+      <Modal visible={collectionLimitPromptVisible} transparent animationType="none" onRequestClose={hideCollectionLimitPrompt}>
+        <View style={styles.collectionLimitModal} pointerEvents="box-none">
+          <Animated.View
+            accessibilityRole="alert"
+            style={[
+              styles.collectionLimitPrompt,
+              {
+                opacity: collectionLimitProgress,
+                transform: [{ translateY: collectionLimitTranslateY }],
+              },
+            ]}
+          >
+            <View style={styles.collectionLimitAccent} />
+            <View style={styles.collectionLimitCopy}>
+              <Text style={styles.collectionLimitTitle}>Free limit reached</Text>
+              <Text style={styles.collectionLimitBody}>
+                You have saved 10 items. Sign in and upgrade to Pro for unlimited collection space.
+              </Text>
+            </View>
+            <View style={styles.collectionLimitActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Sign in to BrickVal"
+                style={styles.collectionLimitSecondary}
+                onPress={handleCollectionLimitSignIn}
+              >
+                <Text style={styles.collectionLimitSecondaryText}>Sign in</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Upgrade to BrickVal Pro"
+                style={styles.collectionLimitPrimary}
+                onPress={handleCollectionLimitUpgrade}
+              >
+                <Text style={styles.collectionLimitPrimaryText}>Upgrade Pro</Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+
       <ManualEntrySheet ref={manualRef} mode={mode} onSubmit={handleManualSubmit} />
+      <PrePurchaseDisclosure
+        visible={showDisclosure}
+        onContinue={handleDisclosureContinue}
+        onDismiss={handleDisclosureDismiss}
+      />
     </View>
   );
 }
@@ -884,7 +1193,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#120e08" },
   previewBtn: {
     position: "absolute",
-    top: 128,
+    top: 188,
     right: 18,
     zIndex: 20,
     borderRadius: 8,
@@ -955,6 +1264,77 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "900",
   },
+  collectionLimitModal: {
+    flex: 1,
+    paddingHorizontal: 18,
+    paddingTop: 110,
+  },
+  collectionLimitPrompt: {
+    overflow: "hidden",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(245,197,24,0.44)",
+    backgroundColor: "rgba(18,14,8,0.96)",
+    shadowColor: "#000",
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
+  },
+  collectionLimitAccent: {
+    height: 4,
+    backgroundColor: "#f5c518",
+  },
+  collectionLimitCopy: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    gap: 6,
+  },
+  collectionLimitTitle: {
+    color: "#f5c518",
+    fontSize: 12,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+  collectionLimitBody: {
+    color: "#fff3cf",
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
+  },
+  collectionLimitActions: {
+    flexDirection: "row",
+    gap: 10,
+    padding: 16,
+    paddingTop: 14,
+  },
+  collectionLimitSecondary: {
+    minHeight: 44,
+    flex: 1,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,243,207,0.24)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  collectionLimitSecondaryText: {
+    color: "#fff3cf",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  collectionLimitPrimary: {
+    minHeight: 44,
+    flex: 1,
+    borderRadius: 999,
+    backgroundColor: "#f5c518",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  collectionLimitPrimaryText: {
+    color: "#171006",
+    fontSize: 12,
+    fontWeight: "900",
+  },
   candidateSheet: {
     position: "absolute",
     left: 18,
@@ -985,6 +1365,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "700",
+  },
+  bulkReviewHeader: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  bulkReviewCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  bulkReviewSummary: {
+    color: "rgba(247,244,234,0.7)",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  bulkReviewBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(245,197,24,0.42)",
+    backgroundColor: "rgba(245,197,24,0.12)",
+  },
+  bulkReviewBadgeText: {
+    color: "#f5c518",
+    fontSize: 14,
+    fontWeight: "900",
   },
   candidateList: {
     gap: 8,
@@ -1020,6 +1432,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.04)",
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  candidateRowSelected: {
+    borderColor: "rgba(245,197,24,0.48)",
+    backgroundColor: "rgba(245,197,24,0.1)",
   },
   candidateThumb: {
     width: 42,
@@ -1061,6 +1477,36 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
   },
+  priceThisText: {
+    minWidth: 44,
+    color: "#f5c518",
+    fontSize: 12,
+    fontWeight: "900",
+    textAlign: "right",
+  },
+  bulkCheck: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: "rgba(247,244,234,0.28)",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  bulkCheckSelected: {
+    borderColor: "#f5c518",
+    backgroundColor: "#f5c518",
+  },
+  bulkCheckText: {
+    color: "transparent",
+    fontSize: 13,
+    fontWeight: "900",
+    lineHeight: 16,
+  },
+  bulkCheckTextSelected: {
+    color: "#171006",
+  },
   candidateActions: {
     flexDirection: "row",
     gap: 10,
@@ -1086,6 +1532,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5c518",
     alignItems: "center",
     justifyContent: "center",
+  },
+  candidatePrimaryDisabled: {
+    opacity: 0.45,
   },
   candidatePrimaryText: {
     color: "#171006",

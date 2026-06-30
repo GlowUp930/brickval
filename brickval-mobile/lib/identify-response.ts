@@ -16,7 +16,7 @@ export function normalizeIdentificationDetections(
   }
 
   if (data.detections?.length) {
-    return data.detections.slice(0, 8);
+    return data.detections.slice(0, 12);
   }
 
   const candidateDetections = (data.candidates ?? []).map((candidate) => ({
@@ -26,7 +26,7 @@ export function normalizeIdentificationDetections(
   }));
 
   if (candidateDetections.length > 0) {
-    return candidateDetections.slice(0, 8);
+    return candidateDetections.slice(0, 12);
   }
 
   if (data.set_number) {

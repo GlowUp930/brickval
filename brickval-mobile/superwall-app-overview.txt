@@ -1,0 +1,344 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e6]:
+        - link "Logo" [ref=e8] [cursor=pointer]:
+          - /url: /
+          - img "Logo" [ref=e9]
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - generic [ref=e197] [cursor=pointer]:
+              - generic [ref=e198]:
+                - img [ref=e200]
+                - img [ref=e203]
+              - generic [ref=e205]:
+                - heading "Brickvalue" [level=2] [ref=e206]
+                - heading "Brickvalue.live" [level=2] [ref=e207]
+              - img "caret-sm-up" [ref=e210]
+            - generic [ref=e214] [cursor=pointer]:
+              - button [ref=e215]:
+                - img [ref=e216]
+              - button [ref=e221]:
+                - img [ref=e223]
+              - button [ref=e231]:
+                - img [ref=e232]
+                - img
+          - generic [ref=e35]:
+            - link "lightning Quickstart" [ref=e235] [cursor=pointer]:
+              - /url: /applications/45804/quickstart
+              - img "lightning" [ref=e236]
+              - generic [ref=e240]: Quickstart
+            - link "phone-toolbar Paywalls & Flows" [ref=e242] [cursor=pointer]:
+              - /url: /applications/45804/paywalls
+              - img "phone-toolbar" [ref=e243]
+              - generic [ref=e247]: Paywalls & Flows
+            - link "spaceship Templates" [ref=e249] [cursor=pointer]:
+              - /url: /applications/45804/templates
+              - img "spaceship" [ref=e250]
+              - generic [ref=e259]: Templates
+            - link "split Campaigns" [ref=e261] [cursor=pointer]:
+              - /url: /applications/45804/rules
+              - img "split" [ref=e262]
+              - generic [ref=e268]: Campaigns
+            - link "edit-curves Charts" [ref=e270] [cursor=pointer]:
+              - /url: /applications/45804/charts/v2
+              - img "edit-curves" [ref=e271]
+              - generic [ref=e276]: Charts
+            - link "Demand Score BETA" [ref=e278] [cursor=pointer]:
+              - /url: /applications/45804/demand-score
+              - img [ref=e279]
+              - generic [ref=e281]:
+                - generic [ref=e282]: Demand Score
+                - generic [ref=e283]: BETA
+            - link "tag Products" [ref=e285] [cursor=pointer]:
+              - /url: /applications/45804/products/v2
+              - img "tag" [ref=e286]
+              - generic [ref=e291]: Products
+            - link "assets Assets" [ref=e293] [cursor=pointer]:
+              - /url: /applications/45804/assets
+              - img "assets" [ref=e294]
+              - generic [ref=e300]: Assets
+            - link "Surveys" [ref=e302] [cursor=pointer]:
+              - /url: /applications/45804/surveys
+              - img [ref=e303]
+              - generic [ref=e308]: Surveys
+            - link "users-wm Users" [ref=e310] [cursor=pointer]:
+              - /url: /applications/45804/users/v2
+              - img "users-wm" [ref=e311]
+              - generic [ref=e316]: Users
+            - link "Integrations" [ref=e318] [cursor=pointer]:
+              - /url: /applications/45804/integrations
+              - img [ref=e319]
+              - generic [ref=e322]: Integrations
+            - link "settings-gear Settings" [ref=e324] [cursor=pointer]:
+              - /url: /applications/45804/settings
+              - img "settings-gear" [ref=e325]
+              - generic [ref=e330]: Settings
+            - generic [ref=e44]:
+              - link "book Docs" [ref=e45] [cursor=pointer]:
+                - /url: https://docs.superwall.com?utm_source=superwall&utm_medium=dashboard&utm_campaign=sidebar
+                - img "book" [ref=e46]
+                - generic [ref=e49]: Docs
+              - link "news Blog" [ref=e50] [cursor=pointer]:
+                - /url: /blog
+                - img "news" [ref=e51]
+                - generic [ref=e56]: Blog
+              - link "AI Experiments" [ref=e57] [cursor=pointer]:
+                - /url: https://paywallexperiments.com?utm_source=superwall&utm_medium=dashboard&utm_campaign=sidebar
+                - img [ref=e58]
+                - generic [ref=e63]: AI Experiments
+              - link "Paywall Inspo" [ref=e64] [cursor=pointer]:
+                - /url: https://paywallscreens.com?utm_source=superwall&utm_medium=dashboard&utm_campaign=sidebar
+                - img [ref=e65]
+                - generic [ref=e68]: Paywall Inspo
+        - generic [ref=e75] [cursor=pointer]:
+          - img "log-out" [ref=e78]
+          - generic [ref=e82]:
+            - heading "GlowUp930" [level=2] [ref=e83]
+            - heading "garychan930@outlook.com" [level=2] [ref=e84]
+      - generic [ref=e88]:
+        - generic [ref=e332]:
+          - heading "Overview" [level=1] [ref=e334]
+          - paragraph [ref=e336]: How your app is performing
+        - generic [ref=e337]:
+          - generic [ref=e338]:
+            - generic [ref=e339]:
+              - generic [ref=e342] [cursor=pointer]:
+                - generic [ref=e343]:
+                  - generic [ref=e345]:
+                    - img [ref=e346]
+                    - paragraph [ref=e349]: Production
+                  - img [ref=e350]
+                - combobox [ref=e353]:
+                  - option "Production" [selected]
+                  - option "Sandbox"
+              - generic [ref=e354] [cursor=pointer]:
+                - generic [ref=e355]:
+                  - generic [ref=e357]:
+                    - img [ref=e358]
+                    - paragraph [ref=e362]: Last 24 Hours
+                  - img [ref=e363]
+                - combobox [ref=e366]:
+                  - option "Last 24 Hours" [selected]
+                  - option "Today"
+                  - option "Yesterday"
+                  - option "Last 7 Days"
+                  - option "Last 30 Days"
+                  - option "Last 90 Days"
+                  - option "Last 180 Days"
+                  - option "Last 365 Days"
+                  - option "Year to Date"
+                  - option "Custom"
+            - generic [ref=e367]:
+              - link "$ 0 Total Proceeds" [ref=e368] [cursor=pointer]:
+                - /url: /applications/45804/charts/v2?cT=netProceeds&e=PRODUCTION&dP=last_30_days
+                - generic [ref=e370]:
+                  - generic [ref=e372]:
+                    - paragraph [ref=e373]: $
+                    - paragraph [ref=e374]: "0"
+                  - generic [ref=e375]:
+                    - generic [ref=e376]:
+                      - text: Total Proceeds
+                      - img [ref=e377]
+                    - generic [ref=e380]:
+                      - img
+              - link "0 New Users" [ref=e382] [cursor=pointer]:
+                - /url: /applications/45804/charts/v2?cT=newUsers&e=PRODUCTION&dP=last_30_days
+                - generic [ref=e384]:
+                  - paragraph [ref=e387]: "0"
+                  - generic [ref=e388]:
+                    - generic [ref=e389]:
+                      - text: New Users
+                      - img [ref=e390]
+                    - generic [ref=e393]:
+                      - img
+              - link "0 Total Conv's" [ref=e395] [cursor=pointer]:
+                - /url: /applications/45804/charts/v2?cT=transactionCompletes&e=PRODUCTION&dP=last_30_days
+                - generic [ref=e397]:
+                  - paragraph [ref=e400]: "0"
+                  - generic [ref=e401]:
+                    - generic [ref=e402]:
+                      - text: Total Conv's
+                      - img [ref=e403]
+                    - generic [ref=e406]:
+                      - img
+              - link "0 Initial Conv's" [ref=e408] [cursor=pointer]:
+                - /url: /applications/45804/charts/v2?cT=initialConvRate&e=PRODUCTION&dP=last_30_days
+                - generic [ref=e410]:
+                  - paragraph [ref=e413]: "0"
+                  - generic [ref=e414]:
+                    - generic [ref=e415]:
+                      - text: Initial Conv's
+                      - img [ref=e416]
+                    - generic [ref=e419]:
+                      - img
+              - link "0 % Paywall Rate" [ref=e421] [cursor=pointer]:
+                - /url: /applications/45804/charts/v2?cT=paywallUserRate&e=PRODUCTION&dP=last_30_days
+                - generic [ref=e423]:
+                  - generic [ref=e425]:
+                    - paragraph [ref=e426]: "0"
+                    - generic [ref=e427]: "%"
+                  - generic [ref=e428]:
+                    - generic [ref=e429]:
+                      - text: Paywall Rate
+                      - img [ref=e430]
+                    - generic [ref=e433]:
+                      - img
+              - link "0 % Initial Conv. Rate" [ref=e435] [cursor=pointer]:
+                - /url: /applications/45804/charts/v2?cT=initialConvRate&e=PRODUCTION&dP=last_30_days
+                - generic [ref=e437]:
+                  - generic [ref=e439]:
+                    - paragraph [ref=e440]: "0"
+                    - generic [ref=e441]: "%"
+                  - generic [ref=e442]:
+                    - generic [ref=e443]:
+                      - text: Initial Conv. Rate
+                      - img [ref=e444]
+                    - generic [ref=e447]:
+                      - img
+          - link "Revenue Tracking Missing Forward subscription events to Superwall to see revenue stats in campaign results. Quick Setup" [ref=e450] [cursor=pointer]:
+            - /url: /applications/45804/settings/integrations
+            - generic [ref=e451]:
+              - generic [ref=e452]:
+                - img [ref=e455]
+                - generic [ref=e460]:
+                  - generic [ref=e462]:
+                    - generic [ref=e463]:
+                      - paragraph [ref=e464]: Revenue Tracking
+                      - generic [ref=e465]: Missing
+                    - img [ref=e468]
+                  - generic [ref=e471]: Forward subscription events to Superwall to see revenue stats in campaign results.
+              - generic [ref=e472]:
+                - button "Quick Setup":
+                  - generic:
+                    - generic:
+                      - generic:
+                        - text: Quick Setup
+                        - img
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+          - link "Try the New Dashboard Experience Preview revamped sections of the dashboard as they roll out. Enable in Public Beta" [ref=e474] [cursor=pointer]:
+            - /url: /applications/45804/settings/experiments
+            - generic [ref=e475]:
+              - generic [ref=e476]:
+                - img [ref=e479]
+                - generic [ref=e481]:
+                  - generic [ref=e483]: Try the New Dashboard Experience
+                  - generic [ref=e484]: Preview revamped sections of the dashboard as they roll out.
+              - generic [ref=e485]:
+                - button "Enable in Public Beta":
+                  - generic:
+                    - generic:
+                      - generic:
+                        - text: Enable in Public Beta
+                        - img
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                - button [ref=e486]:
+                  - generic [ref=e487]:
+                    - img [ref=e489]
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+          - 'link "What''s New in May 2026: Superwall Agents, Web2App Flows, Direct ClickHouse Access, and Everything Else We Shipped Superwall Agents alone would be enough for a monthly update — a full AI workspace that sits on top of your data and acts on it! But we also shipped web2app funnels, raw ClickHouse access, Unity support, and smarter post-purchase logic. Let''s get into it. Read Post →" [ref=e493] [cursor=pointer]':
+            - /url: /blog/whats-new-may-2026
+            - generic [ref=e494]:
+              - generic [ref=e497]:
+                - 'heading "What''s New in May 2026: Superwall Agents, Web2App Flows, Direct ClickHouse Access, and Everything Else We Shipped" [level=2] [ref=e500]'
+                - generic [ref=e502]:
+                  - paragraph [ref=e503]: Superwall Agents alone would be enough for a monthly update — a full AI workspace that sits on top of your data and acts on it! But we also shipped web2app funnels, raw ClickHouse access, Unity support, and smarter post-purchase logic. Let's get into it.
+                  - button "Read Post →" [ref=e504]:
+                    - generic [ref=e505]:
+                      - generic [ref=e506]: Read Post →
+                      - generic:
+                        - generic:
+                          - generic:
+                            - img
+              - button [ref=e507]:
+                - generic [ref=e508]:
+                  - img [ref=e510]
+                  - generic:
+                    - generic:
+                      - generic:
+                        - img
+          - generic [ref=e514]:
+            - generic [ref=e517]:
+              - heading "Active Campaigns" [level=2] [ref=e518]
+              - link "All Campaigns" [ref=e520] [cursor=pointer]:
+                - /url: /applications/45804/rules
+                - button "All Campaigns" [ref=e521]:
+                  - generic [ref=e522]:
+                    - generic [ref=e523]:
+                      - text: All Campaigns
+                      - img [ref=e524]
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+            - generic [ref=e531]:
+              - link "TESTING brickval_upgrade" [ref=e532] [cursor=pointer]:
+                - /url: /applications/45804/campaigns/86740
+                - generic [ref=e534]:
+                  - button [ref=e535]:
+                    - img [ref=e536]
+                  - heading "TESTING" [level=3] [ref=e541]:
+                    - generic [ref=e542]: TESTING
+                  - img [ref=e544]
+                - generic [ref=e548]:
+                  - img [ref=e550]
+                  - paragraph [ref=e553]:
+                    - generic [ref=e554]: brickval_upgrade
+              - generic [ref=e556]:
+                - generic [ref=e559]:
+                  - generic [ref=e560]: "0"
+                  - paragraph [ref=e561]: Users
+                - generic [ref=e564]:
+                  - generic [ref=e565]: "0"
+                  - paragraph [ref=e566]: Conv's
+                - generic [ref=e569]:
+                  - generic [ref=e570]:
+                    - text: "0.0"
+                    - generic [ref=e571]: "%"
+                  - paragraph [ref=e572]: Conv. Rate
+                - generic [ref=e575]:
+                  - generic [ref=e576]:
+                    - generic [ref=e577]: $
+                    - text: "0"
+                  - paragraph [ref=e578]: Proceeds
+          - generic [ref=e580]:
+            - generic [ref=e581]:
+              - heading "Recent Transactions" [level=2] [ref=e582]
+              - generic [ref=e583] [cursor=pointer]:
+                - generic [ref=e584]:
+                  - paragraph [ref=e586]: Main Events
+                  - img [ref=e587]
+                - combobox [ref=e590]:
+                  - option "Main Events" [selected]
+                  - option "All Events"
+                  - option "Paywall Conversion"
+                  - option "Trial Start"
+                  - option "Direct Sub Start"
+                  - option "One Time Purchase"
+                  - option "Intro Offer"
+                  - option "Trial Convert"
+                  - option "Renewal"
+                  - option "Refund"
+                  - option "Trial Cancel"
+                  - option "Trial Expire"
+                  - option "Cancel"
+                  - option "Uncancel"
+                  - option "Expire"
+            - paragraph [ref=e593]: No data yet.
+    - region "Notifications alt+T"
+    - region "Notifications Alt+T"
+  - alert [ref=e120]: Overview
+  - iframe [ref=e194]:
+    
+  - iframe [ref=e195]:
+    - button "Open chat" [ref=f33e3] [cursor=pointer]:
+      - img [ref=f33e4]

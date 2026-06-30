@@ -32,6 +32,15 @@ export interface CollectionItemIdentifier {
   color_id?: number | null;
 }
 
+function isSameCollectionSlot(entry: CollectionItem, item: CollectionItem): boolean {
+  return (
+    entry.set_number === item.set_number &&
+    entry.item_type === item.item_type &&
+    entry.condition === item.condition &&
+    (entry.item_type !== "part" || (entry.color_id ?? null) === (item.color_id ?? null))
+  );
+}
+
 export function inferItemType(identifier: string): CollectionItemType {
   return /^\d+$/.test(identifier) ? "set" : "minifig";
 }
@@ -78,6 +87,19 @@ export function removeCollectionItem(
       entry.condition !== target.condition ||
       (entry.item_type === "part" && (entry.color_id ?? null) !== (target.color_id ?? null))
   );
+}
+
+export function upsertCollectionItem(items: CollectionItem[], item: CollectionItem): CollectionItem[] {
+  const existing = items.find((entry) => isSameCollectionSlot(entry, item));
+  const normalizedItem = normalizeCollectionItem(item);
+  const nextItem = existing
+    ? {
+        ...normalizedItem,
+        quantity: normalizeQuantity(existing.quantity) + normalizeQuantity(normalizedItem.quantity),
+      }
+    : normalizedItem;
+
+  return [nextItem, ...items.filter((entry) => !isSameCollectionSlot(entry, normalizedItem))];
 }
 
 export function normalizeHistoryDate(value: string | null | undefined): string | null {

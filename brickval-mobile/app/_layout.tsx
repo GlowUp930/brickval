@@ -3,8 +3,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as WebBrowser from "expo-web-browser";
 import { ClerkProvider, useAuth } from "@clerk/expo";
-import { tokenCache } from "@clerk/expo/token-cache";
-import { CLERK_PUBLISHABLE_KEY, isClerkConfigured } from "../lib/clerk";
+import { CLERK_PUBLISHABLE_KEY, isClerkConfigured, safeTokenCache, setClerkAuthTokenGetter } from "../lib/clerk";
 import {
   initializeNativePaywall,
   syncPurchaseIdentity,
@@ -12,7 +11,9 @@ import {
   syncSuperwallSubscriptionState,
   getNativeProStatus,
 } from "../lib/paywall";
+import { initSentry } from "../lib/sentry";
 
+initSentry();
 WebBrowser.maybeCompleteAuthSession();
 
 function PlainStack() {
@@ -29,11 +30,16 @@ function PlainStack() {
 }
 
 function AuthenticatedAppStack() {
-  const { isLoaded, userId } = useAuth({ treatPendingAsSignedOut: false });
+  const { getToken, isLoaded, userId } = useAuth({ treatPendingAsSignedOut: false });
 
   useEffect(() => {
     initializeNativePaywall();
   }, []);
+
+  useEffect(() => {
+    setClerkAuthTokenGetter(() => getToken());
+    return () => setClerkAuthTokenGetter(null);
+  }, [getToken]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -60,7 +66,7 @@ export default function RootLayout() {
   }
 
   return (
-    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}>
+    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} tokenCache={safeTokenCache}>
       <AuthenticatedAppStack />
     </ClerkProvider>
   );

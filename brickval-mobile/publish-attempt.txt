@@ -1,0 +1,752 @@
+- generic [ref=e5]:
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - button [ref=e12] [cursor=pointer]:
+          - generic [ref=e13]:
+            - img [ref=e17]
+            - generic:
+              - generic:
+                - generic:
+                  - img
+        - generic [ref=e22] [cursor=pointer]:
+          - generic [ref=e23]: Design Your Trial | Single Page (Template)
+          - img [ref=e24]
+      - img [ref=e28]
+      - generic [ref=e41]:
+        - button:
+          - generic:
+            - generic:
+              - generic:
+                - img
+            - generic:
+              - generic:
+                - generic:
+                  - img
+        - button:
+          - generic:
+            - generic:
+              - generic:
+                - img
+            - generic:
+              - generic:
+                - generic:
+                  - img
+        - button [ref=e43] [cursor=pointer]:
+          - generic [ref=e44]:
+            - img [ref=e46]
+            - generic:
+              - generic:
+                - generic:
+                  - img
+        - button [ref=e49] [cursor=pointer]:
+          - generic [ref=e50]:
+            - img [ref=e52]
+            - generic:
+              - generic:
+                - generic:
+                  - img
+        - button [ref=e56] [cursor=pointer]:
+          - generic [ref=e57]:
+            - img [ref=e59]
+            - generic:
+              - generic:
+                - generic:
+                  - img
+        - button [ref=e62] [cursor=pointer]:
+          - button [ref=e63]:
+            - generic [ref=e64]:
+              - img [ref=e66]
+              - generic:
+                - generic:
+                  - generic:
+                    - img
+        - button "Publish" [ref=e70] [cursor=pointer]:
+          - generic [ref=e71]:
+            - generic [ref=e73]:
+              - img [ref=e74]
+              - generic [ref=e77]: Publish
+            - generic:
+              - generic:
+                - generic:
+                  - img
+    - generic [ref=e78]:
+      - generic [ref=e80]:
+        - generic [ref=e81]:
+          - button [ref=e83] [cursor=pointer]:
+            - generic [ref=e84]:
+              - img [ref=e89]
+              - generic:
+                - generic:
+                  - generic:
+                    - img
+          - button [ref=e92] [cursor=pointer]:
+            - generic [ref=e93]:
+              - img [ref=e98]
+              - generic:
+                - generic:
+                  - generic:
+                    - img
+          - button [ref=e104] [cursor=pointer]:
+            - generic [ref=e105]:
+              - img [ref=e110]
+              - generic:
+                - generic:
+                  - generic:
+                    - img
+          - button [ref=e116] [cursor=pointer]:
+            - generic [ref=e117]:
+              - img [ref=e122]
+              - generic:
+                - generic:
+                  - generic:
+                    - img
+          - button [ref=e126] [cursor=pointer]:
+            - generic [ref=e127]:
+              - img [ref=e132]
+              - generic:
+                - generic:
+                  - generic:
+                    - img
+          - button [ref=e137] [cursor=pointer]:
+            - generic [ref=e138]:
+              - img [ref=e143]
+              - generic:
+                - generic:
+                  - generic:
+                    - img
+          - button [ref=e149] [cursor=pointer]:
+            - generic [ref=e150]:
+              - img [ref=e155]
+              - generic:
+                - generic:
+                  - generic:
+                    - img
+          - button [ref=e158] [cursor=pointer]:
+            - generic [ref=e159]:
+              - img [ref=e164]
+              - generic:
+                - generic:
+                  - generic:
+                    - img
+          - button [ref=e171] [cursor=pointer]:
+            - generic [ref=e172]:
+              - img [ref=e177]
+              - generic:
+                - generic:
+                  - generic:
+                    - img
+          - button [ref=e182] [cursor=pointer]:
+            - generic [ref=e183]:
+              - img [ref=e188]
+              - generic:
+                - generic:
+                  - generic:
+                    - img
+          - button [ref=e192] [cursor=pointer]:
+            - generic [ref=e193]:
+              - img [ref=e198]
+              - generic:
+                - generic:
+                  - generic:
+                    - img
+          - button [ref=e202] [cursor=pointer]:
+            - generic [ref=e203]:
+              - img [ref=e207]
+              - generic:
+                - generic:
+                  - generic:
+                    - img
+        - generic [ref=e212]:
+          - generic [ref=e213]:
+            - heading "Layout" [level=4] [ref=e214]
+            - button [ref=e217] [cursor=pointer]:
+              - generic [ref=e218]:
+                - img [ref=e221]
+                - generic:
+                  - generic:
+                    - generic:
+                      - img
+          - generic [ref=e224]:
+            - generic [ref=e228]:
+              - generic [ref=e229] [cursor=pointer]:
+                - generic [ref=e230]:
+                  - img [ref=e234]
+                  - paragraph [ref=e239]: README
+                - img [ref=e242]
+              - generic [ref=e246] [cursor=pointer]:
+                - generic [ref=e247]:
+                  - img [ref=e250]
+                  - img [ref=e256]
+                  - paragraph [ref=e262]: Simple Navbar
+                - img [ref=e265]
+              - generic [ref=e270] [cursor=pointer]:
+                - img [ref=e273]
+                - img [ref=e280]
+                - paragraph [ref=e286]: Toolbar
+              - generic [ref=e290] [cursor=pointer]:
+                - img [ref=e293]
+                - img [ref=e300]
+                - paragraph [ref=e306]: Left Buttons
+              - generic [ref=e307] [cursor=pointer]:
+                - generic [ref=e311]:
+                  - img [ref=e314]
+                  - img [ref=e320]
+                  - paragraph [ref=e326]: Close button
+                - img [ref=e329]
+              - generic [ref=e339] [cursor=pointer]:
+                - img [ref=e343]
+                - paragraph [ref=e347]: Icon
+              - generic [ref=e352] [cursor=pointer]:
+                - img [ref=e356]
+                - paragraph [ref=e362]: Center Title
+              - generic [ref=e366] [cursor=pointer]:
+                - img [ref=e369]
+                - img [ref=e376]
+                - paragraph [ref=e382]: Right Buttons
+              - generic [ref=e383] [cursor=pointer]:
+                - generic [ref=e387]:
+                  - img [ref=e390]
+                  - img [ref=e396]
+                  - paragraph [ref=e402]: Close button
+                - generic [ref=e404]:
+                  - img [ref=e405]
+                  - img [ref=e409]
+              - generic [ref=e418] [cursor=pointer]:
+                - img [ref=e422]
+                - paragraph [ref=e427]: Icon
+              - generic [ref=e429] [cursor=pointer]:
+                - img [ref=e432]
+                - img [ref=e438]
+                - paragraph [ref=e444]: Navigation
+              - generic [ref=e445] [cursor=pointer]:
+                - generic [ref=e447]:
+                  - img [ref=e450]
+                  - img [ref=e456]
+                  - paragraph [ref=e461]: Navigation
+                - img [ref=e464]
+              - generic [ref=e470] [cursor=pointer]:
+                - img [ref=e473]
+                - img [ref=e479]
+                - paragraph [ref=e485]: Page 1
+              - generic [ref=e490] [cursor=pointer]:
+                - img [ref=e493]
+                - img [ref=e499]
+                - paragraph [ref=e505]: No Trial Header
+              - generic [ref=e512] [cursor=pointer]:
+                - img [ref=e516]
+                - paragraph [ref=e521]: Text
+              - generic [ref=e522] [cursor=pointer]:
+                - generic [ref=e526]:
+                  - img [ref=e529]
+                  - img [ref=e535]
+                  - paragraph [ref=e541]: Trial Eligible Header
+                - img [ref=e544]
+              - generic [ref=e554] [cursor=pointer]:
+                - img [ref=e558]
+                - paragraph [ref=e563]: Text
+              - generic [ref=e564] [cursor=pointer]:
+                - generic [ref=e568]:
+                  - img [ref=e571]
+                  - img [ref=e577]
+                  - paragraph [ref=e583]: Timeline
+                - img [ref=e586]
+              - generic [ref=e595] [cursor=pointer]:
+                - img [ref=e598]
+                - img [ref=e605]
+                - paragraph [ref=e611]: Timeline Item
+              - generic [ref=e619] [cursor=pointer]:
+                - img [ref=e623]
+                - paragraph [ref=e629]: Stack
+              - generic [ref=e636] [cursor=pointer]:
+                - img [ref=e639]
+                - img [ref=e645]
+                - paragraph [ref=e651]: Stack
+              - generic [ref=e659] [cursor=pointer]:
+                - img [ref=e662]
+                - img [ref=e668]
+                - paragraph [ref=e674]: Stack
+              - generic [ref=e684] [cursor=pointer]:
+                - img [ref=e688]
+                - paragraph [ref=e694]: Icon
+              - generic [ref=e701] [cursor=pointer]:
+                - img [ref=e704]
+                - img [ref=e711]
+                - paragraph [ref=e717]: Stack
+              - generic [ref=e725] [cursor=pointer]:
+                - img [ref=e728]
+                - img [ref=e734]
+                - paragraph [ref=e740]: Stack
+              - generic [ref=e749] [cursor=pointer]:
+                - img [ref=e752]
+                - img [ref=e758]
+                - paragraph [ref=e764]: Stack
+              - generic [ref=e775] [cursor=pointer]:
+                - img [ref=e779]
+                - paragraph [ref=e784]: Text
+              - generic [ref=e794] [cursor=pointer]:
+                - img [ref=e798]
+                - paragraph [ref=e803]: Text
+              - generic [ref=e809] [cursor=pointer]:
+                - img [ref=e812]
+                - img [ref=e819]
+                - paragraph [ref=e825]: Timeline Item
+              - generic [ref=e833] [cursor=pointer]:
+                - img [ref=e837]
+                - paragraph [ref=e843]: Stack
+              - generic [ref=e850] [cursor=pointer]:
+                - img [ref=e853]
+                - img [ref=e859]
+                - paragraph [ref=e865]: Stack
+              - generic [ref=e873] [cursor=pointer]:
+                - img [ref=e876]
+                - img [ref=e882]
+                - paragraph [ref=e888]: Stack
+              - generic [ref=e898] [cursor=pointer]:
+                - img [ref=e902]
+                - paragraph [ref=e909]: Icon
+              - generic [ref=e916] [cursor=pointer]:
+                - img [ref=e919]
+                - img [ref=e926]
+                - paragraph [ref=e932]: Stack
+              - generic [ref=e940] [cursor=pointer]:
+                - img [ref=e943]
+                - img [ref=e949]
+                - paragraph [ref=e955]: Stack
+              - generic [ref=e964] [cursor=pointer]:
+                - img [ref=e967]
+                - img [ref=e973]
+                - paragraph [ref=e979]: Stack
+              - generic [ref=e990] [cursor=pointer]:
+                - img [ref=e994]
+                - paragraph [ref=e999]: Text
+              - generic [ref=e1009] [cursor=pointer]:
+                - img [ref=e1013]
+                - paragraph [ref=e1018]: Text
+              - generic [ref=e1024] [cursor=pointer]:
+                - img [ref=e1027]
+                - img [ref=e1034]
+                - paragraph [ref=e1040]: Timeline Item
+              - generic [ref=e1048] [cursor=pointer]:
+                - img [ref=e1052]
+                - paragraph [ref=e1058]: Stack
+              - generic [ref=e1065] [cursor=pointer]:
+                - img [ref=e1068]
+                - img [ref=e1074]
+                - paragraph [ref=e1080]: Stack
+              - generic [ref=e1088] [cursor=pointer]:
+                - img [ref=e1091]
+                - img [ref=e1097]
+                - paragraph [ref=e1103]: Stack
+              - generic [ref=e1113] [cursor=pointer]:
+                - img [ref=e1117]
+                - paragraph [ref=e1121]: Icon
+              - generic [ref=e1128] [cursor=pointer]:
+                - img [ref=e1131]
+                - img [ref=e1138]
+                - paragraph [ref=e1144]: Stack
+              - generic [ref=e1152] [cursor=pointer]:
+                - img [ref=e1155]
+                - img [ref=e1161]
+                - paragraph [ref=e1167]: Stack
+              - generic [ref=e1176] [cursor=pointer]:
+                - img [ref=e1179]
+                - img [ref=e1185]
+                - paragraph [ref=e1191]: Stack
+              - generic [ref=e1202] [cursor=pointer]:
+                - img [ref=e1206]
+                - paragraph [ref=e1211]: Text
+              - generic [ref=e1221] [cursor=pointer]:
+                - img [ref=e1225]
+                - paragraph [ref=e1230]: Text
+              - generic [ref=e1235] [cursor=pointer]:
+                - img [ref=e1238]
+                - img [ref=e1244]
+                - paragraph [ref=e1250]: Social Proof Bento
+              - generic [ref=e1256] [cursor=pointer]:
+                - img [ref=e1259]
+                - img [ref=e1266]
+                - paragraph [ref=e1272]: Accolades
+              - generic [ref=e1279] [cursor=pointer]:
+                - img [ref=e1282]
+                - img [ref=e1289]
+                - paragraph [ref=e1295]: Accolade
+              - generic [ref=e1304] [cursor=pointer]:
+                - img [ref=e1308]
+                - paragraph [ref=e1315]: Image
+              - generic [ref=e1324] [cursor=pointer]:
+                - img [ref=e1328]
+                - paragraph [ref=e1333]: Text
+              - generic [ref=e1342] [cursor=pointer]:
+                - img [ref=e1346]
+                - paragraph [ref=e1353]: Image
+              - generic [ref=e1360] [cursor=pointer]:
+                - img [ref=e1363]
+                - img [ref=e1370]
+                - paragraph [ref=e1376]: Accolade
+              - generic [ref=e1385] [cursor=pointer]:
+                - img [ref=e1389]
+                - paragraph [ref=e1396]: Image
+              - generic [ref=e1405] [cursor=pointer]:
+                - img [ref=e1409]
+                - paragraph [ref=e1414]: Text
+              - generic [ref=e1423] [cursor=pointer]:
+                - img [ref=e1427]
+                - paragraph [ref=e1434]: Image
+              - generic [ref=e1440] [cursor=pointer]:
+                - img [ref=e1443]
+                - img [ref=e1449]
+                - paragraph [ref=e1455]: Review
+              - generic [ref=e1462] [cursor=pointer]:
+                - img [ref=e1465]
+                - img [ref=e1472]
+                - paragraph [ref=e1478]: Top
+              - generic [ref=e1486] [cursor=pointer]:
+                - img [ref=e1489]
+                - img [ref=e1495]
+                - paragraph [ref=e1501]: Left
+              - generic [ref=e1511] [cursor=pointer]:
+                - img [ref=e1515]
+                - paragraph [ref=e1520]: Text
+              - generic [ref=e1529] [cursor=pointer]:
+                - img [ref=e1532]
+                - img [ref=e1539]
+                - paragraph [ref=e1545]: Stars
+              - generic [ref=e1556] [cursor=pointer]:
+                - img [ref=e1560]
+                - paragraph [ref=e1567]: Image
+              - generic [ref=e1578] [cursor=pointer]:
+                - img [ref=e1582]
+                - paragraph [ref=e1589]: Image
+              - generic [ref=e1600] [cursor=pointer]:
+                - img [ref=e1604]
+                - paragraph [ref=e1611]: Image
+              - generic [ref=e1622] [cursor=pointer]:
+                - img [ref=e1626]
+                - paragraph [ref=e1633]: Image
+              - generic [ref=e1644] [cursor=pointer]:
+                - img [ref=e1648]
+                - paragraph [ref=e1655]: Image
+              - generic [ref=e1663] [cursor=pointer]:
+                - img [ref=e1666]
+                - img [ref=e1672]
+                - paragraph [ref=e1678]: Right
+              - generic [ref=e1688] [cursor=pointer]:
+                - img [ref=e1692]
+                - paragraph [ref=e1697]: Text
+              - generic [ref=e1707] [cursor=pointer]:
+                - img [ref=e1711]
+                - paragraph [ref=e1716]: Text
+              - generic [ref=e1724] [cursor=pointer]:
+                - img [ref=e1728]
+                - paragraph [ref=e1733]: Content
+              - generic [ref=e1734] [cursor=pointer]:
+                - generic [ref=e1738]:
+                  - img [ref=e1741]
+                  - img [ref=e1747]
+                  - paragraph [ref=e1753]: Purchase Page Footer
+                - img [ref=e1756]
+              - generic [ref=e1764] [cursor=pointer]:
+                - img [ref=e1767]
+                - img [ref=e1773]
+                - paragraph [ref=e1779]: No Trial Vert Products
+              - generic [ref=e1780] [cursor=pointer]:
+                - generic [ref=e1786]:
+                  - img [ref=e1789]
+                  - img [ref=e1796]
+                  - paragraph [ref=e1802]: First Product
+                - img [ref=e1805]
+              - generic [ref=e1815] [cursor=pointer]:
+                - img [ref=e1818]
+                - img [ref=e1824]
+                - paragraph [ref=e1830]: Left
+              - generic [ref=e1840] [cursor=pointer]:
+                - img [ref=e1844]
+                - paragraph [ref=e1849]: Label
+              - generic [ref=e1859] [cursor=pointer]:
+                - img [ref=e1863]
+                - paragraph [ref=e1868]: Caption
+              - generic [ref=e1876] [cursor=pointer]:
+                - img [ref=e1879]
+                - img [ref=e1885]
+                - paragraph [ref=e1891]: Middle
+              - generic [ref=e1901] [cursor=pointer]:
+                - img [ref=e1905]
+                - paragraph [ref=e1910]: Label
+              - generic [ref=e1918] [cursor=pointer]:
+                - img [ref=e1921]
+                - img [ref=e1927]
+                - paragraph [ref=e1933]: Callout
+              - generic [ref=e1943] [cursor=pointer]:
+                - img [ref=e1947]
+                - paragraph [ref=e1952]: Text
+              - generic [ref=e1953] [cursor=pointer]:
+                - generic [ref=e1959]:
+                  - img [ref=e1962]
+                  - img [ref=e1969]
+                  - paragraph [ref=e1975]: Secondary Selector
+                - img [ref=e1978]
+              - generic [ref=e1988] [cursor=pointer]:
+                - img [ref=e1991]
+                - img [ref=e1997]
+                - paragraph [ref=e2003]: Left
+              - generic [ref=e2013] [cursor=pointer]:
+                - img [ref=e2017]
+                - paragraph [ref=e2022]: Label
+              - generic [ref=e2030] [cursor=pointer]:
+                - img [ref=e2033]
+                - img [ref=e2039]
+                - paragraph [ref=e2045]: Middle
+              - generic [ref=e2055] [cursor=pointer]:
+                - img [ref=e2059]
+                - paragraph [ref=e2064]: Label
+              - generic [ref=e2065] [cursor=pointer]:
+                - generic [ref=e2070]:
+                  - img [ref=e2073]
+                  - img [ref=e2079]
+                  - paragraph [ref=e2085]: Trial Vertical Products
+                - img [ref=e2088]
+              - generic [ref=e2092] [cursor=pointer]:
+                - generic [ref=e2098]:
+                  - img [ref=e2101]
+                  - img [ref=e2108]
+                  - paragraph [ref=e2114]: First Product
+                - img [ref=e2117]
+              - generic [ref=e2127] [cursor=pointer]:
+                - img [ref=e2130]
+                - img [ref=e2136]
+                - paragraph [ref=e2142]: Left
+              - generic [ref=e2152] [cursor=pointer]:
+                - img [ref=e2156]
+                - paragraph [ref=e2161]: Label
+              - generic [ref=e2171] [cursor=pointer]:
+                - img [ref=e2175]
+                - paragraph [ref=e2180]: Caption
+              - generic [ref=e2188] [cursor=pointer]:
+                - img [ref=e2191]
+                - img [ref=e2197]
+                - paragraph [ref=e2203]: Middle
+              - generic [ref=e2213] [cursor=pointer]:
+                - img [ref=e2217]
+                - paragraph [ref=e2221]: Icon
+              - generic [ref=e2222] [cursor=pointer]:
+                - generic [ref=e2228]:
+                  - img [ref=e2231]
+                  - img [ref=e2238]
+                  - paragraph [ref=e2244]: Secondary Selector
+                - img [ref=e2247]
+              - generic [ref=e2257] [cursor=pointer]:
+                - img [ref=e2260]
+                - img [ref=e2266]
+                - paragraph [ref=e2272]: Left
+              - generic [ref=e2282] [cursor=pointer]:
+                - img [ref=e2286]
+                - paragraph [ref=e2291]: Label
+              - generic [ref=e2301] [cursor=pointer]:
+                - img [ref=e2305]
+                - paragraph [ref=e2310]: Caption
+              - generic [ref=e2318] [cursor=pointer]:
+                - img [ref=e2321]
+                - img [ref=e2327]
+                - paragraph [ref=e2333]: Middle
+              - generic [ref=e2334] [cursor=pointer]:
+                - generic [ref=e2343]:
+                  - img [ref=e2347]
+                  - paragraph [ref=e2351]: Icon
+                - img [ref=e2354]
+              - generic [ref=e2358] [cursor=pointer]:
+                - generic [ref=e2363]:
+                  - img [ref=e2366]
+                  - img [ref=e2373]
+                  - paragraph [ref=e2379]: Horizontal Products
+                - img [ref=e2382]
+              - generic [ref=e2386] [cursor=pointer]:
+                - generic [ref=e2392]:
+                  - img [ref=e2395]
+                  - img [ref=e2401]
+                  - paragraph [ref=e2407]: Second Product
+                - img [ref=e2410]
+              - generic [ref=e2421] [cursor=pointer]:
+                - img [ref=e2425]
+                - paragraph [ref=e2430]: Line 1
+              - generic [ref=e2439] [cursor=pointer]:
+                - img [ref=e2443]
+                - paragraph [ref=e2448]: Line 2
+              - generic [ref=e2456] [cursor=pointer]:
+                - img [ref=e2459]
+                - img [ref=e2465]
+                - paragraph [ref=e2471]: Bottom
+              - generic [ref=e2481] [cursor=pointer]:
+                - img [ref=e2485]
+                - paragraph [ref=e2491]: Badge
+              - generic [ref=e2492] [cursor=pointer]:
+                - generic [ref=e2498]:
+                  - img [ref=e2501]
+                  - img [ref=e2507]
+                  - paragraph [ref=e2513]: First Product
+                - img [ref=e2516]
+              - generic [ref=e2527] [cursor=pointer]:
+                - img [ref=e2531]
+                - paragraph [ref=e2536]: Line 1
+              - generic [ref=e2545] [cursor=pointer]:
+                - img [ref=e2549]
+                - paragraph [ref=e2554]: Line 2
+              - generic [ref=e2563] [cursor=pointer]:
+                - img [ref=e2567]
+                - paragraph [ref=e2572]: Line 3
+              - generic [ref=e2580] [cursor=pointer]:
+                - img [ref=e2583]
+                - img [ref=e2589]
+                - paragraph [ref=e2595]: Badge
+              - generic [ref=e2605] [cursor=pointer]:
+                - img [ref=e2609]
+                - paragraph [ref=e2614]: Text
+              - generic [ref=e2620] [cursor=pointer]:
+                - img [ref=e2623]
+                - img [ref=e2630]
+                - paragraph [ref=e2636]: Magic Words
+              - generic [ref=e2644] [cursor=pointer]:
+                - img [ref=e2648]
+                - paragraph [ref=e2652]: Icon
+              - generic [ref=e2660] [cursor=pointer]:
+                - img [ref=e2664]
+                - paragraph [ref=e2669]: Text
+              - generic [ref=e2670] [cursor=pointer]:
+                - generic [ref=e2675]:
+                  - img [ref=e2678]
+                  - img [ref=e2684]
+                  - paragraph [ref=e2690]: CTA Button
+                - img [ref=e2693]
+              - generic [ref=e2703] [cursor=pointer]:
+                - img [ref=e2707]
+                - paragraph [ref=e2712]: Text
+              - generic [ref=e2718] [cursor=pointer]:
+                - img [ref=e2721]
+                - img [ref=e2727]
+                - paragraph [ref=e2733]: Pricing Copy
+              - generic [ref=e2741] [cursor=pointer]:
+                - img [ref=e2745]
+                - paragraph [ref=e2750]: Text
+            - button "Add Element" [ref=e2752] [cursor=pointer]:
+              - generic [ref=e2753]:
+                - generic [ref=e2754]:
+                  - img [ref=e2755]
+                  - text: Add Element
+                - generic:
+                  - generic:
+                    - generic:
+                      - img
+      - generic [ref=e2760]:
+        - generic [ref=e2762]:
+          - button "Public Beta" [ref=e2764] [cursor=pointer]:
+            - generic [ref=e2765]: Public Beta
+          - generic [ref=e2768] [cursor=pointer]:
+            - generic [ref=e2769]:
+              - img [ref=e2770]
+              - generic [ref=e2773]: Connect Agent
+            - generic:
+              - generic:
+                - generic: 1.Make sure you have an MCP-compatible agent
+                - generic: Claude Code, Codex, Cursor, OpenCode, etc.
+              - generic:
+                - generic:
+                  - generic: 2.Install(if not already)
+                  - generic:
+                    - button "Skill"
+                    - button "MCP"
+                - generic:
+                  - generic: npx skills add superwall/skills
+                  - button:
+                    - img
+              - generic:
+                - button "End Session":
+                  - generic:
+                    - generic: End Session
+          - application [ref=e2774]:
+            - group [ref=e2777] [cursor=pointer]:
+              - generic [ref=e2778]:
+                - generic [ref=e2781]:
+                  - generic:
+                    - generic: 下午3:47
+                    - generic:
+                      - img
+                  - generic [ref=e2800]:
+                    - generic [ref=e2802]: Unlock BrickVal Pro
+                    - generic [ref=e2803]:
+                      - generic [ref=e2804]:
+                        - generic [ref=e2805]:
+                          - img [ref=e2806]
+                          - generic [ref=e2807]: LEGO set scanner
+                          - img [ref=e2808]
+                        - generic [ref=e2809]:
+                          - img [ref=e2810]
+                          - generic [ref=e2811]: Market values
+                          - img [ref=e2812]
+                      - generic [ref=e2813]:
+                        - generic [ref=e2814]:
+                          - generic [ref=e2815]:
+                            - generic [ref=e2816]: Scan values faster
+                            - generic [ref=e2817]:
+                              - img [ref=e2818]
+                              - img [ref=e2819]
+                              - img [ref=e2820]
+                              - img [ref=e2821]
+                              - img [ref=e2822]
+                          - generic [ref=e2823]:
+                            - generic [ref=e2824]: Mar 15
+                            - generic [ref=e2825]: Pieter Levels
+                        - generic [ref=e2826]: Scan a LEGO set, see estimated USD market value, and track your collection in one place.
+                    - generic [ref=e2827]:
+                      - generic [ref=e2828]:
+                        - generic [ref=e2829]:
+                          - generic [ref=e2830]:
+                            - generic [ref=e2831]: yearly
+                            - generic [ref=e2832]: Billed $39.99 / year
+                          - generic [ref=e2834]: $0.76/week
+                          - generic [ref=e2836]: 89% OFF
+                        - generic [ref=e2837]:
+                          - generic [ref=e2839]: monthly
+                          - generic [ref=e2841]: $6.99/week
+                      - generic [ref=e2842]:
+                        - img [ref=e2843]
+                        - generic [ref=e2845]: No commitment, cancel anytime
+                      - generic [ref=e2847]: Continue
+                      - generic [ref=e2849]: Just $39.99 per year
+                - generic [ref=e2852]:
+                  - generic [ref=e2853]:
+                    - button [ref=e2855]:
+                      - img [ref=e2856]
+                    - button [ref=e2858]:
+                      - img [ref=e2859]
+                  - generic [ref=e2863]:
+                    - paragraph [ref=e2864]: Has Introductory Offer
+                    - switch [ref=e2865]
+        - generic [ref=e2869]:
+          - generic [ref=e2870]:
+            - button "Preview" [ref=e2872] [cursor=pointer]
+            - button "Device" [ref=e2873] [cursor=pointer]
+            - button "Flow" [disabled] [ref=e2874]
+          - button [ref=e2876] [cursor=pointer]:
+            - img [ref=e2878]
+          - button:
+            - img [ref=e2884] [cursor=pointer]
+          - button:
+            - img [ref=e2887] [cursor=pointer]
+          - button [ref=e2889] [cursor=pointer]:
+            - img [ref=e2892]
+          - generic [ref=e2896] [cursor=pointer]:
+            - generic [ref=e2897]:
+              - paragraph [ref=e2899]: iPhone
+              - img [ref=e2900]
+            - combobox [ref=e2903]:
+              - option "iPhone SE"
+              - option "iPhone" [selected]
+              - option "iPhone XL"
+              - option "iPad"
+              - option "Desktop"
+              - option "Responsive"
+          - generic [ref=e2904]:
+            - img [ref=e2906] [cursor=pointer]
+            - img [ref=e2910] [cursor=pointer]
+          - img [ref=e2915] [cursor=pointer]
+  - region "Notifications alt+T"

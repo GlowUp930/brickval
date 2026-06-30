@@ -1,11 +1,16 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert, Image, View, Text, StyleSheet, Pressable, ScrollView, type ImageSourcePropType } from "react-native";
+import { Alert, Image, Linking, Platform, View, Text, StyleSheet, Pressable, ScrollView, type ImageSourcePropType } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { clearCollection, getCollection, getCollectionValue, type CollectionItem } from "../../lib/collection";
 import { getAuthToken } from "../../lib/api";
-import { tap, warn } from "../../lib/haptics";
-import { presentSuperwallUpgrade, restoreNativePurchases } from "../../lib/paywall";
+import { warn } from "../../lib/haptics";
+import {
+  getNativeProStatus,
+  restoreNativePurchases,
+} from "../../lib/paywall";
+import { useUpgrade } from "../../lib/useUpgrade";
+import { PrePurchaseDisclosure } from "../../components/PrePurchaseDisclosure";
 
 const ACCENT = "#62c79a";
 const LEGO_RED = "#df463f";
@@ -19,6 +24,8 @@ const PANEL = "#0b0e0d";
 const LINE = "rgba(153,231,189,0.14)";
 const DANGER = "#ff8f8f";
 const AVATAR_KEY = "brickval_account_avatar";
+const PRIVACY_URL = "https://brickvalue.live/privacy";
+const TERMS_URL = "https://brickvalue.live/terms";
 
 type AvatarKey = "classic" | "ghost" | "wolf" | "knight";
 
@@ -46,17 +53,21 @@ function getAvatarOption(avatar: AvatarKey) {
 export default function SettingsScreen() {
   const [items, setItems] = useState<CollectionItem[]>([]);
   const [avatar, setAvatar] = useState<AvatarKey>("classic");
+  const [proStatus, setProStatus] = useState<boolean | null>(null);
+  const { triggerUpgrade, openAccountForSignIn, showDisclosure, handleDisclosureContinue, handleDisclosureDismiss } = useUpgrade();
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       async function loadCollection() {
-        const [collection, savedAvatar] = await Promise.all([
+        const [collection, savedAvatar, nextProStatus] = await Promise.all([
           getCollection(),
           SecureStore.getItemAsync(AVATAR_KEY),
+          getNativeProStatus(),
         ]);
         if (!active) return;
         setItems(collection);
+        setProStatus(nextProStatus);
         if (isAvatarKey(savedAvatar)) {
           setAvatar(savedAvatar);
         }
@@ -73,41 +84,38 @@ export default function SettingsScreen() {
   const minifigureCount = items.reduce((total, item) => total + (item.item_type === "minifig" ? item.quantity ?? 1 : 0), 0);
   const partCount = items.reduce((total, item) => total + (item.item_type === "part" ? item.quantity ?? 1 : 0), 0);
   const selectedAvatar = getAvatarOption(avatar);
+  const storeName = Platform.OS === "ios" ? "App Store" : "Google Play";
 
   const openAccount = () => {
     router.push("/account");
   };
 
-  const openUpgrade = async () => {
-    const token = await getAuthToken();
-    if (!token) {
-      openAccount();
-      return;
-    }
-
-    const shown = await presentSuperwallUpgrade();
-    if (!shown) {
-      Alert.alert("Upgrade unavailable", "Use an EAS Android build with the native paywall enabled.");
+  const openExternalUrl = async (url: string) => {
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert("Could not open link", "Try again in a moment.");
     }
   };
 
   const handleRestorePurchases = async () => {
     const token = await getAuthToken();
     if (!token) {
-      openAccount();
+      openAccountForSignIn();
       return;
     }
 
     const restored = await restoreNativePurchases();
+    setProStatus(restored ? true : await getNativeProStatus());
     if (restored === null) {
-      Alert.alert("Restore unavailable", "Use an EAS Android build with RevenueCat enabled.");
+      Alert.alert("Restore unavailable", "Use an EAS store build with RevenueCat enabled.");
       return;
     }
 
     Alert.alert(
       restored ? "BrickVal Pro restored" : "No purchase found",
       restored
-        ? "Your Google Play purchase is active on this device."
+        ? `Your ${storeName} purchase is active on this device.`
         : "We could not find an active BrickVal Pro purchase for this account."
     );
   };
@@ -125,11 +133,6 @@ export default function SettingsScreen() {
         },
       },
     ]);
-  };
-  const handleAvatarSelect = async (nextAvatar: AvatarKey) => {
-    setAvatar(nextAvatar);
-    tap();
-    await SecureStore.setItemAsync(AVATAR_KEY, nextAvatar);
   };
 
   return (
@@ -150,11 +153,20 @@ export default function SettingsScreen() {
           <View style={styles.passportTop}>
             <View style={styles.avatarBlock}>
               <AvatarImage source={selectedAvatar.source} size={62} />
+              <View style={[styles.planBadge, proStatus && styles.planBadgePro]}>
+                <Text style={[styles.planBadgeText, proStatus && styles.planBadgeTextPro]}>
+                  {proStatus ? "Pro" : "Free plan"}
+                </Text>
+              </View>
             </View>
             <View style={styles.passportCopy}>
               <Text style={styles.passportLabel}>Collector profile</Text>
               <Text style={styles.passportTitle}>BrickVal account</Text>
-              <Text style={styles.passportMeta}>Native Google sign-in, Pro access, and account actions now stay inside the app.</Text>
+              <Text style={styles.passportMeta}>
+                {proStatus
+                  ? "Pro unlocks unlimited scans and collection space."
+                  : "Free plan access is active on this device."}
+              </Text>
             </View>
           </View>
           <Pressable
@@ -165,26 +177,6 @@ export default function SettingsScreen() {
           >
             <Text style={styles.primaryActionText}>Open account</Text>
           </Pressable>
-          <View style={styles.avatarPicker}>
-            <Text style={styles.avatarPickerLabel}>Choose profile head</Text>
-            <View style={styles.avatarOptions}>
-              {AVATARS.map((option) => (
-                <Pressable
-                  key={option.key}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: avatar === option.key }}
-                  accessibilityLabel={`${option.label} avatar. ${option.meta}`}
-                  style={[styles.avatarOption, avatar === option.key && styles.avatarOptionActive]}
-                  onPress={() => handleAvatarSelect(option.key)}
-                >
-                  <AvatarImage source={option.source} size={38} />
-                  <Text style={[styles.avatarOptionText, avatar === option.key && styles.avatarOptionTextActive]}>
-                    {option.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
         </View>
 
         <View style={styles.summaryGrid}>
@@ -200,26 +192,51 @@ export default function SettingsScreen() {
 
         <View style={styles.group}>
           <Text style={styles.groupTitle}>Access</Text>
-          <SettingsRow
-            code="PRO"
-            title="BrickVal Pro"
-            meta="Native Android upgrade flow"
-            accent={ACCENT}
-            onPress={() => void openUpgrade()}
-          />
+          {proStatus ? (
+            <View style={[styles.row, { borderColor: "rgba(98,199,154,0.42)" }]}>
+              <View style={[styles.rowGlyph, { borderColor: ACCENT, backgroundColor: "rgba(98,199,154,0.12)" }]}>
+                <Text style={[styles.rowGlyphText, { color: ACCENT }]}>PRO</Text>
+              </View>
+              <View style={styles.rowCopy}>
+                <Text style={[styles.rowTitle, { color: ACCENT }]}>BrickVal Pro active</Text>
+                <Text style={styles.rowMeta}>Unlimited scans unlocked on this device</Text>
+              </View>
+              <Text style={[styles.rowArrow, { color: ACCENT }]}>✓</Text>
+            </View>
+          ) : (
+            <SettingsRow
+              code="PRO"
+              title="BrickVal Pro"
+              meta={`Native ${storeName} upgrade flow`}
+              accent={ACCENT}
+              onPress={() => void triggerUpgrade()}
+            />
+          )}
           <SettingsRow
             code="RST"
             title="Restore purchases"
-            meta="Re-check Google Play access for this account"
+            meta={`Re-check ${storeName} access for this account`}
             accent={LEGO_BLUE}
             onPress={() => void handleRestorePurchases()}
           />
+
+        </View>
+
+        <View style={styles.group}>
+          <Text style={styles.groupTitle}>Legal</Text>
           <SettingsRow
-            code="ACT"
-            title="Native account"
-            meta="Google sign-in, sign out, and delete account"
-            accent={LEGO_YELLOW}
-            onPress={openAccount}
+            code="PRV"
+            title="Privacy policy"
+            meta="How BrickVal handles scans, account data, and purchases"
+            accent={LEGO_BLUE}
+            onPress={() => void openExternalUrl(PRIVACY_URL)}
+          />
+          <SettingsRow
+            code="TOS"
+            title="Terms and subscription terms"
+            meta="App terms, Apple purchase terms, and LEGO disclaimer"
+            accent={ACCENT}
+            onPress={() => void openExternalUrl(TERMS_URL)}
           />
         </View>
 
@@ -251,6 +268,11 @@ export default function SettingsScreen() {
           />
         </View>
       </ScrollView>
+      <PrePurchaseDisclosure
+        visible={showDisclosure}
+        onContinue={handleDisclosureContinue}
+        onDismiss={handleDisclosureDismiss}
+      />
     </View>
   );
 }
@@ -335,7 +357,27 @@ const styles = StyleSheet.create({
     borderColor: "rgba(98,199,154,0.35)",
     alignItems: "center",
     justifyContent: "center",
+    overflow: "visible",
   },
+  planBadge: {
+    position: "absolute",
+    top: -8,
+    right: -8,
+    minHeight: 22,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: "rgba(247,244,234,0.18)",
+    backgroundColor: "#151914",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  planBadgePro: {
+    borderColor: "rgba(98,199,154,0.58)",
+    backgroundColor: ACCENT,
+  },
+  planBadgeText: { color: INK, fontSize: 9, fontWeight: "900" },
+  planBadgeTextPro: { color: "#07100c" },
   passportCopy: { flex: 1, gap: 4, minWidth: 0 },
   passportLabel: { color: SOFT, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
   passportTitle: { color: INK, fontSize: 21, fontWeight: "900", letterSpacing: -0.4 },
@@ -348,31 +390,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   primaryActionText: { color: "#07100c", fontSize: 14, fontWeight: "900" },
-  avatarPicker: {
-    borderTopWidth: 1,
-    borderTopColor: LINE,
-    paddingTop: 14,
-    gap: 10,
-  },
-  avatarPickerLabel: { color: SOFT, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
-  avatarOptions: { flexDirection: "row", gap: 8 },
-  avatarOption: {
-    flex: 1,
-    minHeight: 76,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(247,244,234,0.09)",
-    backgroundColor: "rgba(247,244,234,0.035)",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-  },
-  avatarOptionActive: {
-    borderColor: "rgba(98,199,154,0.72)",
-    backgroundColor: "rgba(98,199,154,0.1)",
-  },
-  avatarOptionText: { color: SOFT, fontSize: 9, fontWeight: "900" },
-  avatarOptionTextActive: { color: INK },
   avatarImageFrame: {
     overflow: "hidden",
     borderWidth: 1,

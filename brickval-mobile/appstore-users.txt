@@ -1,0 +1,137 @@
+- generic [active] [ref=e1]:
+  - banner "App Store Connect" [ref=e3]:
+    - generic [ref=e4]:
+      - heading "App Store Connect" [level=1] [ref=e20]:
+        - link "App Store Connect" [ref=e21] [cursor=pointer]:
+          - /url: /
+      - navigation "全球" [ref=e7]:
+        - list [ref=e23]:
+          - listitem [ref=e24]:
+            - link "App" [ref=e25] [cursor=pointer]:
+              - /url: /apps
+          - listitem [ref=e26]:
+            - link "趨勢" [ref=e27] [cursor=pointer]:
+              - /url: /trends
+          - listitem [ref=e28]:
+            - link "報告" [ref=e29] [cursor=pointer]:
+              - /url: /itc/payments_and_financial_reports
+          - listitem [ref=e30]:
+            - link "商務" [ref=e31] [cursor=pointer]:
+              - /url: /business
+          - listitem [ref=e32]:
+            - link "使用者與存取權限" [ref=e33] [cursor=pointer]:
+              - /url: /access/users
+      - button "Ho lam Chan HO LAM CHAN Account name menu" [ref=e35] [cursor=pointer]:
+        - generic:
+          - generic: Ho lam Chan
+          - generic: HO LAM CHAN
+          - img [ref=e36]
+  - generic [ref=e41]:
+    - generic [ref=e47] [cursor=pointer]: 使用者與存取權限
+    - navigation "使用者與存取權限" [ref=e49]:
+      - list [ref=e50]:
+        - listitem [ref=e51]:
+          - link "人員" [ref=e52] [cursor=pointer]:
+            - /url: /access/users
+        - listitem [ref=e53]:
+          - link "沙箱" [ref=e54] [cursor=pointer]:
+            - /url: /access/users/sandbox
+        - listitem [ref=e55]:
+          - link "整合" [ref=e56] [cursor=pointer]:
+            - /url: /access/integrations
+        - listitem [ref=e57]:
+          - link "Xcode Cloud" [ref=e58] [cursor=pointer]:
+            - /url: /teams/2e454f4c-2b39-4bb5-a5ac-abb47f8405c5/access/ci
+  - main [ref=e62]:
+    - generic [ref=e65]:
+      - navigation [ref=e67]:
+        - list [ref=e68]:
+          - listitem [ref=e69]:
+            - heading "使用者" [level=2] [ref=e71]
+            - list [ref=e72]:
+              - listitem [ref=e73]:
+                - button "全部" [ref=e74] [cursor=pointer]:
+                  - generic [ref=e75]: 全部
+              - listitem [ref=e76]:
+                - button "帳號持有人" [ref=e77] [cursor=pointer]:
+                  - generic [ref=e78]: 帳號持有人
+              - listitem [ref=e79]:
+                - button "管理" [ref=e80] [cursor=pointer]:
+                  - generic [ref=e81]: 管理
+              - listitem [ref=e82]:
+                - button "財務" [ref=e83] [cursor=pointer]:
+                  - generic [ref=e84]: 財務
+              - listitem [ref=e85]:
+                - button "存取報告" [ref=e86] [cursor=pointer]:
+                  - generic [ref=e87]: 存取報告
+              - listitem [ref=e88]:
+                - button "銷售" [ref=e89] [cursor=pointer]:
+                  - generic [ref=e90]: 銷售
+              - listitem [ref=e91]:
+                - button "開發者" [ref=e92] [cursor=pointer]:
+                  - generic [ref=e93]: 開發者
+              - listitem [ref=e94]:
+                - button "App 管理" [ref=e95] [cursor=pointer]:
+                  - generic [ref=e96]: App 管理
+              - listitem [ref=e97]:
+                - button "客戶支援" [ref=e98] [cursor=pointer]:
+                  - generic [ref=e99]: 客戶支援
+              - listitem [ref=e100]:
+                - button "行銷" [ref=e101] [cursor=pointer]:
+                  - generic [ref=e102]: 行銷
+      - generic [ref=e104]:
+        - generic [ref=e106]:
+          - img "新使用者" [ref=e108]
+          - generic [ref=e110]:
+            - button "搜尋" [ref=e111] [cursor=pointer]:
+              - img [ref=e112]
+            - button "所有 App" [ref=e116] [cursor=pointer]:
+              - text: 所有 App
+              - img [ref=e117]
+            - button "編輯" [ref=e120] [cursor=pointer]
+        - table [ref=e125]:
+          - rowgroup [ref=e126]:
+            - row "Apple 帳號 姓名 角色 App" [ref=e127]:
+              - columnheader "Apple 帳號" [ref=e128] [cursor=pointer]:
+                - generic [ref=e130]: Apple 帳號
+              - columnheader "姓名" [ref=e131] [cursor=pointer]:
+                - paragraph [ref=e134]: 姓名
+                - img [ref=e135]
+              - columnheader "角色" [ref=e137]:
+                - paragraph [ref=e140]: 角色
+              - columnheader "App" [ref=e141]:
+                - paragraph [ref=e144]: App
+          - rowgroup [ref=e145]:
+            - row "holamc930@icloud.com ChanHo lam 帳號持有人、管理 所有 App" [ref=e146]:
+              - cell "holamc930@icloud.com" [ref=e147]:
+                - link "holamc930@icloud.com" [ref=e149] [cursor=pointer]:
+                  - /url: /access/users/cf5d4a8d-0019-4215-8573-0dc9ad5b97d6/settings
+              - cell "ChanHo lam" [ref=e150]:
+                - paragraph [ref=e153]:
+                  - generic [ref=e154]: ChanHo lam
+              - cell "帳號持有人、管理" [ref=e155]:
+                - generic [ref=e157]:
+                  - paragraph [ref=e158]: 帳號持有人
+                  - paragraph [ref=e159]: 、管理
+              - cell "所有 App" [ref=e160]:
+                - button "所有 App" [ref=e163] [cursor=pointer]:
+                  - paragraph [ref=e165]: 所有 App
+  - contentinfo [ref=e10]:
+    - generic [ref=e11]:
+      - list [ref=e166]:
+        - listitem [ref=e167]:
+          - link "App Store Connect" [ref=e168] [cursor=pointer]:
+            - /url: /apps
+      - list [ref=e12]:
+        - listitem [ref=e13]: Copyright © 2026 Apple Inc. 保留一切權利。 |
+        - listitem [ref=e14]:
+          - link "服務條款" [ref=e15] [cursor=pointer]:
+            - /url: /WebObjects/iTunesConnect.woa/wa/termsOfService
+          - text: "|"
+        - listitem [ref=e16]:
+          - link "隱私權政策" [ref=e17] [cursor=pointer]:
+            - /url: https://www.apple.com/legal/privacy
+          - text: "|"
+        - listitem [ref=e18]:
+          - link "聯絡我們" [ref=e19] [cursor=pointer]:
+            - /url: /contact-us

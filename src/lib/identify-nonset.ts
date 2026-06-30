@@ -39,6 +39,8 @@ export type BrickognizeCropRect = {
   height: number;
 };
 
+const BULK_SCAN_CROP_BUDGET = 8;
+
 export type BrickognizeSearchAnalysis = {
   detections: NormalizedDetections;
   topScore: number | null;
@@ -95,7 +97,7 @@ export function normalizeBrickognizeDetections(items: BrickognizeRawItem[]): Nor
   }
 
   const sorted = [...deduped.values()].sort((a, b) => b.score - a.score);
-  const minifigs = sorted.filter((item) => item.item_type === "minifig").slice(0, 4);
+  const minifigs = sorted.filter((item) => item.item_type === "minifig").slice(0, 12);
   const parts = sorted.filter((item) => item.item_type === "part").slice(0, 4);
 
   return {
@@ -308,4 +310,55 @@ export function buildBrickognizeRecoveryCrops(
     buildHalfCrop(normalizedWidth, normalizedHeight, primarySplit),
     buildComplementaryCrop(normalizedWidth, normalizedHeight, focus, primarySplit),
   ];
+}
+
+function buildOverlappingTileCrops(imageWidth: number, imageHeight: number): BrickognizeCropRect[] {
+  const tileWidth = Math.max(1, Math.ceil(imageWidth * 0.5));
+  const tileHeight = Math.max(1, Math.ceil(imageHeight * 0.5));
+  const leftPositions = [0, Math.max(0, Math.floor(imageWidth * 0.25)), Math.max(0, imageWidth - tileWidth)];
+  const topPositions = [0, Math.max(0, Math.floor(imageHeight * 0.25)), Math.max(0, imageHeight - tileHeight)];
+  const crops: BrickognizeCropRect[] = [];
+
+  for (const top of topPositions) {
+    for (const left of leftPositions) {
+      crops.push({
+        left,
+        top,
+        width: Math.min(tileWidth, imageWidth - left),
+        height: Math.min(tileHeight, imageHeight - top),
+      });
+    }
+  }
+
+  return crops;
+}
+
+function dedupeCrops(crops: BrickognizeCropRect[]): BrickognizeCropRect[] {
+  const seen = new Set<string>();
+  const deduped: BrickognizeCropRect[] = [];
+
+  for (const crop of crops) {
+    const key = `${crop.left}:${crop.top}:${crop.width}:${crop.height}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(crop);
+  }
+
+  return deduped;
+}
+
+export function buildBrickognizeBulkScanCrops(
+  response: BrickognizeSearchResponse,
+  imageWidth: number,
+  imageHeight: number
+): BrickognizeCropRect[] {
+  const analysis = analyzeBrickognizeSearchResponse(response);
+  if (analysis.detections.minifigs.length >= 12) return [];
+
+  const normalizedWidth = Math.max(1, Math.round(imageWidth));
+  const normalizedHeight = Math.max(1, Math.round(imageHeight));
+  const recoveryCrops = buildBrickognizeRecoveryCrops(response, normalizedWidth, normalizedHeight);
+  const tiledCrops = buildOverlappingTileCrops(normalizedWidth, normalizedHeight);
+
+  return dedupeCrops([...recoveryCrops, ...tiledCrops]).slice(0, BULK_SCAN_CROP_BUDGET);
 }

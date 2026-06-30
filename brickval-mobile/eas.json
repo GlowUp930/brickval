@@ -12,17 +12,30 @@
       "android": {
         "buildType": "apk"
       },
+      "ios": {
+        "simulator": false
+      },
       "distribution": "internal"
     },
     "production": {
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
+      },
+      "ios": {
+        "resourceClass": "m-medium"
+      },
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
+        "SENTRY_ALLOW_FAILURE": "true"
       }
     }
   },
   "submit": {
     "production": {
+      "ios": {
+        "ascAppId": "6771715475"
+      },
       "android": {
         "serviceAccountKeyPath": "/Users/holamchan/.config/brickval/play-service-account.json",
         "track": "internal"

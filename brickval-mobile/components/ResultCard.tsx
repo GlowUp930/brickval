@@ -11,8 +11,9 @@ import {
   Easing,
   useWindowDimensions,
 } from "react-native";
-import { LookupDetailResult, getConditionMarketValueUsd } from "../lib/api";
+import { LookupDetailResult } from "../lib/api";
 import type { CollectionCondition } from "../lib/collection";
+import { buildMarketSnapshot } from "../lib/market-snapshot";
 import { QuestionMarkPlaceholder } from "./QuestionMarkPlaceholder";
 
 /**
@@ -115,7 +116,7 @@ export function ResultCard({
   useEffect(() => {
     if (!result) return;
 
-    const target = getConditionMarketValueUsd(result, condition);
+    const target = buildMarketSnapshot(result, condition).price_usd;
     if (target === null || target === undefined) {
       price.stopAnimation();
       setDisplayPrice("Unavailable");
@@ -161,14 +162,38 @@ export function ResultCard({
   const itemLabel = result.item_type === "part" ? "Part" : result.item_type === "minifig" ? "Minifig" : "Set";
   const gain = pricing.gain_pct;
   const partColor = result.item_type === "part" ? result.part_info.color_name ?? "Color required" : null;
-  const selectedUnitValue = getConditionMarketValueUsd(result, condition);
-  const sourceText =
-    pricing.data_source === "sold"
-      ? `Sold data${pricing.bricklink_new_qty ? ` · ${pricing.bricklink_new_qty} BrickLink sales` : ""}`
-      : pricing.data_source === "listing"
-        ? "Bricklink"
-        : "Market source unavailable";
-  const confidenceText = pricing.data_source === "sold" ? "Higher confidence" : "Use as a guide";
+  const snapshot = buildMarketSnapshot(result, condition);
+  const selectedUnitValue = snapshot.price_usd;
+  const confidenceText =
+    snapshot.confidence === "high"
+      ? "High confidence"
+      : snapshot.confidence === "limited"
+        ? "Limited data"
+        : snapshot.confidence === "guide"
+          ? "Guide only"
+          : "Unavailable";
+  const confidenceDetail =
+    snapshot.confidence === "high"
+      ? "Enough recent sold comps"
+      : snapshot.confidence === "limited"
+        ? "Thin sold history"
+        : snapshot.confidence === "guide"
+          ? "Listing price, not sold"
+          : "No market price";
+  const confidencePillStyle =
+    snapshot.confidence === "high"
+      ? styles.confidencePillHigh
+      : snapshot.confidence === "limited"
+        ? styles.confidencePillLimited
+        : snapshot.confidence === "guide"
+          ? styles.confidencePillGuide
+          : styles.confidencePillUnavailable;
+  const snapshotTypeText =
+    snapshot.source_type === "sold" ? "Sold comps" : snapshot.source_type === "listing" ? "Listings" : "No comps";
+  const snapshotCountText =
+    snapshot.count === null
+      ? "Count unknown"
+      : `${snapshot.count.toLocaleString()} ${snapshot.source_type === "listing" ? "listings" : "sales"}`;
   const deltaText =
     gain !== null && gain !== undefined
       ? `${gain >= 0 ? "+" : ""}${gain.toFixed(0)}%`
@@ -225,12 +250,27 @@ export function ResultCard({
             <View style={styles.pricePanel}>
               <View style={styles.priceHeader}>
                 <Text style={styles.priceLabel}>Market price</Text>
-                <View style={styles.confidencePill}>
+                <View style={[styles.confidencePill, confidencePillStyle]}>
                   <Text style={styles.confidenceText}>{confidenceText}</Text>
                 </View>
               </View>
               <Text style={styles.price}>{displayPrice}</Text>
               <Text style={styles.rrp}>{rrpText}</Text>
+
+              <View style={styles.snapshotStrip}>
+                <View style={styles.snapshotCell}>
+                  <Text style={styles.snapshotLabel}>Source</Text>
+                  <Text style={styles.snapshotValue} numberOfLines={1}>{snapshot.source_name}</Text>
+                </View>
+                <View style={[styles.snapshotCell, styles.snapshotCellDivider]}>
+                  <Text style={styles.snapshotLabel}>Basis</Text>
+                  <Text style={styles.snapshotValue} numberOfLines={1}>{snapshotTypeText}</Text>
+                </View>
+                <View style={styles.snapshotCell}>
+                  <Text style={styles.snapshotLabel}>Count</Text>
+                  <Text style={styles.snapshotValue} numberOfLines={1}>{snapshotCountText}</Text>
+                </View>
+              </View>
             </View>
 
             <View style={styles.heroRow}>
@@ -256,8 +296,8 @@ export function ResultCard({
 
             <View style={styles.signalGrid}>
               <View style={[styles.signalItem, styles.signalDivider]}>
-                <Text style={styles.signalLabel}>Source</Text>
-                <Text style={styles.signalValue} numberOfLines={2}>{sourceText}</Text>
+                <Text style={styles.signalLabel}>Signal</Text>
+                <Text style={styles.signalValue} numberOfLines={2}>{confidenceDetail}</Text>
               </View>
               <View style={styles.signalItem}>
                 <Text style={styles.signalLabel}>{result.item_type === "part" ? "Color" : "Retail comparison"}</Text>
@@ -419,6 +459,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(242,201,76,0.06)",
     padding: 16,
     alignItems: "flex-start",
+    gap: 8,
   },
   priceHeader: {
     width: "100%",
@@ -451,7 +492,48 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: "rgba(21,21,20,0.54)",
   },
+  confidencePillHigh: {
+    borderColor: "rgba(76,217,120,0.45)",
+    backgroundColor: "rgba(76,217,120,0.1)",
+  },
+  confidencePillLimited: {
+    borderColor: "rgba(242,201,76,0.45)",
+    backgroundColor: "rgba(242,201,76,0.1)",
+  },
+  confidencePillGuide: {
+    borderColor: "rgba(247,244,234,0.22)",
+    backgroundColor: "rgba(247,244,234,0.06)",
+  },
+  confidencePillUnavailable: {
+    borderColor: "rgba(255,143,143,0.42)",
+    backgroundColor: "rgba(255,143,143,0.08)",
+  },
   confidenceText: { color: ACCENT, fontSize: 11, fontWeight: "800", textTransform: "uppercase" },
+  snapshotStrip: {
+    width: "100%",
+    minHeight: 58,
+    borderWidth: 1,
+    borderColor: "rgba(247,244,234,0.12)",
+    borderRadius: 8,
+    flexDirection: "row",
+    overflow: "hidden",
+    backgroundColor: "rgba(21,21,20,0.36)",
+  },
+  snapshotCell: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: "center",
+    gap: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
+  snapshotCellDivider: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: "rgba(247,244,234,0.1)",
+  },
+  snapshotLabel: { color: MUTED, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
+  snapshotValue: { color: INK, fontSize: 12, lineHeight: 16, fontWeight: "900" },
   signalGrid: {
     borderWidth: 1,
     borderColor: LINE,

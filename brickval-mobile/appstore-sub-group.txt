@@ -1,0 +1,184 @@
+- generic [active] [ref=e1]:
+  - banner "App Store Connect" [ref=e3]:
+    - generic [ref=e4]:
+      - heading "App Store Connect" [level=1] [ref=e6]:
+        - link "App Store Connect" [ref=e7] [cursor=pointer]:
+          - /url: /
+      - navigation "全球" [ref=e8]:
+        - list [ref=e10]:
+          - listitem [ref=e11]:
+            - link "App" [ref=e12] [cursor=pointer]:
+              - /url: /apps
+          - listitem [ref=e13]:
+            - link "趨勢" [ref=e14] [cursor=pointer]:
+              - /url: /trends
+          - listitem [ref=e15]:
+            - link "報告" [ref=e16] [cursor=pointer]:
+              - /url: /itc/payments_and_financial_reports
+          - listitem [ref=e17]:
+            - link "商務" [ref=e18] [cursor=pointer]:
+              - /url: /business
+          - listitem [ref=e19]:
+            - link "使用者與存取權限" [ref=e20] [cursor=pointer]:
+              - /url: /access/users
+      - button "Ho lam Chan HO LAM CHAN Account name menu" [ref=e22] [cursor=pointer]:
+        - generic:
+          - generic: Ho lam Chan
+          - generic: HO LAM CHAN
+          - img [ref=e23]
+  - generic [ref=e28]:
+    - button "App 選單，已選取BrickValue" [ref=e33] [cursor=pointer]:
+      - generic [ref=e34]:
+        - generic "BrickValue" [ref=e35]:
+          - img "BrickValue" [ref=e36]
+        - generic [ref=e37]: BrickValue
+      - img [ref=e39]
+    - navigation "App" [ref=e42]:
+      - list [ref=e43]:
+        - listitem [ref=e44]:
+          - link "發佈" [ref=e45] [cursor=pointer]:
+            - /url: /apps/6771715475/distribution
+        - listitem [ref=e46]:
+          - link "分析" [ref=e47] [cursor=pointer]:
+            - /url: /apps/6771715475/analytics
+        - listitem [ref=e48]:
+          - link "TestFlight" [ref=e49] [cursor=pointer]:
+            - /url: /teams/2e454f4c-2b39-4bb5-a5ac-abb47f8405c5/apps/6771715475/testflight
+        - listitem [ref=e50]:
+          - link "Xcode Cloud" [ref=e51] [cursor=pointer]:
+            - /url: /teams/2e454f4c-2b39-4bb5-a5ac-abb47f8405c5/apps/6771715475/ci
+  - main [ref=e56]:
+    - generic [ref=e652]:
+      - generic [ref=e656]:
+        - link "訂閱" [ref=e660] [cursor=pointer]:
+          - /url: /apps/6771715475/distribution/subscriptions
+          - generic [ref=e661]:
+            - img [ref=e662]
+            - text: 訂閱
+        - heading "BrickVal Pro" [level=2] [ref=e665]:
+          - heading "BrickVal Pro" [level=2] [ref=e666]
+      - generic [ref=e667]:
+        - paragraph [ref=e668]:
+          - generic [ref=e669]:
+            - text: 你必須先建立訂閱群組，才能建立訂閱項目。所有訂閱項目都必須是群組的一部分。使用者一次只能訂閱群組中的一個訂閱項目，但可以更改為同一群組中的另一個訂閱項目。若訂閱者這麼做，你仍會在第二年收到 85％ 的收益 （稅後金額，若適用）。
+            - link "進一步瞭解" [ref=e670] [cursor=pointer]:
+              - /url: https://developer.apple.com/help/app-store-connect/manage-subscriptions/offer-auto-renewable-subscriptions
+        - generic [ref=e671]:
+          - img [ref=e672]
+          - paragraph [ref=e674]:
+            - generic [ref=e675]:
+              - text: 首個訂閱項目必須以新的 App 版本提交。請先建立訂閱項目，然後從版本頁面的「App 內購買項目和訂閱項目」區段中選取該項目，再將版本提交至「App 審查」。
+              - text: 在上傳二進位檔並提交首個訂閱項目供審查後，你即可從「訂閱」區段中繼續提交其他訂閱項目。
+              - link "進一步瞭解" [ref=e676] [cursor=pointer]:
+                - /url: https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-for-review
+        - generic [ref=e677]:
+          - generic [ref=e678]:
+            - generic [ref=e679]:
+              - generic [ref=e680]:
+                - heading "訂閱項目" [level=3] [ref=e681]
+                - button "建立訂閱項目" [ref=e682] [cursor=pointer]:
+                  - img [ref=e683]
+              - paragraph [ref=e685]:
+                - generic [ref=e686]:
+                  - text: 請從服務等級最高的選項開始，依照遞減順序排列訂閱項目。可以為各個等級新增多個訂閱項目。此順序將決定訂閱項目的升級和降級選項。
+                  - link "進一步瞭解訂閱項目的升級和降級選項" [ref=e687] [cursor=pointer]:
+                    - /url: https://developer.apple.com/go/?id=subscriptions-overview
+            - button "編輯等級" [ref=e690] [cursor=pointer]
+          - generic [ref=e694]:
+            - generic:
+              - generic:
+                - grid:
+                  - row "等級 參照名稱 產品 ID 期限 狀態" [ref=e695]:
+                    - columnheader "等級" [ref=e696]
+                    - columnheader "參照名稱" [ref=e697]
+                    - columnheader "產品 ID" [ref=e698]
+                    - columnheader "期限" [ref=e699]
+                    - columnheader "狀態" [ref=e700]
+                  - rowgroup "grid" [ref=e701]:
+                    - rowgroup [ref=e702]:
+                      - row "2 BrickVal Pro Monthly com.brickval.app.pro.monthly 1 個月 正在等待審查" [ref=e703]:
+                        - gridcell "2" [ref=e704]:
+                          - generic [ref=e706]: "2"
+                        - gridcell "BrickVal Pro Monthly" [ref=e707]:
+                          - link "BrickVal Pro Monthly" [ref=e710] [cursor=pointer]:
+                            - /url: /apps/6771715475/distribution/subscriptions/6775649521
+                        - gridcell "com.brickval.app.pro.monthly" [ref=e711]:
+                          - generic [ref=e713]: com.brickval.app.pro.monthly
+                        - gridcell "1 個月" [ref=e714]:
+                          - generic [ref=e716]: 1 個月
+                        - gridcell "正在等待審查" [ref=e717]:
+                          - generic [ref=e719]:
+                            - img [ref=e720]
+                            - text: 正在等待審查
+                      - row "3 BrickVal Pro Yearly com.brickval.app.pro.yearly 1 年 正在等待審查" [ref=e722]:
+                        - gridcell "3" [ref=e723]:
+                          - generic [ref=e725]: "3"
+                        - gridcell "BrickVal Pro Yearly" [ref=e726]:
+                          - link "BrickVal Pro Yearly" [ref=e729] [cursor=pointer]:
+                            - /url: /apps/6771715475/distribution/subscriptions/6775651631
+                        - gridcell "com.brickval.app.pro.yearly" [ref=e730]:
+                          - generic [ref=e732]: com.brickval.app.pro.yearly
+                        - gridcell "1 年" [ref=e733]:
+                          - generic [ref=e735]: 1 年
+                        - gridcell "正在等待審查" [ref=e736]:
+                          - generic [ref=e738]:
+                            - img [ref=e739]
+                            - text: 正在等待審查
+        - generic [ref=e741]:
+          - generic [ref=e744]:
+            - heading "本地化版本" [level=3] [ref=e745]
+            - button [ref=e746] [cursor=pointer]:
+              - img [ref=e747]
+          - paragraph [ref=e750]:
+            - generic [ref=e751]:
+              - text: 可以在各個本地化版本中使用不同的訂閱群組顯示名稱和 App 名稱顯示選項。App 使用者在裝置上管理訂閱時就會看到這些名稱。
+              - link "進一步瞭解" [ref=e752] [cursor=pointer]:
+                - /url: https://developer.apple.com/help/app-store-connect/manage-subscriptions/offer-auto-renewable-subscriptions
+          - generic [ref=e756]:
+            - generic:
+              - generic:
+                - grid:
+                  - row "本地化版本 訂閱群組顯示名稱 App 名稱 狀態" [ref=e757]:
+                    - columnheader "本地化版本" [ref=e758]
+                    - columnheader "訂閱群組顯示名稱" [ref=e759]
+                    - columnheader "App 名稱" [ref=e760]
+                    - columnheader "狀態" [ref=e761]:
+                      - generic [ref=e762]: 狀態
+                    - columnheader
+                  - rowgroup "grid" [ref=e763]:
+                    - rowgroup [ref=e764]:
+                      - row "英文（美國） BrickValue Pro BrickValue 正在等待審查" [ref=e765]:
+                        - gridcell "英文（美國）" [ref=e766]:
+                          - generic [ref=e768]: 英文（美國）
+                        - gridcell "BrickValue Pro" [ref=e769]:
+                          - generic [ref=e771]: BrickValue Pro
+                        - gridcell "BrickValue" [ref=e772]:
+                          - generic [ref=e774]: BrickValue
+                        - gridcell "正在等待審查" [ref=e775]:
+                          - generic [ref=e777]:
+                            - img [ref=e778]
+                            - text: 正在等待審查
+                        - gridcell [ref=e780]
+        - heading "訂閱群組 ID" [level=6] [ref=e782]
+        - paragraph [ref=e783]: "22104557"
+        - paragraph [ref=e784]:
+          - button "編輯訂閱群組" [ref=e785] [cursor=pointer]
+  - contentinfo [ref=e538]:
+    - generic [ref=e539]:
+      - list [ref=e540]:
+        - listitem [ref=e541]:
+          - link "App Store Connect" [ref=e542] [cursor=pointer]:
+            - /url: /apps
+      - list [ref=e543]:
+        - listitem [ref=e544]: Copyright © 2026 Apple Inc. 保留一切權利。 |
+        - listitem [ref=e545]:
+          - link "服務條款" [ref=e546] [cursor=pointer]:
+            - /url: /WebObjects/iTunesConnect.woa/wa/termsOfService
+          - text: "|"
+        - listitem [ref=e547]:
+          - link "隱私權政策" [ref=e548] [cursor=pointer]:
+            - /url: https://www.apple.com/legal/privacy
+          - text: "|"
+        - listitem [ref=e549]:
+          - link "聯絡我們" [ref=e550] [cursor=pointer]:
+            - /url: /contact-us

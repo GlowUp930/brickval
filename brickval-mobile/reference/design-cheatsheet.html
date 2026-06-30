@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UI Design Cheat Sheet for Vibe Coding</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --text: #11181c;
+    --text-secondary: #687076;
+    --border: #e5e7eb;
+    --primary: #2563eb;
+    --accent: #f59e0b;
+    --radius: 10px;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.5;
+    padding: 32px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  @media print {
+    body { padding: 0; font-size: 11px; }
+    h1 { font-size: 20px; }
+    .section { break-inside: avoid; }
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 640px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .section {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .section h2 {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--primary);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .item {
+    margin-bottom: 8px;
+  }
+
+  .item:last-child { margin-bottom: 0; }
+
+  .item .label {
+    font-size: 12px;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .item .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+    background: #f8f9fb;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+
+  .item .note {
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: block;
+    margin-top: 1px;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+  }
+
+  .full-width {
+    grid-column: 1 / -1;
+  }
+
+  .prompt-box {
+    background: #1a1d23;
+    color: #e4e7ec;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<h1>UI Design Cheat Sheet</h1>
+<p class="subtitle">Print-friendly reference of the 5 levers. All values ready to copy-paste.</p>
+
+<div class="grid">
+
+  <!-- Spacing -->
+  <div class="section">
+    <h2>1. Spacing</h2>
+    <div class="item">
+      <span class="label">Scale</span>
+      <span class="value">4px increments (0.25rem)</span>
+      <span class="note">p-1=4px, p-2=8px, p-3=12px, p-4=16px, p-6=24px, p-8=32px</span>
+    </div>
+    <div class="item">
+      <span class="label">Card padding</span>
+      <span class="value">p-4 (16px) or p-6 (24px)</span>
+    </div>
+    <div class="item">
+      <span class="label">Section padding</span>
+      <span class="value">px-4 py-8</span>
+      <span class="note">Horizontal: 16px, Vertical: 32px</span>
+    </div>
+    <div class="item">
+      <span class="label">Element gap (flex/grid)</span>
+      <span class="value">gap-2 (8px) or gap-3 (12px) or gap-4 (16px)</span>
+    </div>
+    <div class="item">
+      <span class="label">Page margins (mobile)</span>
+      <span class="value">px-4 (16px)</span>
+    </div>
+  </div>
+
+  <!-- Color -->
+  <div class="section">
+    <h2>2. Color</h2>
+    <div class="item">
+      <span class="label">Primary</span>
+      <span class="value">blue-600 (#2563eb)</span>
+    </div>
+    <div class="item">
+      <span class="label">Primary hover</span>
+      <span class="value">blue-700 (#1d4ed8)</span>
+    </div>
+    <div class="item">
+      <span class="label">Primary light</span>
+      <span class="value">blue-50 (#eff6ff)</span>
+      <span class="note">Use for alert/notification backgrounds</span>
+    </div>
+    <div class="item">
+      <span class="label">Text primary</span>
+      <span class="value">gray-900 (#111827)</span>
+      <span class="note">Not pure black!</span>
+    </div>
+    <div class="item">
+      <span class="label">Text secondary</span>
+      <span class="value">gray-500 (#6b7280)</span>
+    </div>
+    <div class="item">
+      <span class="label">Border</span>
+      <span class="value">gray-200 (#e5e7eb)</span>
+    </div>
+    <div class="item">
+      <span class="label">Surface hover</span>
+      <span class="value">gray-50 (#f9fafb)</span>
+    </div>
+    <div class="item">
+      <span class="label">Success</span>
+      <span class="value">green-600 (#16a34a)</span>
+    </div>
+    <div class="item">
+      <span class="label">Error</span>
+      <span class="value">red-600 (#dc2626)</span>
+    </div>
+  </div>
+
+  <!-- Typography -->
+  <div class="section">
+    <h2>3. Typography</h2>
+    <div class="item">
+      <span class="label">Font</span>
+      <span class="value">Inter, system sans-serif</span>
+    </div>
+    <div class="item">
+      <span class="label">h1</span>
+      <span class="value">text-3xl (30px) font-bold -tracking-[0.03em]</span>
+      <span class="note">Hero headings</span>
+    </div>
+    <div class="item">
+      <span class="label">h2</span>
+      <span class="value">text-2xl (24px) font-semibold -tracking-[0.02em]</span>
+    </div>
+    <div class="item">
+      <span class="label">h3</span>
+      <span class="value">text-xl (20px) font-semibold</span>
+    </div>
+    <div class="item">
+      <span class="label">Body</span>
+      <span class="value">text-base (16px) font-normal leading-6</span>
+    </div>
+    <div class="item">
+      <span class="label">Small / caption</span>
+      <span class="value">text-sm (14px) text-gray-500</span>
+    </div>
+    <div class="item">
+      <span class="label">Label / badge</span>
+      <span class="value">text-xs (12px) font-medium uppercase tracking-wider</span>
+    </div>
+  </div>
+
+  <!-- Borders & Shadows -->
+  <div class="section">
+    <h2>4. Borders &amp; Shadows</h2>
+    <div class="item">
+      <span class="label">Border width</span>
+      <span class="value">1px solid</span>
+      <span class="note">Never 2px+ for UI elements</span>
+    </div>
+    <div class="item">
+      <span class="label">Card border-radius</span>
+      <span class="value">rounded-xl (12px)</span>
+    </div>
+    <div class="item">
+      <span class="label">Button border-radius</span>
+      <span class="value">rounded-lg (8px)</span>
+    </div>
+    <div class="item">
+      <span class="label">Badge / pill radius</span>
+      <span class="value">rounded-full (9999px)</span>
+    </div>
+    <div class="item">
+      <span class="label">Input radius</span>
+      <span class="value">rounded-lg (8px)</span>
+    </div>
+    <div class="item">
+      <span class="label">Card shadow (default)</span>
+      <span class="value">shadow-sm (0 1px 2px rgba(0,0,0,0.05))</span>
+    </div>
+    <div class="item">
+      <span class="label">Card shadow (elevated)</span>
+      <span class="value">shadow-md (0 4px 12px rgba(0,0,0,0.08))</span>
+    </div>
+    <div class="item">
+      <span class="label">Modal / dropdown</span>
+      <span class="value">shadow-lg (0 10px 30px rgba(0,0,0,0.12))</span>
+    </div>
+  </div>
+
+  <!-- Animation -->
+  <div class="section full-width">
+    <h2>5. Animation</h2>
+    <div class="grid" style="border:none;padding:0;gap:12px;">
+      <div>
+        <div class="item">
+          <span class="label">Entrance (fade + slide)</span>
+          <span class="value">300ms, ease-out, translateY(8px) → 0</span>
+        </div>
+        <div class="item">
+          <span class="label">Button press</span>
+          <span class="value">100ms, scale 0.97 → 1</span>
+        </div>
+        <div class="item">
+          <span class="label">List stagger delay</span>
+          <span class="value">50ms per item</span>
+        </div>
+      </div>
+      <div>
+        <div class="item">
+          <span class="label">Easing (entrances)</span>
+          <span class="value">cubic-bezier(0.16, 1, 0.3, 1)</span>
+        </div>
+        <div class="item">
+          <span class="label">Easing (transitions)</span>
+          <span class="value">cubic-bezier(0.4, 0, 0.2, 1)</span>
+        </div>
+        <div class="item">
+          <span class="label">Motion reduction</span>
+          <span class="value">@media (prefers-reduced-motion: reduce)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prompt Template -->
+  <div class="section full-width">
+    <h2>AI Prompt Template</h2>
+    <div class="prompt-box">Build a [component name] using Tailwind CSS with these design rules:
+- Spacing: Tailwind 4px scale, p-4/p-6 inside cards, gap-3 between elements
+- Colors: primary=blue-600, surface=white, text=gray-900, secondary=gray-500, border=gray-200, bg-hover=gray-50
+- Typography: Inter font family, h1=text-3xl font-bold, h2=text-2xl font-semibold, body=text-base, caption=text-sm text-gray-500
+- Borders: 1px solid gray-200, rounded-xl for cards, rounded-lg for buttons/inputs, rounded-full for badges
+- Shadows: shadow-sm default, shadow-md elevated
+- Animation: fade-up on entrance (animate-fade-up), scale on press (active:scale-95)</div>
+  </div>
+
+</div>
+
+<hr>
+
+<p style="font-size:12px;color:var(--text-secondary);text-align:center;">
+  BrickVal UI Design Reference &middot; <a href="../MISSION.md">Mission</a> &middot; <a href="../RESOURCES.md">Resources</a>
+</p>
+
+</body>
+</html>

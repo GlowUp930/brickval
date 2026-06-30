@@ -1,0 +1,442 @@
+- generic [active] [ref=e1]:
+  - banner "App Store Connect" [ref=e3]:
+    - generic [ref=e4]:
+      - heading "App Store Connect" [level=1] [ref=e6]:
+        - link "App Store Connect" [ref=e7] [cursor=pointer]:
+          - /url: /
+      - navigation "全球" [ref=e8]:
+        - list [ref=e10]:
+          - listitem [ref=e11]:
+            - link "App" [ref=e12] [cursor=pointer]:
+              - /url: /apps
+          - listitem [ref=e13]:
+            - link "趨勢" [ref=e14] [cursor=pointer]:
+              - /url: /trends
+          - listitem [ref=e15]:
+            - link "報告" [ref=e16] [cursor=pointer]:
+              - /url: /itc/payments_and_financial_reports
+          - listitem [ref=e17]:
+            - link "商務" [ref=e18] [cursor=pointer]:
+              - /url: /business
+          - listitem [ref=e19]:
+            - link "使用者與存取權限" [ref=e20] [cursor=pointer]:
+              - /url: /access/users
+      - button "Ho lam Chan HO LAM CHAN Account name menu" [ref=e22] [cursor=pointer]:
+        - generic:
+          - generic: Ho lam Chan
+          - generic: HO LAM CHAN
+          - img [ref=e23]
+  - generic [ref=e28]:
+    - button "App 選單，已選取BrickValue" [ref=e33] [cursor=pointer]:
+      - generic [ref=e34]:
+        - generic "BrickValue" [ref=e35]:
+          - img "BrickValue" [ref=e36]
+        - generic [ref=e37]: BrickValue
+      - img [ref=e39]
+    - navigation "App" [ref=e42]:
+      - list [ref=e43]:
+        - listitem [ref=e44]:
+          - link "發佈" [ref=e45] [cursor=pointer]:
+            - /url: /apps/6771715475/distribution
+        - listitem [ref=e46]:
+          - link "分析" [ref=e47] [cursor=pointer]:
+            - /url: /apps/6771715475/analytics
+        - listitem [ref=e48]:
+          - link "TestFlight" [ref=e49] [cursor=pointer]:
+            - /url: /teams/2e454f4c-2b39-4bb5-a5ac-abb47f8405c5/apps/6771715475/testflight
+        - listitem [ref=e50]:
+          - link "Xcode Cloud" [ref=e51] [cursor=pointer]:
+            - /url: /teams/2e454f4c-2b39-4bb5-a5ac-abb47f8405c5/apps/6771715475/ci
+  - main [ref=e56]:
+    - generic [ref=e61]:
+      - navigation "發佈" [ref=e63]:
+        - list [ref=e64]:
+          - listitem [ref=e65]:
+            - generic [ref=e66]:
+              - heading "iOS App" [level=2] [ref=e68]
+              - list [ref=e69]:
+                - listitem [ref=e70]:
+                  - link "1.0 已拒絕" [ref=e71] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/ios/version/inflight
+                    - generic [ref=e72]:
+                      - img [ref=e73]
+                      - text: 1.0 已拒絕
+            - button "新增平台" [ref=e75] [cursor=pointer]
+          - listitem [ref=e76]:
+            - separator [ref=e77]
+          - listitem [ref=e78]:
+            - heading "一般資訊" [level=2] [ref=e80]
+            - list [ref=e81]:
+              - listitem [ref=e82]:
+                - link "App 資訊" [ref=e83] [cursor=pointer]:
+                  - /url: /apps/6771715475/distribution/info
+                  - generic [ref=e84]: App 資訊
+              - listitem [ref=e85]:
+                - link "App 審查" [ref=e86] [cursor=pointer]:
+                  - /url: /apps/6771715475/distribution/reviewsubmissions
+                  - generic [ref=e88]:
+                    - img [ref=e89]
+                    - text: App 審查
+              - listitem [ref=e91]:
+                - link "版本記錄" [ref=e92] [cursor=pointer]:
+                  - /url: /apps/6771715475/distribution/activity/ios/versions
+                  - generic [ref=e93]: 版本記錄
+          - listitem [ref=e94]:
+            - separator [ref=e95]
+          - listitem [ref=e96]:
+            - heading "App Store" [level=2] [ref=e98]
+            - generic [ref=e99]:
+              - heading "信任與安全" [level=3] [ref=e101]
+              - list [ref=e102]:
+                - listitem [ref=e103]:
+                  - link "App 隱私權" [ref=e104] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/privacy
+                    - generic [ref=e105]: App 隱私權
+                - listitem [ref=e106]:
+                  - link "App 輔助使用" [ref=e107] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/accessibility
+                    - generic [ref=e108]: App 輔助使用
+                - listitem [ref=e109]:
+                  - link "評分與評論" [ref=e110] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/ratings/ios
+                    - generic [ref=e111]: 評分與評論
+            - generic [ref=e112]:
+              - heading "成長與行銷" [level=3] [ref=e114]
+              - list [ref=e115]:
+                - listitem [ref=e116]:
+                  - link "App 內活動" [ref=e117] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/events
+                    - generic [ref=e118]: App 內活動
+                - listitem [ref=e119]:
+                  - link "自訂產品頁面" [ref=e120] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/productpages
+                    - generic [ref=e121]: 自訂產品頁面
+                - listitem [ref=e122]:
+                  - link "產品頁面最佳化" [ref=e123] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/optimization
+                    - generic [ref=e124]: 產品頁面最佳化
+                - listitem [ref=e125]:
+                  - link "促銷代碼" [ref=e126] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/promo_codes/generate
+                    - generic [ref=e127]: 促銷代碼
+                - listitem [ref=e128]:
+                  - link "Game Center" [ref=e129] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/gamecenter
+                    - generic [ref=e130]: Game Center
+            - generic [ref=e131]:
+              - heading "營利" [level=3] [ref=e133]
+              - list [ref=e134]:
+                - listitem [ref=e135]:
+                  - link "定價與供應狀況" [ref=e136] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/pricing
+                    - generic [ref=e137]: 定價與供應狀況
+                - listitem [ref=e138]:
+                  - link "App 內購買項目" [ref=e139] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/iaps
+                    - generic [ref=e140]: App 內購買項目
+                - listitem [ref=e141]:
+                  - link "訂閱" [ref=e142] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/subscriptions
+                    - generic [ref=e143]: 訂閱
+            - generic [ref=e144]:
+              - heading "精選" [level=3] [ref=e146]
+              - list [ref=e147]:
+                - listitem [ref=e148]:
+                  - link "推選項目" [ref=e149] [cursor=pointer]:
+                    - /url: /apps/6771715475/distribution/nominations
+                    - generic [ref=e150]: 推選項目
+      - generic [ref=e153]:
+        - generic [ref=e154]:
+          - generic [ref=e155]:
+            - heading "iOS App 版本 1.0" [level=2] [ref=e158]
+            - generic [ref=e159]:
+              - button "儲存" [disabled] [ref=e160]
+              - button "更新審查內容" [ref=e161] [cursor=pointer]
+          - separator [ref=e162]
+        - generic [ref=e163]:
+          - img [ref=e164]
+          - generic [ref=e166]:
+            - paragraph [ref=e167]: 需要注意此項目：
+            - paragraph [ref=e168]: 你提交的項目遭到拒絕。從提交詳細資訊頁面進一步瞭解。
+            - list [ref=e169]:
+              - listitem [ref=e170]: "2.1.0 Performance: App Completeness"
+          - paragraph [ref=e171]:
+            - link "檢視提交內容" [ref=e172] [cursor=pointer]:
+              - /url: /apps/6771715475/distribution/reviewsubmissions/details/f6e6adec-7265-4205-8c6c-eae55cafaba1
+        - generic [ref=e173]:
+          - generic [ref=e176]:
+            - paragraph [ref=e178]: 下方素材與元資料將顯示在 App 產品頁面上，也會在使用者安裝你的 App 時顯示，還會在你發佈 App 後用於網頁引擎搜尋結果。
+            - generic [ref=e181]:
+              - button "英文（美國）" [ref=e182] [cursor=pointer]:
+                - text: 英文（美國）
+                - img [ref=e183]
+              - button "?" [ref=e187] [cursor=pointer]
+          - separator [ref=e188]
+          - generic [ref=e189]:
+            - heading "預覽和截圖" [level=3] [ref=e190]
+            - button "更多資訊" [ref=e192] [cursor=pointer]: "?"
+          - paragraph [ref=e193]: 新增 App 在最新裝置上的準確截圖，將有助於呈現 App 的使用者體驗。請注意，我們會在所有顯示器尺寸和本地化語言中使用這些截圖。只有 iOS App 必須提供截圖，且 App 安裝說明中僅會使用前 3 張截圖。
+          - generic [ref=e194]:
+            - tablist [ref=e195]:
+              - tab "iPhone" [selected] [ref=e196] [cursor=pointer]:
+                - generic [ref=e197]: iPhone
+              - tab "iPad" [ref=e198] [cursor=pointer]:
+                - generic [ref=e199]: iPad
+              - tab "Apple Watch" [ref=e200] [cursor=pointer]:
+                - generic [ref=e201]: Apple Watch
+            - paragraph [ref=e202]:
+              - link "在媒體管理中檢視所有尺寸" [ref=e203] [cursor=pointer]:
+                - /url: /apps/6771715475/distribution/ios/version/inflight/media-manager/iphone
+          - generic [ref=e205]:
+            - generic:
+              - alert
+            - tabpanel "iPhone" [ref=e206]:
+              - generic [ref=e207]:
+                - generic [ref=e208]:
+                  - img [ref=e211]
+                  - generic [ref=e216]:
+                    - generic [ref=e217]: iPhone
+                    - generic [ref=e218]: 6.5 吋顯示器
+                - region [ref=e219]:
+                  - tabpanel [ref=e220]:
+                    - generic [ref=e223]:
+                      - list "6.5 吋顯示器 的 App 預覽"
+                      - list "6.5 吋顯示器 的截圖" [ref=e224]:
+                        - listitem [ref=e225]:
+                          - generic [ref=e226]:
+                            - button "截圖 Simulator Screenshot - iPhone 17 - 2026-05-25 at 18.02.25 1.png" [ref=e227]:
+                              - img [ref=e229]
+                            - button "刪除" [ref=e230] [cursor=pointer]:
+                              - img [ref=e231]
+                        - listitem [ref=e233]:
+                          - generic [ref=e234]:
+                            - button "截圖 Simulator Screenshot - iPhone 17 - 2026-05-25 at 18.03.27 1.png" [ref=e235]:
+                              - img [ref=e237]
+                            - button "刪除" [ref=e238] [cursor=pointer]:
+                              - img [ref=e239]
+                        - listitem [ref=e241]:
+                          - generic [ref=e242]:
+                            - button "截圖 Simulator Screenshot - iPhone 17 - 2026-05-25 at 18.03.20 1.png" [ref=e243]:
+                              - img [ref=e245]
+                            - button "刪除" [ref=e246] [cursor=pointer]:
+                              - img [ref=e247]
+                        - listitem [ref=e249]:
+                          - generic [ref=e250]:
+                            - button "截圖 Simulator Screenshot - iPhone 17 - 2026-05-25 at 18.02.08 1.png" [ref=e251]:
+                              - img [ref=e253]
+                            - button "刪除" [ref=e254] [cursor=pointer]:
+                              - img [ref=e255]
+                        - listitem [ref=e257]:
+                          - generic [ref=e258]:
+                            - button "截圖 Simulator Screenshot - iPhone 17 - 2026-05-25 at 18.02.37 1.png" [ref=e259]:
+                              - img [ref=e261]
+                            - button "刪除" [ref=e262] [cursor=pointer]:
+                              - img [ref=e263]
+                        - listitem [ref=e265]:
+                          - generic [ref=e266]:
+                            - button "截圖 Simulator Screenshot - iPhone 17 - 2026-05-25 at 18.02.17 1.png" [ref=e267]:
+                              - img [ref=e269]
+                            - button "刪除" [ref=e270] [cursor=pointer]:
+                              - img [ref=e271]
+                        - listitem [ref=e273]:
+                          - generic [ref=e274]:
+                            - button "截圖 Simulator Screenshot - iPhone 17 - 2026-05-25 at 17.58.28 1.png" [ref=e275]:
+                              - img [ref=e277]
+                            - button "刪除" [ref=e278] [cursor=pointer]:
+                              - img [ref=e279]
+                        - listitem [ref=e281]:
+                          - generic [ref=e282]:
+                            - button "截圖 Simulator Screenshot - iPhone 17 - 2026-05-25 at 18.01.56 1.png" [ref=e283]:
+                              - img [ref=e285]
+                            - button "刪除" [ref=e286] [cursor=pointer]:
+                              - img [ref=e287]
+                    - generic [ref=e289]:
+                      - paragraph [ref=e291]: 共 0 個 App 預覽（最多 3 個）
+                      - paragraph [ref=e293]: 共 8 張截圖（最多 10 張）
+                      - paragraph [ref=e296]:
+                        - button "選擇檔案" [ref=e297] [cursor=pointer]
+                      - paragraph [ref=e299]:
+                        - button "全部刪除" [ref=e300] [cursor=pointer]
+          - generic [ref=e301]:
+            - generic [ref=e302]:
+              - generic [ref=e304]:
+                - generic [ref=e305]: 行銷宣傳文字
+                - button "更多資訊" [ref=e307] [cursor=pointer]: "?"
+              - textbox "行銷宣傳文字" [ref=e309]: Scan LEGO sets and minifigures instantly to check market value, identify rare finds, and track your collection.
+              - status "剩餘字元" [ref=e311]: "59"
+            - separator [ref=e313]
+            - generic [ref=e314]:
+              - generic [ref=e316]:
+                - generic [ref=e317]: 描述
+                - button "更多資訊" [ref=e319] [cursor=pointer]: "?"
+              - textbox "描述" [ref=e321]: "BrickValue lets you scan LEGO sets and minifigures to identify them and see estimated value. Key features: - Fast LEGO scanner - Minifigure recognition - Value estimate - Collection tracking Check prices, track your collection, and find retired or rare LEGO sets. BrickValue is for LEGO collectors, buyers and sellers who want quick value checks."
+              - status "剩餘字元" [ref=e323]: 3,651
+            - generic [ref=e324]:
+              - generic [ref=e326]:
+                - generic [ref=e327]: 關鍵字
+                - button "更多資訊" [ref=e329] [cursor=pointer]: "?"
+              - textbox "關鍵字" [ref=e331]: lego,scanner,minifigure,price,guide,value,tracker,retired,brickscan
+              - status "剩餘字元" [ref=e333]: "33"
+            - generic [ref=e334]:
+              - generic [ref=e336]:
+                - generic [ref=e337]: 支援 URL
+                - button "更多資訊" [ref=e339] [cursor=pointer]: "?"
+              - textbox "支援 URL" [ref=e341]: https://brickvalue.live/privacy
+            - generic [ref=e342]:
+              - generic [ref=e344]:
+                - generic [ref=e345]: 行銷 URL
+                - button "更多資訊" [ref=e347] [cursor=pointer]: "?"
+              - textbox "行銷 URL" [ref=e349]: https://brickvalue.live
+            - generic [ref=e350]:
+              - generic [ref=e352]:
+                - generic [ref=e353]: 版本
+                - button "更多資訊" [ref=e355] [cursor=pointer]: "?"
+              - textbox "版本" [ref=e357]: "1.0"
+            - generic [ref=e358]:
+              - generic [ref=e360]:
+                - generic [ref=e361]: 版權
+                - button "更多資訊" [ref=e363] [cursor=pointer]: "?"
+              - textbox "版權" [ref=e365]: NA
+              - status "剩餘字元" [ref=e367]: "198"
+            - generic [ref=e368]:
+              - generic [ref=e370]:
+                - generic [ref=e371]: 路線規劃 App 地區範圍檔案
+                - button "更多資訊" [ref=e373] [cursor=pointer]: "?"
+              - generic [ref=e375] [cursor=pointer]:
+                - button "選擇檔案" [ref=e376]
+                - generic [ref=e378]: 選擇檔案
+          - separator [ref=e379]
+          - button "輕巧 App" [ref=e381] [cursor=pointer]:
+            - img [ref=e383]
+            - text: 輕巧 App
+          - generic [ref=e386]:
+            - heading "iMessage App" [level=3] [ref=e387]:
+              - button "iMessage App" [ref=e388] [cursor=pointer]:
+                - img [ref=e390]
+                - text: iMessage App
+            - button "更多資訊" [ref=e393] [cursor=pointer]: "?"
+        - generic [ref=e394]:
+          - heading "建置版本" [level=3] [ref=e396]
+          - table [ref=e398]:
+            - rowgroup [ref=e399]:
+              - row "建置版本 版本 提供輕巧 App" [ref=e400]:
+                - columnheader "建置版本" [ref=e401]:
+                  - generic [ref=e403]: 建置版本
+                - columnheader "版本" [ref=e404]:
+                  - generic [ref=e406]: 版本
+                - columnheader "提供輕巧 App" [ref=e407]:
+                  - generic [ref=e409]: 提供輕巧 App
+                - columnheader [ref=e410]
+            - rowgroup [ref=e411]:
+              - row "App 圖像 6 1.0.0 否 刪除" [ref=e412]:
+                - cell "App 圖像 6" [ref=e413]:
+                  - generic [ref=e415]:
+                    - link "App 圖像" [ref=e416] [cursor=pointer]:
+                      - /url: /apps/6771715475/testflight/ios/4bcd24d7-8e57-4aa7-ae83-327f54c570a8/metadata
+                      - generic "App 圖像" [ref=e417]:
+                        - img "App 圖像" [ref=e418]
+                    - link "6" [ref=e420] [cursor=pointer]:
+                      - /url: /apps/6771715475/testflight/ios/4bcd24d7-8e57-4aa7-ae83-327f54c570a8/metadata
+                - cell "1.0.0" [ref=e421]:
+                  - generic [ref=e422]: 1.0.0
+                - cell "否" [ref=e423]:
+                  - paragraph [ref=e425]: 否
+                - cell "刪除" [ref=e426]:
+                  - button "刪除":
+                    - img [ref=e427] [cursor=pointer]
+          - paragraph [ref=e429]: 包含的素材
+          - generic [ref=e431]:
+            - button "App 圖像" [ref=e432] [cursor=pointer]:
+              - generic "App 圖像" [ref=e433]:
+                - img "App 圖像" [ref=e434]
+            - paragraph [ref=e435]: App 圖像
+        - generic [ref=e437]:
+          - generic [ref=e441] [cursor=pointer]:
+            - checkbox "Game Center" [ref=e443]
+            - text: Game Center
+          - generic [ref=e445]:
+            - img [ref=e446]
+            - paragraph [ref=e448]:
+              - text: 現在可以直接在 Game Center 區段新增 Game Center 組件供審查。你無法再從 App 版本頁面選取組件。
+              - link "進一步瞭解" [ref=e449] [cursor=pointer]:
+                - /url: https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-game-center-components
+            - button [ref=e450] [cursor=pointer]:
+              - img [ref=e451]
+        - separator [ref=e453]
+        - generic [ref=e454]:
+          - heading "App 審查資訊" [level=3] [ref=e455]
+          - generic [ref=e456]:
+            - generic [ref=e458]:
+              - generic [ref=e460]:
+                - generic [ref=e461]: 登入資訊
+                - button "更多資訊" [ref=e463] [cursor=pointer]: "?"
+              - paragraph [ref=e464]: 請提供使用者名稱及密碼，以便我們登入 App。我們需要此資訊完成 App 審查。
+              - generic [ref=e466]:
+                - checkbox "需要登入" [ref=e467]
+                - generic [ref=e469]: 需要登入
+            - generic [ref=e470]:
+              - generic [ref=e472]:
+                - generic [ref=e473]: 聯絡人資訊
+                - button "更多資訊" [ref=e475] [cursor=pointer]: "?"
+              - textbox "名字" [ref=e478]: Gary
+              - textbox "姓氏" [ref=e481]: Chan
+              - textbox "電話號碼" [ref=e484]: "+610451389300"
+              - textbox "電子郵件" [ref=e487]: garychan930@outlook.com
+            - generic [ref=e488]:
+              - generic [ref=e490]:
+                - generic [ref=e491]: 備註
+                - button "更多資訊" [ref=e493] [cursor=pointer]: "?"
+              - paragraph [ref=e494]:
+                - generic [ref=e495]:
+                  - text: 根據中國法律規定，含有新聞、宗教、書籍和雜誌內容的 App 須先取得相關許可，才能在中國大陸的 App Store 中供應。若適用，請於下方輸入許可的相關資訊。
+                  - link "進一步瞭解" [ref=e496] [cursor=pointer]:
+                    - /url: https://developer.apple.com/help/app-store-connect/reference/app-information
+              - textbox "備註" [ref=e498]: The app does not require sign-in to use. However with sign in will enable user to save their collection items
+              - status "剩餘字元" [ref=e500]: 3,889
+            - generic [ref=e501]:
+              - generic [ref=e503]:
+                - generic [ref=e504]: 附件
+                - button "更多資訊" [ref=e506] [cursor=pointer]: "?"
+              - generic [ref=e508] [cursor=pointer]:
+                - button "選擇檔案（可留空）" [ref=e509]
+                - generic [ref=e511]: 選擇檔案（可留空）
+        - separator [ref=e512]
+        - generic [ref=e513]:
+          - heading "App Store 版本發佈" [level=3] [ref=e514]
+          - paragraph [ref=e515]: 若要在 App Store 推出 App，你可在 App 通過核准後自動發佈，也可之後再於 App Store 手動發佈。
+          - generic [ref=e516]:
+            - generic [ref=e518]:
+              - generic [ref=e519]:
+                - radio "手動發佈此版本" [checked] [ref=e520]
+                - generic [ref=e522]: 手動發佈此版本
+              - generic [ref=e523]:
+                - radio "自動發佈此版本" [ref=e524]
+                - generic [ref=e526]: 自動發佈此版本
+              - generic [ref=e527]:
+                - radio "通過 App 審查後自動發佈此版本，不得早於" [ref=e528]
+                - generic [ref=e530]: 通過 App 審查後自動發佈此版本，不得早於
+            - paragraph [ref=e532]: 所在國家或地區的日期和時間。
+            - generic [ref=e535]:
+              - textbox "通過 App 審查後自動發佈此版本，不得早於" [disabled] [ref=e536]: 2026年6月11日 下午 2:00
+              - text: GMT+10
+  - contentinfo [ref=e538]:
+    - generic [ref=e539]:
+      - list [ref=e540]:
+        - listitem [ref=e541]:
+          - link "App Store Connect" [ref=e542] [cursor=pointer]:
+            - /url: /apps
+      - list [ref=e543]:
+        - listitem [ref=e544]: Copyright © 2026 Apple Inc. 保留一切權利。 |
+        - listitem [ref=e545]:
+          - link "服務條款" [ref=e546] [cursor=pointer]:
+            - /url: /WebObjects/iTunesConnect.woa/wa/termsOfService
+          - text: "|"
+        - listitem [ref=e547]:
+          - link "隱私權政策" [ref=e548] [cursor=pointer]:
+            - /url: https://www.apple.com/legal/privacy
+          - text: "|"
+        - listitem [ref=e549]:
+          - link "聯絡我們" [ref=e550] [cursor=pointer]:
+            - /url: /contact-us
+  - log [ref=e551]
+  - log [ref=e552]

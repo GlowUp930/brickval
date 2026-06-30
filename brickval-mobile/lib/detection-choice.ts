@@ -14,7 +14,7 @@ export function getDetectionChoiceMessage(
   lowConfidenceThreshold: number
 ): string {
   if (detections.length > 1) {
-    return "We found more than one LEGO minifigure or part in this photo. Pick one to view its value.";
+    return "Review the items found in this photo. Pick one to price first.";
   }
 
   if (detections.length === 1 && detections[0].score < lowConfidenceThreshold) {
@@ -22,4 +22,29 @@ export function getDetectionChoiceMessage(
   }
 
   return "We found LEGO minifigures and parts in this photo. Pick one to view its value.";
+}
+
+export function getDetectionReviewTitle(detections: IdentificationDetection[]): string {
+  return detections.length > 1 ? "Review bulk scan" : "Confirm match";
+}
+
+export function getDetectionReviewSummary(detections: IdentificationDetection[]): string {
+  const minifigCount = detections.filter((item) => item.item_type === "minifig").length;
+  const partCount = detections.filter((item) => item.item_type === "part").length;
+  const segments = [
+    minifigCount > 0 ? `${minifigCount} minifig${minifigCount === 1 ? "" : "s"}` : null,
+    partCount > 0 ? `${partCount} part${partCount === 1 ? "" : "s"}` : null,
+  ].filter(Boolean);
+
+  return segments.length > 0 ? segments.join(" · ") : "No review items";
+}
+
+export function getBatchableMinifigIds(detections: IdentificationDetection[]): string[] {
+  return detections.filter((item) => item.item_type === "minifig").map((item) => item.id);
+}
+
+export function toggleBulkMinifigSelection(selectedIds: string[], id: string): string[] {
+  return selectedIds.includes(id)
+    ? selectedIds.filter((selectedId) => selectedId !== id)
+    : [...selectedIds, id];
 }

@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import Jimp from "jimp";
 import { anthropic } from "@/lib/anthropic";
 import {
-  buildBrickognizeRecoveryCrops,
+  buildBrickognizeBulkScanCrops,
   analyzeBrickognizeSearchResponse,
   normalizeBrickognizeDetections,
   normalizeBrickognizeSearchResponse,
@@ -94,10 +94,7 @@ async function identifyNonSet(imageFile: File): Promise<NonSetIdentifyResponse> 
       }))
     ).all;
 
-  if (
-    collectedDetections.length >= 2 ||
-    (collectedDetections.length === 1 && (analysis.topScore ?? 0) >= 0.88)
-  ) {
+  if (collectedDetections.length >= 2) {
     return { detections: mergeDetections() };
   }
 
@@ -121,13 +118,14 @@ async function identifyNonSet(imageFile: File): Promise<NonSetIdentifyResponse> 
     return { detections: mergeDetections() };
   }
 
-  const recoveryCrops = buildBrickognizeRecoveryCrops(searchData, searchWidth, searchHeight).slice(0, 3);
+  const decodedImage = sourceImage;
+  const recoveryCrops = buildBrickognizeBulkScanCrops(searchData, searchWidth, searchHeight);
   if (!recoveryCrops.length) {
     return { detections: mergeDetections() };
   }
 
-  for (const crop of recoveryCrops) {
-    const croppedImage = sourceImage
+  async function identifyCrop(crop: { left: number; top: number; width: number; height: number }) {
+    const croppedImage = decodedImage
       .clone()
       .crop(crop.left, crop.top, crop.width, crop.height)
       .quality(88);
@@ -143,20 +141,24 @@ async function identifyNonSet(imageFile: File): Promise<NonSetIdentifyResponse> 
       if (cropRes) {
         console.warn("[identify] Brickognize crop search returned", cropRes.status);
       }
-      continue;
+      return [];
     }
 
     let cropData: BrickognizeSearchResponse;
     try {
       cropData = (await cropRes.json()) as BrickognizeSearchResponse;
     } catch {
-      continue;
+      return [];
     }
 
-    const cropDetections = normalizeBrickognizeSearchResponse(cropData).all;
-    if (cropDetections.length > 0) {
-      collectedDetections.push(...cropDetections);
-    }
+    return normalizeBrickognizeSearchResponse(cropData).all;
+  }
+
+  const CROP_BATCH_SIZE = 4;
+  for (let i = 0; i < recoveryCrops.length && mergeDetections().length < 12; i += CROP_BATCH_SIZE) {
+    const cropBatch = recoveryCrops.slice(i, i + CROP_BATCH_SIZE);
+    const cropResults = await Promise.all(cropBatch.map((crop) => identifyCrop(crop)));
+    collectedDetections.push(...cropResults.flat());
   }
 
   return { detections: mergeDetections() };

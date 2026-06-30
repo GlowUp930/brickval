@@ -1,0 +1,730 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "BetaList" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e13]: BetaList
+        - generic [ref=e14]:
+          - link "Home" [ref=e15] [cursor=pointer]:
+            - /url: /
+          - link "Browse" [ref=e16] [cursor=pointer]:
+            - /url: /browse
+          - link "Newsletter" [ref=e17] [cursor=pointer]:
+            - /url: /newsletter
+          - link "Search" [ref=e18] [cursor=pointer]:
+            - /url: /search
+          - button [ref=e20]:
+            - img [ref=e22]
+        - generic [ref=e24]:
+          - button "Toggle theme" [ref=e25]:
+            - img [ref=e26]
+          - link "Log in" [ref=e28]:
+            - /url: /sign_in
+          - link "Submit Startup" [ref=e29]:
+            - /url: /sign_in
+  - generic [ref=e31]:
+    - link "SaaS" [ref=e32] [cursor=pointer]:
+      - /url: /browse/productivity/saas
+      - img [ref=e34]
+      - generic [ref=e36]: SaaS
+    - link "AI Tools" [ref=e37] [cursor=pointer]:
+      - /url: /browse/ai/ai-tools
+      - img [ref=e39]
+      - generic [ref=e43]: AI Tools
+    - link "Analytics" [ref=e44] [cursor=pointer]:
+      - /url: /browse/data-analytics/analytics
+      - img [ref=e46]
+      - generic [ref=e48]: Analytics
+    - link "Tracking" [ref=e49] [cursor=pointer]:
+      - /url: /browse/data-analytics/tracking
+      - img [ref=e51]
+      - generic [ref=e56]: Tracking
+    - link "Workflow Automation" [ref=e57] [cursor=pointer]:
+      - /url: /browse/productivity/workflow-automation
+      - generic [ref=e58]: Workflow Automation
+    - link "Productivity" [ref=e59] [cursor=pointer]:
+      - /url: /browse/productivity/productivity
+      - generic [ref=e60]: Productivity
+    - link "Startups" [ref=e61] [cursor=pointer]:
+      - /url: /browse/other/startups
+      - img [ref=e63]
+      - generic [ref=e71]: Startups
+    - link "AI Assistant" [ref=e72] [cursor=pointer]:
+      - /url: /browse/ai/ai-assistant
+      - img [ref=e74]
+      - generic [ref=e81]: AI Assistant
+    - link "E-Commerce" [ref=e82] [cursor=pointer]:
+      - /url: /browse/commerce/e-commerce
+      - img [ref=e84]
+      - generic [ref=e88]: E-Commerce
+    - link "AI Image Creation" [ref=e89] [cursor=pointer]:
+      - /url: /browse/ai/ai-image-creation
+      - img [ref=e91]
+      - generic [ref=e93]: AI Image Creation
+    - link "Marketing Analytic" [ref=e94] [cursor=pointer]:
+      - /url: /browse/data-analytics/marketing-analytic
+      - generic [ref=e95]: Marketing Analytic
+    - link "Developer Tools" [ref=e96] [cursor=pointer]:
+      - /url: /browse/dev-tools/developer-tools
+      - img [ref=e98]
+      - generic [ref=e102]: Developer Tools
+  - generic [ref=e105]:
+    - button [ref=e106]:
+      - img [ref=e107]
+    - generic [ref=e109]:
+      - heading "Discover tomorrow's startups, today." [level=1] [ref=e110]
+      - generic [ref=e111]:
+        - heading "BetaList helps you find early-stage startups before they make it big." [level=2] [ref=e112]
+        - generic [ref=e113]:
+          - link "Submit startup" [ref=e114] [cursor=pointer]:
+            - /url: /submit
+          - link "Sign in" [ref=e115] [cursor=pointer]:
+            - /url: /sign_in
+  - generic [ref=e116]:
+    - generic [ref=e117]:
+      - generic [ref=e118]: Trending Startups
+      - generic [ref=e119]:
+        - generic [ref=e120]:
+          - img [ref=e122]
+          - generic [ref=e123]:
+            - link "HeyDreaming" [ref=e124] [cursor=pointer]:
+              - /url: /startups/heydreaming
+              - generic [ref=e125]: HeyDreaming
+            - generic [ref=e127]: Generate four scored ad videos from a product URL in 90 seconds
+          - generic [ref=e132] [cursor=pointer]:
+            - checkbox [ref=e133]
+            - img [ref=e135]
+        - generic [ref=e137]:
+          - img [ref=e139]
+          - generic [ref=e140]:
+            - link "MindTheClub" [ref=e141] [cursor=pointer]:
+              - /url: /startups/mindtheclub
+              - generic [ref=e142]: MindTheClub
+            - generic [ref=e144]: Message and call privately with serverless end-to-end encryption
+          - generic [ref=e149] [cursor=pointer]:
+            - checkbox [ref=e150]
+            - img [ref=e152]
+        - generic [ref=e154]:
+          - img [ref=e156]
+          - generic [ref=e157]:
+            - link "Merzing" [ref=e158] [cursor=pointer]:
+              - /url: /startups/merzing
+              - generic [ref=e159]: Merzing
+            - generic [ref=e161]: Securely auto-fill Word and PowerPoint templates from Excel data
+          - generic [ref=e166] [cursor=pointer]:
+            - checkbox [ref=e167]
+            - img [ref=e169]
+    - generic [ref=e174]:
+      - button [ref=e175]:
+        - img [ref=e176]
+      - generic [ref=e178]:
+        - generic [ref=e179]: 🔥
+        - generic [ref=e180]:
+          - generic [ref=e181]: Stay ahead of the curve
+          - generic [ref=e182]: Receive a daily digest of the newest startups.
+      - generic [ref=e183]:
+        - textbox "Your email address" [active] [ref=e184]: https://brickvalue.live
+        - button "Get early access" [ref=e185] [cursor=pointer]
+    - generic [ref=e187]:
+      - generic [ref=e188]:
+        - generic [ref=e189]:
+          - strong [ref=e190]: Today
+          - text: June 22nd
+        - generic [ref=e191]:
+          - link [ref=e192] [cursor=pointer]:
+            - /url: /startups/talnexis
+          - img [ref=e195]
+          - generic [ref=e196]:
+            - generic [ref=e197]:
+              - generic [ref=e198]: Talnexis
+              - generic [ref=e199]: Spot hiring shifts weeks before press releases and earnings
+            - generic [ref=e203] [cursor=pointer]:
+              - checkbox [ref=e204]
+              - img [ref=e206]
+        - generic [ref=e208]:
+          - link [ref=e209] [cursor=pointer]:
+            - /url: /startups/feno
+          - img [ref=e212]
+          - generic [ref=e213]:
+            - generic [ref=e214]:
+              - generic [ref=e215]: Feno
+              - generic [ref=e216]: Clean your whole mouth in 20 seconds with an AI-powered smartbrush
+            - generic [ref=e220] [cursor=pointer]:
+              - checkbox [ref=e221]
+              - img [ref=e223]
+        - generic [ref=e225]:
+          - link [ref=e226] [cursor=pointer]:
+            - /url: /startups/plug-your-build
+          - img [ref=e229]
+          - generic [ref=e230]:
+            - generic [ref=e231]:
+              - generic [ref=e232]: Plug Your Build
+              - generic [ref=e233]: List your indie build in a permanent, searchable directory
+              - link "BOOSTED" [ref=e234] [cursor=pointer]:
+                - /url: /boost
+            - generic [ref=e238] [cursor=pointer]:
+              - checkbox [ref=e239]
+              - img [ref=e241]
+        - generic [ref=e243]:
+          - link [ref=e244] [cursor=pointer]:
+            - /url: /startups/screen-charm
+          - img [ref=e247]
+          - generic [ref=e248]:
+            - generic [ref=e249]:
+              - generic [ref=e250]: Screen Charm
+              - generic [ref=e251]: Create pro product videos with auto-zoom and smooth cursor on Mac
+            - generic [ref=e255] [cursor=pointer]:
+              - checkbox [ref=e256]
+              - img [ref=e258]
+        - generic [ref=e260]:
+          - link [ref=e261] [cursor=pointer]:
+            - /url: /startups/seeyouincourt-ai
+          - img [ref=e264]
+          - generic [ref=e265]:
+            - generic [ref=e266]:
+              - generic [ref=e267]: SeeYouInCourt.ai
+              - generic [ref=e268]: Buy AI-scored legal leads with no contracts or sales calls
+            - generic [ref=e272] [cursor=pointer]:
+              - checkbox [ref=e273]
+              - img [ref=e275]
+        - generic [ref=e277]:
+          - strong [ref=e278]: Yesterday
+          - text: June 21st
+        - generic [ref=e279]:
+          - link [ref=e280] [cursor=pointer]:
+            - /url: /startups/docugenie
+          - img [ref=e283]
+          - generic [ref=e284]:
+            - generic [ref=e285]:
+              - generic [ref=e286]: Docugenie
+              - generic [ref=e287]: AI document processing tools in one platform
+            - generic [ref=e291] [cursor=pointer]:
+              - checkbox [ref=e292]
+              - img [ref=e294]
+        - generic [ref=e296]:
+          - link [ref=e297] [cursor=pointer]:
+            - /url: /startups/teno
+          - img [ref=e300]
+          - generic [ref=e301]:
+            - generic [ref=e302]:
+              - generic [ref=e303]: Teno
+              - generic [ref=e304]: Generate campaign-ready video and image ads from one chat
+            - generic [ref=e308] [cursor=pointer]:
+              - checkbox [ref=e309]
+              - img [ref=e311]
+        - generic [ref=e313]:
+          - link [ref=e314] [cursor=pointer]:
+            - /url: /startups/mezdoc
+          - img [ref=e317]
+          - generic [ref=e318]:
+            - generic [ref=e319]:
+              - generic [ref=e320]: Mezdoc
+              - generic [ref=e321]: Mezdoc helps businesses generate, automate, sign, and manage documents
+            - generic [ref=e325] [cursor=pointer]:
+              - checkbox [ref=e326]
+              - img [ref=e328]
+        - generic [ref=e330]:
+          - link [ref=e331] [cursor=pointer]:
+            - /url: /startups/cxtrading
+          - img [ref=e334]
+          - generic [ref=e335]:
+            - generic [ref=e336]:
+              - generic [ref=e337]: Voila
+              - generic [ref=e338]: Turn dense PDFs into lessons, outlines, quizzes, and flashcards
+            - generic [ref=e342] [cursor=pointer]:
+              - checkbox [ref=e343]
+              - img [ref=e345]
+        - generic [ref=e347]:
+          - link [ref=e348] [cursor=pointer]:
+            - /url: /startups/spotchase
+          - img [ref=e351]
+          - generic [ref=e352]:
+            - generic [ref=e353]:
+              - generic [ref=e354]: SpotChase
+              - generic [ref=e355]: Plan personalized day-by-day trips with AI and share with friends
+            - generic [ref=e359] [cursor=pointer]:
+              - checkbox [ref=e360]
+              - img [ref=e362]
+        - generic [ref=e364]:
+          - link [ref=e365] [cursor=pointer]:
+            - /url: /startups/pack-planner
+          - img [ref=e368]
+          - generic [ref=e369]:
+            - generic [ref=e370]:
+              - generic [ref=e371]: Pack Planner
+              - generic [ref=e372]: Keep your pack in sync with shared tasks, calendars, and document storage
+            - generic [ref=e376] [cursor=pointer]:
+              - checkbox [ref=e377]
+              - img [ref=e379]
+        - generic [ref=e381]:
+          - link [ref=e382] [cursor=pointer]:
+            - /url: /startups/cinlink
+          - img [ref=e385]
+          - generic [ref=e386]:
+            - generic [ref=e387]:
+              - generic [ref=e388]: CinLink
+              - generic [ref=e389]: Create, edit, translate, and repurpose video with natural language
+            - generic [ref=e393] [cursor=pointer]:
+              - checkbox [ref=e394]
+              - img [ref=e396]
+        - generic [ref=e398]:
+          - link [ref=e399] [cursor=pointer]:
+            - /url: /startups/anypeople
+          - img [ref=e402]
+          - generic [ref=e403]:
+            - generic [ref=e404]:
+              - generic [ref=e405]: AnyPeople
+              - generic [ref=e406]: Generate stunning, realistic people photos for any project
+            - generic [ref=e410] [cursor=pointer]:
+              - checkbox [ref=e411]
+              - img [ref=e413]
+        - generic [ref=e415]:
+          - link [ref=e416] [cursor=pointer]:
+            - /url: /startups/host4-ai
+          - img [ref=e419]
+          - generic [ref=e420]:
+            - generic [ref=e421]:
+              - generic [ref=e422]: Host4.ai
+              - generic [ref=e423]: Run Claude Code and Codex 24/7 with SSH and a browser terminal on mobile
+              - link "BOOSTED" [ref=e424] [cursor=pointer]:
+                - /url: /boost
+            - generic [ref=e428] [cursor=pointer]:
+              - checkbox [ref=e429]
+              - img [ref=e431]
+        - generic [ref=e433]:
+          - link [ref=e434] [cursor=pointer]:
+            - /url: /startups/cartoru
+          - img [ref=e437]
+          - generic [ref=e438]:
+            - generic [ref=e439]:
+              - generic [ref=e440]: CarToru
+              - generic [ref=e441]: Get fair-value context and negotiation angles for used-car listings
+            - generic [ref=e445] [cursor=pointer]:
+              - checkbox [ref=e446]
+              - img [ref=e448]
+        - generic [ref=e450]:
+          - link [ref=e451] [cursor=pointer]:
+            - /url: /startups/picmim
+          - img [ref=e454]
+          - generic [ref=e455]:
+            - generic [ref=e456]:
+              - generic [ref=e457]: Picmim
+              - generic [ref=e458]: Create and schedule brand-ready social posts in seconds with a swipe
+            - generic [ref=e462] [cursor=pointer]:
+              - checkbox [ref=e463]
+              - img [ref=e465]
+        - generic [ref=e467]:
+          - link [ref=e468] [cursor=pointer]:
+            - /url: /startups/lorica
+          - img [ref=e471]
+          - generic [ref=e472]:
+            - generic [ref=e473]:
+              - generic [ref=e474]: Lorica
+              - generic [ref=e475]: Stop paying interest and automate a payoff plan tailored to your income
+            - generic [ref=e479] [cursor=pointer]:
+              - checkbox [ref=e480]
+              - img [ref=e482]
+        - generic [ref=e484]:
+          - link [ref=e485] [cursor=pointer]:
+            - /url: /startups/naosuu
+          - img [ref=e488]
+          - generic [ref=e489]:
+            - generic [ref=e490]:
+              - generic [ref=e491]: Naosuu
+              - generic [ref=e492]: Protect client data by redacting prompts locally before using AI
+            - generic [ref=e496] [cursor=pointer]:
+              - checkbox [ref=e497]
+              - img [ref=e499]
+        - generic [ref=e501]:
+          - link [ref=e502] [cursor=pointer]:
+            - /url: /startups/mydesignmd
+          - img [ref=e505]
+          - generic [ref=e506]:
+            - generic [ref=e507]:
+              - generic [ref=e508]: MyDesignMD
+              - generic [ref=e509]: Generate a grounded design system package from any public URL
+            - generic [ref=e513] [cursor=pointer]:
+              - checkbox [ref=e514]
+              - img [ref=e516]
+        - generic [ref=e518]:
+          - link [ref=e519] [cursor=pointer]:
+            - /url: /startups/denker
+          - img [ref=e522]
+          - generic [ref=e523]:
+            - generic [ref=e524]:
+              - generic [ref=e525]: Denker
+              - generic [ref=e526]: Direct an AI agent team from one canvas to move work forward
+            - generic [ref=e530] [cursor=pointer]:
+              - checkbox [ref=e531]
+              - img [ref=e533]
+        - generic [ref=e535]:
+          - strong [ref=e536]: Saturday
+          - text: June 20th
+        - generic [ref=e537]:
+          - link [ref=e538] [cursor=pointer]:
+            - /url: /startups/dedoctive
+          - img [ref=e541]
+          - generic [ref=e542]:
+            - generic [ref=e543]:
+              - generic [ref=e544]: Dedoctive
+              - generic [ref=e545]: Auditable AI providing defensible decisions with trusted evidence
+            - generic [ref=e549] [cursor=pointer]:
+              - checkbox [ref=e550]
+              - img [ref=e552]
+        - generic [ref=e554]:
+          - link [ref=e555] [cursor=pointer]:
+            - /url: /startups/viewsnapstories
+          - img [ref=e558]
+          - generic [ref=e559]:
+            - generic [ref=e560]:
+              - generic [ref=e561]: ViewSnapStories
+              - generic [ref=e562]: View and download Snapchat stories, spotlight, videos, without logging in.
+            - generic [ref=e566] [cursor=pointer]:
+              - checkbox [ref=e567]
+              - img [ref=e569]
+        - generic [ref=e571]:
+          - link [ref=e572] [cursor=pointer]:
+            - /url: /startups/v2md
+          - img [ref=e575]
+          - generic [ref=e576]:
+            - generic [ref=e577]:
+              - generic [ref=e578]: v2md
+              - generic [ref=e579]: Turn voice memos into clean, structured Markdown notes
+            - generic [ref=e583] [cursor=pointer]:
+              - checkbox [ref=e584]
+              - img [ref=e586]
+        - generic [ref=e588]:
+          - link [ref=e589] [cursor=pointer]:
+            - /url: /startups/receiptgenie
+          - img [ref=e592]
+          - generic [ref=e593]:
+            - generic [ref=e594]:
+              - generic [ref=e595]: ReceiptGenie
+              - generic [ref=e596]: Scan receipts and auto-track expenses with 95%+ accurate AI
+            - generic [ref=e600] [cursor=pointer]:
+              - checkbox [ref=e601]
+              - img [ref=e603]
+        - generic [ref=e605]:
+          - link [ref=e606] [cursor=pointer]:
+            - /url: /startups/captioner
+          - img [ref=e609]
+          - generic [ref=e610]:
+            - generic [ref=e611]:
+              - generic [ref=e612]: Captioner
+              - generic [ref=e613]: Add accurate subtitles to your videos and save hours of work
+            - generic [ref=e617] [cursor=pointer]:
+              - checkbox [ref=e618]
+              - img [ref=e620]
+        - generic [ref=e622]:
+          - link [ref=e623] [cursor=pointer]:
+            - /url: /startups/createyourmusic
+          - img [ref=e626]
+          - generic [ref=e627]:
+            - generic [ref=e628]:
+              - generic [ref=e629]: CreateYourMusic
+              - generic [ref=e630]: Turn any idea into a finished song in under 60 seconds
+            - generic [ref=e634] [cursor=pointer]:
+              - checkbox [ref=e635]
+              - img [ref=e637]
+        - generic [ref=e639]:
+          - link [ref=e640] [cursor=pointer]:
+            - /url: /startups/propopad
+          - img [ref=e643]
+          - generic [ref=e644]:
+            - generic [ref=e645]:
+              - generic [ref=e646]: Propopad
+              - generic [ref=e647]: Scan your site and send branded proposals in 60 seconds
+            - generic [ref=e651] [cursor=pointer]:
+              - checkbox [ref=e652]
+              - img [ref=e654]
+        - generic [ref=e656]:
+          - link [ref=e657] [cursor=pointer]:
+            - /url: /startups/notenz
+          - img [ref=e660]
+          - generic [ref=e661]:
+            - generic [ref=e662]:
+              - generic [ref=e663]: Notenz
+              - generic [ref=e664]: Securely store essentials and auto-deliver them if you go silent
+            - generic [ref=e668] [cursor=pointer]:
+              - checkbox [ref=e669]
+              - img [ref=e671]
+        - generic [ref=e673]:
+          - link [ref=e674] [cursor=pointer]:
+            - /url: /startups/securo
+          - img [ref=e677]
+          - generic [ref=e678]:
+            - generic [ref=e679]:
+              - generic [ref=e680]: Securo
+              - generic [ref=e681]: Self-hosted, privacy-first money manager with bank sync and budgets
+            - generic [ref=e685] [cursor=pointer]:
+              - checkbox [ref=e686]
+              - img [ref=e688]
+        - generic [ref=e690]:
+          - link [ref=e691] [cursor=pointer]:
+            - /url: /startups/stampford
+          - img [ref=e694]
+          - generic [ref=e695]:
+            - generic [ref=e696]:
+              - generic [ref=e697]: Stampford
+              - generic [ref=e698]: Prove your content’s story with tamper-evident, timestamped records
+            - generic [ref=e702] [cursor=pointer]:
+              - checkbox [ref=e703]
+              - img [ref=e705]
+        - generic [ref=e707]:
+          - link [ref=e708] [cursor=pointer]:
+            - /url: /startups/host4-ai
+          - img [ref=e711]
+          - generic [ref=e712]:
+            - generic [ref=e713]:
+              - generic [ref=e714]: Host4.ai
+              - generic [ref=e715]: Run Claude Code and Codex 24/7 with SSH and a browser terminal on mobile
+              - link "BOOSTED" [ref=e716] [cursor=pointer]:
+                - /url: /boost
+            - generic [ref=e720] [cursor=pointer]:
+              - checkbox [ref=e721]
+              - img [ref=e723]
+        - generic [ref=e725]:
+          - link [ref=e726] [cursor=pointer]:
+            - /url: /startups/facefame
+          - img [ref=e729]
+          - generic [ref=e730]:
+            - generic [ref=e731]:
+              - generic [ref=e732]: Facefame
+              - generic [ref=e733]: Browse, apply, and share AI-powered photo and video effects
+            - generic [ref=e737] [cursor=pointer]:
+              - checkbox [ref=e738]
+              - img [ref=e740]
+        - generic [ref=e742]:
+          - link [ref=e743] [cursor=pointer]:
+            - /url: /startups/oobit
+          - img [ref=e746]
+          - generic [ref=e747]:
+            - generic [ref=e748]:
+              - generic [ref=e749]: Oobit
+              - generic [ref=e750]: Pay anywhere with crypto from your own wallet with tap to pay
+            - generic [ref=e754] [cursor=pointer]:
+              - checkbox [ref=e755]
+              - img [ref=e757]
+        - generic [ref=e759]:
+          - link [ref=e760] [cursor=pointer]:
+            - /url: /startups/defyton
+          - img [ref=e763]
+          - generic [ref=e764]:
+            - generic [ref=e765]:
+              - generic [ref=e766]: DefyTON
+              - generic [ref=e767]: Stake crypto on habits, AI verifies, earn or lose
+            - generic [ref=e771] [cursor=pointer]:
+              - checkbox [ref=e772]
+              - img [ref=e774]
+        - generic [ref=e776]:
+          - link [ref=e777] [cursor=pointer]:
+            - /url: /startups/tagmybeat
+          - img [ref=e780]
+          - generic [ref=e781]:
+            - generic [ref=e782]:
+              - generic [ref=e783]: TagMyBeat
+              - generic [ref=e784]: A producer tag generator for music producers and beatmakers
+            - generic [ref=e788] [cursor=pointer]:
+              - checkbox [ref=e789]
+              - img [ref=e791]
+        - generic [ref=e793]:
+          - link [ref=e794] [cursor=pointer]:
+            - /url: /startups/credmail
+          - img [ref=e797]
+          - generic [ref=e798]:
+            - generic [ref=e799]:
+              - generic [ref=e800]: Credmail
+              - generic [ref=e801]: Audit SPF, DKIM, DMARC, blacklists, and reputation to reach inboxes
+            - generic [ref=e805] [cursor=pointer]:
+              - checkbox [ref=e806]
+              - img [ref=e808]
+        - generic [ref=e810]:
+          - strong [ref=e811]: Friday
+          - text: June 19th
+        - generic [ref=e812]:
+          - link [ref=e813] [cursor=pointer]:
+            - /url: /startups/alwaysup
+          - img [ref=e816]
+          - generic [ref=e817]:
+            - generic [ref=e818]:
+              - generic [ref=e819]: AlwaysUp
+              - generic [ref=e820]: Monitor uptime, SSL, ads, and keywords with real-time alerts
+            - generic [ref=e824] [cursor=pointer]:
+              - checkbox [ref=e825]
+              - img [ref=e827]
+        - generic [ref=e829]:
+          - link [ref=e830] [cursor=pointer]:
+            - /url: /startups/tracktime-com
+          - img [ref=e833]
+          - generic [ref=e834]:
+            - generic [ref=e835]:
+              - generic [ref=e836]: TrackTime.com
+              - generic [ref=e837]: Automatically capture every billable call, SMS, email, and travel
+            - generic [ref=e841] [cursor=pointer]:
+              - checkbox [ref=e842]
+              - img [ref=e844]
+        - generic [ref=e846]:
+          - link [ref=e847] [cursor=pointer]:
+            - /url: /startups/ai-expense-budget
+          - img [ref=e850]
+          - generic [ref=e851]:
+            - generic [ref=e852]:
+              - generic [ref=e853]: AI Expense & Budget
+              - generic [ref=e854]: Budget smarter with AI-powered expense tracking and insights
+            - generic [ref=e858] [cursor=pointer]:
+              - checkbox [ref=e859]
+              - img [ref=e861]
+        - generic [ref=e863]:
+          - link [ref=e864] [cursor=pointer]:
+            - /url: /startups/tenarie
+          - img [ref=e867]
+          - generic [ref=e868]:
+            - generic [ref=e869]:
+              - generic [ref=e870]: Tenarie
+              - generic [ref=e871]: Test, prove, and move faster in one connected cybersecurity workspace
+            - generic [ref=e875] [cursor=pointer]:
+              - checkbox [ref=e876]
+              - img [ref=e878]
+        - generic [ref=e880]:
+          - link [ref=e881] [cursor=pointer]:
+            - /url: /startups/aristotle
+          - img [ref=e884]
+          - generic [ref=e885]:
+            - generic [ref=e886]:
+              - generic [ref=e887]: Aristotle
+              - generic [ref=e888]: AI tutor that learns how your child thinks
+            - generic [ref=e892] [cursor=pointer]:
+              - checkbox [ref=e893]
+              - img [ref=e895]
+        - generic [ref=e897]:
+          - link [ref=e898] [cursor=pointer]:
+            - /url: /startups/ito
+          - img [ref=e901]
+          - generic [ref=e902]:
+            - generic [ref=e903]:
+              - generic [ref=e904]: Ito
+              - generic [ref=e905]: Agentic QA on every PR to catch bugs static analysis misses
+            - generic [ref=e909] [cursor=pointer]:
+              - checkbox [ref=e910]
+              - img [ref=e912]
+        - generic [ref=e914]:
+          - link [ref=e915] [cursor=pointer]:
+            - /url: /startups/carly-ai
+          - img [ref=e918]
+          - generic [ref=e919]:
+            - generic [ref=e920]:
+              - generic [ref=e921]: Carly AI
+              - generic [ref=e922]: Delegate scheduling, email, and CRM tasks to AI agents you control
+            - generic [ref=e926] [cursor=pointer]:
+              - checkbox [ref=e927]
+              - img [ref=e929]
+        - generic [ref=e931]:
+          - link [ref=e932] [cursor=pointer]:
+            - /url: /startups/nof1
+          - img [ref=e935]
+          - generic [ref=e936]:
+            - generic [ref=e937]:
+              - generic [ref=e938]: NOF1
+              - generic [ref=e939]: Search payer policies, contracts, and market data to guide care
+            - generic [ref=e943] [cursor=pointer]:
+              - checkbox [ref=e944]
+              - img [ref=e946]
+        - generic [ref=e948]:
+          - link [ref=e949] [cursor=pointer]:
+            - /url: /startups/is-it-ai
+          - img [ref=e952]
+          - generic [ref=e953]:
+            - generic [ref=e954]:
+              - generic [ref=e955]: is-it.ai
+              - generic [ref=e956]: Community-judged platform to determine if content is AI or human
+            - generic [ref=e960] [cursor=pointer]:
+              - checkbox [ref=e961]
+              - img [ref=e963]
+        - generic [ref=e965]:
+          - link [ref=e966] [cursor=pointer]:
+            - /url: /startups/bumgun
+          - img [ref=e969]
+          - generic [ref=e970]:
+            - generic [ref=e971]:
+              - generic [ref=e972]: Bumgun
+              - generic [ref=e973]: Learn why washing beats wiping and find the best bidet sprayer
+            - generic [ref=e977] [cursor=pointer]:
+              - checkbox [ref=e978]
+              - img [ref=e980]
+        - generic [ref=e982]:
+          - link [ref=e983] [cursor=pointer]:
+            - /url: /startups/potoo
+          - img [ref=e986]
+          - generic [ref=e987]:
+            - generic [ref=e988]:
+              - generic [ref=e989]: Potoo
+              - generic [ref=e990]: Turn your IP cameras into private, on-device smart security
+            - generic [ref=e994] [cursor=pointer]:
+              - checkbox [ref=e995]
+              - img [ref=e997]
+        - generic [ref=e999]:
+          - link [ref=e1000] [cursor=pointer]:
+            - /url: /startups/aeroflip
+          - img [ref=e1003]
+          - generic [ref=e1004]:
+            - generic [ref=e1005]:
+              - generic [ref=e1006]: AeroFlip
+              - generic [ref=e1007]: Lightweight, cushioned, water-friendly flip flops for everyday wear
+            - generic [ref=e1011] [cursor=pointer]:
+              - checkbox [ref=e1012]
+              - img [ref=e1014]
+        - generic [ref=e1016]:
+          - link [ref=e1017] [cursor=pointer]:
+            - /url: /startups/votura
+          - img [ref=e1020]
+          - generic [ref=e1021]:
+            - generic [ref=e1022]:
+              - generic [ref=e1023]: Votura
+              - generic [ref=e1024]: Explore 500+ cities with AI audio tours and turn-by-turn navigation
+            - generic [ref=e1028] [cursor=pointer]:
+              - checkbox [ref=e1029]
+              - img [ref=e1031]
+        - generic [ref=e1033]:
+          - link [ref=e1034] [cursor=pointer]:
+            - /url: /startups/hellonod
+          - img [ref=e1037]
+          - generic [ref=e1038]:
+            - generic [ref=e1039]:
+              - generic [ref=e1040]: Nod
+              - generic [ref=e1041]: Record any Mac call without a bot, search and chat your notes
+            - generic [ref=e1045] [cursor=pointer]:
+              - checkbox [ref=e1046]
+              - img [ref=e1048]
+        - generic [ref=e1050]:
+          - link [ref=e1051] [cursor=pointer]:
+            - /url: /startups/schedly-2
+          - img [ref=e1054]
+          - generic [ref=e1055]:
+            - generic [ref=e1056]:
+              - generic [ref=e1057]: Schedly
+              - generic [ref=e1058]: Generate, schedule, and manage posts across all your social media
+            - generic [ref=e1062] [cursor=pointer]:
+              - checkbox [ref=e1063]
+              - img [ref=e1065]
+        - generic [ref=e1067]:
+          - strong [ref=e1068]: Thursday
+          - text: June 18th
+        - generic [ref=e1069]:
+          - link [ref=e1070] [cursor=pointer]:
+            - /url: /startups/reprokit
+          - img [ref=e1073]
+          - generic [ref=e1074]:
+            - generic [ref=e1075]:
+              - generic [ref=e1076]: ReproKit
+              - generic [ref=e1077]: Capture runtime signals and group them into actionable frontend issues
+            - generic [ref=e1081] [cursor=pointer]:
+              - checkbox [ref=e1082]
+              - img [ref=e1084]
+      - link "Load next page…" [ref=e1087] [cursor=pointer]:
+        - /url: /?page=2
+  - iframe [ref=e1090]:
+    - generic [ref=f1e6]:
+      - text: 採用
+      - strong [ref=f1e7]: reCAPTCHA
+      - text: 保護機制

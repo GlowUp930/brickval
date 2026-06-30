@@ -1,0 +1,165 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - log
+    - log
+  - generic [ref=e6]:
+    - link "Skip to main content" [ref=e7] [cursor=pointer]:
+      - /url: "#main"
+    - generic [ref=e8]:
+      - navigation "Primary Navigation" [ref=e9]:
+        - button "Toggle organization menu" [ref=e11] [cursor=pointer]:
+          - img [ref=e14]:
+            - generic [ref=e16]: A
+        - list [ref=e17]:
+          - listitem [ref=e18]:
+            - link "Issues" [ref=e19] [cursor=pointer]:
+              - /url: /issues/
+              - img [ref=e21]
+              - generic [ref=e23]: Issues
+          - listitem [ref=e24]:
+            - link "Explore" [ref=e25] [cursor=pointer]:
+              - /url: /explore/traces/
+              - img [ref=e27]
+              - generic [ref=e29]: Explore
+          - listitem [ref=e30]:
+            - link "Dashboards" [ref=e31] [cursor=pointer]:
+              - /url: /dashboards/
+              - img [ref=e33]
+              - generic [ref=e35]: Dashboards
+          - listitem [ref=e36]:
+            - link "Monitors" [ref=e37] [cursor=pointer]:
+              - /url: /monitors/
+              - img [ref=e39]
+              - generic [ref=e41]: Monitors
+          - listitem [ref=e42]:
+            - link "Settings" [ref=e43] [cursor=pointer]:
+              - /url: /settings/organization/
+              - img [ref=e45]
+              - generic [ref=e47]: Settings
+        - generic [ref=e48]:
+          - generic [ref=e51]:
+            - button "Onboarding" [ref=e52] [cursor=pointer]:
+              - img [ref=e56]:
+                - generic [ref=e471]: "5"
+            - button "Try Business" [ref=e62] [cursor=pointer]:
+              - img [ref=e65]
+            - button "Configure Seer" [ref=e67] [cursor=pointer]:
+              - img [ref=e70]
+            - button "What's New" [ref=e73] [cursor=pointer]:
+              - img [ref=e76]
+            - button "Help" [ref=e79] [cursor=pointer]:
+              - img [ref=e82]
+          - button "garychan930@outlook.com" [ref=e87] [cursor=pointer]:
+            - img [ref=e90]:
+              - generic [ref=e92]: G
+      - navigation "Secondary Navigation" [ref=e95]:
+        - generic [ref=e472]:
+          - generic [ref=e473]: Projects
+          - button "Collapse" [ref=e475] [cursor=pointer]:
+            - img [ref=e478]
+        - generic [ref=e480]:
+          - list [ref=e484]:
+            - listitem [ref=e485]:
+              - link "All Projects" [ref=e486] [cursor=pointer]:
+                - /url: /projects/
+                - generic [ref=e487]: All Projects
+          - separator [ref=e489]
+          - generic [ref=e490]:
+            - button "Projects" [ref=e491] [cursor=pointer]:
+              - generic [ref=e492]:
+                - generic [ref=e493]: Projects
+                - img [ref=e495]
+            - list [ref=e499]:
+              - listitem [ref=e500]:
+                - link "areyouok-ios" [ref=e501] [cursor=pointer]:
+                  - /url: /projects/areyouok-ios/
+                  - img [ref=e503]
+                  - generic [ref=e504]: areyouok-ios
+              - listitem [ref=e505]:
+                - link "react-native" [ref=e506] [cursor=pointer]:
+                  - /url: /projects/react-native/
+                  - img [ref=e508]
+                  - generic [ref=e509]: react-native
+    - generic [ref=e130]:
+      - generic [ref=e133]:
+        - button "Search" [ref=e134] [cursor=pointer]:
+          - generic [ref=e135]:
+            - img [ref=e137]
+            - generic [ref=e139]:
+              - text: Search
+              - generic [ref=e140]:
+                - generic "⌘" [ref=e141]:
+                  - img [ref=e142]
+                - generic [ref=e144]: K
+        - button "Ask Seer" [ref=e145] [cursor=pointer]:
+          - generic [ref=e146]:
+            - img [ref=e148]
+            - generic [ref=e151]:
+              - generic [ref=e152]: Ask Seer
+              - generic [ref=e154]:
+                - generic "⌘" [ref=e155]:
+                  - img [ref=e156]
+                - generic [ref=e158]: /
+        - button "Give Feedback" [ref=e160] [cursor=pointer]:
+          - img [ref=e163]
+      - main [ref=e165]:
+        - generic [ref=e510]:
+          - generic [ref=e511]:
+            - heading "Configure React Native SDK" [level=2] [ref=e512]
+            - generic [ref=e513]:
+              - button "Back to Platform Selection" [ref=e514] [cursor=pointer]:
+                - generic [ref=e515]:
+                  - img [ref=e517]
+                  - text: Back to Platform Selection
+              - button "Full Documentation" [ref=e519] [cursor=pointer]:
+                - generic [ref=e520]: Full Documentation
+          - generic [ref=e521]:
+            - separator [ref=e522]
+            - generic [ref=e523]:
+              - generic [ref=e524]:
+                - generic [ref=e525]:
+                  - heading "Automatic Configuration (Recommended)" [level=4] [ref=e526]
+                  - button "Copy instructions" [ref=e529] [cursor=pointer]:
+                    - generic [ref=e530]:
+                      - img [ref=e532]
+                      - text: Copy instructions
+                - generic [ref=e535]:
+                  - generic [ref=e536]:
+                    - text: Add Sentry automatically to your app with the
+                    - link "Sentry wizard" [ref=e537] [cursor=pointer]:
+                      - /url: https://docs.sentry.io/platforms/react-native/#install
+                    - text: (call this inside your project directory).
+                  - generic [ref=e539]:
+                    - button "Copy snippet" [ref=e541] [cursor=pointer]:
+                      - img [ref=e544]
+                    - code [ref=e548]: npx @sentry/wizard@latest -i reactNative --saas --org areyouok-4x --project react-native
+                  - generic [ref=e549]: "The Sentry wizard will automatically patch your project with the following:"
+                  - list [ref=e550]:
+                    - listitem [ref=e551]: Configure the SDK with your DSN
+                    - listitem [ref=e552]: Add source maps upload to your build process
+                    - listitem [ref=e553]: Add debug symbols upload to your build process
+              - generic [ref=e555] [cursor=pointer]:
+                - heading "Manual Configuration" [level=4] [ref=e556]
+                - button "Toggle optional configuration" [ref=e557]:
+                  - img [ref=e560]
+                - button "Copy DSN" [ref=e563]:
+                  - generic [ref=e564]:
+                    - img [ref=e566]
+                    - text: Copy DSN
+            - separator [ref=e568]
+            - heading "Additional Information" [level=4] [ref=e569]
+            - list [ref=e570]:
+              - listitem [ref=e571]:
+                - link "React Navigation" [ref=e572] [cursor=pointer]:
+                  - /url: https://docs.sentry.io/platforms/react-native/tracing/instrumentation/react-navigation/
+                - text: ": Set up automatic instrumentation with React Navigation"
+              - listitem [ref=e573]:
+                - link "React Native Navigation" [ref=e574] [cursor=pointer]:
+                  - /url: https://docs.sentry.io/platforms/react-native/tracing/instrumentation/react-native-navigation/
+                - text: ": Set up automatic instrumentation with React Native Navigation"
+              - listitem [ref=e575]:
+                - link "Expo Router" [ref=e576] [cursor=pointer]:
+                  - /url: https://docs.sentry.io/platforms/react-native/tracing/instrumentation/expo-router/
+                - text: ": Set up automatic instrumentation with Expo Router"
+          - button "Take me to Issues" [ref=e579] [cursor=pointer]:
+            - generic [ref=e580]: Take me to Issues

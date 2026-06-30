@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { router, useFocusEffect } from "expo-router";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { AuthView } from "@clerk/expo/native";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
+import * as SecureStore from "expo-secure-store";
 import { useAuth, useClerk, useUser } from "@clerk/expo";
-import { API_BASE } from "../lib/api";
+import { useSignInWithApple } from "@clerk/expo/apple";
+import { API_BASE, getAuthToken } from "../lib/api";
 import { isClerkConfigured } from "../lib/clerk";
-import { getNativeProStatus, presentSuperwallUpgrade, restoreNativePurchases } from "../lib/paywall";
+import { clearCollection } from "../lib/collection";
+import { tap } from "../lib/haptics";
+import { presentNativeAuth } from "../lib/native-auth";
+import {
+  getNativeProStatus,
+  getPaywallDiagnosticMessage,
+  presentSuperwallUpgradeWithResult,
+  restoreNativePurchases,
+} from "../lib/paywall";
+import { PrePurchaseDisclosure } from "../components/PrePurchaseDisclosure";
 
 const ACCENT = "#62c79a";
 const INK = "#f7f4ea";
@@ -15,6 +25,20 @@ const SURFACE = "#070908";
 const PANEL = "#0b0e0d";
 const LINE = "rgba(153,231,189,0.14)";
 const DANGER = "#ff8f8f";
+const AVATAR_KEY = "brickval_account_avatar";
+
+type AvatarKey = "classic" | "ghost" | "wolf" | "knight";
+
+const AVATARS: { key: AvatarKey; label: string; meta: string; source: ImageSourcePropType }[] = [
+  { key: "classic", label: "Classic", meta: "Blue cap", source: require("../assets/account-icons/classic.webp") },
+  { key: "ghost", label: "Ghost", meta: "Glow shell", source: require("../assets/account-icons/ghost.webp") },
+  { key: "wolf", label: "Wolf", meta: "Wolfpack", source: require("../assets/account-icons/wolf.webp") },
+  { key: "knight", label: "Knight", meta: "Castle helm", source: require("../assets/account-icons/knight.webp") },
+];
+
+function isAvatarKey(value: string | null): value is AvatarKey {
+  return AVATARS.some((option) => option.key === value);
+}
 
 export default function AccountScreen() {
   if (!isClerkConfigured) {
@@ -34,12 +58,17 @@ export default function AccountScreen() {
 }
 
 function ConfiguredAccountScreen() {
-  const { isLoaded, isSignedIn, getToken } = useAuth({ treatPendingAsSignedOut: false });
+  const { upgrade } = useLocalSearchParams<{ upgrade?: string }>();
+  const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
   const { user } = useUser();
   const { signOut } = useClerk();
+  const { startAppleAuthenticationFlow } = useSignInWithApple();
   const [accountBusy, setAccountBusy] = useState(false);
   const [proStatus, setProStatus] = useState<boolean | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [didAutoOpenUpgrade, setDidAutoOpenUpgrade] = useState(false);
+  const [avatar, setAvatar] = useState<AvatarKey>("classic");
+  const [showDisclosure, setShowDisclosure] = useState(false);
 
   const accountLabel = useMemo(() => {
     if (!user) return "Guest";
@@ -53,8 +82,23 @@ function ConfiguredAccountScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void refreshProStatus();
-    }, [refreshProStatus])
+      let active = true;
+      SecureStore.getItemAsync(AVATAR_KEY).then((savedAvatar) => {
+        if (active && isAvatarKey(savedAvatar)) {
+          setAvatar(savedAvatar);
+        }
+      });
+
+      if (isSignedIn) {
+        void refreshProStatus();
+      } else {
+        setProStatus(false);
+      }
+
+      return () => {
+        active = false;
+      };
+    }, [isSignedIn, refreshProStatus])
   );
 
   useEffect(() => {
@@ -73,14 +117,87 @@ function ConfiguredAccountScreen() {
       setErrorMessage("Sign in first so BrickVal Pro can attach to your account.");
       return;
     }
+    if (proStatus) return;
 
-    const shown = await presentSuperwallUpgrade();
-    if (!shown) {
-      setErrorMessage("Upgrade is unavailable in this build. Use an EAS Android build with native paywall enabled.");
+    setShowDisclosure(true);
+  };
+
+  const handleDisclosureContinue = async () => {
+    setShowDisclosure(false);
+    setErrorMessage(null);
+
+    const result = await presentSuperwallUpgradeWithResult();
+    if (result.status !== "presented") {
+      setErrorMessage(getPaywallDiagnosticMessage(result));
       return;
     }
 
     await refreshProStatus();
+  };
+
+  const handleDisclosureDismiss = () => {
+    setShowDisclosure(false);
+  };
+
+  useEffect(() => {
+    if (upgrade !== "1" || didAutoOpenUpgrade || !isLoaded || !isSignedIn) return;
+    setDidAutoOpenUpgrade(true);
+    void handleUpgrade();
+  }, [didAutoOpenUpgrade, isLoaded, isSignedIn, upgrade]);
+
+  const handleAppleSignIn = async () => {
+    setAccountBusy(true);
+    setErrorMessage(null);
+
+    try {
+      if (!isLoaded) {
+        setErrorMessage("Account is still loading. Try again in a moment.");
+        return;
+      }
+
+      const { createdSessionId, setActive } = await startAppleAuthenticationFlow();
+      if (!createdSessionId || !setActive) {
+        setErrorMessage("Apple sign-in did not return a session. Check Clerk Apple Sign In for com.brickval.app, or use email sign-in for now.");
+        return;
+      }
+
+      await setActive({ session: createdSessionId });
+      await refreshProStatus();
+    } catch (error: any) {
+      if (error?.code === "ERR_REQUEST_CANCELED") {
+        return;
+      }
+      console.warn("Apple sign-in failed", error);
+      setErrorMessage("Apple sign-in could not finish. Make sure Apple is enabled in Clerk, or use email sign-in for now.");
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
+  const handleNativeSignIn = async () => {
+    setAccountBusy(true);
+    setErrorMessage(null);
+
+    try {
+      if (!isLoaded) {
+        setErrorMessage("Account is still loading. Try again in a moment.");
+        return;
+      }
+
+      const result = await presentNativeAuth();
+      if (result === "unavailable") {
+        setErrorMessage("Native sign-in is unavailable in this build. Use an EAS store build.");
+        return;
+      }
+      if (result === "signed-in") {
+        await refreshProStatus();
+      }
+    } catch (error) {
+      console.warn("Native sign-in failed", error);
+      setErrorMessage("We could not open sign-in right now. Try again in a moment.");
+    } finally {
+      setAccountBusy(false);
+    }
   };
 
   const handleRestorePurchases = async () => {
@@ -104,54 +221,12 @@ function ConfiguredAccountScreen() {
       Alert.alert(
         restored ? "BrickVal Pro restored" : "No purchase found",
         restored
-          ? "Your Google Play purchase is active on this device."
+          ? "Your store purchase is active on this device."
           : "We could not find an active BrickVal Pro purchase for this account."
       );
     } finally {
       setAccountBusy(false);
     }
-  };
-
-  const handleDeleteAccount = async () => {
-    const token = await getToken();
-    if (!token) {
-      setErrorMessage("Sign in first before deleting this account.");
-      return;
-    }
-
-    Alert.alert(
-      "Delete account?",
-      "This deletes your BrickVal account and server-side Pro access. Local collection data on this phone stays until you clear it from Settings.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            setAccountBusy(true);
-            setErrorMessage(null);
-            try {
-              const res = await fetch(`${API_BASE}/api/delete-account`, {
-                method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              if (!res.ok) {
-                setErrorMessage("We could not delete the account right now. Try again in a moment.");
-                return;
-              }
-              await signOut();
-              setProStatus(false);
-              router.replace("/(tabs)/settings");
-            } catch (error) {
-              console.warn("Delete account failed", error);
-              setErrorMessage("We could not delete the account right now. Try again in a moment.");
-            } finally {
-              setAccountBusy(false);
-            }
-          },
-        },
-      ]
-    );
   };
 
   const handleSignOut = async () => {
@@ -166,6 +241,61 @@ function ConfiguredAccountScreen() {
     } finally {
       setAccountBusy(false);
     }
+  };
+
+  const handleDeleteAccount = async () => {
+    setErrorMessage(null);
+    if (!isSignedIn) {
+      setErrorMessage("Sign in first so we know which account to delete.");
+      return;
+    }
+
+    Alert.alert(
+      "Delete BrickVal account?",
+      "This permanently deletes your BrickVal account data. Active App Store subscriptions must still be cancelled in your Apple ID settings.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete account",
+          style: "destructive",
+          onPress: async () => {
+            setAccountBusy(true);
+            try {
+              const token = await getAuthToken();
+              if (!token) {
+                setErrorMessage("Your sign-in session expired. Sign in again before deleting your account.");
+                return;
+              }
+
+              const response = await fetch(`${API_BASE}/api/delete-account`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (!response.ok) {
+                const body = await response.json().catch(() => ({}));
+                throw new Error(body.error ?? `Delete failed with HTTP ${response.status}`);
+              }
+
+              await clearCollection();
+              await signOut();
+              setProStatus(false);
+              setErrorMessage(null);
+            } catch (error) {
+              console.warn("Delete account failed", error);
+              setErrorMessage(error instanceof Error ? error.message : "We could not delete your account right now. Try again.");
+            } finally {
+              setAccountBusy(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleAvatarSelect = async (nextAvatar: AvatarKey) => {
+    setAvatar(nextAvatar);
+    tap();
+    await SecureStore.setItemAsync(AVATAR_KEY, nextAvatar);
   };
 
   return (
@@ -205,13 +335,50 @@ function ConfiguredAccountScreen() {
           </Text>
         </View>
 
+        <View style={styles.avatarPanel}>
+          <View style={styles.avatarHeader}>
+            <View>
+              <Text style={styles.cardLabel}>Profile head</Text>
+              <Text style={styles.avatarTitle}>Choose your collector look</Text>
+            </View>
+            <AvatarImage source={AVATARS.find((option) => option.key === avatar)?.source ?? AVATARS[0].source} size={44} />
+          </View>
+          <View style={styles.avatarOptions}>
+            {AVATARS.map((option) => (
+              <Pressable
+                key={option.key}
+                accessibilityRole="button"
+                accessibilityState={{ selected: avatar === option.key }}
+                accessibilityLabel={`${option.label} avatar. ${option.meta}`}
+                style={[styles.avatarOption, avatar === option.key && styles.avatarOptionActive]}
+                onPress={() => handleAvatarSelect(option.key)}
+              >
+                <AvatarImage source={option.source} size={36} />
+                <Text style={[styles.avatarOptionText, avatar === option.key && styles.avatarOptionTextActive]}>
+                  {option.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
         {!isLoaded ? null : !isSignedIn ? (
           <View style={styles.section}>
-            <View style={styles.authShell}>
-              <AuthView mode="signInOrUp" />
-            </View>
+            <ActionButton
+              label={accountBusy ? "Opening sign-in..." : "Sign in with email"}
+              onPress={handleNativeSignIn}
+              disabled={accountBusy}
+            />
+            {Platform.OS === "ios" ? (
+              <ActionButton
+                label={accountBusy ? "Opening sign-in..." : "Continue with Apple"}
+                onPress={handleAppleSignIn}
+                disabled={accountBusy}
+                tone="secondary"
+              />
+            ) : null}
             <Text style={styles.helpText}>
-              Guest mode covers the first 3 mobile lookups. Sign in to keep scanning and attach Pro access to your account.
+              Free plan includes 5 scans. Sign in to keep scanning and attach Pro access to your account.
             </Text>
           </View>
         ) : (
@@ -222,11 +389,13 @@ function ConfiguredAccountScreen() {
               disabled={accountBusy}
               tone="secondary"
             />
-            <ActionButton
-              label="Upgrade to BrickVal Pro"
-              onPress={handleUpgrade}
-              disabled={accountBusy}
-            />
+            {proStatus ? null : (
+              <ActionButton
+                label="Upgrade to BrickVal Pro"
+                onPress={handleUpgrade}
+                disabled={accountBusy}
+              />
+            )}
             <ActionButton
               label={accountBusy ? "Signing out..." : "Sign out"}
               onPress={handleSignOut}
@@ -234,7 +403,7 @@ function ConfiguredAccountScreen() {
               tone="secondary"
             />
             <ActionButton
-              label={accountBusy ? "Deleting..." : "Delete account"}
+              label={accountBusy ? "Working..." : "Delete account"}
               onPress={handleDeleteAccount}
               disabled={accountBusy}
               tone="danger"
@@ -249,6 +418,11 @@ function ConfiguredAccountScreen() {
           </View>
         ) : null}
       </ScrollView>
+      <PrePurchaseDisclosure
+        visible={showDisclosure}
+        onContinue={handleDisclosureContinue}
+        onDismiss={handleDisclosureDismiss}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -289,6 +463,14 @@ function ActionButton({
   );
 }
 
+function AvatarImage({ source, size }: { source: ImageSourcePropType; size: number }) {
+  return (
+    <View style={[styles.avatarImageFrame, { width: size, height: size, borderRadius: size * 0.24 }]}>
+      <Image source={source} style={styles.avatarImage} resizeMode="cover" />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: SURFACE },
   content: { padding: 20, paddingTop: 56, paddingBottom: 96, gap: 18 },
@@ -318,15 +500,47 @@ const styles = StyleSheet.create({
   cardLabel: { color: SOFT, fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
   cardTitle: { color: INK, fontSize: 24, fontWeight: "900" },
   cardMeta: { color: ACCENT, fontSize: 14, fontWeight: "800" },
-  section: { gap: 10 },
-  authShell: {
-    minHeight: 640,
-    borderRadius: 20,
-    overflow: "hidden",
+  avatarPanel: {
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: LINE,
     backgroundColor: PANEL,
+    padding: 14,
+    gap: 12,
   },
+  avatarHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  avatarTitle: { color: INK, fontSize: 15, fontWeight: "900", marginTop: 4 },
+  avatarOptions: { flexDirection: "row", gap: 8 },
+  avatarOption: {
+    flex: 1,
+    minHeight: 74,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(247,244,234,0.09)",
+    backgroundColor: "rgba(247,244,234,0.035)",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
+  avatarOptionActive: {
+    borderColor: "rgba(98,199,154,0.72)",
+    backgroundColor: "rgba(98,199,154,0.1)",
+  },
+  avatarOptionText: { color: SOFT, fontSize: 9, fontWeight: "900" },
+  avatarOptionTextActive: { color: INK },
+  avatarImageFrame: {
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(247,244,234,0.16)",
+    backgroundColor: "rgba(247,244,234,0.05)",
+  },
+  avatarImage: { width: "100%", height: "100%" },
+  section: { gap: 10 },
   action: {
     minHeight: 48,
     borderRadius: 8,
