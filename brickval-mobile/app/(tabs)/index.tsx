@@ -162,6 +162,21 @@ export default function HomeDashboard() {
   const currentMorphShapeRef = useRef<{ x: number; y: number }[]>([]);
   const morphLineRef = useRef<any>(null);
   const morphFillRef = useRef<any>(null);
+  const indexTapCount = useRef(0);
+  const indexTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleIndexTap = () => {
+    indexTapCount.current += 1;
+    if (indexTapTimer.current) clearTimeout(indexTapTimer.current);
+    if (indexTapCount.current >= 5) {
+      indexTapCount.current = 0;
+      SecureStore.deleteItemAsync("has_completed_onboarding").catch(() => {});
+      SecureStore.deleteItemAsync("primary_goal").catch(() => {});
+      router.replace("/onboarding");
+      return;
+    }
+    indexTapTimer.current = setTimeout(() => { indexTapCount.current = 0; }, 2000);
+  };
 
   useEffect(() => {
     let active = true;
@@ -362,7 +377,7 @@ export default function HomeDashboard() {
       <ScrollView contentContainerStyle={s.content}>
         <View style={s.topRail}>
           <View>
-            <Text style={s.brand}>BrickVal <Text style={s.pro}>INDEX</Text></Text>
+            <Text style={s.brand}>BrickVal <Pressable onPress={handleIndexTap}><Text style={s.pro}>INDEX</Text></Pressable></Text>
             <Text style={s.brandMeta}>Sets + minifigures + parts</Text>
           </View>
           <Pressable
