@@ -234,4 +234,13 @@ export function isAvailable(): boolean {
   return shouldInit();
 }
 
+export async function dismissPaywall(): Promise<void> {
+  if (!didConfigure) return;
+  try {
+    await Superwall.shared.dismiss();
+  } catch (error) {
+    console.warn("Failed to dismiss Superwall paywall", error);
+  }
+}
+
 export { SUPERWALL_UPGRADE_PLACEMENT };

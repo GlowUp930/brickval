@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -25,14 +25,8 @@ import { getNativeProStatus } from "../../lib/paywall";
 import { normalizeHistoryDate } from "../../lib/api";
 import { CollectionSwipeRow } from "../../components/CollectionSwipeRow";
 import { buildChartAreaPath, interpolateChartLine, sampleChartLine } from "../../lib/chart-motion";
+import { useTheme, type ThemeColors } from "../../lib/ThemeProvider";
 
-const ACCENT = "#62c79a";
-const INK = "#f7f4ea";
-const MUTED = "rgba(247,244,234,0.62)";
-const SOFT = "rgba(247,244,234,0.38)";
-const SURFACE = "#121715";
-const PANEL = "#0b0e0d";
-const LINE = "rgba(153,231,189,0.14)";
 const HISTORY_TIP_KEY = "brickval_home_history_tip_seen";
 
 const usdFormatter = new Intl.NumberFormat("en-US", {
@@ -151,6 +145,8 @@ function getHistoricalCollectionSeries(items: CollectionItem[], horizon: Horizon
 }
 
 export default function HomeDashboard() {
+  const { colors: c, mode } = useTheme();
+  const s = useMemo(() => getStyles(c), [c, mode]);
   const { width: screenWidth } = useWindowDimensions();
   const [items, setItems] = useState<CollectionItem[]>([]);
   const [horizon, setHorizon] = useState<Horizon>("6M");
@@ -362,81 +358,81 @@ export default function HomeDashboard() {
   }, []);
 
   return (
-    <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.topRail}>
+    <View style={s.root}>
+      <ScrollView contentContainerStyle={s.content}>
+        <View style={s.topRail}>
           <View>
-            <Text style={styles.brand}>BrickVal <Text style={styles.pro}>INDEX</Text></Text>
-            <Text style={styles.brandMeta}>Sets + minifigures + parts</Text>
+            <Text style={s.brand}>BrickVal <Text style={s.pro}>INDEX</Text></Text>
+            <Text style={s.brandMeta}>Sets + minifigures + parts</Text>
           </View>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Scan item"
-            style={styles.scanButton}
+            style={s.scanButton}
             onPress={() => router.push("/scan")}
           >
-            <Text style={styles.scanButtonText}>Scan item</Text>
+            <Text style={s.scanButtonText}>Scan item</Text>
           </Pressable>
         </View>
 
-        <View style={styles.hero}>
-          <Text style={styles.eyebrow}>Portfolio value</Text>
-          <Text style={styles.total}>{usdFormatter.format(totalValue)}</Text>
-          <Text style={styles.caption}>
+        <View style={s.hero}>
+          <Text style={s.eyebrow}>Portfolio value</Text>
+          <Text style={s.total}>{usdFormatter.format(totalValue)}</Text>
+          <Text style={s.caption}>
             Based on sold/listing market values from saved LEGO sets, minifigures, and parts
           </Text>
 
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{setCount}</Text>
-              <Text style={styles.statLabel}>Sets</Text>
+          <View style={s.statsRow}>
+            <View style={s.stat}>
+              <Text style={s.statValue}>{setCount}</Text>
+              <Text style={s.statLabel}>Sets</Text>
             </View>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{minifigureCount}</Text>
-              <Text style={styles.statLabel}>Minifigs</Text>
+            <View style={s.stat}>
+              <Text style={s.statValue}>{minifigureCount}</Text>
+              <Text style={s.statLabel}>Minifigs</Text>
             </View>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{partCount}</Text>
-              <Text style={styles.statLabel}>Parts</Text>
+            <View style={s.stat}>
+              <Text style={s.statValue}>{partCount}</Text>
+              <Text style={s.statLabel}>Parts</Text>
             </View>
           </View>
 
-          <View style={styles.historyBlock}>
-            <View style={styles.historyHeader}>
-              <Text style={styles.historyTitle}>Value history</Text>
+          <View style={s.historyBlock}>
+            <View style={s.historyHeader}>
+              <Text style={s.historyTitle}>Value history</Text>
             </View>
             {showHistoryTip ? (
               <Animated.View
                 pointerEvents="none"
                 style={[
-                  styles.historyTip,
+                  s.historyTip,
                   {
                     opacity: historyTipProgress,
                     transform: [{ translateY: historyTipTranslateY }],
                   },
                 ]}
               >
-                <Text style={styles.historyTipText}>Tap the line to inspect a point.</Text>
+                <Text style={s.historyTipText}>Tap the line to inspect a point.</Text>
               </Animated.View>
             ) : null}
             <View
               accessibilityLabel={`Collection value chart, ${latestHistoryLabel}, from ${usdFormatter.format(firstHistoryValue)} to ${usdFormatter.format(totalValue)}`}
-              style={[styles.valueGraph, { width: chartWidth, height: chartHeight }]}
+              style={[s.valueGraph, { width: chartWidth, height: chartHeight }]}
               onStartShouldSetResponder={() => true}
               onMoveShouldSetResponder={() => true}
               onResponderGrant={handleChartTouch}
               onResponderMove={handleChartTouch}
             >
-              <View style={styles.gridLineTop} />
-              <View style={styles.gridLineMid} />
-              <View style={styles.gridLineBottom} />
+              <View style={s.gridLineTop} />
+              <View style={s.gridLineMid} />
+              <View style={s.gridLineBottom} />
               {selectedHistoryPoint ? (
                 <>
-                  <View style={[styles.chartCursor, { left: selectedX }]} />
+                  <View style={[s.chartCursor, { left: selectedX }]} />
                   <Animated.View
                     pointerEvents="none"
                     style={[
-                      styles.chartPopup,
+                      s.chartPopup,
                       {
                         left: popupLeft,
                         top: popupTop,
@@ -445,14 +441,14 @@ export default function HomeDashboard() {
                       },
                     ]}
                   >
-                    <Text style={styles.chartPopupLabel}>{formatTimelineLabel(selectedHistoryPoint.date)}</Text>
-                    <Text style={styles.chartPopupValue}>
+                    <Text style={s.chartPopupLabel}>{formatTimelineLabel(selectedHistoryPoint.date)}</Text>
+                    <Text style={s.chartPopupValue}>
                       {usdFormatter.format(selectedHistoryPoint.total_value_usd)}
                     </Text>
                   </Animated.View>
                   <View
                     style={[
-                      styles.selectedPoint,
+                      s.selectedPoint,
                       {
                         left: selectedX - 4,
                         top:
@@ -467,8 +463,8 @@ export default function HomeDashboard() {
               <Svg width={chartWidth} height={chartHeight} style={StyleSheet.absoluteFill}>
                 <Defs>
                   <LinearGradient id="portfolioFill" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor={ACCENT} stopOpacity="0.08" />
-                    <Stop offset="1" stopColor={ACCENT} stopOpacity="0" />
+                    <Stop offset="0" stopColor={c.semantic.success} stopOpacity="0.08" />
+                    <Stop offset="1" stopColor={c.semantic.success} stopOpacity="0" />
                   </LinearGradient>
                 </Defs>
                 {chartAreaPath ? <Path ref={morphFillRef} d={chartAreaPath} fill="url(#portfolioFill)" /> : null}
@@ -477,7 +473,7 @@ export default function HomeDashboard() {
                     ref={morphLineRef}
                     d={chartLinePath}
                     fill="none"
-                    stroke={ACCENT}
+                    stroke={c.semantic.success}
                     strokeWidth={2.5}
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -485,24 +481,24 @@ export default function HomeDashboard() {
                 ) : null}
               </Svg>
             </View>
-            <View style={[styles.graphTimeline, { width: chartWidth }]}>
+            <View style={[s.graphTimeline, { width: chartWidth }]}>
               {timelinePoints.map((point) => (
-                <Text key={point.date} style={styles.graphTimelineLabel}>
+                <Text key={point.date} style={s.graphTimelineLabel}>
                   {formatTimelineLabel(point.date)}
                 </Text>
               ))}
             </View>
-            <View style={styles.horizonRow}>
+            <View style={s.horizonRow}>
               {(["1M", "3M", "6M"] as Horizon[]).map((option) => (
                 <Pressable
                   key={option}
                   accessibilityRole="button"
                   accessibilityState={{ selected: horizon === option }}
                   accessibilityLabel={`Show ${option} value history`}
-                  style={[styles.horizonPill, horizon === option && styles.horizonPillActive]}
+                  style={[s.horizonPill, horizon === option && s.horizonPillActive]}
                   onPress={() => selectHorizon(option)}
                 >
-                  <Text style={[styles.horizonText, horizon === option && styles.horizonTextActive]}>
+                  <Text style={[s.horizonText, horizon === option && s.horizonTextActive]}>
                     {option}
                   </Text>
                 </Pressable>
@@ -510,66 +506,66 @@ export default function HomeDashboard() {
             </View>
           </View>
 
-          <View style={styles.graphFooter}>
-            <Text style={styles.graphText}>
+          <View style={s.graphFooter}>
+            <Text style={s.graphText}>
               {topSet
                 ? `Top item · ${topSet.quantity > 1 ? `${topSet.quantity}× ` : ""}${topSet.name}`
                 : "Add your first item to start the value history"}
             </Text>
-            <Text style={styles.graphDelta}>{pricedUnits} priced units</Text>
+            <Text style={s.graphDelta}>{pricedUnits} priced units</Text>
           </View>
         </View>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Saved inventory</Text>
-          <Text style={styles.sectionMeta}>{items.length} total</Text>
+        <View style={s.sectionHeader}>
+          <Text style={s.sectionTitle}>Saved inventory</Text>
+          <Text style={s.sectionMeta}>{items.length} total</Text>
         </View>
         {proStatus ? (
           <Animated.View
             accessibilityLabel="BrickVal Pro active. Unlimited scans are enabled."
             style={[
-              styles.collectionLimit,
-              styles.collectionLimitPro,
+              s.collectionLimit,
+              s.collectionLimitPro,
               {
                 opacity: reduceMotionEnabled ? 1 : proBannerProgress,
                 transform: reduceMotionEnabled ? [] : [{ translateY: proBannerTranslateY }],
               },
             ]}
           >
-            <View style={styles.proStatusTop}>
-              <Text style={[styles.collectionLimitLabel, styles.collectionLimitLabelPro]}>BrickVal Pro</Text>
-              <View style={styles.proStatusPill}>
-                <Text style={styles.proStatusPillText}>Active</Text>
+            <View style={s.proStatusTop}>
+              <Text style={[s.collectionLimitLabel, s.collectionLimitLabelPro]}>BrickVal Pro</Text>
+              <View style={s.proStatusPill}>
+                <Text style={s.proStatusPillText}>Active</Text>
               </View>
             </View>
-            <Text style={[styles.collectionLimitText, styles.collectionLimitTextPro]}>
+            <Text style={[s.collectionLimitText, s.collectionLimitTextPro]}>
               Unlimited scans are on. Keep checking LEGO values without the free-plan limit.
             </Text>
           </Animated.View>
         ) : (
-          <View style={styles.collectionLimit}>
-            <Text style={styles.collectionLimitLabel}>Free plan</Text>
-            <Text style={styles.collectionLimitText}>Save up to 10 LEGO items. Pro unlocks unlimited collection space.</Text>
+          <View style={s.collectionLimit}>
+            <Text style={s.collectionLimitLabel}>Free plan</Text>
+            <Text style={s.collectionLimitText}>Save up to 10 LEGO items. Pro unlocks unlimited collection space.</Text>
           </View>
         )}
 
         {items.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No items yet</Text>
-              <Text style={styles.emptyBody}>
+          <View style={s.empty}>
+            <Text style={s.emptyTitle}>No items yet</Text>
+              <Text style={s.emptyBody}>
               Scan a LEGO set, minifigure, or part, then add the result to start tracking value changes.
               </Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Start scanning"
-              style={styles.emptyAction}
+              style={s.emptyAction}
               onPress={() => router.push("/scan")}
             >
-              <Text style={styles.emptyActionText}>Start scanning</Text>
+              <Text style={s.emptyActionText}>Start scanning</Text>
             </Pressable>
           </View>
         ) : (
-          <View style={styles.list}>
+          <View style={s.list}>
             {topItems.map((item, index) => {
               return (
                 <CollectionSwipeRow
@@ -598,40 +594,43 @@ export default function HomeDashboard() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#070908" },
+function getStyles(c: ThemeColors) {
+  const accentRgb = `${parseInt(c.semantic.success.slice(1, 3), 16)}, ${parseInt(c.semantic.success.slice(3, 5), 16)}, ${parseInt(c.semantic.success.slice(5, 7), 16)}`;
+  const textRgb = `${parseInt(c.dark.text.slice(1, 3), 16)}, ${parseInt(c.dark.text.slice(3, 5), 16)}, ${parseInt(c.dark.text.slice(5, 7), 16)}`;
+  return StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.dark.background },
   content: { padding: 20, paddingTop: 58, paddingBottom: 112, gap: 24 },
   topRail: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  brand: { color: INK, fontSize: 26, fontWeight: "900", letterSpacing: -0.4 },
-  pro: { color: ACCENT, fontSize: 11, fontWeight: "900" },
-  brandMeta: { color: MUTED, fontSize: 12, fontWeight: "800", marginTop: 3 },
+  brand: { color: c.dark.text, fontSize: 26, fontWeight: "900", letterSpacing: -0.4 },
+  pro: { color: c.semantic.success, fontSize: 11, fontWeight: "900" },
+  brandMeta: { color: c.dark.textMuted, fontSize: 12, fontWeight: "800", marginTop: 3 },
   scanButton: {
     minHeight: 40,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: LINE,
-    backgroundColor: "rgba(98,199,154,0.08)",
+    borderColor: c.dark.border,
+    backgroundColor: `rgba(${accentRgb}, 0.08)`,
     paddingHorizontal: 14,
     alignItems: "center",
     justifyContent: "center",
   },
-  scanButtonText: { color: INK, fontSize: 12, fontWeight: "900" },
+  scanButtonText: { color: c.dark.text, fontSize: 12, fontWeight: "900" },
   hero: {
     minHeight: 450,
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: LINE,
-    backgroundColor: PANEL,
+    borderColor: c.dark.border,
+    backgroundColor: c.dark.backgroundElevated,
     padding: 18,
     overflow: "hidden",
   },
-  eyebrow: { color: ACCENT, fontSize: 12, fontWeight: "900", textAlign: "center" },
-  total: { color: INK, fontSize: 47, fontWeight: "900", lineHeight: 58, textAlign: "center", letterSpacing: -1.8 },
-  caption: { color: MUTED, fontSize: 12, fontWeight: "800", textAlign: "center" },
+  eyebrow: { color: c.semantic.success, fontSize: 12, fontWeight: "900", textAlign: "center" },
+  total: { color: c.dark.text, fontSize: 47, fontWeight: "900", lineHeight: 58, textAlign: "center", letterSpacing: -1.8 },
+  caption: { color: c.dark.textMuted, fontSize: 12, fontWeight: "800", textAlign: "center" },
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -639,8 +638,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   stat: { flex: 1, alignItems: "center", gap: 5 },
-  statValue: { color: INK, fontSize: 15, fontWeight: "900" },
-  statLabel: { color: SOFT, fontSize: 10, fontWeight: "800", textTransform: "uppercase", textAlign: "center" },
+  statValue: { color: c.dark.text, fontSize: 15, fontWeight: "900" },
+  statLabel: { color: c.dark.textDisabled, fontSize: 10, fontWeight: "800", textTransform: "uppercase", textAlign: "center" },
   historyBlock: {
     marginTop: 28,
   },
@@ -650,7 +649,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  historyTitle: { color: INK, fontSize: 14, fontWeight: "900" },
+  historyTitle: { color: c.dark.text, fontSize: 14, fontWeight: "900" },
   historyTip: {
     marginTop: 10,
     alignSelf: "flex-start",
@@ -661,14 +660,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
-  historyTipText: { color: INK, fontSize: 10, fontWeight: "800", lineHeight: 14 },
+  historyTipText: { color: c.dark.text, fontSize: 10, fontWeight: "800", lineHeight: 14 },
   horizonRow: {
     flexDirection: "row",
     justifyContent: "space-around",
     gap: 10,
     marginTop: 12,
     borderRadius: 999,
-    backgroundColor: "rgba(247,244,234,0.07)",
+    backgroundColor: `rgba(${textRgb}, 0.07)`,
     padding: 4,
   },
   horizonPill: {
@@ -680,10 +679,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   horizonPillActive: {
-    backgroundColor: ACCENT,
-    borderColor: ACCENT,
+    backgroundColor: c.semantic.success,
+    borderColor: c.semantic.success,
   },
-  horizonText: { color: SOFT, fontSize: 11, fontWeight: "900" },
+  horizonText: { color: c.dark.textDisabled, fontSize: 11, fontWeight: "900" },
   horizonTextActive: { color: "#07100c" },
   valueGraph: {
     marginTop: 18,
@@ -735,13 +734,13 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.08)",
   },
   chartPopupLabel: {
-    color: SOFT,
+    color: c.dark.textDisabled,
     fontSize: 9,
     fontWeight: "900",
     textTransform: "uppercase",
   },
   chartPopupValue: {
-    color: INK,
+    color: c.dark.text,
     fontSize: 15,
     fontWeight: "900",
     marginTop: 2,
@@ -751,7 +750,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: ACCENT,
+    backgroundColor: c.semantic.success,
     borderWidth: 2,
     borderColor: "#0b0f0d",
     zIndex: 3,
@@ -764,7 +763,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   graphTimelineLabel: {
-    color: MUTED,
+    color: c.dark.textMuted,
     flex: 1,
     fontSize: 8,
     fontWeight: "900",
@@ -778,23 +777,23 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 16,
   },
-  graphText: { flex: 1, color: SOFT, fontSize: 11, fontWeight: "800" },
-  graphDelta: { color: ACCENT, fontSize: 11, fontWeight: "900" },
+  graphText: { flex: 1, color: c.dark.textDisabled, fontSize: 11, fontWeight: "800" },
+  graphDelta: { color: c.semantic.success, fontSize: 11, fontWeight: "900" },
   sectionHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
-  sectionTitle: { color: INK, fontSize: 20, fontWeight: "900" },
-  sectionMeta: { color: MUTED, fontSize: 12, fontWeight: "700" },
+  sectionTitle: { color: c.dark.text, fontSize: 20, fontWeight: "900" },
+  sectionMeta: { color: c.dark.textMuted, fontSize: 12, fontWeight: "700" },
   collectionLimit: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: LINE,
+    borderColor: c.dark.border,
     backgroundColor: "rgba(247,244,234,0.03)",
     paddingHorizontal: 14,
     paddingVertical: 12,
     gap: 4,
   },
   collectionLimitPro: {
-    borderColor: "rgba(98,199,154,0.34)",
-    backgroundColor: "rgba(98,199,154,0.1)",
+    borderColor: `rgba(${accentRgb}, 0.34)`,
+    backgroundColor: `rgba(${accentRgb}, 0.1)`,
     gap: 8,
   },
   proStatusTop: {
@@ -806,34 +805,35 @@ const styles = StyleSheet.create({
   proStatusPill: {
     minHeight: 28,
     borderRadius: 999,
-    backgroundColor: ACCENT,
+    backgroundColor: c.semantic.success,
     paddingHorizontal: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   proStatusPillText: { color: "#07100c", fontSize: 10, fontWeight: "900" },
-  collectionLimitLabel: { color: SOFT, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
-  collectionLimitLabelPro: { color: ACCENT },
-  collectionLimitText: { color: MUTED, fontSize: 12, lineHeight: 17, fontWeight: "700" },
-  collectionLimitTextPro: { color: INK, fontSize: 13, lineHeight: 18 },
+  collectionLimitLabel: { color: c.dark.textDisabled, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
+  collectionLimitLabelPro: { color: c.semantic.success },
+  collectionLimitText: { color: c.dark.textMuted, fontSize: 12, lineHeight: 17, fontWeight: "700" },
+  collectionLimitTextPro: { color: c.dark.text, fontSize: 13, lineHeight: 18 },
   empty: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: LINE,
-    backgroundColor: SURFACE,
+    borderColor: c.dark.border,
+    backgroundColor: c.dark.surface,
     padding: 18,
     gap: 12,
   },
-  emptyTitle: { color: INK, fontSize: 18, fontWeight: "900" },
-  emptyBody: { color: MUTED, fontSize: 14, lineHeight: 21 },
+  emptyTitle: { color: c.dark.text, fontSize: 18, fontWeight: "900" },
+  emptyBody: { color: c.dark.textMuted, fontSize: 14, lineHeight: 21 },
   emptyAction: {
     minHeight: 44,
     borderRadius: 10,
-    backgroundColor: ACCENT,
+    backgroundColor: c.semantic.success,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 4,
   },
   emptyActionText: { color: "#07100c", fontSize: 14, fontWeight: "900" },
   list: { gap: 12 },
-});
+  });
+}

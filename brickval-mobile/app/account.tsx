@@ -16,15 +16,9 @@ import {
   restoreNativePurchases,
 } from "../lib/paywall";
 import { PrePurchaseDisclosure } from "../components/PrePurchaseDisclosure";
+import { useTheme, type ModeColors } from "../lib/ThemeProvider";
+import { colors } from "../lib/theme";
 
-const ACCENT = "#62c79a";
-const INK = "#f7f4ea";
-const MUTED = "rgba(247,244,234,0.64)";
-const SOFT = "rgba(247,244,234,0.38)";
-const SURFACE = "#070908";
-const PANEL = "#0b0e0d";
-const LINE = "rgba(153,231,189,0.14)";
-const DANGER = "#ff8f8f";
 const AVATAR_KEY = "brickval_account_avatar";
 
 type AvatarKey = "classic" | "ghost" | "wolf" | "knight";
@@ -41,6 +35,9 @@ function isAvatarKey(value: string | null): value is AvatarKey {
 }
 
 export default function AccountScreen() {
+  const { c } = useTheme();
+  const styles = useMemo(() => getStyles(c), [c]);
+
   if (!isClerkConfigured) {
     return (
       <View style={styles.root}>
@@ -58,6 +55,8 @@ export default function AccountScreen() {
 }
 
 function ConfiguredAccountScreen() {
+  const { colors, c } = useTheme();
+  const styles = useMemo(() => getStyles(c), [c]);
   const { upgrade } = useLocalSearchParams<{ upgrade?: string }>();
   const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
   const { user } = useUser();
@@ -438,23 +437,25 @@ function ActionButton({
   disabled?: boolean;
   tone?: "primary" | "secondary" | "danger";
 }) {
+  const { c } = useTheme();
+  const s = getStyles(c);
   return (
     <Pressable
       accessibilityRole="button"
       style={[
-        styles.action,
-        tone === "secondary" && styles.actionSecondary,
-        tone === "danger" && styles.actionDanger,
-        disabled && styles.actionDisabled,
+        s.action,
+        tone === "secondary" && s.actionSecondary,
+        tone === "danger" && s.actionDanger,
+        disabled && s.actionDisabled,
       ]}
       onPress={onPress}
       disabled={disabled}
     >
       <Text
         style={[
-          styles.actionText,
-          tone === "secondary" && styles.actionTextSecondary,
-          tone === "danger" && styles.actionTextDanger,
+          s.actionText,
+          tone === "secondary" && s.actionTextSecondary,
+          tone === "danger" && s.actionTextDanger,
         ]}
       >
         {label}
@@ -464,121 +465,125 @@ function ActionButton({
 }
 
 function AvatarImage({ source, size }: { source: ImageSourcePropType; size: number }) {
+  const { c } = useTheme();
+  const s = getStyles(c);
   return (
-    <View style={[styles.avatarImageFrame, { width: size, height: size, borderRadius: size * 0.24 }]}>
-      <Image source={source} style={styles.avatarImage} resizeMode="cover" />
+    <View style={[s.avatarImageFrame, { width: size, height: size, borderRadius: size * 0.24 }]}>
+      <Image source={source} style={s.avatarImage} resizeMode="cover" />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: SURFACE },
-  content: { padding: 20, paddingTop: 56, paddingBottom: 96, gap: 18 },
-  backBtn: {
-    alignSelf: "flex-start",
-    minHeight: 36,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: LINE,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backText: { color: INK, fontSize: 12, fontWeight: "900" },
-  header: { gap: 8 },
-  eyebrow: { color: ACCENT, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
-  title: { color: INK, fontSize: 34, fontWeight: "900" },
-  body: { color: MUTED, fontSize: 14, lineHeight: 21, fontWeight: "700" },
-  card: {
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: LINE,
-    backgroundColor: PANEL,
-    padding: 16,
-    gap: 6,
-  },
-  cardLabel: { color: SOFT, fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
-  cardTitle: { color: INK, fontSize: 24, fontWeight: "900" },
-  cardMeta: { color: ACCENT, fontSize: 14, fontWeight: "800" },
-  avatarPanel: {
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: LINE,
-    backgroundColor: PANEL,
-    padding: 14,
-    gap: 12,
-  },
-  avatarHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  avatarTitle: { color: INK, fontSize: 15, fontWeight: "900", marginTop: 4 },
-  avatarOptions: { flexDirection: "row", gap: 8 },
-  avatarOption: {
-    flex: 1,
-    minHeight: 74,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(247,244,234,0.09)",
-    backgroundColor: "rgba(247,244,234,0.035)",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-  },
-  avatarOptionActive: {
-    borderColor: "rgba(98,199,154,0.72)",
-    backgroundColor: "rgba(98,199,154,0.1)",
-  },
-  avatarOptionText: { color: SOFT, fontSize: 9, fontWeight: "900" },
-  avatarOptionTextActive: { color: INK },
-  avatarImageFrame: {
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(247,244,234,0.16)",
-    backgroundColor: "rgba(247,244,234,0.05)",
-  },
-  avatarImage: { width: "100%", height: "100%" },
-  section: { gap: 10 },
-  action: {
-    minHeight: 48,
-    borderRadius: 8,
-    backgroundColor: ACCENT,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 16,
-  },
-  actionSecondary: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: LINE,
-  },
-  actionDanger: {
-    backgroundColor: "rgba(255,143,143,0.14)",
-    borderWidth: 1,
-    borderColor: "rgba(255,143,143,0.4)",
-  },
-  actionDisabled: { opacity: 0.6 },
-  actionText: { color: "#07100c", fontSize: 14, fontWeight: "900" },
-  actionTextSecondary: { color: INK },
-  actionTextDanger: { color: DANGER },
-  helpText: { color: MUTED, fontSize: 12, lineHeight: 18, fontWeight: "700" },
-  errorCard: {
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,143,143,0.38)",
-    backgroundColor: "rgba(35,18,12,0.9)",
-    padding: 14,
-    gap: 8,
-  },
-  errorTitle: { color: "#ffb4b4", fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
-  errorBody: { color: INK, fontSize: 13, fontWeight: "700", lineHeight: 19 },
-  emptyState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-    gap: 12,
-  },
-});
+function getStyles(c: ModeColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: c.surface },
+    content: { padding: 20, paddingTop: 56, paddingBottom: 96, gap: 18 },
+    backBtn: {
+      alignSelf: "flex-start",
+      minHeight: 36,
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: c.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    backText: { color: c.text, fontSize: 12, fontWeight: "900" },
+    header: { gap: 8 },
+    eyebrow: { color: colors.semantic.success, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+    title: { color: c.text, fontSize: 34, fontWeight: "900" },
+    body: { color: c.textMuted, fontSize: 14, lineHeight: 21, fontWeight: "700" },
+    card: {
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.backgroundElevated,
+      padding: 16,
+      gap: 6,
+    },
+    cardLabel: { color: c.textDisabled, fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
+    cardTitle: { color: c.text, fontSize: 24, fontWeight: "900" },
+    cardMeta: { color: colors.semantic.success, fontSize: 14, fontWeight: "800" },
+    avatarPanel: {
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.backgroundElevated,
+      padding: 14,
+      gap: 12,
+    },
+    avatarHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+    },
+    avatarTitle: { color: c.text, fontSize: 15, fontWeight: "900", marginTop: 4 },
+    avatarOptions: { flexDirection: "row", gap: 8 },
+    avatarOption: {
+      flex: 1,
+      minHeight: 74,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 7,
+    },
+    avatarOptionActive: {
+      borderColor: colors.semantic.success,
+      backgroundColor: colors.semantic.successSoft,
+    },
+    avatarOptionText: { color: c.textDisabled, fontSize: 9, fontWeight: "900" },
+    avatarOptionTextActive: { color: c.text },
+    avatarImageFrame: {
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+    },
+    avatarImage: { width: "100%", height: "100%" },
+    section: { gap: 10 },
+    action: {
+      minHeight: 48,
+      borderRadius: 8,
+      backgroundColor: colors.semantic.success,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 16,
+    },
+    actionSecondary: {
+      backgroundColor: "transparent",
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    actionDanger: {
+      backgroundColor: c.backgroundElevated,
+      borderWidth: 1,
+      borderColor: colors.semantic.danger,
+    },
+    actionDisabled: { opacity: 0.6 },
+    actionText: { color: c.textInverse, fontSize: 14, fontWeight: "900" },
+    actionTextSecondary: { color: c.text },
+    actionTextDanger: { color: colors.semantic.danger },
+    helpText: { color: c.textMuted, fontSize: 12, lineHeight: 18, fontWeight: "700" },
+    errorCard: {
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.semantic.danger,
+      backgroundColor: c.surface,
+      padding: 14,
+      gap: 8,
+    },
+    errorTitle: { color: colors.semantic.danger, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+    errorBody: { color: c.text, fontSize: 13, fontWeight: "700", lineHeight: 19 },
+    emptyState: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+      gap: 12,
+    },
+  });
+}

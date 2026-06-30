@@ -7,6 +7,7 @@ import {
 } from "./revenuecat";
 import {
   configureSuperwall,
+  dismissPaywall as dismissSuperwallPaywall,
   syncIdentity as syncSuperwallIdentityRaw,
   setSubscriptionStatus,
   presentUpgrade,
@@ -84,4 +85,9 @@ export async function presentSuperwallUpgrade(): Promise<boolean> {
 export async function presentSuperwallUpgradeWithResult(): Promise<PaywallPresentationResult> {
   await ensureInitialized();
   return presentUpgrade();
+}
+
+export async function dismissPaywall(): Promise<void> {
+  await ensureInitialized();
+  await dismissSuperwallPaywall();
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
   Animated,
@@ -18,14 +18,8 @@ import { CollectionItem, getCollection, getItemTotalValue } from "../../../lib/c
 import { normalizeHistoryDate } from "../../../lib/api";
 import { QuestionMarkPlaceholder } from "../../../components/QuestionMarkPlaceholder";
 import { buildChartAreaPath, interpolateChartLine, sampleChartLine } from "../../../lib/chart-motion";
-
-const ACCENT = "#62c79a";
-const INK = "#f7f4ea";
-const MUTED = "rgba(247,244,234,0.64)";
-const SOFT = "rgba(247,244,234,0.38)";
-const SURFACE = "#070908";
-const PANEL = "#0b0e0d";
-const LINE = "rgba(153,231,189,0.14)";
+import { useTheme } from "../../../lib/ThemeProvider";
+import { type ThemeColors } from "../../../lib/theme";
 const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 type Horizon = "1M" | "3M" | "6M";
 const HORIZON_DAYS: Record<Horizon, number> = {
@@ -131,6 +125,8 @@ function buildChartCoordinates(
 
 export default function ItemDetailScreen() {
   const { width: screenWidth } = useWindowDimensions();
+  const { colors: c } = useTheme();
+  const s = useMemo(() => getStyles(c), [c]);
   const params = useLocalSearchParams<{
     itemType?: string | string[];
     setNumber?: string | string[];
@@ -305,15 +301,15 @@ export default function ItemDetailScreen() {
 
   if (!item) {
     return (
-      <View style={styles.root}>
-        <View style={styles.header}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Go back" style={styles.backBtn} onPress={() => router.back()}>
-            <Text style={styles.backText}>Back</Text>
+      <View style={s.root}>
+        <View style={s.header}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Go back" style={s.backBtn} onPress={() => router.back()}>
+            <Text style={s.backText}>Back</Text>
           </Pressable>
         </View>
-        <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>Item not found</Text>
-          <Text style={styles.emptyBody}>This saved item is no longer on this phone.</Text>
+        <View style={s.empty}>
+          <Text style={s.emptyTitle}>Item not found</Text>
+          <Text style={s.emptyBody}>This saved item is no longer on this phone.</Text>
         </View>
       </View>
     );
@@ -345,86 +341,86 @@ export default function ItemDetailScreen() {
   ).filter((field): field is CollectorField => field !== null);
 
   return (
-    <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Go back" style={styles.backBtn} onPress={() => router.back()}>
-            <Text style={styles.backText}>Back</Text>
+    <View style={s.root}>
+      <ScrollView contentContainerStyle={s.content}>
+        <View style={s.header}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Go back" style={s.backBtn} onPress={() => router.back()}>
+            <Text style={s.backText}>Back</Text>
           </Pressable>
-          <Text style={styles.eyebrow}>
+          <Text style={s.eyebrow}>
             {item.item_type === "part" ? "Part details" : item.item_type === "minifig" ? "Minifigure details" : "Set details"}
           </Text>
-          <Text style={styles.title}>{item.name}</Text>
-          <Text style={styles.meta}>
+          <Text style={s.title}>{item.name}</Text>
+          <Text style={s.meta}>
             {item.set_number}
             {item.item_type === "part" && item.color_name ? ` · ${item.color_name}` : ""}
             {` · ${item.quantity}× · ${formatCondition(item.condition)}`}
           </Text>
         </View>
 
-        <View style={styles.hero}>
-          <View style={styles.heroTop}>
+        <View style={s.hero}>
+          <View style={s.heroTop}>
             {item.image_url ? (
-              <Image source={{ uri: item.image_url }} style={styles.image} />
+              <Image source={{ uri: item.image_url }} style={s.image} />
             ) : (
-              <QuestionMarkPlaceholder style={styles.image} />
+              <QuestionMarkPlaceholder style={s.image} />
             )}
-            <View style={styles.heroCopy}>
-              <Text style={styles.valueLabel}>Collection value</Text>
-              <Text style={styles.value}>{USD.format(totalValue)}</Text>
-              <Text style={styles.unitValue}>
+            <View style={s.heroCopy}>
+              <Text style={s.valueLabel}>Collection value</Text>
+              <Text style={s.value}>{USD.format(totalValue)}</Text>
+              <Text style={s.unitValue}>
                 {unitValue === null ? "No unit value" : `${USD.format(unitValue)} each`}
               </Text>
             </View>
           </View>
 
-          <View style={styles.statsRow}>
-            <Stat label="Quantity" value={`${quantity}`} />
-            <Stat label="Condition" value={formatCondition(item.condition)} />
-            <Stat
+          <View style={s.statsRow}>
+            <Stat s={s} label="Quantity" value={`${quantity}`} />
+            <Stat s={s} label="Condition" value={formatCondition(item.condition)} />
+            <Stat s={s}
               label={item.item_type === "part" ? "Color" : "Retail"}
               value={item.item_type === "part" ? item.color_name ?? "Unknown" : formatRetailComparison(item.gain_pct)}
             />
           </View>
         </View>
 
-        <View style={styles.chartCard}>
-          <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>Value history</Text>
-            <Text style={styles.chartMeta}>
+        <View style={s.chartCard}>
+          <View style={s.chartHeader}>
+            <Text style={s.chartTitle}>Value history</Text>
+            <Text style={s.chartMeta}>
               {windowedHistory.length ? `${windowedHistory.length} points` : "Saved snapshot"}
             </Text>
           </View>
-          <View style={styles.chartMotion}>
-            <View style={styles.summaryRow}>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryValue}>{salesInWindow}</Text>
-                <Text style={styles.summaryLabel}>Sales in window</Text>
+          <View style={s.chartMotion}>
+            <View style={s.summaryRow}>
+              <View style={s.summaryItem}>
+                <Text style={s.summaryValue}>{salesInWindow}</Text>
+                <Text style={s.summaryLabel}>Sales in window</Text>
               </View>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryValue}>{horizon}</Text>
-                <Text style={styles.summaryLabel}>Selected range</Text>
+              <View style={s.summaryItem}>
+                <Text style={s.summaryValue}>{horizon}</Text>
+                <Text style={s.summaryLabel}>Selected range</Text>
               </View>
             </View>
 
             <View
               accessibilityLabel="Saved item value history chart"
-              style={[styles.chartWrap, { width: chartWidth, height: chartHeight }]}
+              style={[s.chartWrap, { width: chartWidth, height: chartHeight }]}
               onStartShouldSetResponder={() => true}
               onMoveShouldSetResponder={() => true}
               onResponderGrant={handleChartTouch}
               onResponderMove={handleChartTouch}
             >
-              <View style={styles.gridLineTop} />
-              <View style={styles.gridLineMid} />
-              <View style={styles.gridLineBottom} />
+              <View style={s.gridLineTop} />
+              <View style={s.gridLineMid} />
+              <View style={s.gridLineBottom} />
               {selectedHistoryPoint ? (
                 <>
-                  <View style={[styles.chartCursor, { left: selectedX }]} />
+                  <View style={[s.chartCursor, { left: selectedX }]} />
                   <Animated.View
                     pointerEvents="none"
                     style={[
-                      styles.chartPopup,
+                      s.chartPopup,
                       {
                         left: popupLeft,
                         top: popupTop,
@@ -433,12 +429,12 @@ export default function ItemDetailScreen() {
                       },
                     ]}
                   >
-                    <Text style={styles.chartPopupLabel}>{formatTimelineLabel(selectedHistoryPoint.date)}</Text>
-                    <Text style={styles.chartPopupValue}>{USD.format(selectedHistoryPoint.total)}</Text>
+                    <Text style={s.chartPopupLabel}>{formatTimelineLabel(selectedHistoryPoint.date)}</Text>
+                    <Text style={s.chartPopupValue}>{USD.format(selectedHistoryPoint.total)}</Text>
                   </Animated.View>
                   <View
                     style={[
-                      styles.selectedPoint,
+                      s.selectedPoint,
                       {
                         left: selectedX - 4,
                         top: selectedHistoryPoint.y >= 4 ? selectedHistoryPoint.y - 4 : selectedHistoryPoint.y,
@@ -450,50 +446,50 @@ export default function ItemDetailScreen() {
               <Svg width={chartWidth} height={chartHeight} style={StyleSheet.absoluteFill}>
               <Defs>
                 <LinearGradient id="detailFill" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={ACCENT} stopOpacity="0.08" />
-                  <Stop offset="1" stopColor={ACCENT} stopOpacity="0" />
+                  <Stop offset="0" stopColor={c.semantic.success} stopOpacity="0.08" />
+                  <Stop offset="1" stopColor={c.semantic.success} stopOpacity="0" />
                 </LinearGradient>
               </Defs>
                 {chartAreaPath ? <Path ref={morphFillRef} d={chartAreaPath} fill="url(#detailFill)" /> : null}
-                {chartLinePath ? <Path ref={morphLineRef} d={chartLinePath} fill="none" stroke={ACCENT} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /> : null}
+                {chartLinePath ? <Path ref={morphLineRef} d={chartLinePath} fill="none" stroke={c.semantic.success} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /> : null}
               </Svg>
             </View>
-            <View style={[styles.timeline, { width: chartWidth }]}>
+            <View style={[s.timeline, { width: chartWidth }]}>
               {timelinePoints.map((point) => (
-                <Text key={`${point.date}-${point.total}`} style={[styles.timelineLabel, { left: clampTimelineLeft(point.x) }]} numberOfLines={1}>
+                <Text key={`${point.date}-${point.total}`} style={[s.timelineLabel, { left: clampTimelineLeft(point.x) }]} numberOfLines={1}>
                   {formatTimelineLabel(point.date)}
                 </Text>
               ))}
             </View>
-            <View style={styles.horizonRow}>
+            <View style={s.horizonRow}>
               {(["1M", "3M", "6M"] as Horizon[]).map((option) => (
                 <Pressable
                   key={option}
                   accessibilityRole="button"
                   accessibilityState={{ selected: horizon === option }}
                   accessibilityLabel={`Show ${option} value history`}
-                  style={[styles.horizonPill, horizon === option && styles.horizonPillActive]}
+                  style={[s.horizonPill, horizon === option && s.horizonPillActive]}
                   onPress={() => selectHorizon(option)}
                 >
-                  <Text style={[styles.horizonText, horizon === option && styles.horizonTextActive]}>
+                  <Text style={[s.horizonText, horizon === option && s.horizonTextActive]}>
                     {option}
                   </Text>
                 </Pressable>
               ))}
             </View>
             {salesInWindow === 0 ? (
-              <Text style={styles.noSalesText}>No sales in the selected time frame for this item.</Text>
+              <Text style={s.noSalesText}>No sales in the selected time frame for this item.</Text>
             ) : null}
           </View>
         </View>
 
-        <View style={styles.collectorCard}>
-          <Text style={styles.collectorTitle}>Collector Details</Text>
-          <View style={styles.collectorGrid}>
+        <View style={s.collectorCard}>
+          <Text style={s.collectorTitle}>Collector Details</Text>
+          <View style={s.collectorGrid}>
             {collectorFields.map((field) => (
-              <View key={field.label} style={styles.collectorField}>
-                <Text style={styles.collectorLabel}>{field.label}</Text>
-                <Text style={styles.collectorValue}>{field.value}</Text>
+              <View key={field.label} style={s.collectorField}>
+                <Text style={s.collectorLabel}>{field.label}</Text>
+                <Text style={s.collectorValue}>{field.value}</Text>
               </View>
             ))}
           </View>
@@ -503,19 +499,20 @@ export default function ItemDetailScreen() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ s, label, value }: { s: any; label: string; value: string }) {
   return (
-    <View style={styles.stat}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue} numberOfLines={2}>
+    <View style={s.stat}>
+      <Text style={s.statLabel}>{label}</Text>
+      <Text style={s.statValue} numberOfLines={2}>
         {value}
       </Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: SURFACE },
+function getStyles(c: ThemeColors) {
+  return StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.dark.background },
   content: { padding: 20, paddingTop: 56, paddingBottom: 96, gap: 18 },
   header: { gap: 6 },
   backBtn: {
@@ -524,51 +521,51 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: LINE,
+    borderColor: c.dark.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  backText: { color: INK, fontSize: 12, fontWeight: "900" },
-  eyebrow: { color: ACCENT, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
-  title: { color: INK, fontSize: 30, fontWeight: "900", letterSpacing: -1.1, lineHeight: 34 },
-  meta: { color: MUTED, fontSize: 13, fontWeight: "700" },
+  backText: { color: c.dark.text, fontSize: 12, fontWeight: "900" },
+  eyebrow: { color: c.semantic.success, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+  title: { color: c.dark.text, fontSize: 30, fontWeight: "900", letterSpacing: -1.1, lineHeight: 34 },
+  meta: { color: c.dark.textMuted, fontSize: 13, fontWeight: "700" },
   hero: {
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: LINE,
-    backgroundColor: PANEL,
+    borderColor: c.dark.border,
+    backgroundColor: c.dark.backgroundElevated,
     padding: 16,
     gap: 16,
   },
   heroTop: { flexDirection: "row", gap: 14, alignItems: "center" },
   image: { width: 82, height: 82, borderRadius: 14, backgroundColor: "#171717" },
   heroCopy: { flex: 1, gap: 5 },
-  valueLabel: { color: MUTED, fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
-  value: { color: INK, fontSize: 32, fontWeight: "900", lineHeight: 36, letterSpacing: -0.8 },
-  unitValue: { color: SOFT, fontSize: 12, fontWeight: "700" },
+  valueLabel: { color: c.dark.textMuted, fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
+  value: { color: c.dark.text, fontSize: 32, fontWeight: "900", lineHeight: 36, letterSpacing: -0.8 },
+  unitValue: { color: c.dark.textDisabled, fontSize: 12, fontWeight: "700" },
   statsRow: { flexDirection: "row", gap: 10 },
   stat: {
     flex: 1,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: LINE,
+    borderColor: c.dark.border,
     padding: 12,
     gap: 6,
     backgroundColor: "rgba(255,255,255,0.02)",
   },
-  statLabel: { color: MUTED, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
-  statValue: { color: INK, fontSize: 13, fontWeight: "800", lineHeight: 17 },
+  statLabel: { color: c.dark.textMuted, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
+  statValue: { color: c.dark.text, fontSize: 13, fontWeight: "800", lineHeight: 17 },
   chartCard: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: LINE,
+    borderColor: c.dark.border,
     backgroundColor: "rgba(255,255,255,0.015)",
     padding: 16,
     gap: 14,
   },
   chartHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  chartTitle: { color: INK, fontSize: 15, fontWeight: "900", letterSpacing: -0.2 },
-  chartMeta: { color: MUTED, fontSize: 11, fontWeight: "800" },
+  chartTitle: { color: c.dark.text, fontSize: 15, fontWeight: "900", letterSpacing: -0.2 },
+  chartMeta: { color: c.dark.textMuted, fontSize: 11, fontWeight: "800" },
   chartMotion: {
     gap: 14,
   },
@@ -580,8 +577,8 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
-  summaryValue: { color: INK, fontSize: 18, fontWeight: "900", letterSpacing: -0.4, lineHeight: 22 },
-  summaryLabel: { color: SOFT, fontSize: 10, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.2 },
+  summaryValue: { color: c.dark.text, fontSize: 18, fontWeight: "900", letterSpacing: -0.4, lineHeight: 22 },
+  summaryLabel: { color: c.dark.textDisabled, fontSize: 10, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.2 },
   chartWrap: { alignSelf: "center", position: "relative" },
   gridLineTop: { position: "absolute", top: 24, left: 0, right: 0, height: 1, backgroundColor: "rgba(255,255,255,0.04)" },
   gridLineMid: { position: "absolute", top: 108, left: 0, right: 0, height: 1, backgroundColor: "rgba(255,255,255,0.05)" },
@@ -607,13 +604,13 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.08)",
   },
   chartPopupLabel: {
-    color: SOFT,
+    color: c.dark.textDisabled,
     fontSize: 9,
     fontWeight: "900",
     textTransform: "uppercase",
   },
   chartPopupValue: {
-    color: INK,
+    color: c.dark.text,
     fontSize: 15,
     fontWeight: "900",
     marginTop: 2,
@@ -622,7 +619,7 @@ const styles = StyleSheet.create({
   timelineLabel: {
     position: "absolute",
     width: 52,
-    color: MUTED,
+    color: c.dark.textMuted,
     fontSize: 9,
     fontWeight: "900",
     textAlign: "center",
@@ -645,19 +642,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  horizonPillActive: { backgroundColor: ACCENT, borderColor: ACCENT },
-  horizonText: { color: SOFT, fontSize: 11, fontWeight: "900" },
+  horizonPillActive: { backgroundColor: c.semantic.success, borderColor: c.semantic.success },
+  horizonText: { color: c.dark.textDisabled, fontSize: 11, fontWeight: "900" },
   horizonTextActive: { color: "#07100c" },
-  noSalesText: { color: MUTED, fontSize: 12, fontWeight: "700", lineHeight: 18 },
+  noSalesText: { color: c.dark.textMuted, fontSize: 12, fontWeight: "700", lineHeight: 18 },
   collectorCard: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: LINE,
+    borderColor: c.dark.border,
     backgroundColor: "rgba(255,255,255,0.02)",
     padding: 16,
     gap: 12,
   },
-  collectorTitle: { color: INK, fontSize: 14, fontWeight: "900" },
+  collectorTitle: { color: c.dark.text, fontSize: 14, fontWeight: "900" },
   collectorGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -674,14 +671,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 4,
   },
-  collectorLabel: { color: SOFT, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
-  collectorValue: { color: INK, fontSize: 13, lineHeight: 17, fontWeight: "800" },
+  collectorLabel: { color: c.dark.textDisabled, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
+  collectorValue: { color: c.dark.text, fontSize: 13, lineHeight: 17, fontWeight: "800" },
   selectedPoint: {
     position: "absolute",
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: ACCENT,
+    backgroundColor: c.semantic.success,
     borderWidth: 2,
     borderColor: "#0b0f0d",
     zIndex: 3,
@@ -690,11 +687,12 @@ const styles = StyleSheet.create({
     marginTop: 60,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: LINE,
-    backgroundColor: PANEL,
+    borderColor: c.dark.border,
+    backgroundColor: c.dark.backgroundElevated,
     padding: 20,
     gap: 8,
   },
-  emptyTitle: { color: INK, fontSize: 18, fontWeight: "900" },
-  emptyBody: { color: MUTED, fontSize: 13, lineHeight: 19, fontWeight: "700" },
-});
+  emptyTitle: { color: c.dark.text, fontSize: 18, fontWeight: "900" },
+  emptyBody: { color: c.dark.textMuted, fontSize: 13, lineHeight: 19, fontWeight: "700" },
+  });
+}

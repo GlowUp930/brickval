@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Alert, Image, Linking, Platform, View, Text, StyleSheet, Pressable, ScrollView, type ImageSourcePropType } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { clearCollection, getCollection, getCollectionValue, type CollectionItem } from "../../lib/collection";
@@ -10,19 +10,10 @@ import {
   restoreNativePurchases,
 } from "../../lib/paywall";
 import { useUpgrade } from "../../lib/useUpgrade";
+import { useTheme, type ModeColors } from "../../lib/ThemeProvider";
 import { PrePurchaseDisclosure } from "../../components/PrePurchaseDisclosure";
+import { colors } from "../../lib/theme";
 
-const ACCENT = "#62c79a";
-const LEGO_RED = "#df463f";
-const LEGO_BLUE = "#4b8fff";
-const LEGO_YELLOW = "#f2c94c";
-const INK = "#f7f4ea";
-const MUTED = "rgba(247,244,234,0.64)";
-const SOFT = "rgba(247,244,234,0.38)";
-const SURFACE = "#121715";
-const PANEL = "#0b0e0d";
-const LINE = "rgba(153,231,189,0.14)";
-const DANGER = "#ff8f8f";
 const AVATAR_KEY = "brickval_account_avatar";
 const PRIVACY_URL = "https://brickvalue.live/privacy";
 const TERMS_URL = "https://brickvalue.live/terms";
@@ -55,6 +46,8 @@ export default function SettingsScreen() {
   const [avatar, setAvatar] = useState<AvatarKey>("classic");
   const [proStatus, setProStatus] = useState<boolean | null>(null);
   const { triggerUpgrade, openAccountForSignIn, showDisclosure, handleDisclosureContinue, handleDisclosureDismiss } = useUpgrade();
+  const { colors, c } = useTheme();
+  const styles = useMemo(() => getStyles(c), [c]);
 
   useFocusEffect(
     useCallback(() => {
@@ -146,9 +139,9 @@ export default function SettingsScreen() {
 
         <View style={styles.passportCard}>
           <View style={styles.studRail}>
-            <View style={[styles.stud, { backgroundColor: LEGO_RED }]} />
-            <View style={[styles.stud, { backgroundColor: LEGO_YELLOW }]} />
-            <View style={[styles.stud, { backgroundColor: LEGO_BLUE }]} />
+            <View style={[styles.stud, { backgroundColor: colors.lego.red }]} />
+            <View style={[styles.stud, { backgroundColor: colors.lego.yellow }]} />
+            <View style={[styles.stud, { backgroundColor: colors.lego.blue }]} />
           </View>
           <View style={styles.passportTop}>
             <View style={styles.avatarBlock}>
@@ -193,22 +186,22 @@ export default function SettingsScreen() {
         <View style={styles.group}>
           <Text style={styles.groupTitle}>Access</Text>
           {proStatus ? (
-            <View style={[styles.row, { borderColor: "rgba(98,199,154,0.42)" }]}>
-              <View style={[styles.rowGlyph, { borderColor: ACCENT, backgroundColor: "rgba(98,199,154,0.12)" }]}>
-                <Text style={[styles.rowGlyphText, { color: ACCENT }]}>PRO</Text>
+            <View style={[styles.row, { borderColor: colors.semantic.success }]}>
+              <View style={[styles.rowGlyph, { borderColor: colors.semantic.success, backgroundColor: colors.semantic.successSoft }]}>
+                <Text style={[styles.rowGlyphText, { color: colors.semantic.success }]}>PRO</Text>
               </View>
               <View style={styles.rowCopy}>
-                <Text style={[styles.rowTitle, { color: ACCENT }]}>BrickVal Pro active</Text>
+                <Text style={[styles.rowTitle, { color: colors.semantic.success }]}>BrickVal Pro active</Text>
                 <Text style={styles.rowMeta}>Unlimited scans unlocked on this device</Text>
               </View>
-              <Text style={[styles.rowArrow, { color: ACCENT }]}>✓</Text>
+              <Text style={[styles.rowArrow, { color: colors.semantic.success }]}>✓</Text>
             </View>
           ) : (
             <SettingsRow
               code="PRO"
               title="BrickVal Pro"
               meta={`Native ${storeName} upgrade flow`}
-              accent={ACCENT}
+              accent={colors.semantic.success}
               onPress={() => void triggerUpgrade()}
             />
           )}
@@ -216,7 +209,7 @@ export default function SettingsScreen() {
             code="RST"
             title="Restore purchases"
             meta={`Re-check ${storeName} access for this account`}
-            accent={LEGO_BLUE}
+            accent={colors.lego.blue}
             onPress={() => void handleRestorePurchases()}
           />
 
@@ -228,14 +221,14 @@ export default function SettingsScreen() {
             code="PRV"
             title="Privacy policy"
             meta="How BrickVal handles scans, account data, and purchases"
-            accent={LEGO_BLUE}
+            accent={colors.lego.blue}
             onPress={() => void openExternalUrl(PRIVACY_URL)}
           />
           <SettingsRow
             code="TOS"
             title="Terms and subscription terms"
             meta="App terms, Apple purchase terms, and LEGO disclaimer"
-            accent={ACCENT}
+            accent={colors.semantic.success}
             onPress={() => void openExternalUrl(TERMS_URL)}
           />
         </View>
@@ -262,7 +255,7 @@ export default function SettingsScreen() {
             code="CLR"
             title="Clear local collection"
             meta="Removes saved items from this phone only"
-            accent={DANGER}
+            accent={colors.semantic.danger}
             destructive
             onPress={handleClearCollection}
           />
@@ -278,9 +271,11 @@ export default function SettingsScreen() {
 }
 
 function AvatarImage({ source, size }: { source: ImageSourcePropType; size: number }) {
+  const { c } = useTheme();
+  const s = getStyles(c);
   return (
-    <View style={[styles.avatarImageFrame, { width: size, height: size, borderRadius: size * 0.24 }]}>
-      <Image source={source} style={styles.avatarImage} resizeMode="cover" />
+    <View style={[s.avatarImageFrame, { width: size, height: size, borderRadius: size * 0.24 }]}>
+      <Image source={source} style={s.avatarImage} resizeMode="cover" />
     </View>
   );
 }
@@ -300,154 +295,158 @@ function SettingsRow({
   destructive?: boolean;
   onPress: () => void;
 }) {
+  const { c } = useTheme();
+  const s = getStyles(c);
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${title}. ${meta}`} style={styles.row} onPress={onPress}>
-      <View style={[styles.rowGlyph, { borderColor: accent }]}>
-        <Text style={[styles.rowGlyphText, { color: accent }]}>{code}</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${title}. ${meta}`} style={s.row} onPress={onPress}>
+      <View style={[s.rowGlyph, { borderColor: accent }]}>
+        <Text style={[s.rowGlyphText, { color: accent }]}>{code}</Text>
       </View>
-      <View style={styles.rowCopy}>
-        <Text style={[styles.rowTitle, destructive && styles.rowTitleDanger]}>{title}</Text>
-        <Text style={styles.rowMeta}>{meta}</Text>
+      <View style={s.rowCopy}>
+        <Text style={[s.rowTitle, destructive && s.rowTitleDanger]}>{title}</Text>
+        <Text style={s.rowMeta}>{meta}</Text>
       </View>
-      <Text style={styles.rowArrow}>›</Text>
+      <Text style={s.rowArrow}>›</Text>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#070908" },
-  content: { padding: 20, paddingTop: 58, paddingBottom: 112, gap: 22 },
-  header: { gap: 8 },
-  eyebrow: { color: ACCENT, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
-  title: { color: INK, fontSize: 34, fontWeight: "900", letterSpacing: -1.2 },
-  body: { color: MUTED, fontSize: 14, lineHeight: 21, fontWeight: "700" },
-  passportCard: {
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: LINE,
-    backgroundColor: PANEL,
-    padding: 18,
-    gap: 18,
-  },
-  studRail: {
-    position: "absolute",
-    top: 14,
-    right: 14,
-    flexDirection: "row",
-    gap: 8,
-  },
-  stud: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    opacity: 0.82,
-  },
-  passportTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    paddingTop: 14,
-  },
-  avatarBlock: {
-    width: 72,
-    height: 72,
-    borderRadius: 18,
-    backgroundColor: "rgba(98,199,154,0.14)",
-    borderWidth: 1,
-    borderColor: "rgba(98,199,154,0.35)",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "visible",
-  },
-  planBadge: {
-    position: "absolute",
-    top: -8,
-    right: -8,
-    minHeight: 22,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: "rgba(247,244,234,0.18)",
-    backgroundColor: "#151914",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  planBadgePro: {
-    borderColor: "rgba(98,199,154,0.58)",
-    backgroundColor: ACCENT,
-  },
-  planBadgeText: { color: INK, fontSize: 9, fontWeight: "900" },
-  planBadgeTextPro: { color: "#07100c" },
-  passportCopy: { flex: 1, gap: 4, minWidth: 0 },
-  passportLabel: { color: SOFT, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
-  passportTitle: { color: INK, fontSize: 21, fontWeight: "900", letterSpacing: -0.4 },
-  passportMeta: { color: MUTED, fontSize: 12, lineHeight: 18, fontWeight: "700" },
-  primaryAction: {
-    minHeight: 48,
-    borderRadius: 16,
-    backgroundColor: ACCENT,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryActionText: { color: "#07100c", fontSize: 14, fontWeight: "900" },
-  avatarImageFrame: {
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(247,244,234,0.16)",
-    backgroundColor: "rgba(247,244,234,0.05)",
-  },
-  avatarImage: { width: "100%", height: "100%" },
-  summaryGrid: { flexDirection: "row", gap: 12 },
-  summaryTile: {
-    flex: 1,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: LINE,
-    backgroundColor: SURFACE,
-    padding: 14,
-    gap: 7,
-  },
-  summaryLabel: { color: SOFT, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
-  summaryValue: { color: INK, fontSize: 19, fontWeight: "900", letterSpacing: -0.5 },
-  group: { gap: 10 },
-  groupTitle: { color: MUTED, fontSize: 12, fontWeight: "900", textTransform: "uppercase", marginLeft: 2 },
-  row: {
-    minHeight: 74,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: LINE,
-    backgroundColor: SURFACE,
-    padding: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  rowGlyph: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(247,244,234,0.035)",
-  },
-  rowGlyphText: { fontSize: 10, fontWeight: "900" },
-  rowCopy: { flex: 1, minWidth: 0, gap: 4 },
-  rowTitle: { color: INK, fontSize: 15, fontWeight: "900" },
-  rowTitleDanger: { color: DANGER },
-  rowMeta: { color: MUTED, fontSize: 12, lineHeight: 17, fontWeight: "700" },
-  rowArrow: { color: SOFT, fontSize: 28, fontWeight: "700" },
-  localPanel: {
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: LINE,
-    backgroundColor: "rgba(18,23,21,0.76)",
-    padding: 14,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  localMetric: { flex: 1, alignItems: "center", gap: 4 },
-  localValue: { color: INK, fontSize: 22, fontWeight: "900" },
-  localLabel: { color: SOFT, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
-  localDivider: { width: 1, height: 42, backgroundColor: LINE },
-});
+function getStyles(c: ModeColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: c.surface },
+    content: { padding: 20, paddingTop: 58, paddingBottom: 112, gap: 22 },
+    header: { gap: 8 },
+    eyebrow: { color: colors.semantic.success, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+    title: { color: c.text, fontSize: 34, fontWeight: "900", letterSpacing: -1.2 },
+    body: { color: c.textMuted, fontSize: 14, lineHeight: 21, fontWeight: "700" },
+    passportCard: {
+      borderRadius: 28,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.backgroundElevated,
+      padding: 18,
+      gap: 18,
+    },
+    studRail: {
+      position: "absolute",
+      top: 14,
+      right: 14,
+      flexDirection: "row",
+      gap: 8,
+    },
+    stud: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      opacity: 0.82,
+    },
+    passportTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 14,
+      paddingTop: 14,
+    },
+    avatarBlock: {
+      width: 72,
+      height: 72,
+      borderRadius: 18,
+      backgroundColor: c.backgroundElevated,
+      borderWidth: 1,
+      borderColor: colors.semantic.success,
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "visible",
+    },
+    planBadge: {
+      position: "absolute",
+      top: -8,
+      right: -8,
+      minHeight: 22,
+      borderRadius: 999,
+      paddingHorizontal: 8,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    planBadgePro: {
+      borderColor: colors.semantic.success,
+      backgroundColor: colors.semantic.success,
+    },
+    planBadgeText: { color: c.text, fontSize: 9, fontWeight: "900" },
+    planBadgeTextPro: { color: c.textInverse },
+    passportCopy: { flex: 1, gap: 4, minWidth: 0 },
+    passportLabel: { color: c.textDisabled, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
+    passportTitle: { color: c.text, fontSize: 21, fontWeight: "900", letterSpacing: -0.4 },
+    passportMeta: { color: c.textMuted, fontSize: 12, lineHeight: 18, fontWeight: "700" },
+    primaryAction: {
+      minHeight: 48,
+      borderRadius: 16,
+      backgroundColor: colors.semantic.success,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    primaryActionText: { color: c.textInverse, fontSize: 14, fontWeight: "900" },
+    avatarImageFrame: {
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+    },
+    avatarImage: { width: "100%", height: "100%" },
+    summaryGrid: { flexDirection: "row", gap: 12 },
+    summaryTile: {
+      flex: 1,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+      padding: 14,
+      gap: 7,
+    },
+    summaryLabel: { color: c.textDisabled, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
+    summaryValue: { color: c.text, fontSize: 19, fontWeight: "900", letterSpacing: -0.5 },
+    group: { gap: 10 },
+    groupTitle: { color: c.textMuted, fontSize: 12, fontWeight: "900", textTransform: "uppercase", marginLeft: 2 },
+    row: {
+      minHeight: 74,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+      padding: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    rowGlyph: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      borderWidth: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: c.surface,
+    },
+    rowGlyphText: { fontSize: 10, fontWeight: "900" },
+    rowCopy: { flex: 1, minWidth: 0, gap: 4 },
+    rowTitle: { color: c.text, fontSize: 15, fontWeight: "900" },
+    rowTitleDanger: { color: colors.semantic.danger },
+    rowMeta: { color: c.textMuted, fontSize: 12, lineHeight: 17, fontWeight: "700" },
+    rowArrow: { color: c.textDisabled, fontSize: 28, fontWeight: "700" },
+    localPanel: {
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+      padding: 14,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    localMetric: { flex: 1, alignItems: "center", gap: 4 },
+    localValue: { color: c.text, fontSize: 22, fontWeight: "900" },
+    localLabel: { color: c.textDisabled, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
+    localDivider: { width: 1, height: 42, backgroundColor: c.border },
+  });
+}

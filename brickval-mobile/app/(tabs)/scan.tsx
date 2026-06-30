@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Animated, Easing, View, StyleSheet, Pressable, Text, ScrollView, TextInput, Image, Modal } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
@@ -42,6 +42,8 @@ import {
 } from "../../lib/guest-scan-limits";
 import { useUpgrade } from "../../lib/useUpgrade";
 import { PrePurchaseDisclosure } from "../../components/PrePurchaseDisclosure";
+import { useTheme } from "../../lib/ThemeProvider";
+import type { ThemeColors } from "../../lib/theme";
 
 /**
  * Native scan screen — fullscreen camera, manual capture, result sheet over
@@ -175,6 +177,8 @@ export default function ScanHome() {
   const pendingServerScansUsed = useRef<number | null>(null);
   const promptedOnCurrentResult = useRef(false);
   const { triggerUpgrade, openAccountForUpgrade, openAccountForSignIn, showDisclosure, handleDisclosureContinue, handleDisclosureDismiss } = useUpgrade();
+  const { colors: c, mode: themeMode } = useTheme();
+  const s = useMemo(() => getStyles(c), [c, themeMode]);
 
   const syncGuestScansUsed = async () => {
     const count = await getGuestScansUsed();
@@ -795,7 +799,7 @@ export default function ScanHome() {
   const canReturnToDetectionSheet = detections.length > 1;
 
   return (
-    <View style={styles.root}>
+    <View style={s.root}>
       <CameraScanner
         enabled={status === "idle"}
         mode={mode}
@@ -811,8 +815,8 @@ export default function ScanHome() {
       <TopBar onAccountPress={openAccountForSignIn} />
 
       {__DEV__ && status === "idle" && (
-        <Pressable style={styles.previewBtn} onPress={showPreviewResult}>
-          <Text style={styles.previewText}>Preview result</Text>
+        <Pressable style={s.previewBtn} onPress={showPreviewResult}>
+          <Text style={s.previewText}>Preview result</Text>
         </Pressable>
       )}
 
@@ -821,8 +825,8 @@ export default function ScanHome() {
       {status === "detections" && detections.length > 0 ? (
         <Animated.View
           style={[
-            styles.candidateSheet,
-            styles.detectionSheet,
+            s.candidateSheet,
+            s.detectionSheet,
             {
               opacity: candidateProgress,
               transform: [
@@ -836,20 +840,20 @@ export default function ScanHome() {
             },
           ]}
         >
-          <View style={styles.bulkReviewHeader}>
-            <View style={styles.bulkReviewCopy}>
-              <Text style={styles.candidateTitle}>{detectionReviewTitle}</Text>
-              <Text style={styles.bulkReviewSummary}>{detectionReviewSummary}</Text>
+          <View style={s.bulkReviewHeader}>
+            <View style={s.bulkReviewCopy}>
+              <Text style={s.candidateTitle}>{detectionReviewTitle}</Text>
+              <Text style={s.bulkReviewSummary}>{detectionReviewSummary}</Text>
             </View>
-            <View style={styles.bulkReviewBadge}>
-              <Text style={styles.bulkReviewBadgeText}>{detections.length}</Text>
+            <View style={s.bulkReviewBadge}>
+              <Text style={s.bulkReviewBadgeText}>{detections.length}</Text>
             </View>
           </View>
-          <Text style={styles.candidateBody}>{detectionMessage}</Text>
-          <ScrollView style={styles.detectionScroll} contentContainerStyle={styles.detectionScrollContent} showsVerticalScrollIndicator={false}>
+          <Text style={s.candidateBody}>{detectionMessage}</Text>
+          <ScrollView style={s.detectionScroll} contentContainerStyle={s.detectionScrollContent} showsVerticalScrollIndicator={false}>
             {groupedDetections.minifigs.length > 0 ? (
-              <View style={styles.detectionSection}>
-                <Text style={styles.detectionSectionTitle}>Minifigures</Text>
+              <View style={s.detectionSection}>
+                <Text style={s.detectionSectionTitle}>Minifigures</Text>
                 {groupedDetections.minifigs.map((candidate) => {
                   const selected = selectedBulkMinifigIds.includes(candidate.id);
                   return (
@@ -857,18 +861,18 @@ export default function ScanHome() {
                       key={`minifig-${candidate.id}`}
                       accessibilityRole="checkbox"
                       accessibilityState={{ checked: selected }}
-                      style={[styles.candidateRow, selected && styles.candidateRowSelected]}
+                      style={[s.candidateRow, selected && s.candidateRowSelected]}
                       onPress={() => handleBulkMinifigToggle(candidate.id)}
                     >
-                      <View style={styles.candidateThumb}>
-                        <Image source={{ uri: getBrickLinkPreviewImageUrl("minifig", candidate.id) }} style={styles.candidateThumbImage} />
+                      <View style={s.candidateThumb}>
+                        <Image source={{ uri: getBrickLinkPreviewImageUrl("minifig", candidate.id) }} style={s.candidateThumbImage} />
                       </View>
-                      <View style={styles.candidateCopy}>
-                        <Text style={styles.candidateId}>Minifig #{candidate.id}</Text>
-                        <Text style={styles.candidateScore}>{Math.round(candidate.score * 100)}% match</Text>
+                      <View style={s.candidateCopy}>
+                        <Text style={s.candidateId}>Minifig #{candidate.id}</Text>
+                        <Text style={s.candidateScore}>{Math.round(candidate.score * 100)}% match</Text>
                       </View>
-                      <View style={[styles.bulkCheck, selected && styles.bulkCheckSelected]}>
-                        <Text style={[styles.bulkCheckText, selected && styles.bulkCheckTextSelected]}>{selected ? "✓" : ""}</Text>
+                      <View style={[s.bulkCheck, selected && s.bulkCheckSelected]}>
+                        <Text style={[s.bulkCheckText, selected && s.bulkCheckTextSelected]}>{selected ? "✓" : ""}</Text>
                       </View>
                     </Pressable>
                   );
@@ -877,32 +881,32 @@ export default function ScanHome() {
             ) : null}
 
             {groupedDetections.parts.length > 0 ? (
-              <View style={styles.detectionSection}>
-                <Text style={styles.detectionSectionTitle}>Parts</Text>
+              <View style={s.detectionSection}>
+                <Text style={s.detectionSectionTitle}>Parts</Text>
                 {groupedDetections.parts.map((candidate) => (
                   <Pressable
                     key={`part-${candidate.id}`}
                     accessibilityRole="button"
-                    style={styles.candidateRow}
+                    style={s.candidateRow}
                     onPress={() => handleDetectionPick(candidate)}
                   >
-                    <View style={styles.candidateThumb}>
-                      <Image source={{ uri: getBrickLinkPreviewImageUrl("part", candidate.id) }} style={styles.candidateThumbImage} />
+                    <View style={s.candidateThumb}>
+                      <Image source={{ uri: getBrickLinkPreviewImageUrl("part", candidate.id) }} style={s.candidateThumbImage} />
                     </View>
-                    <View style={styles.candidateCopy}>
-                      <Text style={styles.candidateId}>Part #{candidate.id}</Text>
-                      <Text style={styles.candidateScore}>{Math.round(candidate.score * 100)}% match</Text>
+                    <View style={s.candidateCopy}>
+                      <Text style={s.candidateId}>Part #{candidate.id}</Text>
+                      <Text style={s.candidateScore}>{Math.round(candidate.score * 100)}% match</Text>
                     </View>
-                    <Text style={styles.priceThisText}>Price</Text>
+                    <Text style={s.priceThisText}>Price</Text>
                   </Pressable>
                 ))}
               </View>
             ) : null}
           </ScrollView>
-          <View style={styles.candidateActions}>
+          <View style={s.candidateActions}>
             <Pressable
               accessibilityRole="button"
-              style={styles.candidateSecondary}
+              style={s.candidateSecondary}
               onPress={() => {
                 setDetections([]);
                 setSelectedPart(null);
@@ -912,14 +916,14 @@ export default function ScanHome() {
                 setStatus("idle");
               }}
             >
-              <Text style={styles.candidateSecondaryText}>Try again</Text>
+              <Text style={s.candidateSecondaryText}>Try again</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
               accessibilityState={{ disabled: batchableMinifigCount > 0 && selectedBulkMinifigIds.length === 0 }}
               style={[
-                styles.candidatePrimary,
-                batchableMinifigCount > 0 && selectedBulkMinifigIds.length === 0 && styles.candidatePrimaryDisabled,
+                s.candidatePrimary,
+                batchableMinifigCount > 0 && selectedBulkMinifigIds.length === 0 && s.candidatePrimaryDisabled,
               ]}
               disabled={batchableMinifigCount > 0 && selectedBulkMinifigIds.length === 0}
               onPress={() => {
@@ -935,7 +939,7 @@ export default function ScanHome() {
                 setStatus("idle");
               }}
             >
-              <Text style={styles.candidatePrimaryText}>
+              <Text style={s.candidatePrimaryText}>
                 {batchableMinifigCount > 0
                   ? `Price ${selectedBulkMinifigIds.length} selected`
                   : "Close"}
@@ -948,7 +952,7 @@ export default function ScanHome() {
       {status === "candidates" && candidateOptions.length > 0 ? (
         <Animated.View
           style={[
-            styles.candidateSheet,
+            s.candidateSheet,
             {
               opacity: candidateProgress,
               transform: [
@@ -962,49 +966,49 @@ export default function ScanHome() {
             },
           ]}
         >
-          <Text style={styles.candidateTitle}>Low confidence scan</Text>
-          <Text style={styles.candidateBody}>{candidateMessage}</Text>
-          <View style={styles.candidateList}>
+          <Text style={s.candidateTitle}>Low confidence scan</Text>
+          <Text style={s.candidateBody}>{candidateMessage}</Text>
+          <View style={s.candidateList}>
             {candidateOptions.map((candidate, index) => (
               <Pressable
                 key={`${candidate.id}-${index}`}
                 accessibilityRole="button"
-                style={styles.candidateRow}
+                style={s.candidateRow}
                 onPress={() => handleCandidatePick(candidate.id)}
               >
-                <View style={styles.candidateRank}>
-                  <Text style={styles.candidateRankText}>{index + 1}</Text>
+                <View style={s.candidateRank}>
+                  <Text style={s.candidateRankText}>{index + 1}</Text>
                 </View>
-                <View style={styles.candidateCopy}>
-                  <Text style={styles.candidateId}>#{candidate.id}</Text>
-                  <Text style={styles.candidateScore}>
+                <View style={s.candidateCopy}>
+                  <Text style={s.candidateId}>#{candidate.id}</Text>
+                  <Text style={s.candidateScore}>
                     {Math.round(candidate.score * 100)}% match
                   </Text>
                 </View>
               </Pressable>
             ))}
           </View>
-          <View style={styles.candidateActions}>
+          <View style={s.candidateActions}>
             <Pressable
               accessibilityRole="button"
-              style={styles.candidateSecondary}
+              style={s.candidateSecondary}
               onPress={() => {
                 setCandidateOptions([]);
                 setStatus("idle");
               }}
             >
-              <Text style={styles.candidateSecondaryText}>Try again</Text>
+              <Text style={s.candidateSecondaryText}>Try again</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              style={styles.candidatePrimary}
+              style={s.candidatePrimary}
               onPress={() => {
                 setCandidateOptions([]);
                 setStatus("idle");
                 manualRef.current?.open();
               }}
             >
-              <Text style={styles.candidatePrimaryText}>Enter manually</Text>
+              <Text style={s.candidatePrimaryText}>Enter manually</Text>
             </Pressable>
           </View>
         </Animated.View>
@@ -1013,8 +1017,8 @@ export default function ScanHome() {
       {status === "partColor" && selectedPart ? (
         <Animated.View
           style={[
-            styles.candidateSheet,
-            styles.colorSheet,
+            s.candidateSheet,
+            s.colorSheet,
             {
               opacity: candidateProgress,
               transform: [
@@ -1028,37 +1032,37 @@ export default function ScanHome() {
             },
           ]}
         >
-          <Text style={styles.candidateTitle}>Pick part color</Text>
-          <Text style={styles.candidateBody}>Part #{selectedPart.id} needs a color before BrickVal can price it.</Text>
+          <Text style={s.candidateTitle}>Pick part color</Text>
+          <Text style={s.candidateBody}>Part #{selectedPart.id} needs a color before BrickVal can price it.</Text>
           <TextInput
             value={partColorQuery}
             onChangeText={setPartColorQuery}
             placeholder="Search colors"
-            placeholderTextColor="rgba(247,244,234,0.36)"
-            style={styles.colorSearch}
+            placeholderTextColor={c.dark.textDisabled}
+            style={s.colorSearch}
             autoCorrect={false}
             autoCapitalize="words"
           />
-          <ScrollView style={styles.colorScroll} contentContainerStyle={styles.detectionScrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView style={s.colorScroll} contentContainerStyle={s.detectionScrollContent} showsVerticalScrollIndicator={false}>
             {filteredPartColors.map((color) => (
               <Pressable
                 key={color.color_id}
                 accessibilityRole="button"
-                style={styles.colorRow}
+                style={s.colorRow}
                 onPress={() => handlePartColorPick(color)}
               >
-                <Text style={styles.colorName}>{color.color_name}</Text>
-                <Text style={styles.colorMeta}>Color #{color.color_id}</Text>
+                <Text style={s.colorName}>{color.color_name}</Text>
+                <Text style={s.colorMeta}>Color #{color.color_id}</Text>
               </Pressable>
             ))}
             {filteredPartColors.length === 0 ? (
-              <Text style={styles.colorEmpty}>No colors match that search.</Text>
+              <Text style={s.colorEmpty}>No colors match that search.</Text>
             ) : null}
           </ScrollView>
-          <View style={styles.candidateActions}>
+          <View style={s.candidateActions}>
             <Pressable
               accessibilityRole="button"
-              style={styles.candidateSecondary}
+              style={s.candidateSecondary}
               onPress={() => {
                 setSelectedPart(null);
                 setPartColorQuery("");
@@ -1070,18 +1074,18 @@ export default function ScanHome() {
                 }
               }}
             >
-              <Text style={styles.candidateSecondaryText}>{canReturnToDetectionSheet ? "Back" : "Cancel"}</Text>
+              <Text style={s.candidateSecondaryText}>{canReturnToDetectionSheet ? "Back" : "Cancel"}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              style={styles.candidatePrimary}
+              style={s.candidatePrimary}
               onPress={() => {
                 setSelectedPart(null);
                 setPartColorQuery("");
                 setStatus("idle");
               }}
             >
-              <Text style={styles.candidatePrimaryText}>Cancel</Text>
+              <Text style={s.candidatePrimaryText}>Cancel</Text>
             </Pressable>
           </View>
         </Animated.View>
@@ -1091,20 +1095,20 @@ export default function ScanHome() {
         <Animated.View
           accessibilityRole="alert"
           style={[
-            styles.errorBanner,
+            s.errorBanner,
             {
               opacity: errorProgress,
               transform: [{ translateY: errorTranslateY }],
             },
           ]}
         >
-          <Text style={styles.errorTitle}>Scan issue</Text>
-          <Text style={styles.errorBody}>{errorMessage}</Text>
-          <View style={styles.errorActions}>
+          <Text style={s.errorTitle}>Scan issue</Text>
+          <Text style={s.errorBody}>{errorMessage}</Text>
+          <View style={s.errorActions}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={mode === "minifig" ? "Dismiss scan issue" : "Enter set number manually"}
-              style={styles.errorPrimary}
+              style={s.errorPrimary}
               onPress={() => {
                 setErrorMessage(null);
                 if (mode === "set") {
@@ -1112,15 +1116,15 @@ export default function ScanHome() {
                 }
               }}
             >
-              <Text style={styles.errorPrimaryText}>{mode === "minifig" ? "Try again" : "Enter manually"}</Text>
+              <Text style={s.errorPrimaryText}>{mode === "minifig" ? "Try again" : "Enter manually"}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Dismiss scan issue"
-              style={styles.errorSecondary}
+              style={s.errorSecondary}
               onPress={() => setErrorMessage(null)}
             >
-              <Text style={styles.errorSecondaryText}>Dismiss</Text>
+              <Text style={s.errorSecondaryText}>Dismiss</Text>
             </Pressable>
           </View>
         </Animated.View>
@@ -1139,40 +1143,40 @@ export default function ScanHome() {
       />
 
       <Modal visible={collectionLimitPromptVisible} transparent animationType="none" onRequestClose={hideCollectionLimitPrompt}>
-        <View style={styles.collectionLimitModal} pointerEvents="box-none">
+        <View style={s.collectionLimitModal} pointerEvents="box-none">
           <Animated.View
             accessibilityRole="alert"
             style={[
-              styles.collectionLimitPrompt,
+              s.collectionLimitPrompt,
               {
                 opacity: collectionLimitProgress,
                 transform: [{ translateY: collectionLimitTranslateY }],
               },
             ]}
           >
-            <View style={styles.collectionLimitAccent} />
-            <View style={styles.collectionLimitCopy}>
-              <Text style={styles.collectionLimitTitle}>Free limit reached</Text>
-              <Text style={styles.collectionLimitBody}>
+            <View style={s.collectionLimitAccent} />
+            <View style={s.collectionLimitCopy}>
+              <Text style={s.collectionLimitTitle}>Free limit reached</Text>
+              <Text style={s.collectionLimitBody}>
                 You have saved 10 items. Sign in and upgrade to Pro for unlimited collection space.
               </Text>
             </View>
-            <View style={styles.collectionLimitActions}>
+            <View style={s.collectionLimitActions}>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Sign in to BrickVal"
-                style={styles.collectionLimitSecondary}
+                style={s.collectionLimitSecondary}
                 onPress={handleCollectionLimitSignIn}
               >
-                <Text style={styles.collectionLimitSecondaryText}>Sign in</Text>
+                <Text style={s.collectionLimitSecondaryText}>Sign in</Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Upgrade to BrickVal Pro"
-                style={styles.collectionLimitPrimary}
+                style={s.collectionLimitPrimary}
                 onPress={handleCollectionLimitUpgrade}
               >
-                <Text style={styles.collectionLimitPrimaryText}>Upgrade Pro</Text>
+                <Text style={s.collectionLimitPrimaryText}>Upgrade Pro</Text>
               </Pressable>
             </View>
           </Animated.View>
@@ -1189,8 +1193,9 @@ export default function ScanHome() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#120e08" },
+function getStyles(c: ThemeColors) {
+  return StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.dark.background },
   previewBtn: {
     position: "absolute",
     top: 188,
@@ -1198,13 +1203,13 @@ const styles = StyleSheet.create({
     zIndex: 20,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(0,0,0,0.2)",
+    borderColor: c.dark.border,
+    backgroundColor: c.dark.backgroundMuted,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
   previewText: {
-    color: "#fff3cf",
+    color: c.dark.text,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -1216,19 +1221,19 @@ const styles = StyleSheet.create({
     zIndex: 30,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,143,143,0.42)",
-    backgroundColor: "rgba(35,18,12,0.9)",
+    borderColor: c.semantic.danger,
+    backgroundColor: c.dark.background,
     padding: 14,
     gap: 10,
   },
   errorTitle: {
-    color: "#ffb4b4",
+    color: c.semantic.danger,
     fontSize: 12,
     fontWeight: "900",
     textTransform: "uppercase",
   },
   errorBody: {
-    color: "#fff3cf",
+    color: c.dark.text,
     fontSize: 13,
     fontWeight: "700",
     lineHeight: 19,
@@ -1241,12 +1246,12 @@ const styles = StyleSheet.create({
     minHeight: 40,
     flex: 1,
     borderRadius: 999,
-    backgroundColor: "#f5c518",
+    backgroundColor: c.lego.yellow,
     alignItems: "center",
     justifyContent: "center",
   },
   errorPrimaryText: {
-    color: "#171006",
+    color: c.dark.textInverse,
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1255,12 +1260,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,243,207,0.2)",
+    borderColor: c.dark.border,
     alignItems: "center",
     justifyContent: "center",
   },
   errorSecondaryText: {
-    color: "#fff3cf",
+    color: c.dark.text,
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1273,8 +1278,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(245,197,24,0.44)",
-    backgroundColor: "rgba(18,14,8,0.96)",
+    borderColor: c.lego.yellow,
+    backgroundColor: c.dark.background,
     shadowColor: "#000",
     shadowOpacity: 0.28,
     shadowRadius: 18,
@@ -1283,7 +1288,7 @@ const styles = StyleSheet.create({
   },
   collectionLimitAccent: {
     height: 4,
-    backgroundColor: "#f5c518",
+    backgroundColor: c.lego.yellow,
   },
   collectionLimitCopy: {
     paddingHorizontal: 16,
@@ -1291,13 +1296,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   collectionLimitTitle: {
-    color: "#f5c518",
+    color: c.lego.yellow,
     fontSize: 12,
     fontWeight: "900",
     textTransform: "uppercase",
   },
   collectionLimitBody: {
-    color: "#fff3cf",
+    color: c.dark.text,
     fontSize: 14,
     fontWeight: "700",
     lineHeight: 20,
@@ -1313,12 +1318,12 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,243,207,0.24)",
+    borderColor: c.dark.border,
     alignItems: "center",
     justifyContent: "center",
   },
   collectionLimitSecondaryText: {
-    color: "#fff3cf",
+    color: c.dark.text,
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1326,12 +1331,12 @@ const styles = StyleSheet.create({
     minHeight: 44,
     flex: 1,
     borderRadius: 999,
-    backgroundColor: "#f5c518",
+    backgroundColor: c.lego.yellow,
     alignItems: "center",
     justifyContent: "center",
   },
   collectionLimitPrimaryText: {
-    color: "#171006",
+    color: c.dark.textInverse,
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1343,8 +1348,8 @@ const styles = StyleSheet.create({
     zIndex: 35,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "rgba(16,16,18,0.9)",
+    borderColor: c.dark.border,
+    backgroundColor: c.dark.surface,
     padding: 16,
     gap: 10,
   },
@@ -1355,13 +1360,13 @@ const styles = StyleSheet.create({
     maxHeight: 520,
   },
   candidateTitle: {
-    color: "#fff3cf",
+    color: c.dark.text,
     fontSize: 12,
     fontWeight: "900",
     textTransform: "uppercase",
   },
   candidateBody: {
-    color: "#f7f4ea",
+    color: c.dark.text,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "700",
@@ -1379,7 +1384,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   bulkReviewSummary: {
-    color: "rgba(247,244,234,0.7)",
+    color: c.dark.textMuted,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -1390,11 +1395,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(245,197,24,0.42)",
-    backgroundColor: "rgba(245,197,24,0.12)",
+    borderColor: c.lego.yellow,
+    backgroundColor: c.dark.backgroundMuted,
   },
   bulkReviewBadgeText: {
-    color: "#f5c518",
+    color: c.lego.yellow,
     fontSize: 14,
     fontWeight: "900",
   },
@@ -1415,7 +1420,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   detectionSectionTitle: {
-    color: "rgba(247,244,234,0.72)",
+    color: c.dark.textMuted,
     fontSize: 11,
     fontWeight: "900",
     textTransform: "uppercase",
@@ -1428,14 +1433,14 @@ const styles = StyleSheet.create({
     gap: 12,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: c.dark.border,
+    backgroundColor: c.dark.surface,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   candidateRowSelected: {
-    borderColor: "rgba(245,197,24,0.48)",
-    backgroundColor: "rgba(245,197,24,0.1)",
+    borderColor: c.lego.yellow,
+    backgroundColor: c.dark.backgroundMuted,
   },
   candidateThumb: {
     width: 42,
@@ -1443,8 +1448,8 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(255,255,255,0.06)",
+    borderColor: c.dark.border,
+    backgroundColor: c.dark.surface,
   },
   candidateThumbImage: {
     width: "100%",
@@ -1456,10 +1461,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f5c518",
+    backgroundColor: c.lego.yellow,
   },
   candidateRankText: {
-    color: "#171006",
+    color: c.dark.textInverse,
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1468,18 +1473,18 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   candidateId: {
-    color: "#f7f4ea",
+    color: c.dark.text,
     fontSize: 14,
     fontWeight: "900",
   },
   candidateScore: {
-    color: "rgba(247,244,234,0.68)",
+    color: c.dark.textMuted,
     fontSize: 11,
     fontWeight: "700",
   },
   priceThisText: {
     minWidth: 44,
-    color: "#f5c518",
+    color: c.lego.yellow,
     fontSize: 12,
     fontWeight: "900",
     textAlign: "right",
@@ -1489,14 +1494,14 @@ const styles = StyleSheet.create({
     height: 26,
     borderRadius: 13,
     borderWidth: 1,
-    borderColor: "rgba(247,244,234,0.28)",
+    borderColor: c.dark.border,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: c.dark.surface,
   },
   bulkCheckSelected: {
-    borderColor: "#f5c518",
-    backgroundColor: "#f5c518",
+    borderColor: c.lego.yellow,
+    backgroundColor: c.lego.yellow,
   },
   bulkCheckText: {
     color: "transparent",
@@ -1505,7 +1510,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   bulkCheckTextSelected: {
-    color: "#171006",
+    color: c.dark.textInverse,
   },
   candidateActions: {
     flexDirection: "row",
@@ -1516,12 +1521,12 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(255,243,207,0.2)",
+    borderColor: c.dark.border,
     alignItems: "center",
     justifyContent: "center",
   },
   candidateSecondaryText: {
-    color: "#fff3cf",
+    color: c.dark.text,
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1529,7 +1534,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     flex: 1,
     borderRadius: 999,
-    backgroundColor: "#f5c518",
+    backgroundColor: c.lego.yellow,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1537,7 +1542,7 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   candidatePrimaryText: {
-    color: "#171006",
+    color: c.dark.textInverse,
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1545,9 +1550,9 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.04)",
-    color: "#f7f4ea",
+    borderColor: c.dark.border,
+    backgroundColor: c.dark.surface,
+    color: c.dark.text,
     paddingHorizontal: 14,
     fontSize: 14,
     fontWeight: "700",
@@ -1556,28 +1561,29 @@ const styles = StyleSheet.create({
     minHeight: 52,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: c.dark.border,
+    backgroundColor: c.dark.surface,
     paddingHorizontal: 14,
     paddingVertical: 10,
     justifyContent: "center",
     gap: 2,
   },
   colorName: {
-    color: "#f7f4ea",
+    color: c.dark.text,
     fontSize: 14,
     fontWeight: "900",
   },
   colorMeta: {
-    color: "rgba(247,244,234,0.64)",
+    color: c.dark.textMuted,
     fontSize: 11,
     fontWeight: "700",
   },
   colorEmpty: {
-    color: "rgba(247,244,234,0.64)",
+    color: c.dark.textMuted,
     fontSize: 13,
     fontWeight: "700",
     textAlign: "center",
     paddingVertical: 18,
   },
-});
+  });
+}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,8 @@ import { LookupDetailResult } from "../lib/api";
 import type { CollectionCondition } from "../lib/collection";
 import { buildMarketSnapshot } from "../lib/market-snapshot";
 import { QuestionMarkPlaceholder } from "./QuestionMarkPlaceholder";
+import { useTheme, type ModeColors } from "../lib/ThemeProvider";
+import { colors as themeColors } from "../lib/theme";
 
 /**
  * Fullscreen modal that slides up from the bottom over the camera.
@@ -22,11 +24,13 @@ import { QuestionMarkPlaceholder } from "./QuestionMarkPlaceholder";
  * in Expo Go without the gesture-handler TurboModule mismatch.
  */
 
-const ACCENT = "#f2c94c";
-const INK = "#f7f4ea";
-const MUTED = "rgba(247,244,234,0.64)";
-const SURFACE = "#151514";
-const LINE = "rgba(247,244,234,0.12)";
+const hexToRgba = (hex: string, alpha: number) => {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
+};
 
 interface Props {
   result: LookupDetailResult | null;
@@ -44,6 +48,8 @@ export function ResultCard({
   onViewDetails,
 }: Props) {
   const { height: screenHeight } = useWindowDimensions();
+  const { colors, c, mode } = useTheme();
+  const s = useMemo(() => getStyles(c), [c, mode]);
   const sheetMaxHeight = Math.round(screenHeight * 0.82);
   const slide = useRef(new Animated.Value(screenHeight)).current;
   const backdrop = useRef(new Animated.Value(0)).current;
@@ -182,12 +188,12 @@ export function ResultCard({
           : "No market price";
   const confidencePillStyle =
     snapshot.confidence === "high"
-      ? styles.confidencePillHigh
+      ? s.confidencePillHigh
       : snapshot.confidence === "limited"
-        ? styles.confidencePillLimited
+        ? s.confidencePillLimited
         : snapshot.confidence === "guide"
-          ? styles.confidencePillGuide
-          : styles.confidencePillUnavailable;
+          ? s.confidencePillGuide
+          : s.confidencePillUnavailable;
   const snapshotTypeText =
     snapshot.source_type === "sold" ? "Sold comps" : snapshot.source_type === "listing" ? "Listings" : "No comps";
   const snapshotCountText =
@@ -221,99 +227,99 @@ export function ResultCard({
       onRequestClose={onDismiss}
     >
       {/* Dim backdrop */}
-      <Animated.View style={[styles.backdrop, { opacity: backdrop }]}>
+      <Animated.View style={[s.backdrop, { opacity: backdrop }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} />
       </Animated.View>
 
       <Animated.View
         style={[
-          styles.sheet,
+          s.sheet,
           { maxHeight: sheetMaxHeight, transform: [{ translateY: slide }] },
         ]}
       >
-        <View style={styles.handle} />
+        <View style={s.handle} />
 
         <ScrollView
-          style={styles.sheetScroll}
-          contentContainerStyle={styles.sheetContent}
+          style={s.sheetScroll}
+          contentContainerStyle={s.sheetContent}
           showsVerticalScrollIndicator={false}
         >
           <Animated.View
             style={[
-              styles.revealContent,
+              s.revealContent,
               {
                 opacity: content,
                 transform: [{ translateY: contentTranslateY }],
               },
             ]}
           >
-            <View style={styles.pricePanel}>
-              <View style={styles.priceHeader}>
-                <Text style={styles.priceLabel}>Market price</Text>
-                <View style={[styles.confidencePill, confidencePillStyle]}>
-                  <Text style={styles.confidenceText}>{confidenceText}</Text>
+            <View style={s.pricePanel}>
+              <View style={s.priceHeader}>
+                <Text style={s.priceLabel}>Market price</Text>
+                <View style={[s.confidencePill, confidencePillStyle]}>
+                  <Text style={s.confidenceText}>{confidenceText}</Text>
                 </View>
               </View>
-              <Text style={styles.price}>{displayPrice}</Text>
-              <Text style={styles.rrp}>{rrpText}</Text>
+              <Text style={s.price}>{displayPrice}</Text>
+              <Text style={s.rrp}>{rrpText}</Text>
 
-              <View style={styles.snapshotStrip}>
-                <View style={styles.snapshotCell}>
-                  <Text style={styles.snapshotLabel}>Source</Text>
-                  <Text style={styles.snapshotValue} numberOfLines={1}>{snapshot.source_name}</Text>
+              <View style={s.snapshotStrip}>
+                <View style={s.snapshotCell}>
+                  <Text style={s.snapshotLabel}>Source</Text>
+                  <Text style={s.snapshotValue} numberOfLines={1}>{snapshot.source_name}</Text>
                 </View>
-                <View style={[styles.snapshotCell, styles.snapshotCellDivider]}>
-                  <Text style={styles.snapshotLabel}>Basis</Text>
-                  <Text style={styles.snapshotValue} numberOfLines={1}>{snapshotTypeText}</Text>
+                <View style={[s.snapshotCell, s.snapshotCellDivider]}>
+                  <Text style={s.snapshotLabel}>Basis</Text>
+                  <Text style={s.snapshotValue} numberOfLines={1}>{snapshotTypeText}</Text>
                 </View>
-                <View style={styles.snapshotCell}>
-                  <Text style={styles.snapshotLabel}>Count</Text>
-                  <Text style={styles.snapshotValue} numberOfLines={1}>{snapshotCountText}</Text>
+                <View style={s.snapshotCell}>
+                  <Text style={s.snapshotLabel}>Count</Text>
+                  <Text style={s.snapshotValue} numberOfLines={1}>{snapshotCountText}</Text>
                 </View>
               </View>
             </View>
 
-            <View style={styles.heroRow}>
+            <View style={s.heroRow}>
               {result.image_url ? (
-                <Image source={{ uri: result.image_url }} style={styles.thumb} />
+                <Image source={{ uri: result.image_url }} style={s.thumb} />
               ) : (
-                <QuestionMarkPlaceholder style={styles.thumb} />
+                <QuestionMarkPlaceholder style={s.thumb} />
               )}
-              <View style={styles.identity}>
-                <Text style={styles.name} numberOfLines={2}>
+              <View style={s.identity}>
+                <Text style={s.name} numberOfLines={2}>
                   {result.name}
                 </Text>
-                <Text style={styles.meta}>
+                <Text style={s.meta}>
                   {result.theme}
                   {result.pieces ? ` · ${result.pieces.toLocaleString()} pieces` : ""}
                 </Text>
-                <Text style={styles.setNo}>
+                <Text style={s.setNo}>
                   {itemLabel} #{result.set_number}
                   {partColor ? ` · ${partColor}` : ""}
                 </Text>
               </View>
             </View>
 
-            <View style={styles.signalGrid}>
-              <View style={[styles.signalItem, styles.signalDivider]}>
-                <Text style={styles.signalLabel}>Signal</Text>
-                <Text style={styles.signalValue} numberOfLines={2}>{confidenceDetail}</Text>
+            <View style={s.signalGrid}>
+              <View style={[s.signalItem, s.signalDivider]}>
+                <Text style={s.signalLabel}>Signal</Text>
+                <Text style={s.signalValue} numberOfLines={2}>{confidenceDetail}</Text>
               </View>
-              <View style={styles.signalItem}>
-                <Text style={styles.signalLabel}>{result.item_type === "part" ? "Color" : "Retail comparison"}</Text>
+              <View style={s.signalItem}>
+                <Text style={s.signalLabel}>{result.item_type === "part" ? "Color" : "Retail comparison"}</Text>
                 {result.item_type === "part" ? (
-                  <Text style={styles.signalValue} numberOfLines={2}>
+                  <Text style={s.signalValue} numberOfLines={2}>
                     {partColor ?? "Color unknown"}
                   </Text>
                 ) : (
                   <Text
                     style={[
-                      styles.signalValue,
+                      s.signalValue,
                       gain === null || gain === undefined
-                        ? styles.signalMuted
+                        ? s.signalMuted
                         : gain >= 0
-                          ? { color: ACCENT }
-                          : { color: "#ff8f8f" },
+                          ? { color: themeColors.lego.yellow }
+                          : { color: themeColors.semantic.danger },
                     ]}
                     numberOfLines={2}
                   >
@@ -327,37 +333,37 @@ export function ResultCard({
               </View>
             </View>
 
-            <View style={styles.collectionPanel}>
-              <View style={styles.collectionHeader}>
-                <Text style={styles.collectionLabel}>Save details</Text>
-                <Text style={styles.collectionMeta}>Choose quantity and condition before saving</Text>
+            <View style={s.collectionPanel}>
+              <View style={s.collectionHeader}>
+                <Text style={s.collectionLabel}>Save details</Text>
+                <Text style={s.collectionMeta}>Choose quantity and condition before saving</Text>
               </View>
 
-              <View style={styles.optionRow}>
-                <Text style={styles.optionLabel}>Quantity</Text>
-                <View style={styles.stepper}>
+              <View style={s.optionRow}>
+                <Text style={s.optionLabel}>Quantity</Text>
+                <View style={s.stepper}>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="Decrease quantity"
-                    style={[styles.stepperBtn, quantity === 1 && styles.stepperBtnDisabled]}
+                    style={[s.stepperBtn, quantity === 1 && s.stepperBtnDisabled]}
                     onPress={() => setQuantity((current) => Math.max(1, current - 1))}
                     disabled={quantity === 1}
                   >
-                    <Text style={styles.stepperBtnText}>−</Text>
+                    <Text style={s.stepperBtnText}>−</Text>
                   </Pressable>
-                  <Text style={styles.stepperValue}>{quantity}</Text>
+                  <Text style={s.stepperValue}>{quantity}</Text>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="Increase quantity"
-                    style={styles.stepperBtn}
+                    style={s.stepperBtn}
                     onPress={() => setQuantity((current) => current + 1)}
                   >
-                    <Text style={styles.stepperBtnText}>+</Text>
+                    <Text style={s.stepperBtnText}>+</Text>
                   </Pressable>
                 </View>
               </View>
 
-              <View style={styles.conditionRow}>
+              <View style={s.conditionRow}>
                 {[
                   { key: "new_sealed" as const, label: "New / sealed" },
                   { key: "used" as const, label: "Used" },
@@ -367,46 +373,46 @@ export function ResultCard({
                     accessibilityRole="button"
                     accessibilityState={{ selected: condition === option.key }}
                     accessibilityLabel={option.label}
-                    style={[styles.conditionPill, condition === option.key && styles.conditionPillActive]}
+                    style={[s.conditionPill, condition === option.key && s.conditionPillActive]}
                     onPress={() => setCondition(option.key)}
                   >
-                    <Text style={[styles.conditionText, condition === option.key && styles.conditionTextActive]}>
+                    <Text style={[s.conditionText, condition === option.key && s.conditionTextActive]}>
                       {option.label}
                     </Text>
                   </Pressable>
                 ))}
               </View>
 
-              <Text style={styles.collectionNote}>
+              <Text style={s.collectionNote}>
                 Saved value: {collectionValue}
               </Text>
             </View>
           </Animated.View>
         </ScrollView>
 
-        <View style={styles.actions}>
+        <View style={s.actions}>
           <Animated.View style={{ transform: [{ scale: savePulse }] }}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={addedToCollection ? "Added to collection" : "Save to collection"}
-              style={[styles.primary, addedToCollection && styles.primarySaved]}
+              style={[s.primary, addedToCollection && s.primarySaved]}
               onPress={() => onAddToCollection(result, { quantity, condition })}
             >
-              <Text style={[styles.primaryText, addedToCollection && styles.primarySavedText]}>
+              <Text style={[s.primaryText, addedToCollection && s.primarySavedText]}>
                 {addedToCollection ? "Added to collection" : "Save to collection"}
               </Text>
             </Pressable>
           </Animated.View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Scan another item" style={styles.secondary} onPress={onDismiss}>
-            <Text style={styles.secondaryText}>Scan another</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Scan another item" style={s.secondary} onPress={onDismiss}>
+            <Text style={s.secondaryText}>Scan another</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="View full item details"
-            style={styles.tertiary}
+            style={s.tertiary}
             onPress={() => onViewDetails(result.set_number)}
           >
-            <Text style={styles.tertiaryText}>View details</Text>
+            <Text style={s.tertiaryText}>View details</Text>
           </Pressable>
         </View>
       </Animated.View>
@@ -414,14 +420,14 @@ export function ResultCard({
   );
 }
 
-const styles = StyleSheet.create({
+function getStyles(c: ModeColors) { return StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.58)" },
   sheet: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: SURFACE,
+    backgroundColor: c.background,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     paddingHorizontal: 20,
@@ -432,7 +438,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: ACCENT,
+    backgroundColor: themeColors.lego.yellow,
     alignSelf: "center",
     marginBottom: 6,
   },
@@ -449,14 +455,14 @@ const styles = StyleSheet.create({
   heroRow: { flexDirection: "row", alignItems: "center" },
   thumb: { width: 76, height: 76, borderRadius: 8 },
   identity: { flex: 1, marginLeft: 14, gap: 4 },
-  name: { color: INK, fontWeight: "800", fontSize: 17, lineHeight: 22 },
-  meta: { color: MUTED, fontSize: 13, lineHeight: 18 },
-  setNo: { color: ACCENT, fontSize: 12, fontWeight: "800", marginTop: 2 },
+  name: { color: c.text, fontWeight: "800", fontSize: 17, lineHeight: 22 },
+  meta: { color: c.textMuted, fontSize: 13, lineHeight: 18 },
+  setNo: { color: themeColors.lego.yellow, fontSize: 12, fontWeight: "800", marginTop: 2 },
   pricePanel: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(242,201,76,0.2)",
-    backgroundColor: "rgba(242,201,76,0.06)",
+    borderColor: hexToRgba(themeColors.lego.yellow, 0.2),
+    backgroundColor: hexToRgba(themeColors.lego.yellow, 0.06),
     padding: 16,
     alignItems: "flex-start",
     gap: 8,
@@ -469,55 +475,55 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   priceLabel: {
-    color: MUTED,
+    color: c.textMuted,
     fontSize: 12,
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0,
   },
   price: {
-    color: INK,
+    color: c.text,
     fontSize: 58,
     fontWeight: "900",
     letterSpacing: 0,
     marginTop: 4,
     lineHeight: 66,
   },
-  rrp: { color: MUTED, fontSize: 13, fontWeight: "700" },
+  rrp: { color: c.textMuted, fontSize: 13, fontWeight: "700" },
   confidencePill: {
     borderWidth: 1,
-    borderColor: "rgba(242,201,76,0.34)",
+    borderColor: hexToRgba(themeColors.lego.yellow, 0.34),
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: "rgba(21,21,20,0.54)",
+    backgroundColor: c.backgroundMuted,
   },
   confidencePillHigh: {
-    borderColor: "rgba(76,217,120,0.45)",
-    backgroundColor: "rgba(76,217,120,0.1)",
+    borderColor: hexToRgba(themeColors.semantic.success, 0.45),
+    backgroundColor: hexToRgba(themeColors.semantic.success, 0.1),
   },
   confidencePillLimited: {
-    borderColor: "rgba(242,201,76,0.45)",
-    backgroundColor: "rgba(242,201,76,0.1)",
+    borderColor: hexToRgba(themeColors.lego.yellow, 0.45),
+    backgroundColor: hexToRgba(themeColors.lego.yellow, 0.1),
   },
   confidencePillGuide: {
-    borderColor: "rgba(247,244,234,0.22)",
-    backgroundColor: "rgba(247,244,234,0.06)",
+    borderColor: hexToRgba(c.text, 0.22),
+    backgroundColor: hexToRgba(c.text, 0.06),
   },
   confidencePillUnavailable: {
-    borderColor: "rgba(255,143,143,0.42)",
-    backgroundColor: "rgba(255,143,143,0.08)",
+    borderColor: hexToRgba(themeColors.semantic.danger, 0.42),
+    backgroundColor: hexToRgba(themeColors.semantic.danger, 0.08),
   },
-  confidenceText: { color: ACCENT, fontSize: 11, fontWeight: "800", textTransform: "uppercase" },
+  confidenceText: { color: themeColors.lego.yellow, fontSize: 11, fontWeight: "800", textTransform: "uppercase" },
   snapshotStrip: {
     width: "100%",
     minHeight: 58,
     borderWidth: 1,
-    borderColor: "rgba(247,244,234,0.12)",
+    borderColor: c.border,
     borderRadius: 8,
     flexDirection: "row",
     overflow: "hidden",
-    backgroundColor: "rgba(21,21,20,0.36)",
+    backgroundColor: c.surface,
   },
   snapshotCell: {
     flex: 1,
@@ -530,48 +536,48 @@ const styles = StyleSheet.create({
   snapshotCellDivider: {
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: "rgba(247,244,234,0.1)",
+    borderColor: c.border,
   },
-  snapshotLabel: { color: MUTED, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
-  snapshotValue: { color: INK, fontSize: 12, lineHeight: 16, fontWeight: "900" },
+  snapshotLabel: { color: c.textMuted, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
+  snapshotValue: { color: c.text, fontSize: 12, lineHeight: 16, fontWeight: "900" },
   signalGrid: {
     borderWidth: 1,
-    borderColor: LINE,
+    borderColor: c.border,
     borderRadius: 8,
     flexDirection: "row",
     overflow: "hidden",
   },
   signalItem: { flex: 1, gap: 5, padding: 14 },
-  signalDivider: { borderRightWidth: 1, borderRightColor: LINE },
-  signalLabel: { color: MUTED, fontSize: 11, fontWeight: "800", textTransform: "uppercase" },
-  signalValue: { color: INK, fontSize: 14, fontWeight: "800", lineHeight: 19 },
-  signalMuted: { color: MUTED },
+  signalDivider: { borderRightWidth: 1, borderRightColor: c.border },
+  signalLabel: { color: c.textMuted, fontSize: 11, fontWeight: "800", textTransform: "uppercase" },
+  signalValue: { color: c.text, fontSize: 14, fontWeight: "800", lineHeight: 19 },
+  signalMuted: { color: c.textMuted },
   collectionPanel: {
     borderWidth: 1,
-    borderColor: LINE,
+    borderColor: c.border,
     borderRadius: 16,
     padding: 14,
     gap: 12,
-    backgroundColor: "rgba(255,255,255,0.02)",
+    backgroundColor: c.backgroundElevated,
   },
   collectionHeader: { gap: 3 },
-  collectionLabel: { color: INK, fontSize: 14, fontWeight: "900" },
-  collectionMeta: { color: MUTED, fontSize: 12, fontWeight: "700", lineHeight: 16 },
+  collectionLabel: { color: c.text, fontSize: 14, fontWeight: "900" },
+  collectionMeta: { color: c.textMuted, fontSize: 12, fontWeight: "700", lineHeight: 16 },
   optionRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
   },
-  optionLabel: { color: MUTED, fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
+  optionLabel: { color: c.textMuted, fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
   stepper: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: LINE,
+    borderColor: c.border,
     borderRadius: 999,
     overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.02)",
+    backgroundColor: c.backgroundElevated,
   },
   stepperBtn: {
     width: 36,
@@ -580,8 +586,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   stepperBtnDisabled: { opacity: 0.35 },
-  stepperBtnText: { color: INK, fontSize: 22, fontWeight: "800", marginTop: -1 },
-  stepperValue: { minWidth: 28, textAlign: "center", color: INK, fontSize: 14, fontWeight: "900" },
+  stepperBtnText: { color: c.text, fontSize: 22, fontWeight: "800", marginTop: -1 },
+  stepperValue: { minWidth: 28, textAlign: "center", color: c.text, fontSize: 14, fontWeight: "900" },
   conditionRow: {
     flexDirection: "row",
     gap: 10,
@@ -593,41 +599,41 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: LINE,
-    backgroundColor: "rgba(255,255,255,0.02)",
+    borderColor: c.border,
+    backgroundColor: c.backgroundElevated,
   },
   conditionPillActive: {
-    borderColor: "rgba(242,201,76,0.55)",
-    backgroundColor: "rgba(242,201,76,0.12)",
+    borderColor: hexToRgba(themeColors.lego.yellow, 0.55),
+    backgroundColor: hexToRgba(themeColors.lego.yellow, 0.12),
   },
-  conditionText: { color: MUTED, fontSize: 12, fontWeight: "800" },
-  conditionTextActive: { color: INK },
-  collectionNote: { color: MUTED, fontSize: 12, fontWeight: "700" },
+  conditionText: { color: c.textMuted, fontSize: 12, fontWeight: "800" },
+  conditionTextActive: { color: c.text },
+  collectionNote: { color: c.textMuted, fontSize: 12, fontWeight: "700" },
   actions: { gap: 10 },
   primary: {
-    backgroundColor: ACCENT,
+    backgroundColor: themeColors.lego.yellow,
     borderRadius: 8,
     paddingVertical: 16,
     alignItems: "center",
   },
   primarySaved: {
-    backgroundColor: "rgba(245,197,24,0.26)",
+    backgroundColor: hexToRgba(themeColors.lego.yellow, 0.26),
     borderWidth: 1,
-    borderColor: "rgba(245,197,24,0.52)",
+    borderColor: hexToRgba(themeColors.lego.yellow, 0.52),
   },
-  primaryText: { color: "#11110f", fontWeight: "900", fontSize: 15 },
-  primarySavedText: { color: INK },
+  primaryText: { color: c.textInverse, fontWeight: "900", fontSize: 15 },
+  primarySavedText: { color: c.text },
   secondary: {
     borderWidth: 1,
-    borderColor: "rgba(247,244,234,0.18)",
+    borderColor: c.border,
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: "center",
   },
-  secondaryText: { color: INK, fontWeight: "800", fontSize: 14 },
+  secondaryText: { color: c.text, fontWeight: "800", fontSize: 14 },
   tertiary: {
     paddingVertical: 8,
     alignItems: "center",
   },
-  tertiaryText: { color: MUTED, fontWeight: "800", fontSize: 13 },
-});
+  tertiaryText: { color: c.textMuted, fontWeight: "800", fontSize: 13 },
+}); }

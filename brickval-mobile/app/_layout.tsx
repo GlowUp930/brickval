@@ -12,6 +12,7 @@ import {
   getNativeProStatus,
 } from "../lib/paywall";
 import { initSentry } from "../lib/sentry";
+import { ThemeProvider } from "../lib/ThemeProvider";
 
 initSentry();
 WebBrowser.maybeCompleteAuthSession();
@@ -61,13 +62,13 @@ function AuthenticatedAppStack() {
 }
 
 export default function RootLayout() {
-  if (!isClerkConfigured) {
-    return <PlainStack />;
-  }
-
-  return (
+  const app = !isClerkConfigured ? (
+    <PlainStack />
+  ) : (
     <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} tokenCache={safeTokenCache}>
       <AuthenticatedAppStack />
     </ClerkProvider>
   );
+
+  return <ThemeProvider initial="light">{app}</ThemeProvider>;
 }

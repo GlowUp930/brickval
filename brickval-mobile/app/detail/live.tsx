@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Image,
@@ -15,14 +15,8 @@ import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import { normalizeHistoryDate, type BrickLinkDetail, type EbaySale, type LookupDetailResult } from "../../lib/api";
 import { getLatestLookupResult } from "../../lib/live-result";
 import { QuestionMarkPlaceholder } from "../../components/QuestionMarkPlaceholder";
-
-const ACCENT = "#62c79a";
-const INK = "#f7f4ea";
-const MUTED = "rgba(247,244,234,0.64)";
-const SOFT = "rgba(247,244,234,0.38)";
-const SURFACE = "#070908";
-const PANEL = "#0b0e0d";
-const LINE = "rgba(153,231,189,0.14)";
+import { useTheme } from "../../lib/ThemeProvider";
+import { type ThemeColors } from "../../lib/theme";
 const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const USD_DECIMAL = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -165,18 +159,20 @@ function buildPartRows(result: Extract<LookupDetailResult, { item_type: "part" }
 
 export default function LiveDetailScreen() {
   const { width: screenWidth } = useWindowDimensions();
+  const { colors: c } = useTheme();
+  const s = useMemo(() => getStyles(c), [c]);
   const result = getLatestLookupResult();
   const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<number | null>(null);
   const popupProgress = useRef(new Animated.Value(0)).current;
 
   if (!result) {
     return (
-      <View style={styles.root}>
-        <View style={styles.emptyState}>
-          <Text style={styles.title}>Live result unavailable</Text>
-          <Text style={styles.body}>Scan again to open native result details.</Text>
-          <Pressable style={styles.backBtn} onPress={() => router.replace("/scan")}>
-            <Text style={styles.backText}>Back to scan</Text>
+      <View style={s.root}>
+        <View style={s.emptyState}>
+          <Text style={s.title}>Live result unavailable</Text>
+          <Text style={s.body}>Scan again to open native result details.</Text>
+          <Pressable style={s.backBtn} onPress={() => router.replace("/scan")}>
+            <Text style={s.backText}>Back to scan</Text>
           </Pressable>
         </View>
       </View>
@@ -267,34 +263,34 @@ export default function LiveDetailScreen() {
   ).filter((field): field is CollectorField => field !== null);
 
   return (
-    <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Pressable accessibilityRole="button" style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backText}>Back</Text>
+    <View style={s.root}>
+      <ScrollView contentContainerStyle={s.content}>
+        <Pressable accessibilityRole="button" style={s.backBtn} onPress={() => router.back()}>
+          <Text style={s.backText}>Back</Text>
         </Pressable>
 
-        <View style={styles.header}>
-          <Text style={styles.eyebrow}>
+        <View style={s.header}>
+          <Text style={s.eyebrow}>
             {result.item_type === "set" ? "Live set result" : result.item_type === "part" ? "Live part result" : "Live minifigure result"}
           </Text>
-          <Text style={styles.title}>{result.name}</Text>
-          <Text style={styles.meta}>
+          <Text style={s.title}>{result.name}</Text>
+          <Text style={s.meta}>
             {result.set_number} · {result.theme}
             {result.pieces ? ` · ${result.pieces.toLocaleString()} pieces` : ""}
           </Text>
         </View>
 
-        <View style={styles.hero}>
-          <View style={styles.heroTop}>
+        <View style={s.hero}>
+          <View style={s.heroTop}>
             {result.image_url ? (
-              <Image source={{ uri: result.image_url }} style={styles.image} />
+              <Image source={{ uri: result.image_url }} style={s.image} />
             ) : (
-              <QuestionMarkPlaceholder style={styles.image} />
+              <QuestionMarkPlaceholder style={s.image} />
             )}
-            <View style={styles.heroCopy}>
-              <Text style={styles.valueLabel}>Market price</Text>
-              <Text style={styles.value}>{heroPrice === null ? "Unavailable" : USD.format(heroPrice)}</Text>
-              <Text style={styles.unitValue}>
+            <View style={s.heroCopy}>
+              <Text style={s.valueLabel}>Market price</Text>
+              <Text style={s.value}>{heroPrice === null ? "Unavailable" : USD.format(heroPrice)}</Text>
+              <Text style={s.unitValue}>
                 {result.item_type === "part"
                   ? result.part_info.color_name ?? "Part color"
                   : formatRetailComparison(result.pricing.gain_pct)}
@@ -302,39 +298,39 @@ export default function LiveDetailScreen() {
             </View>
           </View>
 
-          <View style={styles.statsRow}>
-            <Stat label="Source" value={result.pricing.data_source === "sold" ? "Sold data" : result.pricing.data_source === "listing" ? "Listing data" : "Unknown"} />
-            <Stat label="Volume" value={result.pricing.bricklink_new_qty ? `${result.pricing.bricklink_new_qty} rows` : "Light data"} />
-            <Stat
+          <View style={s.statsRow}>
+            <Stat s={s} label="Source" value={result.pricing.data_source === "sold" ? "Sold data" : result.pricing.data_source === "listing" ? "Listing data" : "Unknown"} />
+            <Stat s={s} label="Volume" value={result.pricing.bricklink_new_qty ? `${result.pricing.bricklink_new_qty} rows` : "Light data"} />
+            <Stat s={s}
               label={result.item_type === "part" ? "Color" : "RRP"}
               value={result.item_type === "part" ? result.part_info.color_name ?? "Unknown" : result.pricing.rrp_usd === null ? "Unavailable" : `~${USD.format(result.pricing.rrp_usd)}`}
             />
           </View>
         </View>
 
-        <View style={styles.chartCard}>
-          <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>Value history</Text>
-            <Text style={styles.chartMeta}>{history.length ? `${history.length} points` : "No history yet"}</Text>
+        <View style={s.chartCard}>
+          <View style={s.chartHeader}>
+            <Text style={s.chartTitle}>Value history</Text>
+            <Text style={s.chartMeta}>{history.length ? `${history.length} points` : "No history yet"}</Text>
           </View>
           <View
             accessibilityLabel="Live value history chart"
-            style={[styles.chartWrap, { width: chartWidth, height: chartHeight }]}
+            style={[s.chartWrap, { width: chartWidth, height: chartHeight }]}
             onStartShouldSetResponder={() => true}
             onMoveShouldSetResponder={() => true}
             onResponderGrant={handleChartTouch}
             onResponderMove={handleChartTouch}
           >
-            <View style={styles.gridLineTop} />
-            <View style={styles.gridLineMid} />
-            <View style={styles.gridLineBottom} />
+            <View style={s.gridLineTop} />
+            <View style={s.gridLineMid} />
+            <View style={s.gridLineBottom} />
             {selectedHistoryPoint ? (
               <>
-                <View style={[styles.chartCursor, { left: selectedX }]} />
+                <View style={[s.chartCursor, { left: selectedX }]} />
                 <Animated.View
                   pointerEvents="none"
                   style={[
-                    styles.chartPopup,
+                    s.chartPopup,
                     {
                       left: popupLeft,
                       top: popupTop,
@@ -343,12 +339,12 @@ export default function LiveDetailScreen() {
                     },
                   ]}
                 >
-                  <Text style={styles.chartPopupLabel}>{formatTimelineLabel(selectedHistoryPoint.date)}</Text>
-                  <Text style={styles.chartPopupValue}>{USD_DECIMAL.format(selectedHistoryPoint.price_usd)}</Text>
+                  <Text style={s.chartPopupLabel}>{formatTimelineLabel(selectedHistoryPoint.date)}</Text>
+                  <Text style={s.chartPopupValue}>{USD_DECIMAL.format(selectedHistoryPoint.price_usd)}</Text>
                 </Animated.View>
                 <View
                   style={[
-                    styles.selectedPoint,
+                    s.selectedPoint,
                     {
                       left: selectedX - 4,
                       top: selectedHistoryPoint.y >= 4 ? selectedHistoryPoint.y - 4 : selectedHistoryPoint.y,
@@ -360,50 +356,50 @@ export default function LiveDetailScreen() {
             <Svg width={chartWidth} height={chartHeight} style={StyleSheet.absoluteFill}>
               <Defs>
                 <LinearGradient id="detailFill" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={ACCENT} stopOpacity="0.08" />
-                  <Stop offset="1" stopColor={ACCENT} stopOpacity="0" />
+                  <Stop offset="0" stopColor={c.semantic.success} stopOpacity="0.08" />
+                  <Stop offset="1" stopColor={c.semantic.success} stopOpacity="0" />
                 </LinearGradient>
               </Defs>
               {chartAreaPath ? <Path d={chartAreaPath} fill="url(#detailFill)" /> : null}
-              {chartLinePath ? <Path d={chartLinePath} fill="none" stroke={ACCENT} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /> : null}
+              {chartLinePath ? <Path d={chartLinePath} fill="none" stroke={c.semantic.success} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /> : null}
             </Svg>
           </View>
-            <View style={styles.timeline}>
+            <View style={s.timeline}>
               {timelinePoints.map((point) => (
-                <Text key={`${point.date}-${point.price_usd}`} style={styles.timelineLabel}>
+                <Text key={`${point.date}-${point.price_usd}`} style={s.timelineLabel}>
                   {formatTimelineLabel(point.date)}
                 </Text>
               ))}
             </View>
         </View>
 
-        <View style={styles.marketCard}>
-          <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>Market rows</Text>
-            <Text style={styles.chartMeta}>{marketRows.length} shown</Text>
+        <View style={s.marketCard}>
+          <View style={s.chartHeader}>
+            <Text style={s.chartTitle}>Market rows</Text>
+            <Text style={s.chartMeta}>{marketRows.length} shown</Text>
           </View>
           {marketRows.length === 0 ? (
-            <Text style={styles.emptyRows}>No detailed market rows came back for this scan.</Text>
+            <Text style={s.emptyRows}>No detailed market rows came back for this scan.</Text>
           ) : (
             marketRows.map((row) => (
-              <View key={row.id} style={styles.marketRow}>
-                <View style={styles.marketCopy}>
-                  <Text style={styles.marketLabel}>{row.label}</Text>
-                  <Text style={styles.marketMeta}>{row.meta}</Text>
+              <View key={row.id} style={s.marketRow}>
+                <View style={s.marketCopy}>
+                  <Text style={s.marketLabel}>{row.label}</Text>
+                  <Text style={s.marketMeta}>{row.meta}</Text>
                 </View>
-                <Text style={styles.marketValue}>{USD_DECIMAL.format(row.priceUsd)}</Text>
+                <Text style={s.marketValue}>{USD_DECIMAL.format(row.priceUsd)}</Text>
               </View>
             ))
           )}
         </View>
 
-        <View style={styles.collectorCard}>
-          <Text style={styles.collectorTitle}>Collector Details</Text>
-          <View style={styles.collectorGrid}>
+        <View style={s.collectorCard}>
+          <Text style={s.collectorTitle}>Collector Details</Text>
+          <View style={s.collectorGrid}>
             {collectorFields.map((field) => (
-              <View key={field.label} style={styles.collectorField}>
-                <Text style={styles.collectorLabel}>{field.label}</Text>
-                <Text style={styles.collectorValue}>{field.value}</Text>
+              <View key={field.label} style={s.collectorField}>
+                <Text style={s.collectorLabel}>{field.label}</Text>
+                <Text style={s.collectorValue}>{field.value}</Text>
               </View>
             ))}
           </View>
@@ -413,19 +409,20 @@ export default function LiveDetailScreen() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ s, label, value }: { s: any; label: string; value: string }) {
   return (
-    <View style={styles.stat}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue} numberOfLines={2}>
+    <View style={s.stat}>
+      <Text style={s.statLabel}>{label}</Text>
+      <Text style={s.statValue} numberOfLines={2}>
         {value}
       </Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: SURFACE },
+function getStyles(c: ThemeColors) {
+  return StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.dark.background },
   content: { padding: 20, paddingTop: 56, paddingBottom: 96, gap: 18 },
   emptyState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 12 },
   backBtn: {
@@ -434,52 +431,52 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: LINE,
+    borderColor: c.dark.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  backText: { color: INK, fontSize: 12, fontWeight: "900" },
+  backText: { color: c.dark.text, fontSize: 12, fontWeight: "900" },
   header: { gap: 6 },
-  eyebrow: { color: ACCENT, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
-  title: { color: INK, fontSize: 30, fontWeight: "900", lineHeight: 34 },
-  body: { color: MUTED, fontSize: 14, lineHeight: 20, fontWeight: "700", textAlign: "center" },
-  meta: { color: MUTED, fontSize: 13, fontWeight: "700" },
+  eyebrow: { color: c.semantic.success, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+  title: { color: c.dark.text, fontSize: 30, fontWeight: "900", lineHeight: 34 },
+  body: { color: c.dark.textMuted, fontSize: 14, lineHeight: 20, fontWeight: "700", textAlign: "center" },
+  meta: { color: c.dark.textMuted, fontSize: 13, fontWeight: "700" },
   hero: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: LINE,
-    backgroundColor: PANEL,
+    borderColor: c.dark.border,
+    backgroundColor: c.dark.backgroundElevated,
     padding: 16,
     gap: 16,
   },
   heroTop: { flexDirection: "row", gap: 14, alignItems: "center" },
   image: { width: 82, height: 82, borderRadius: 8, backgroundColor: "#171717" },
   heroCopy: { flex: 1, gap: 5 },
-  valueLabel: { color: MUTED, fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
-  value: { color: INK, fontSize: 32, fontWeight: "900", lineHeight: 36 },
-  unitValue: { color: SOFT, fontSize: 12, fontWeight: "700" },
+  valueLabel: { color: c.dark.textMuted, fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
+  value: { color: c.dark.text, fontSize: 32, fontWeight: "900", lineHeight: 36 },
+  unitValue: { color: c.dark.textDisabled, fontSize: 12, fontWeight: "700" },
   statsRow: { flexDirection: "row", gap: 10 },
   stat: {
     flex: 1,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: LINE,
+    borderColor: c.dark.border,
     padding: 12,
     gap: 6,
   },
-  statLabel: { color: SOFT, fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
-  statValue: { color: INK, fontSize: 13, fontWeight: "800" },
+  statLabel: { color: c.dark.textDisabled, fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
+  statValue: { color: c.dark.text, fontSize: 13, fontWeight: "800" },
   chartCard: {
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: LINE,
+    borderColor: c.dark.border,
     backgroundColor: "rgba(255,255,255,0.015)",
     padding: 16,
     gap: 14,
   },
   chartHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  chartTitle: { color: INK, fontSize: 15, fontWeight: "900", letterSpacing: -0.2 },
-  chartMeta: { color: SOFT, fontSize: 12, fontWeight: "700" },
+  chartTitle: { color: c.dark.text, fontSize: 15, fontWeight: "900", letterSpacing: -0.2 },
+  chartMeta: { color: c.dark.textDisabled, fontSize: 12, fontWeight: "700" },
   chartWrap: { alignSelf: "center", overflow: "hidden", position: "relative" },
   gridLineTop: { position: "absolute", left: 0, right: 0, top: 24, borderTopWidth: 1, borderColor: "rgba(255,255,255,0.04)" },
   gridLineMid: { position: "absolute", left: 0, right: 0, top: 104, borderTopWidth: 1, borderColor: "rgba(255,255,255,0.05)" },
@@ -505,24 +502,24 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.08)",
   },
   chartPopupLabel: {
-    color: SOFT,
+    color: c.dark.textDisabled,
     fontSize: 9,
     fontWeight: "900",
     textTransform: "uppercase",
   },
   chartPopupValue: {
-    color: INK,
+    color: c.dark.text,
     fontSize: 15,
     fontWeight: "900",
     marginTop: 2,
   },
   timeline: { flexDirection: "row", justifyContent: "space-between", marginTop: -4, paddingHorizontal: 2 },
-  timelineLabel: { flex: 1, color: MUTED, fontSize: 8, fontWeight: "900", textAlign: "center", letterSpacing: 0.2 },
+  timelineLabel: { flex: 1, color: c.dark.textMuted, fontSize: 8, fontWeight: "900", textAlign: "center", letterSpacing: 0.2 },
   marketCard: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: LINE,
-    backgroundColor: PANEL,
+    borderColor: c.dark.border,
+    backgroundColor: c.dark.backgroundElevated,
     padding: 16,
     gap: 10,
   },
@@ -535,19 +532,19 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(255,255,255,0.06)",
   },
   marketCopy: { flex: 1, gap: 3 },
-  marketLabel: { color: INK, fontSize: 13, fontWeight: "800" },
-  marketMeta: { color: SOFT, fontSize: 11, fontWeight: "700" },
-  marketValue: { color: ACCENT, fontSize: 13, fontWeight: "900" },
-  emptyRows: { color: MUTED, fontSize: 13, fontWeight: "700", lineHeight: 18 },
+  marketLabel: { color: c.dark.text, fontSize: 13, fontWeight: "800" },
+  marketMeta: { color: c.dark.textDisabled, fontSize: 11, fontWeight: "700" },
+  marketValue: { color: c.semantic.success, fontSize: 13, fontWeight: "900" },
+  emptyRows: { color: c.dark.textMuted, fontSize: 13, fontWeight: "700", lineHeight: 18 },
   collectorCard: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: LINE,
+    borderColor: c.dark.border,
     backgroundColor: "rgba(255,255,255,0.025)",
     padding: 16,
     gap: 12,
   },
-  collectorTitle: { color: INK, fontSize: 14, fontWeight: "900" },
+  collectorTitle: { color: c.dark.text, fontSize: 14, fontWeight: "900" },
   collectorGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -564,16 +561,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 4,
   },
-  collectorLabel: { color: SOFT, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
-  collectorValue: { color: INK, fontSize: 13, fontWeight: "800", lineHeight: 17 },
+  collectorLabel: { color: c.dark.textDisabled, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
+  collectorValue: { color: c.dark.text, fontSize: 13, fontWeight: "800", lineHeight: 17 },
   selectedPoint: {
     position: "absolute",
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: ACCENT,
+    backgroundColor: c.semantic.success,
     borderWidth: 2,
     borderColor: "#0b0f0d",
     zIndex: 3,
   },
-});
+  });
+}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import {
   Modal,
   View,
@@ -9,14 +9,9 @@ import {
   Linking,
   Dimensions,
 } from "react-native";
+import { useTheme } from "../lib/ThemeProvider";
+import { colors as c } from "../lib/theme";
 
-const ACCENT = "#62c79a";
-const INK = "#f7f4ea";
-const MUTED = "rgba(247,244,234,0.64)";
-const SOFT = "rgba(247,244,234,0.38)";
-const SURFACE = "#121715";
-const PANEL = "#0b0e0d";
-const LINE = "rgba(153,231,189,0.14)";
 const { height: SCREEN_H } = Dimensions.get("window");
 
 const PRIVACY_URL = "https://brickvalue.live/privacy";
@@ -28,7 +23,111 @@ interface Props {
   onDismiss: () => void;
 }
 
+function getStyles() {
+  return StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      backgroundColor: c.dark.overlay,
+      justifyContent: "flex-end",
+    },
+    sheet: {
+      backgroundColor: c.dark.backgroundElevated,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingHorizontal: 24,
+      paddingBottom: 40,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderColor: c.dark.border,
+    },
+    handle: {
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: c.dark.textDisabled,
+      alignSelf: "center",
+      marginBottom: 20,
+    },
+    title: {
+      color: c.semantic.success,
+      fontSize: 22,
+      fontWeight: "700",
+      marginBottom: 8,
+    },
+    body: {
+      color: c.dark.textMuted,
+      fontSize: 15,
+      lineHeight: 22,
+      marginBottom: 8,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: c.dark.border,
+      marginVertical: 20,
+    },
+    sectionLabel: {
+      color: c.dark.textDisabled,
+      fontSize: 12,
+      fontWeight: "600",
+      textTransform: "uppercase",
+      letterSpacing: 1,
+      marginBottom: 12,
+    },
+    linkRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderColor: c.dark.border,
+    },
+    linkText: {
+      color: c.dark.text,
+      fontSize: 16,
+      fontWeight: "500",
+    },
+    linkArrow: {
+      color: c.dark.textDisabled,
+      fontSize: 16,
+    },
+    eulaNote: {
+      color: c.dark.textDisabled,
+      fontSize: 12,
+      lineHeight: 18,
+      marginTop: 14,
+    },
+    eulaLink: {
+      color: c.semantic.success,
+      textDecorationLine: "underline",
+    },
+    continueButton: {
+      backgroundColor: c.semantic.success,
+      borderRadius: 12,
+      paddingVertical: 16,
+      alignItems: "center",
+    },
+    continueText: {
+      color: c.dark.backgroundElevated,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    cancelButton: {
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: "center",
+      marginTop: 8,
+    },
+    cancelText: {
+      color: c.dark.textMuted,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+  });
+}
+
 export function PrePurchaseDisclosure({ visible, onContinue, onDismiss }: Props) {
+  const { mode } = useTheme();
+  const s = useMemo(() => getStyles(), [mode]);
   const [renderSheet, setRenderSheet] = useState(false);
   const slide = useRef(new Animated.Value(SCREEN_H)).current;
 
@@ -62,45 +161,45 @@ export function PrePurchaseDisclosure({ visible, onContinue, onDismiss }: Props)
       statusBarTranslucent
       onRequestClose={onDismiss}
     >
-      <Pressable style={styles.backdrop} onPress={onDismiss}>
+      <Pressable style={s.backdrop} onPress={onDismiss}>
         <Animated.View
-          style={[styles.sheet, { transform: [{ translateY: slide }] }]}
+          style={[s.sheet, { transform: [{ translateY: slide }] }]}
         >
           <Pressable onPress={() => {}}>
-            <View style={styles.handle} />
-            <Text style={styles.title}>BrickVal Pro</Text>
-            <Text style={styles.body}>
+            <View style={s.handle} />
+            <Text style={s.title}>BrickVal Pro</Text>
+            <Text style={s.body}>
               Unlock unlimited scans and save as many LEGO sets and minifigures as
               you want in your collection.
             </Text>
 
-            <View style={styles.divider} />
+            <View style={s.divider} />
 
-            <Text style={styles.sectionLabel}>Before you subscribe</Text>
+            <Text style={s.sectionLabel}>Before you subscribe</Text>
 
             <Pressable
-              style={styles.linkRow}
+              style={s.linkRow}
               accessibilityRole="link"
               onPress={() => void Linking.openURL(PRIVACY_URL)}
             >
-              <Text style={styles.linkText}>Privacy Policy</Text>
-              <Text style={styles.linkArrow}>→</Text>
+              <Text style={s.linkText}>Privacy Policy</Text>
+              <Text style={s.linkArrow}>→</Text>
             </Pressable>
 
             <Pressable
-              style={styles.linkRow}
+              style={s.linkRow}
               accessibilityRole="link"
               onPress={() => void Linking.openURL(TERMS_URL)}
             >
-              <Text style={styles.linkText}>Terms of Use</Text>
-              <Text style={styles.linkArrow}>→</Text>
+              <Text style={s.linkText}>Terms of Use</Text>
+              <Text style={s.linkArrow}>→</Text>
             </Pressable>
 
-            <Text style={styles.eulaNote}>
+            <Text style={s.eulaNote}>
               Apple's standard End User License Agreement (EULA) applies to this
               app.{"\n"}
               <Text
-                style={styles.eulaLink}
+                style={s.eulaLink}
                 onPress={() =>
                   void Linking.openURL(
                     "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
@@ -111,14 +210,22 @@ export function PrePurchaseDisclosure({ visible, onContinue, onDismiss }: Props)
               </Text>
             </Text>
 
-            <View style={styles.divider} />
+            <View style={s.divider} />
 
             <Pressable
               accessibilityRole="button"
-              style={styles.continueButton}
+              style={s.continueButton}
               onPress={onContinue}
             >
-              <Text style={styles.continueText}>Continue to Subscribe</Text>
+              <Text style={s.continueText}>Continue to Subscribe</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              style={s.cancelButton}
+              onPress={onDismiss}
+            >
+              <Text style={s.cancelText}>Cancel</Text>
             </Pressable>
           </Pressable>
         </Animated.View>
@@ -126,92 +233,3 @@ export function PrePurchaseDisclosure({ visible, onContinue, onDismiss }: Props)
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.62)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: PANEL,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderColor: LINE,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: SOFT,
-    alignSelf: "center",
-    marginBottom: 20,
-  },
-  title: {
-    color: ACCENT,
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  body: {
-    color: MUTED,
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 8,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: LINE,
-    marginVertical: 20,
-  },
-  sectionLabel: {
-    color: SOFT,
-    fontSize: 12,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: 12,
-  },
-  linkRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderColor: LINE,
-  },
-  linkText: {
-    color: INK,
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  linkArrow: {
-    color: SOFT,
-    fontSize: 16,
-  },
-  eulaNote: {
-    color: SOFT,
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 14,
-  },
-  eulaLink: {
-    color: ACCENT,
-    textDecorationLine: "underline",
-  },
-  continueButton: {
-    backgroundColor: ACCENT,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  continueText: {
-    color: PANEL,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-});

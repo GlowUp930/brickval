@@ -4,7 +4,6 @@
     "slug": "brickvalue",
     "version": "1.0.1",
     "orientation": "portrait",
-<<<<<<< HEAD
     "icon": "./assets/brickval-loader-logo.png",
     "userInterfaceStyle": "dark",
     "scheme": "brickval",
