@@ -153,7 +153,7 @@ export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoP
         showModeSwitch={enabled}
       />
 
-      <View style={[styles.bottomBar, { bottom: Math.max(136, insets.bottom + 112) }]}>
+      <View style={[styles.bottomBar, { bottom: Math.max(96, insets.bottom + 70) }]}>
         <View style={styles.leftStack}>
           <View style={styles.toolSpacer} />
           <Pressable
