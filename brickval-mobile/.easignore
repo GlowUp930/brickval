@@ -14,3 +14,9 @@ build/
 
 # macOS metadata
 .DS_Store
+
+# Local design previews and agent checkouts are not runtime app assets.
+previews/
+.agents/skills/swiftui-agent-skill/
+assets/tab-icons/
+assets/onboarding-bricklink.svg
