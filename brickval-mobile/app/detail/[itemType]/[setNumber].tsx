@@ -446,12 +446,12 @@ export default function ItemDetailScreen() {
               <Svg width={chartWidth} height={chartHeight} style={StyleSheet.absoluteFill}>
               <Defs>
                 <LinearGradient id="detailFill" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={c.semantic.success} stopOpacity="0.08" />
-                  <Stop offset="1" stopColor={c.semantic.success} stopOpacity="0" />
+                  <Stop offset="0" stopColor={c.lego.yellow} stopOpacity="0.12" />
+                  <Stop offset="1" stopColor={c.lego.yellow} stopOpacity="0" />
                 </LinearGradient>
               </Defs>
                 {chartAreaPath ? <Path ref={morphFillRef} d={chartAreaPath} fill="url(#detailFill)" /> : null}
-                {chartLinePath ? <Path ref={morphLineRef} d={chartLinePath} fill="none" stroke={c.semantic.success} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /> : null}
+                {chartLinePath ? <Path ref={morphLineRef} d={chartLinePath} fill="none" stroke={c.lego.yellow} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /> : null}
               </Svg>
             </View>
             <View style={[s.timeline, { width: chartWidth }]}>
@@ -526,7 +526,7 @@ function getStyles(c: ThemeColors) {
     justifyContent: "center",
   },
   backText: { color: c.dark.text, fontSize: 12, fontWeight: "900" },
-  eyebrow: { color: c.semantic.success, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+  eyebrow: { color: c.lego.yellow, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
   title: { color: c.dark.text, fontSize: 30, fontWeight: "900", letterSpacing: -1.1, lineHeight: 34 },
   meta: { color: c.dark.textMuted, fontSize: 13, fontWeight: "700" },
   hero: {
@@ -642,7 +642,7 @@ function getStyles(c: ThemeColors) {
     alignItems: "center",
     justifyContent: "center",
   },
-  horizonPillActive: { backgroundColor: c.semantic.success, borderColor: c.semantic.success },
+  horizonPillActive: { backgroundColor: c.lego.yellow, borderColor: c.lego.yellow },
   horizonText: { color: c.dark.textDisabled, fontSize: 11, fontWeight: "900" },
   horizonTextActive: { color: "#07100c" },
   noSalesText: { color: c.dark.textMuted, fontSize: 12, fontWeight: "700", lineHeight: 18 },
@@ -678,7 +678,7 @@ function getStyles(c: ThemeColors) {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: c.semantic.success,
+    backgroundColor: c.lego.yellow,
     borderWidth: 2,
     borderColor: "#0b0f0d",
     zIndex: 3,

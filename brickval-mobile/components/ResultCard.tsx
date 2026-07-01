@@ -621,7 +621,7 @@ function getStyles(c: ModeColors) { return StyleSheet.create({
     borderWidth: 1,
     borderColor: hexToRgba(themeColors.lego.yellow, 0.52),
   },
-  primaryText: { color: c.textInverse, fontWeight: "900", fontSize: 15 },
+  primaryText: { color: themeColors.light.text, fontWeight: "900", fontSize: 15 },
   primarySavedText: { color: c.text },
   secondary: {
     borderWidth: 1,

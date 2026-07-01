@@ -1,67 +1,54 @@
-import { Tabs } from "expo-router";
-import { View, Text } from "react-native";
+import { Stack } from "expo-router";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
+
 import { useTheme } from "../../lib/ThemeProvider";
+
+const tabIcons = {
+  collection: require("../../assets/native-tab-icons/collection.png"),
+  scan: require("../../assets/native-tab-icons/scanning.png"),
+  settings: require("../../assets/native-tab-icons/gear.png"),
+} as const;
 
 export default function TabLayout() {
   const { colors: c } = useTheme();
-  return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: c.lego.yellow,
-        tabBarInactiveTintColor: c.dark.textMuted,
-        tabBarStyle: {
-          backgroundColor: c.dark.background,
-          borderTopColor: "rgba(247,244,234,0.12)",
-          height: 72,
-          paddingTop: 8,
-          paddingBottom: 12,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "800",
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => <TabGlyph color={color} label="H" />,
-        }}
-      />
-      <Tabs.Screen
-        name="scan"
-        options={{
-          title: "Scan",
-          tabBarIcon: ({ color }) => <TabGlyph color={color} label="S" />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: "Settings",
-          tabBarIcon: ({ color }) => <TabGlyph color={color} label="G" />,
-        }}
-      />
-    </Tabs>
-  );
-}
 
-function TabGlyph({ color, label }: { color: string; label: string }) {
   return (
-    <View
-      style={{
-        width: 24,
-        height: 24,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: color,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Text style={{ color, fontSize: 11, fontWeight: "900" }}>{label}</Text>
-    </View>
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <NativeTabs
+        tintColor={c.lego.yellow}
+        iconColor={{ default: c.light.textDisabled, selected: c.light.text }}
+        labelStyle={{
+          default: {
+            color: c.light.textMuted,
+            fontSize: 11,
+            fontWeight: "800",
+          },
+          selected: {
+            color: c.light.text,
+            fontSize: 11,
+            fontWeight: "900",
+          },
+        }}
+        backgroundColor={c.light.surfaceGlassStrong}
+        shadowColor={c.light.border}
+        indicatorColor={c.lego.yellow}
+        disableTransparentOnScrollEdge
+        minimizeBehavior="never"
+      >
+        <NativeTabs.Trigger name="index">
+          <NativeTabs.Trigger.Icon src={tabIcons.collection} renderingMode="template" />
+          <NativeTabs.Trigger.Label>Collection</NativeTabs.Trigger.Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="scan">
+          <NativeTabs.Trigger.Icon src={tabIcons.scan} renderingMode="template" />
+          <NativeTabs.Trigger.Label>Scan</NativeTabs.Trigger.Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="settings">
+          <NativeTabs.Trigger.Icon src={tabIcons.settings} renderingMode="template" />
+          <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
+        </NativeTabs.Trigger>
+      </NativeTabs>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { Alert, Image, Linking, Platform, View, Text, StyleSheet, Pressable, ScrollView, type ImageSourcePropType } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as SecureStore from "expo-secure-store";
 import { clearCollection, getCollection, getCollectionValue, type CollectionItem } from "../../lib/collection";
 import { getAuthToken } from "../../lib/api";
@@ -47,7 +48,8 @@ export default function SettingsScreen() {
   const [proStatus, setProStatus] = useState<boolean | null>(null);
   const { triggerUpgrade, openAccountForSignIn, showDisclosure, handleDisclosureContinue, handleDisclosureDismiss } = useUpgrade();
   const { colors, c } = useTheme();
-  const styles = useMemo(() => getStyles(c), [c]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => getStyles(c, insets.top, insets.bottom), [c, insets.top, insets.bottom]);
 
   useFocusEffect(
     useCallback(() => {
@@ -139,9 +141,9 @@ export default function SettingsScreen() {
 
         <View style={styles.passportCard}>
           <View style={styles.studRail}>
-            <View style={[styles.stud, { backgroundColor: colors.lego.red }]} />
             <View style={[styles.stud, { backgroundColor: colors.lego.yellow }]} />
-            <View style={[styles.stud, { backgroundColor: colors.lego.blue }]} />
+            <View style={[styles.stud, { backgroundColor: colors.lego.yellow }]} />
+            <View style={[styles.stud, { backgroundColor: colors.light.borderStrong }]} />
           </View>
           <View style={styles.passportTop}>
             <View style={styles.avatarBlock}>
@@ -186,22 +188,22 @@ export default function SettingsScreen() {
         <View style={styles.group}>
           <Text style={styles.groupTitle}>Access</Text>
           {proStatus ? (
-            <View style={[styles.row, { borderColor: colors.semantic.success }]}>
-              <View style={[styles.rowGlyph, { borderColor: colors.semantic.success, backgroundColor: colors.semantic.successSoft }]}>
-                <Text style={[styles.rowGlyphText, { color: colors.semantic.success }]}>PRO</Text>
+            <View style={[styles.row, { borderColor: colors.lego.yellowBorder }]}>
+              <View style={[styles.rowGlyph, { borderColor: colors.lego.yellow, backgroundColor: colors.lego.yellowSoft }]}>
+                <Text style={[styles.rowGlyphText, { color: colors.light.text }]}>PRO</Text>
               </View>
               <View style={styles.rowCopy}>
-                <Text style={[styles.rowTitle, { color: colors.semantic.success }]}>BrickVal Pro active</Text>
+                <Text style={[styles.rowTitle, { color: colors.light.text }]}>BrickVal Pro active</Text>
                 <Text style={styles.rowMeta}>Unlimited scans unlocked on this device</Text>
               </View>
-              <Text style={[styles.rowArrow, { color: colors.semantic.success }]}>✓</Text>
+              <Text style={[styles.rowArrow, { color: colors.lego.yellowPressed }]}>✓</Text>
             </View>
           ) : (
             <SettingsRow
               code="PRO"
               title="BrickVal Pro"
               meta={`Native ${storeName} upgrade flow`}
-              accent={colors.semantic.success}
+              accent={colors.lego.yellow}
               onPress={() => void triggerUpgrade()}
             />
           )}
@@ -209,7 +211,7 @@ export default function SettingsScreen() {
             code="RST"
             title="Restore purchases"
             meta={`Re-check ${storeName} access for this account`}
-            accent={colors.lego.blue}
+            accent={c.textMuted}
             onPress={() => void handleRestorePurchases()}
           />
 
@@ -221,14 +223,14 @@ export default function SettingsScreen() {
             code="PRV"
             title="Privacy policy"
             meta="How BrickVal handles scans, account data, and purchases"
-            accent={colors.lego.blue}
+            accent={c.textMuted}
             onPress={() => void openExternalUrl(PRIVACY_URL)}
           />
           <SettingsRow
             code="TOS"
             title="Terms and subscription terms"
             meta="App terms, Apple purchase terms, and LEGO disclaimer"
-            accent={colors.semantic.success}
+            accent={colors.lego.yellow}
             onPress={() => void openExternalUrl(TERMS_URL)}
           />
         </View>
@@ -311,12 +313,17 @@ function SettingsRow({
   );
 }
 
-function getStyles(c: ModeColors) {
+function getStyles(c: ModeColors, safeTop = 0, safeBottom = 0) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: c.surface },
-    content: { padding: 20, paddingTop: 58, paddingBottom: 112, gap: 22 },
+    content: {
+      padding: 20,
+      paddingTop: Math.max(58, safeTop + 18),
+      paddingBottom: Math.max(112, safeBottom + 96),
+      gap: 22,
+    },
     header: { gap: 8 },
-    eyebrow: { color: colors.semantic.success, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+    eyebrow: { color: colors.lego.yellowPressed, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
     title: { color: c.text, fontSize: 34, fontWeight: "900", letterSpacing: -1.2 },
     body: { color: c.textMuted, fontSize: 14, lineHeight: 21, fontWeight: "700" },
     passportCard: {
@@ -352,7 +359,7 @@ function getStyles(c: ModeColors) {
       borderRadius: 18,
       backgroundColor: c.backgroundElevated,
       borderWidth: 1,
-      borderColor: colors.semantic.success,
+      borderColor: colors.lego.yellow,
       alignItems: "center",
       justifyContent: "center",
       overflow: "visible",
@@ -371,11 +378,11 @@ function getStyles(c: ModeColors) {
       justifyContent: "center",
     },
     planBadgePro: {
-      borderColor: colors.semantic.success,
-      backgroundColor: colors.semantic.success,
+      borderColor: colors.lego.yellow,
+      backgroundColor: colors.lego.yellow,
     },
     planBadgeText: { color: c.text, fontSize: 9, fontWeight: "900" },
-    planBadgeTextPro: { color: c.textInverse },
+    planBadgeTextPro: { color: colors.light.text },
     passportCopy: { flex: 1, gap: 4, minWidth: 0 },
     passportLabel: { color: c.textDisabled, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
     passportTitle: { color: c.text, fontSize: 21, fontWeight: "900", letterSpacing: -0.4 },
@@ -383,11 +390,11 @@ function getStyles(c: ModeColors) {
     primaryAction: {
       minHeight: 48,
       borderRadius: 16,
-      backgroundColor: colors.semantic.success,
+      backgroundColor: colors.lego.yellow,
       alignItems: "center",
       justifyContent: "center",
     },
-    primaryActionText: { color: c.textInverse, fontSize: 14, fontWeight: "900" },
+    primaryActionText: { color: colors.light.text, fontSize: 14, fontWeight: "900" },
     avatarImageFrame: {
       overflow: "hidden",
       borderWidth: 1,

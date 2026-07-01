@@ -12,9 +12,9 @@ import {
 import Svg, { Defs, Mask, Rect } from "react-native-svg";
 import type { ScanMode } from "../lib/api";
 
-const SET_ACCENT = "#f2c94c";
-const MINIFIG_ACCENT = "#8ed1ff";
-const INK = "#f7f4ea";
+const SET_ACCENT = "#F2CD37";
+const MINIFIG_ACCENT = "#F2CD37";
+const INK = "#F5F5F7";
 const { width: INITIAL_SCREEN_W } = Dimensions.get("window");
 const INITIAL_FRAME_W = INITIAL_SCREEN_W * 0.78;
 const INITIAL_FRAME_H = INITIAL_FRAME_W * 1.25; // 4:5 portrait - fits a LEGO box nicely
@@ -114,7 +114,7 @@ export function ViewfinderOverlay({ pulse, scanning, mode, onModeChange, showMod
           <View
             style={[
               styles.modeSwitch,
-              { borderColor: mode === "minifig" ? "rgba(142,209,255,0.42)" : "rgba(242,201,76,0.34)" },
+              { borderColor: "rgba(242,205,55,0.34)" },
             ]}
           >
             <Pressable

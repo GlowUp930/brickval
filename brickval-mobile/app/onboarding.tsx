@@ -1,76 +1,48 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
-  Dimensions,
   Easing,
   Image,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { router } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import * as StoreReview from "expo-store-review";
+import { useVideoPlayer, VideoView } from "expo-video";
+import Svg, { Circle, Defs, LinearGradient, Path, Stop } from "react-native-svg";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { setCompletedOnboarding, setPrimaryGoal, type PrimaryGoal } from "../lib/onboarding";
 import { useTheme, type ThemeColors } from "../lib/ThemeProvider";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const PROGRESS_WIDTH = SCREEN_WIDTH - 48;
+type ScreenId = "value" | "demo" | "goal" | "trust" | "review";
 
-type ScreenId = "value" | "how" | "goal" | "trust" | "start";
+const SCREENS: ScreenId[] = ["value", "demo", "goal", "trust", "review"];
 
-const SCREENS: ScreenId[] = ["value", "how", "goal", "trust", "start"];
+const r2d2Image = { uri: "https://img.bricklink.com/ItemImage/SN/0/75308-1.png" };
+const demoVideo = require("../assets/onboarding-demo.mp4");
+const shieldIcon = require("../assets/onboarding-shield.png");
+const bricklinkLogo = require("../assets/onboarding-bricklink.png");
+const bricksetLogo = require("../assets/onboarding-brickset.webp");
+const appLogo = require("../assets/brickval-loader-logo.png");
 
 const goals: { id: PrimaryGoal; title: string; description: string }[] = [
   {
     id: "catalog",
-    title: "I collect LEGO and want to catalog my collection",
-    description: "Track what I own and see what it is worth today.",
+    title: "Catalog my collection",
+    description: "Track what I own and what it is worth today.",
   },
   {
     id: "resell",
-    title: "I buy and sell LEGO",
-    description: "Check value fast before I list, buy, or negotiate.",
+    title: "Buy and sell LEGO",
+    description: "Check value before I list, buy, or negotiate.",
   },
   {
     id: "deal_check",
-    title: "I want to spot hidden gems at flea markets or in stores",
-    description: "Scan quickly on the go and avoid overpaying.",
-  },
-];
-
-const trustRows = [
-  {
-    title: "BrickLink market activity",
-    description: "Use real LEGO marketplace pricing instead of rough guesses.",
-  },
-  {
-    title: "eBay market checks",
-    description: "Cross-check current demand across broader resale listings.",
-  },
-  {
-    title: "Scan confirmation first",
-    description: "Confirm what you are looking at before showing the value.",
-  },
-];
-
-const howRows = [
-  {
-    step: "1",
-    title: "Scan the set or minifigure",
-    description: "Use the camera first, or type a set number when needed.",
-  },
-  {
-    step: "2",
-    title: "Confirm the match",
-    description: "If the scan is uncertain, pick the closest result yourself.",
-  },
-  {
-    step: "3",
-    title: "See the market value",
-    description: "Get the pricing view instantly and save it to your collection.",
+    title: "Spot hidden gems",
+    description: "Scan quickly in stores, markets, or bulk lots.",
   },
 ];
 
@@ -79,12 +51,12 @@ export default function OnboardingScreen() {
   const s = useMemo(() => getStyles(c), [c]);
   const [screenIndex, setScreenIndex] = useState(0);
   const [selectedGoal, setSelectedGoal] = useState<PrimaryGoal | null>(null);
+  const reviewPromptRequested = useRef(false);
   const progress = useRef(new Animated.Value(0)).current;
   const content = useRef(new Animated.Value(0)).current;
-  const goalAdvanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const screen = SCREENS[screenIndex];
-  const isLastScreen = screen === "start";
+  const isLastScreen = screen === "review";
   const progressRatio = (screenIndex + 1) / SCREENS.length;
 
   useEffect(() => {
@@ -102,15 +74,15 @@ export default function OnboardingScreen() {
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
-  }, [content, progress, progressRatio, screenIndex]);
 
-  useEffect(() => {
-    return () => {
-      if (goalAdvanceRef.current) {
-        clearTimeout(goalAdvanceRef.current);
-      }
-    };
-  }, []);
+    if (screen === "review" && !reviewPromptRequested.current) {
+      const timer = setTimeout(() => {
+        reviewPromptRequested.current = true;
+        void requestNativeReview();
+      }, 1300);
+      return () => clearTimeout(timer);
+    }
+  }, [content, progress, progressRatio, screenIndex]);
 
   const contentStyle = useMemo(
     () => ({
@@ -133,8 +105,6 @@ export default function OnboardingScreen() {
   };
 
   const handleContinue = async () => {
-    if (screen === "goal") return;
-
     if (isLastScreen) {
       await completeOnboarding();
       return;
@@ -143,136 +113,150 @@ export default function OnboardingScreen() {
     setScreenIndex((value) => Math.min(value + 1, SCREENS.length - 1));
   };
 
-  const handleSkip = async () => {
-    await completeOnboarding();
-  };
-
   const handleGoalPick = async (goal: PrimaryGoal) => {
     setSelectedGoal(goal);
     await setPrimaryGoal(goal);
-
-    if (goalAdvanceRef.current) {
-      clearTimeout(goalAdvanceRef.current);
-    }
-
-    goalAdvanceRef.current = setTimeout(() => {
-      setScreenIndex((value) => Math.min(value + 1, SCREENS.length - 1));
-    }, 260);
   };
 
-  const progressBarWidth = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, PROGRESS_WIDTH],
-  });
+  const requestNativeReview = async () => {
+    try {
+      if (await StoreReview.hasAction()) {
+        await StoreReview.requestReview();
+      }
+    } catch (error) {
+      console.warn("Failed to request App Store review", error);
+    }
+  };
 
   return (
     <SafeAreaView style={s.safeArea} edges={["top", "bottom"]}>
       <StatusBar style="dark" />
       <View style={s.root}>
-        <View style={s.topRow}>
-          <View style={s.progressTrack}>
-            <Animated.View style={[s.progressFill, { width: progressBarWidth }]} />
-          </View>
-          {!isLastScreen ? (
-            <Pressable onPress={handleSkip} style={s.skipButton}>
-              <Text style={s.skipText}>Skip</Text>
-            </Pressable>
-          ) : (
-            <View style={s.skipSpacer} />
-          )}
+        <View style={s.progressRow}>
+          {SCREENS.map((item, index) => (
+            <View
+              key={item}
+              style={[s.progressSegment, index <= screenIndex && s.progressSegmentActive]}
+            />
+          ))}
         </View>
 
-        <Animated.View style={[s.content, contentStyle]}>
-          {screen === "value" ? <ValueScreen s={s} /> : null}
-          {screen === "how" ? <HowScreen s={s} /> : null}
+        <Animated.View style={[s.screen, contentStyle]}>
+          {screen === "value" ? <ValueScreen s={s} c={c} /> : null}
+          {screen === "demo" ? <DemoScreen s={s} /> : null}
           {screen === "goal" ? (
             <GoalScreen s={s} selectedGoal={selectedGoal} onSelect={handleGoalPick} />
           ) : null}
           {screen === "trust" ? <TrustScreen s={s} /> : null}
-          {screen === "start" ? <StartScreen s={s} /> : null}
+          {screen === "review" ? <ReviewScreen s={s} /> : null}
         </Animated.View>
 
         <View style={s.footer}>
-          {screen !== "goal" ? (
-            <Pressable onPress={handleContinue} style={s.primaryButton}>
-              <Text style={s.primaryButtonText}>
-                {isLastScreen ? "Start scanning" : "Continue"}
-              </Text>
-            </Pressable>
-          ) : (
-            <Text style={s.goalHint}>Choose the one that sounds most like you.</Text>
-          )}
-          <Text style={s.stepText}>
-            {screenIndex + 1} of {SCREENS.length}
-          </Text>
+          <Pressable onPress={handleContinue} style={s.primaryButton}>
+            <Text style={s.primaryButtonText}>
+              {screenIndex === 0 ? "Get started" : "Continue"}
+            </Text>
+          </Pressable>
         </View>
       </View>
     </SafeAreaView>
   );
 }
 
-function ValueScreen({ s }: { s: any }) {
+function HeroText({
+  s,
+  title,
+  subtitle,
+}: {
+  s: ReturnType<typeof getStyles>;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <View style={s.heroBlock}>
+      <Text style={s.title}>{title}</Text>
+      <Text style={s.subtitle}>{subtitle}</Text>
+    </View>
+  );
+}
+
+function ValueScreen({ s, c }: { s: ReturnType<typeof getStyles>; c: ThemeColors }) {
   return (
     <>
-      <View style={s.heroBlock}>
-        <View style={s.heroChip}>
-          <Text style={s.heroChipText}>BrickVal</Text>
-        </View>
-        <Text style={s.kicker}>Trusted LEGO valuation</Text>
-        <Text style={s.title}>Know what your LEGO is worth in seconds.</Text>
-        <Text style={s.body}>
-          Scan a set or minifigure, confirm the match, and get a market value view built for collectors and resellers.
-        </Text>
-      </View>
+      <HeroText
+        s={s}
+        title="Know what your LEGO is worth"
+        subtitle="Scan sets and minifigures, check value, and track your collection."
+      />
 
-      <View style={s.imageStage}>
-        <View style={s.imageHalo} />
-        <Image
-          source={{ uri: "https://img.bricklink.com/ItemImage/SN/0/75192-1.png" }}
-          style={s.heroImage}
-          resizeMode="contain"
-        />
-      </View>
-
-      <View style={s.metricRow}>
-        <View style={s.metricItem}>
-          <Text style={s.metricValue}>USD</Text>
-          <Text style={s.metricLabel}>market pricing</Text>
+      <View style={s.valueCard}>
+        <Image source={r2d2Image} style={s.setImage} resizeMode="contain" />
+        <View>
+          <Text style={s.label}>Set</Text>
+          <Text style={s.setName}>75308{"\n"}R2-D2</Text>
+          <Text style={s.setTheme}>Star Wars</Text>
         </View>
-        <View style={s.metricDivider} />
-        <View style={s.metricItem}>
-          <Text style={s.metricValue}>Fast</Text>
-          <Text style={s.metricLabel}>first scan flow</Text>
+        <View style={s.priceRow}>
+          <View>
+            <Text style={s.label}>Estimated value</Text>
+            <Text style={s.price}>$214</Text>
+          </View>
+          <Text style={s.gain}>+24%</Text>
+        </View>
+        <View style={s.chartBox}>
+          <Svg width="100%" height="100%" viewBox="0 0 260 92">
+            <Defs>
+              <LinearGradient id="chartFill" x1="0" x2="0" y1="16" y2="92">
+                <Stop offset="0" stopColor={c.lego.yellow} stopOpacity="0.34" />
+                <Stop offset="0.62" stopColor={c.lego.yellow} stopOpacity="0.13" />
+                <Stop offset="1" stopColor={c.lego.yellow} stopOpacity="0" />
+              </LinearGradient>
+            </Defs>
+            <Path
+              d="M4 58 C16 61 27 52 38 59 C51 68 61 73 73 64 C85 55 94 78 104 61 C116 42 124 47 134 36 C146 24 159 39 170 28 C181 17 194 26 205 18 C218 8 231 19 242 10 C250 4 255 7 258 5 L258 92 L4 92 Z"
+              fill="url(#chartFill)"
+            />
+            <Path
+              d="M4 58 C16 61 27 52 38 59 C51 68 61 73 73 64 C85 55 94 78 104 61 C116 42 124 47 134 36 C146 24 159 39 170 28 C181 17 194 26 205 18 C218 8 231 19 242 10 C250 4 255 7 258 5"
+              fill="none"
+              stroke={c.lego.yellow}
+              strokeLinecap="round"
+              strokeWidth={4}
+            />
+            <Circle cx={258} cy={5} r={4.5} fill={c.lego.yellow} stroke="#FFFFFF" strokeWidth={3} />
+          </Svg>
         </View>
       </View>
     </>
   );
 }
 
-function HowScreen({ s }: { s: any }) {
+function DemoScreen({ s }: { s: ReturnType<typeof getStyles> }) {
+  const player = useVideoPlayer(demoVideo, (videoPlayer) => {
+    videoPlayer.loop = true;
+    videoPlayer.muted = true;
+    videoPlayer.play();
+  });
+
   return (
     <>
-      <View style={s.heroBlock}>
-        <Text style={s.kicker}>How it works</Text>
-        <Text style={s.title}>Fast enough to use in the aisle, at home, or on the way out.</Text>
-        <Text style={s.body}>
-          One action per step. No setup wall before you get to the value check.
-        </Text>
-      </View>
+      <HeroText
+        s={s}
+        title="Scan. Confirm. Reveal."
+        subtitle="Watch how BrickVal gets from camera to value."
+      />
 
-      <View style={s.phoneFrame}>
-        <View style={s.phoneBar} />
-        {howRows.map((row) => (
-          <View key={row.step} style={s.flowRow}>
-            <View style={s.flowStep}>
-              <Text style={s.flowStepText}>{row.step}</Text>
-            </View>
-            <View style={s.flowCopy}>
-              <Text style={s.flowTitle}>{row.title}</Text>
-              <Text style={s.flowBody}>{row.description}</Text>
-            </View>
+      <View style={s.demoStage}>
+        <View style={s.demoPhoneFrame}>
+          <View style={s.demoPhoneScreen}>
+            <VideoView
+              player={player}
+              style={s.demoVideo}
+              contentFit="cover"
+              nativeControls={false}
+            />
           </View>
-        ))}
+        </View>
       </View>
     </>
   );
@@ -283,23 +267,19 @@ function GoalScreen({
   selectedGoal,
   onSelect,
 }: {
-  s: any;
+  s: ReturnType<typeof getStyles>;
   selectedGoal: PrimaryGoal | null;
   onSelect: (goal: PrimaryGoal) => void;
 }) {
   return (
     <>
-      <View style={s.heroBlock}>
-        <Text style={s.kicker}>Tailor the app</Text>
-        <Text style={s.title}>What are you mainly here to do?</Text>
-        <Text style={s.body}>Pick one. This helps shape the way BrickVal guides you next.</Text>
-      </View>
+      <HeroText
+        s={s}
+        title="What are you mainly here to do?"
+        subtitle="Pick one. This helps BrickVal guide your first scan."
+      />
 
-      <ScrollView
-        style={s.goalListScroll}
-        contentContainerStyle={s.goalList}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={s.goalList}>
         {goals.map((goal) => {
           const selected = selectedGoal === goal.id;
           return (
@@ -308,76 +288,119 @@ function GoalScreen({
               onPress={() => onSelect(goal.id)}
               style={[s.goalRow, selected && s.goalRowSelected]}
             >
-              <Text style={[s.goalTitle, selected && s.goalTitleSelected]}>
-                {goal.title}
-              </Text>
+              <Text style={s.goalTitle}>{goal.title}</Text>
               <Text style={s.goalDescription}>{goal.description}</Text>
             </Pressable>
           );
         })}
-      </ScrollView>
-    </>
-  );
-}
-
-function TrustScreen({ s }: { s: any }) {
-  return (
-    <>
-      <View style={s.heroBlock}>
-        <Text style={s.kicker}>Why trust it</Text>
-        <Text style={s.title}>Built to give you a market answer you can actually use.</Text>
-        <Text style={s.body}>
-          BrickVal is designed around real LEGO resale signals, not a made-up estimate.
-        </Text>
-      </View>
-
-      <View style={s.trustList}>
-        {trustRows.map((row) => (
-          <View key={row.title} style={s.trustRow}>
-            <View style={s.trustDot} />
-            <View style={s.trustCopy}>
-              <Text style={s.trustTitle}>{row.title}</Text>
-              <Text style={s.trustBody}>{row.description}</Text>
-            </View>
-          </View>
-        ))}
       </View>
     </>
   );
 }
 
-function StartScreen({ s }: { s: any }) {
+function TrustScreen({ s }: { s: ReturnType<typeof getStyles> }) {
   return (
     <>
-      <View style={s.heroBlock}>
-        <Text style={s.kicker}>Ready</Text>
-        <Text style={s.title}>Start with the camera and get to the answer fast.</Text>
-        <Text style={s.body}>
-          Your first lookups stay lightweight. Sign-in can wait until after you have seen the product work.
-        </Text>
-      </View>
-
-      <View style={s.startStage}>
-        <View style={s.startPhone}>
-          <View style={s.startViewfinder}>
-            <View style={[s.corner, s.cornerTopLeft]} />
-            <View style={[s.corner, s.cornerTopRight]} />
-            <View style={[s.corner, s.cornerBottomLeft]} />
-            <View style={[s.corner, s.cornerBottomRight]} />
+      <View style={s.trustVisual}>
+        <View style={s.trustCanvas}>
+          <View style={s.trustOrbit} />
+          <View style={[s.sourceChip, s.bricklinkChip]}>
+            <Image source={bricklinkLogo} style={s.bricklinkLogo} resizeMode="contain" />
           </View>
-          <View style={s.startPillRow}>
-            <View style={s.startPill}>
-              <Text style={s.startPillText}>Set</Text>
-            </View>
-            <View style={s.startPillMuted}>
-              <Text style={s.startPillMutedText}>Minifigure</Text>
-            </View>
+          <View style={[s.sourceChip, s.bricksetChip]}>
+            <Image source={bricksetLogo} style={s.bricksetLogo} resizeMode="contain" />
+          </View>
+          <View style={[s.connector, s.connectorOne]} />
+          <View style={[s.connector, s.connectorTwo]} />
+          <View style={s.shieldNode}>
+            <Image source={shieldIcon} style={s.shieldIcon} resizeMode="contain" />
           </View>
         </View>
       </View>
+
+      <HeroText
+        s={s}
+        title="Real Market Data"
+        subtitle="BrickVal uses data from reliable sources"
+      />
     </>
   );
 }
+
+function ReviewScreen({ s }: { s: ReturnType<typeof getStyles> }) {
+  return (
+    <View style={s.reviewScreen}>
+      <HeroText
+        s={s}
+        title="Leave us a review"
+        subtitle="BrickVal is a new indie LEGO app built by a LEGO fan."
+      />
+
+      <View style={s.reviewStack}>
+        <View style={s.indieVisual}>
+          <View style={s.indieGlow} />
+          <View style={s.indieConnectorLeft} />
+          <View style={s.indieConnectorRight} />
+          <View style={[s.indiePill, s.indiePillLeft]}>
+            <Text style={s.indiePillText}>Built for collectors</Text>
+          </View>
+          <View style={[s.indiePill, s.indiePillRight]}>
+            <Text style={s.indiePillText}>Made by a fan</Text>
+          </View>
+          <View style={s.indieLogoCircle}>
+            <Image source={appLogo} style={s.indieLogo} resizeMode="contain" />
+          </View>
+        </View>
+
+        <View style={s.reviewCard}>
+          <Text style={s.reviewMuted}>
+            Your review helps more LEGO collectors find the app and helps us improve it.
+          </Text>
+        </View>
+
+        <View style={s.testimonial}>
+          <View style={s.testimonialHeader}>
+            <Text style={s.testimonialName}>Daniel K.</Text>
+            <RatingStars color="#D99D5A" />
+          </View>
+          <Text style={s.testimonialCopy}>Fastest way I have found to check a set before buying.</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function RatingStars({
+  color,
+}: {
+  color: string;
+}) {
+  return (
+    <View style={stylesBase.filledStars}>
+      {Array.from({ length: 5 }).map((_, index) => (
+        <Text
+          key={index}
+          style={[stylesBase.filledStar, { color }]}
+        >
+          ★
+        </Text>
+      ))}
+    </View>
+  );
+}
+
+const stylesBase = StyleSheet.create({
+  filledStars: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  filledStar: {
+    fontSize: 16,
+    lineHeight: 18,
+    fontWeight: "900",
+  },
+});
 
 function getStyles(c: ThemeColors) {
   return StyleSheet.create({
@@ -390,30 +413,29 @@ function getStyles(c: ThemeColors) {
       backgroundColor: c.light.background,
       paddingHorizontal: 24,
     },
-    topRow: {
+    progressRow: {
+      minHeight: 22,
       paddingTop: 8,
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "space-between",
-      minHeight: 40,
+      gap: 9,
     },
-    progressTrack: {
-      width: PROGRESS_WIDTH,
+    progressSegment: {
+      flex: 1,
       height: 4,
-      borderRadius: 4,
-      backgroundColor: c.light.border,
-      overflow: "hidden",
+      borderRadius: 999,
+      backgroundColor: c.light.borderStrong,
     },
-    progressFill: {
-      height: 4,
-      borderRadius: 4,
+    progressSegmentActive: {
       backgroundColor: c.lego.yellow,
     },
     skipButton: {
       position: "absolute",
       right: 0,
-      minHeight: 32,
-      paddingHorizontal: 10,
+      top: 0,
+      minHeight: 44,
+      minWidth: 44,
+      alignItems: "flex-end",
       justifyContent: "center",
     },
     skipText: {
@@ -421,334 +443,417 @@ function getStyles(c: ThemeColors) {
       fontSize: 13,
       fontWeight: "700",
     },
-    skipSpacer: {
-      width: 44,
-    },
-    content: {
+    screen: {
       flex: 1,
-      paddingTop: 18,
-      gap: 28,
+      paddingTop: 26,
+      paddingBottom: 12,
+      gap: 16,
     },
     heroBlock: {
-      gap: 12,
-    },
-    heroChip: {
-      alignSelf: "flex-start",
-      minHeight: 28,
-      paddingHorizontal: 10,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: c.lego.yellow + "33",
-      backgroundColor: c.light.backgroundMuted,
+      alignItems: "center",
+      gap: 11,
+      minHeight: 104,
       justifyContent: "center",
-    },
-    heroChipText: {
-      color: c.light.text,
-      fontSize: 12,
-      fontWeight: "800",
-    },
-    kicker: {
-      color: c.light.textMuted,
-      fontSize: 13,
-      fontWeight: "800",
     },
     title: {
       color: c.light.text,
-      fontSize: 34,
-      lineHeight: 38,
+      fontSize: 27,
+      lineHeight: 30,
       fontWeight: "900",
       letterSpacing: 0,
+      textAlign: "center",
+      maxWidth: 330,
     },
-    body: {
-      color: c.light.textMuted,
-      fontSize: 16,
-      lineHeight: 24,
+    subtitle: {
+      color: c.light.textSecondary,
+      fontSize: 14,
+      lineHeight: 20,
       fontWeight: "600",
-      maxWidth: 340,
+      textAlign: "center",
+      maxWidth: 310,
     },
-    imageStage: {
-      minHeight: 280,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    imageHalo: {
-      position: "absolute",
-      width: 270,
-      height: 270,
-      borderRadius: 270,
-      backgroundColor: "#efe7d3",
-    },
-    heroImage: {
-      width: 280,
-      height: 280,
-    },
-    metricRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 16,
-      paddingTop: 4,
-    },
-    metricItem: {
+    valueCard: {
       flex: 1,
-      gap: 4,
+      borderRadius: 26,
+      borderWidth: 1,
+      borderColor: "rgba(209, 209, 214, 0.82)",
+      backgroundColor: c.light.surfaceGlass,
+      padding: 16,
+      gap: 11,
+      shadowColor: "#111111",
+      shadowOpacity: 0.1,
+      shadowRadius: 30,
+      shadowOffset: { width: 0, height: 18 },
+      elevation: 4,
     },
-    metricValue: {
-      color: c.light.text,
-      fontSize: 20,
-      fontWeight: "900",
-    },
-    metricLabel: {
-      color: c.light.textMuted,
-      fontSize: 13,
-      fontWeight: "700",
-    },
-    metricDivider: {
-      width: 1,
-      height: 28,
-      backgroundColor: c.light.border,
-    },
-    phoneFrame: {
-      borderRadius: 8,
+    setImage: {
+      width: 148,
+      height: 148,
+      borderRadius: 24,
+      alignSelf: "center",
+      backgroundColor: c.light.surface,
       borderWidth: 1,
       borderColor: c.light.border,
-      backgroundColor: c.light.background,
-      paddingHorizontal: 14,
-      paddingVertical: 14,
-      gap: 14,
-      shadowColor: "#000",
-      shadowOpacity: 0.05,
-      shadowRadius: 18,
-      shadowOffset: { width: 0, height: 10 },
-      elevation: 2,
     },
-    phoneBar: {
-      alignSelf: "center",
-      width: 56,
-      height: 5,
-      borderRadius: 5,
-      backgroundColor: c.light.border,
-      marginBottom: 4,
+    label: {
+      color: c.light.textMuted,
+      fontSize: 10,
+      fontWeight: "900",
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
     },
-    flowRow: {
+    setName: {
+      color: c.light.text,
+      marginTop: 4,
+      fontSize: 20,
+      lineHeight: 22,
+      fontWeight: "900",
+    },
+    setTheme: {
+      color: c.light.textMuted,
+      marginTop: 6,
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    priceRow: {
+      borderTopWidth: 1,
+      borderTopColor: c.light.border,
+      paddingTop: 12,
       flexDirection: "row",
-      gap: 12,
-      alignItems: "flex-start",
+      alignItems: "flex-end",
+      justifyContent: "space-between",
     },
-    flowStep: {
-      width: 28,
-      height: 28,
-      borderRadius: 8,
-      backgroundColor: c.light.backgroundMuted,
+    price: {
+      color: c.light.text,
+      fontSize: 34,
+      lineHeight: 36,
+      fontWeight: "900",
+    },
+    gain: {
+      color: c.semantic.success,
+      fontSize: 14,
+      fontWeight: "900",
+    },
+    chartBox: {
+      height: 92,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: "rgba(245, 216, 92, 0.36)",
+      backgroundColor: c.lego.yellowSoft,
+      overflow: "hidden",
+    },
+    demoStage: {
+      flex: 1,
       alignItems: "center",
       justifyContent: "center",
     },
-    flowStepText: {
-      color: c.light.text,
-      fontSize: 13,
-      fontWeight: "900",
+    demoPhoneFrame: {
+      width: 188,
+      height: 390,
+      borderRadius: 38,
+      padding: 8,
+      backgroundColor: c.light.borderStrong,
+      shadowColor: "#111111",
+      shadowOpacity: 0.18,
+      shadowRadius: 28,
+      shadowOffset: { width: 0, height: 18 },
+      elevation: 5,
     },
-    flowCopy: {
+    demoPhoneScreen: {
       flex: 1,
-      gap: 4,
+      borderRadius: 30,
+      overflow: "hidden",
+      backgroundColor: c.light.text,
+      borderWidth: 1,
+      borderColor: "rgba(17, 17, 17, 0.22)",
     },
-    flowTitle: {
-      color: c.light.text,
-      fontSize: 15,
-      fontWeight: "800",
-    },
-    flowBody: {
-      color: c.light.textMuted,
-      fontSize: 13,
-      lineHeight: 19,
-      fontWeight: "600",
-    },
-    goalListScroll: {
+    demoVideo: {
       flex: 1,
     },
     goalList: {
-      gap: 12,
-      paddingBottom: 12,
+      flex: 1,
+      justifyContent: "center",
+      gap: 10,
     },
     goalRow: {
-      borderRadius: 8,
+      borderRadius: 18,
       borderWidth: 1,
       borderColor: c.light.border,
-      backgroundColor: c.light.background,
-      paddingHorizontal: 14,
-      paddingVertical: 14,
+      backgroundColor: "rgba(255, 255, 255, 0.7)",
+      padding: 13,
       gap: 6,
     },
     goalRowSelected: {
       borderColor: c.lego.yellow,
-      backgroundColor: c.light.backgroundMuted,
+      backgroundColor: c.lego.yellowSoft,
     },
     goalTitle: {
       color: c.light.text,
       fontSize: 15,
-      lineHeight: 21,
-      fontWeight: "800",
-    },
-    goalTitleSelected: {
-      color: c.light.text,
+      lineHeight: 20,
+      fontWeight: "900",
     },
     goalDescription: {
       color: c.light.textMuted,
       fontSize: 13,
-      lineHeight: 19,
-      fontWeight: "600",
+      lineHeight: 18,
+      fontWeight: "700",
     },
-    trustList: {
-      gap: 18,
-      paddingTop: 12,
-    },
-    trustRow: {
-      flexDirection: "row",
-      gap: 12,
-      alignItems: "flex-start",
-    },
-    trustDot: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-      backgroundColor: c.lego.yellow,
-      marginTop: 7,
-    },
-    trustCopy: {
-      flex: 1,
-      gap: 4,
-    },
-    trustTitle: {
-      color: c.light.text,
-      fontSize: 16,
-      fontWeight: "800",
-    },
-    trustBody: {
-      color: c.light.textMuted,
-      fontSize: 14,
-      lineHeight: 21,
-      fontWeight: "600",
-    },
-    startStage: {
-      flex: 1,
+    trustVisual: {
+      height: 336,
       alignItems: "center",
       justifyContent: "center",
     },
-    startPhone: {
-      width: 230,
-      height: 410,
-      borderRadius: 8,
+    trustCanvas: {
+      width: 236,
+      height: 320,
+      position: "relative",
+    },
+    trustOrbit: {
+      position: "absolute",
+      left: 28,
+      top: 74,
+      width: 176,
+      height: 176,
+      borderRadius: 999,
+      backgroundColor: "rgba(242, 205, 55, 0.12)",
+      borderWidth: 28,
+      borderColor: "rgba(239, 239, 244, 0.82)",
+    },
+    sourceChip: {
+      position: "absolute",
+      minHeight: 56,
+      borderRadius: 22,
+      backgroundColor: "rgba(255, 255, 255, 0.9)",
       borderWidth: 1,
-      borderColor: c.light.border,
-      backgroundColor: c.light.background,
-      padding: 18,
-      justifyContent: "space-between",
-      shadowColor: "#000",
-      shadowOpacity: 0.05,
+      borderColor: "rgba(209, 209, 214, 0.66)",
+      shadowColor: "#111111",
+      shadowOpacity: 0.08,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 12 },
+      elevation: 3,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 10,
+    },
+    bricklinkChip: {
+      right: 2,
+      top: 76,
+      minWidth: 112,
+    },
+    bricksetChip: {
+      left: 0,
+      top: 220,
+      minWidth: 126,
+    },
+    bricklinkLogo: {
+      width: 94,
+      height: 28,
+    },
+    bricksetLogo: {
+      width: 106,
+      height: 32,
+    },
+    connector: {
+      position: "absolute",
+      width: 54,
+      height: 40,
+      borderColor: "rgba(17, 17, 17, 0.72)",
+      zIndex: 2,
+    },
+    connectorOne: {
+      left: 128,
+      top: 137,
+      borderRightWidth: 2,
+      borderBottomWidth: 2,
+      borderBottomRightRadius: 24,
+    },
+    connectorTwo: {
+      left: 62,
+      top: 190,
+      borderLeftWidth: 2,
+      borderTopWidth: 2,
+      borderTopLeftRadius: 24,
+    },
+    shieldNode: {
+      position: "absolute",
+      left: 80,
+      top: 136,
+      width: 76,
+      height: 76,
+      borderRadius: 999,
+      backgroundColor: "#1D1A23",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 3,
+      shadowColor: "#111111",
+      shadowOpacity: 0.14,
       shadowRadius: 18,
       shadowOffset: { width: 0, height: 10 },
-      elevation: 2,
+      elevation: 5,
     },
-    startViewfinder: {
+    shieldIcon: {
+      width: 44,
+      height: 44,
+      tintColor: c.light.textInverse,
+      opacity: 0.92,
+    },
+    reviewScreen: {
       flex: 1,
-      borderRadius: 8,
-      backgroundColor: c.light.backgroundMuted,
       position: "relative",
-      overflow: "hidden",
+      gap: 14,
     },
-    corner: {
+    reviewStack: {
+      flex: 1,
+      justifyContent: "center",
+      gap: 12,
+    },
+    indieVisual: {
+      height: 172,
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+    },
+    indieGlow: {
       position: "absolute",
-      width: 28,
-      height: 28,
-      borderColor: c.lego.yellow,
+      width: 148,
+      height: 148,
+      borderRadius: 999,
+      backgroundColor: "rgba(242, 205, 55, 0.14)",
+      borderWidth: 24,
+      borderColor: "rgba(239, 239, 244, 0.86)",
     },
-    cornerTopLeft: {
-      top: 18,
-      left: 18,
-      borderTopWidth: 3,
-      borderLeftWidth: 3,
-      borderTopLeftRadius: 8,
-    },
-    cornerTopRight: {
-      top: 18,
-      right: 18,
-      borderTopWidth: 3,
-      borderRightWidth: 3,
-      borderTopRightRadius: 8,
-    },
-    cornerBottomLeft: {
-      bottom: 18,
-      left: 18,
-      borderBottomWidth: 3,
-      borderLeftWidth: 3,
-      borderBottomLeftRadius: 8,
-    },
-    cornerBottomRight: {
-      bottom: 18,
-      right: 18,
-      borderBottomWidth: 3,
-      borderRightWidth: 3,
-      borderBottomRightRadius: 8,
-    },
-    startPillRow: {
-      flexDirection: "row",
-      gap: 8,
-    },
-    startPill: {
-      flex: 1,
-      minHeight: 36,
-      borderRadius: 8,
-      backgroundColor: c.lego.yellow,
+    indieLogoCircle: {
+      width: 82,
+      height: 82,
+      borderRadius: 999,
+      backgroundColor: "#1D1A23",
       alignItems: "center",
       justifyContent: "center",
+      shadowColor: "#111111",
+      shadowOpacity: 0.16,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 12 },
+      elevation: 5,
+      zIndex: 4,
     },
-    startPillMuted: {
-      flex: 1,
-      minHeight: 36,
-      borderRadius: 8,
-      backgroundColor: c.light.backgroundMuted,
+    indieLogo: {
+      width: 52,
+      height: 52,
+    },
+    indiePill: {
+      position: "absolute",
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: "rgba(229, 229, 234, 0.88)",
+      backgroundColor: "rgba(255, 255, 255, 0.92)",
+      paddingHorizontal: 12,
+      minHeight: 35,
       alignItems: "center",
       justifyContent: "center",
+      shadowColor: "#111111",
+      shadowOpacity: 0.07,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 9 },
+      elevation: 2,
+      zIndex: 3,
     },
-    startPillText: {
-      color: c.light.text,
+    indiePillLeft: {
+      left: 2,
+      top: 30,
+    },
+    indiePillRight: {
+      right: 4,
+      bottom: 28,
+    },
+    indiePillText: {
+      color: c.light.textSecondary,
       fontSize: 12,
       fontWeight: "900",
     },
-    startPillMutedText: {
-      color: c.light.textMuted,
-      fontSize: 12,
+    indieConnectorLeft: {
+      position: "absolute",
+      left: 60,
+      bottom: 48,
+      width: 48,
+      height: 32,
+      borderLeftWidth: 2,
+      borderBottomWidth: 2,
+      borderColor: "rgba(17, 17, 17, 0.56)",
+      borderBottomLeftRadius: 18,
+      zIndex: 2,
+    },
+    indieConnectorRight: {
+      position: "absolute",
+      right: 62,
+      top: 46,
+      width: 44,
+      height: 32,
+      borderRightWidth: 2,
+      borderTopWidth: 2,
+      borderColor: "rgba(17, 17, 17, 0.56)",
+      borderTopRightRadius: 18,
+      zIndex: 2,
+    },
+    reviewCard: {
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: c.light.border,
+      backgroundColor: "rgba(255, 255, 255, 0.72)",
+      paddingVertical: 16,
+      paddingHorizontal: 18,
+    },
+    reviewMuted: {
+      color: c.light.textSecondary,
+      textAlign: "center",
+      fontSize: 14,
+      lineHeight: 20,
       fontWeight: "800",
+    },
+    testimonial: {
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: c.light.border,
+      backgroundColor: "rgba(255, 255, 255, 0.55)",
+      padding: 14,
+      gap: 7,
+    },
+    testimonialHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+    },
+    testimonialName: {
+      color: c.light.text,
+      fontSize: 15,
+      fontWeight: "900",
+    },
+    testimonialCopy: {
+      color: c.light.textMuted,
+      fontSize: 13,
+      lineHeight: 18,
+      fontWeight: "700",
     },
     footer: {
       paddingBottom: 12,
-      gap: 12,
     },
     primaryButton: {
       minHeight: 56,
-      borderRadius: 8,
-      backgroundColor: c.light.text,
+      borderRadius: 999,
+      backgroundColor: c.lego.yellow,
       alignItems: "center",
       justifyContent: "center",
+      shadowColor: c.lego.yellowPressed,
+      shadowOpacity: 0.22,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 3,
     },
     primaryButtonText: {
-      color: c.light.background,
+      color: c.light.text,
       fontSize: 16,
       fontWeight: "900",
-    },
-    goalHint: {
-      color: c.light.textMuted,
-      fontSize: 14,
-      lineHeight: 20,
-      fontWeight: "700",
-      textAlign: "center",
-      minHeight: 56,
-      textAlignVertical: "center",
-    },
-    stepText: {
-      color: c.light.textMuted,
-      fontSize: 12,
-      fontWeight: "700",
-      textAlign: "center",
     },
   });
 }

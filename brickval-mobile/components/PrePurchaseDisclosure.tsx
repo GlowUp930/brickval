@@ -49,7 +49,7 @@ function getStyles() {
       marginBottom: 20,
     },
     title: {
-      color: c.semantic.success,
+      color: c.lego.yellow,
       fontSize: 22,
       fontWeight: "700",
       marginBottom: 8,
@@ -97,11 +97,11 @@ function getStyles() {
       marginTop: 14,
     },
     eulaLink: {
-      color: c.semantic.success,
+      color: c.lego.yellow,
       textDecorationLine: "underline",
     },
     continueButton: {
-      backgroundColor: c.semantic.success,
+      backgroundColor: c.lego.yellow,
       borderRadius: 12,
       paddingVertical: 16,
       alignItems: "center",

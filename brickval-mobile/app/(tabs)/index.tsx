@@ -14,6 +14,7 @@ import {
 import * as SecureStore from "expo-secure-store";
 import { Paths, File } from "expo-file-system";
 import { router, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import {
   CollectionItem,
@@ -147,7 +148,8 @@ function getHistoricalCollectionSeries(items: CollectionItem[], horizon: Horizon
 
 export default function HomeDashboard() {
   const { colors: c, mode } = useTheme();
-  const s = useMemo(() => getStyles(c), [c, mode]);
+  const insets = useSafeAreaInsets();
+  const s = useMemo(() => getStyles(c, insets.top, insets.bottom), [c, mode, insets.top, insets.bottom]);
   const { width: screenWidth } = useWindowDimensions();
   const [items, setItems] = useState<CollectionItem[]>([]);
   const [horizon, setHorizon] = useState<Horizon>("6M");
@@ -479,8 +481,8 @@ export default function HomeDashboard() {
               <Svg width={chartWidth} height={chartHeight} style={StyleSheet.absoluteFill}>
                 <Defs>
                   <LinearGradient id="portfolioFill" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor={c.semantic.success} stopOpacity="0.08" />
-                    <Stop offset="1" stopColor={c.semantic.success} stopOpacity="0" />
+                    <Stop offset="0" stopColor={c.lego.yellow} stopOpacity="0.12" />
+                    <Stop offset="1" stopColor={c.lego.yellow} stopOpacity="0" />
                   </LinearGradient>
                 </Defs>
                 {chartAreaPath ? <Path ref={morphFillRef} d={chartAreaPath} fill="url(#portfolioFill)" /> : null}
@@ -489,7 +491,7 @@ export default function HomeDashboard() {
                     ref={morphLineRef}
                     d={chartLinePath}
                     fill="none"
-                    stroke={c.semantic.success}
+                    stroke={c.lego.yellow}
                     strokeWidth={2.5}
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -610,19 +612,24 @@ export default function HomeDashboard() {
   );
 }
 
-function getStyles(c: ThemeColors) {
-  const accentRgb = `${parseInt(c.semantic.success.slice(1, 3), 16)}, ${parseInt(c.semantic.success.slice(3, 5), 16)}, ${parseInt(c.semantic.success.slice(5, 7), 16)}`;
+function getStyles(c: ThemeColors, safeTop: number, safeBottom: number) {
+  const accentRgb = `${parseInt(c.lego.yellow.slice(1, 3), 16)}, ${parseInt(c.lego.yellow.slice(3, 5), 16)}, ${parseInt(c.lego.yellow.slice(5, 7), 16)}`;
   const textRgb = `${parseInt(c.dark.text.slice(1, 3), 16)}, ${parseInt(c.dark.text.slice(3, 5), 16)}, ${parseInt(c.dark.text.slice(5, 7), 16)}`;
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: c.dark.background },
-  content: { padding: 20, paddingTop: 58, paddingBottom: 112, gap: 24 },
+  content: {
+    padding: 20,
+    paddingTop: Math.max(58, safeTop + 18),
+    paddingBottom: Math.max(112, safeBottom + 96),
+    gap: 24,
+  },
   topRail: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
   brand: { color: c.dark.text, fontSize: 26, fontWeight: "900", letterSpacing: -0.4 },
-  pro: { color: c.semantic.success, fontSize: 11, fontWeight: "900" },
+  pro: { color: c.lego.yellow, fontSize: 11, fontWeight: "900" },
   brandMeta: { color: c.dark.textMuted, fontSize: 12, fontWeight: "800", marginTop: 3 },
   scanButton: {
     minHeight: 40,
@@ -644,7 +651,7 @@ function getStyles(c: ThemeColors) {
     padding: 18,
     overflow: "hidden",
   },
-  eyebrow: { color: c.semantic.success, fontSize: 12, fontWeight: "900", textAlign: "center" },
+  eyebrow: { color: c.lego.yellow, fontSize: 12, fontWeight: "900", textAlign: "center" },
   total: { color: c.dark.text, fontSize: 47, fontWeight: "900", lineHeight: 58, textAlign: "center", letterSpacing: -1.8 },
   caption: { color: c.dark.textMuted, fontSize: 12, fontWeight: "800", textAlign: "center" },
   statsRow: {
@@ -695,8 +702,8 @@ function getStyles(c: ThemeColors) {
     justifyContent: "center",
   },
   horizonPillActive: {
-    backgroundColor: c.semantic.success,
-    borderColor: c.semantic.success,
+    backgroundColor: c.lego.yellow,
+    borderColor: c.lego.yellow,
   },
   horizonText: { color: c.dark.textDisabled, fontSize: 11, fontWeight: "900" },
   horizonTextActive: { color: "#07100c" },
@@ -766,7 +773,7 @@ function getStyles(c: ThemeColors) {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: c.semantic.success,
+    backgroundColor: c.lego.yellow,
     borderWidth: 2,
     borderColor: "#0b0f0d",
     zIndex: 3,
@@ -821,14 +828,14 @@ function getStyles(c: ThemeColors) {
   proStatusPill: {
     minHeight: 28,
     borderRadius: 999,
-    backgroundColor: c.semantic.success,
+    backgroundColor: c.lego.yellow,
     paddingHorizontal: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   proStatusPillText: { color: "#07100c", fontSize: 10, fontWeight: "900" },
   collectionLimitLabel: { color: c.dark.textDisabled, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
-  collectionLimitLabelPro: { color: c.semantic.success },
+  collectionLimitLabelPro: { color: c.lego.yellow },
   collectionLimitText: { color: c.dark.textMuted, fontSize: 12, lineHeight: 17, fontWeight: "700" },
   collectionLimitTextPro: { color: c.dark.text, fontSize: 13, lineHeight: 18 },
   empty: {
@@ -844,7 +851,7 @@ function getStyles(c: ThemeColors) {
   emptyAction: {
     minHeight: 44,
     borderRadius: 10,
-    backgroundColor: c.semantic.success,
+    backgroundColor: c.lego.yellow,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 4,

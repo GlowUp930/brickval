@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Pressable, StyleSheet, Text, Animated } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { ViewfinderOverlay } from "./ViewfinderOverlay";
 import { tap, success, warn } from "../lib/haptics";
 import type { ScanMode } from "../lib/api";
 
-const SET_ACCENT = "#f2c94c";
-const MINIFIG_ACCENT = "#8ed1ff";
-const INK = "#f7f4ea";
-const MUTED = "rgba(247,244,234,0.68)";
+const SET_ACCENT = "#F2CD37";
+const MINIFIG_ACCENT = "#F2CD37";
+const INK = "#F5F5F7";
+const MUTED = "rgba(245,245,247,0.68)";
 
 interface Props {
   enabled: boolean; // false while a result card is up
@@ -22,6 +23,7 @@ interface Props {
 
 export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoPress, onManualPress }: Props) {
   const cameraRef = useRef<CameraView>(null);
+  const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [torch, setTorch] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -151,7 +153,7 @@ export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoP
         showModeSwitch={enabled}
       />
 
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { bottom: Math.max(136, insets.bottom + 112) }]}>
         <View style={styles.leftStack}>
           <View style={styles.toolSpacer} />
           <Pressable
@@ -189,7 +191,7 @@ export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoP
                 styles.pulse,
                 {
                   borderColor: activeAccent,
-                  backgroundColor: mode === "minifig" ? "rgba(142,209,255,0.12)" : "rgba(242,201,76,0.12)",
+                  backgroundColor: "rgba(242,205,55,0.12)",
                   transform: [{ scale: pulseScale }],
                   opacity: pulseOpacity,
                 },
@@ -265,7 +267,6 @@ const styles = StyleSheet.create({
   permBtnSecondaryText: { color: INK, fontWeight: "800", fontSize: 15 },
   bottomBar: {
     position: "absolute",
-    bottom: 42,
     left: 0,
     right: 0,
     flexDirection: "row",

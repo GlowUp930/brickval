@@ -3,34 +3,25 @@
  * ------------------------------------------------------------
  * Direction:
  * - Apple / Cal AI inspired: soft grey base, glassy cards, clean black text.
- * - LEGO collector signal: one sharp brick-red accent used sparingly.
+ * - One sharp LEGO yellow accent used sparingly.
  * - The UI should feel like a premium scanner / pricing tool, not a toy app.
  *
  * Usage rule:
- * 80% neutral surfaces
- * 15% text / borders / depth
- * 5% sharp accent for scan CTA, value movement, Pro moments
+ * 90% neutral grey / white surfaces
+ * 5-8% yellow for CTA, selected state, progress, scanner active state, Pro moments
+ * Functional green/red only when the UI needs success or error meaning
  */
 
 export const colors = {
   /**
-   * Brand accents
-   * Use brickRed as the main brand action colour.
-   * Use brickYellow only as a small LEGO-world supporting colour.
+   * Brand accent
+   * Yellow is the only brand accent. Avoid competing LEGO primary colours.
    */
   brand: {
-    brickRed: '#C91A09',
-    brickRedDark: '#A81608',
-    brickRedSoft: '#FCECEA',
-
-    brickYellow: '#F2CD37',
-    brickYellowSoft: '#FFF7D6',
-
-    collectorGreen: '#00A86B',
-    collectorGreenSoft: '#E8F8F1',
-
-    scanBlue: '#007AFF',
-    scanBlueSoft: '#EAF3FF',
+    yellow: '#F2CD37',
+    yellowPressed: '#D9B52F',
+    yellowSoft: '#FFF7D6',
+    yellowBorder: '#F5D85C',
   },
 
   /**
@@ -56,12 +47,12 @@ export const colors = {
     textDisabled: '#A1A1AA',
     textInverse: '#FFFFFF',
 
-    primary: '#C91A09',
-    primaryPressed: '#A81608',
-    primarySoft: '#FCECEA',
+    primary: '#F2CD37',
+    primaryPressed: '#D9B52F',
+    primarySoft: '#FFF7D6',
 
     tabActive: '#111111',
-    tabInactive: '#8E8E93',
+    tabInactive: '#6E6E73',
 
     shadow: 'rgba(17, 17, 17, 0.08)',
     overlay: 'rgba(0, 0, 0, 0.32)',
@@ -90,9 +81,9 @@ export const colors = {
     textDisabled: '#6E6E73',
     textInverse: '#111111',
 
-    primary: '#FF3B30',
-    primaryPressed: '#D92D20',
-    primarySoft: 'rgba(255, 59, 48, 0.14)',
+    primary: '#F2CD37',
+    primaryPressed: '#D9B52F',
+    primarySoft: 'rgba(242, 205, 55, 0.14)',
 
     tabActive: '#F5F5F7',
     tabInactive: '#8E8E93',
@@ -106,31 +97,31 @@ export const colors = {
    * These are for scan results, value movement, collection state, and errors.
    */
   semantic: {
-    success: '#00A86B',
-    successSoft: '#E8F8F1',
+    success: '#2F8F63',
+    successSoft: '#EAF6F0',
 
     warning: '#FFB020',
     warningSoft: '#FFF4DA',
 
-    danger: '#FF3B30',
-    dangerSoft: '#FFE8E6',
+    danger: '#C94A3A',
+    dangerSoft: '#FCEDEA',
 
-    info: '#007AFF',
-    infoSoft: '#EAF3FF',
+    info: '#6E6E73',
+    infoSoft: '#EFEFF4',
 
-    rare: '#7C3AED',
-    rareSoft: '#F1EAFE',
+    rare: '#3A3A3C',
+    rareSoft: '#EFEFF4',
   },
 
   /**
-   * LEGO-inspired category colours.
-   * Use these for small chips/tags only, never as full-screen backgrounds.
+   * LEGO signal colour.
+   * Keep this narrow so the app does not become a multi-colour toy UI.
    */
   lego: {
-    red: '#C91A09',
     yellow: '#F2CD37',
-    blue: '#0055BF',
-    green: '#237841',
+    yellowPressed: '#D9B52F',
+    yellowSoft: '#FFF7D6',
+    yellowBorder: '#F5D85C',
     black: '#05131D',
     white: '#FFFFFF',
     lightBluishGray: '#A0A5A9',
@@ -153,13 +144,13 @@ export const gradients = {
   /**
    * Use for Pro/paywall moments.
    */
-  proHero: ['#111111', '#2A1A1A'],
+  proHero: ['#111111', '#2B2B2D'],
 
   /**
    * Subtle brand lift.
    * Use only for small highlights, not the full app.
    */
-  brandAccent: ['#C91A09', '#FF3B30'],
+  brandAccent: ['#F2CD37', '#F5D85C'],
 } as const;
 
 export const opacity = {

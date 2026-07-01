@@ -55,7 +55,8 @@
         {
           "enableSourceMaps": false
         }
-      ]
+      ],
+      "expo-video"
     ],
     "extra": {
       "enableNativePaywall": true,

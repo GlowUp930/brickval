@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import type { ScanMode } from "../lib/api";
 
-const GOLD = "#f5c518";
+const GOLD = "#F2CD37";
 const { height: SCREEN_H } = Dimensions.get("window");
 const SHEET_H = Math.min(340, Math.round(SCREEN_H * 0.44));
 

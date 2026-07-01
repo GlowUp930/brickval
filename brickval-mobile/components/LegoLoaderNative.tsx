@@ -269,7 +269,7 @@ export function LegoLoaderNative({ message = "Looking up..." }: { message?: stri
           width: 240,
           height: 240,
           borderRadius: 999,
-          backgroundColor: "rgba(244,191,22,0.12)",
+          backgroundColor: "rgba(242,205,55,0.12)",
           opacity: 0.75,
         }}
       />
@@ -292,7 +292,7 @@ export function LegoLoaderNative({ message = "Looking up..." }: { message?: stri
           width: 252,
           height: 252,
           borderRadius: 999,
-          backgroundColor: "rgba(244,191,22,0.05)",
+          backgroundColor: "rgba(242,205,55,0.05)",
         }}
       />
 
@@ -334,9 +334,9 @@ export function LegoLoaderNative({ message = "Looking up..." }: { message?: stri
             paddingHorizontal: 9,
             paddingVertical: 4,
             borderRadius: 999,
-            backgroundColor: "rgba(244,191,22,0.12)",
+            backgroundColor: "rgba(242,205,55,0.12)",
             borderWidth: 1,
-            borderColor: "rgba(244,191,22,0.2)",
+            borderColor: "rgba(242,205,55,0.2)",
           }}
         >
           <View
@@ -344,13 +344,13 @@ export function LegoLoaderNative({ message = "Looking up..." }: { message?: stri
               width: 6,
               height: 6,
               borderRadius: 999,
-              backgroundColor: "#F4BF16",
+              backgroundColor: "#F2CD37",
             }}
           />
           <Text
             selectable
             style={{
-              color: "#F4BF16",
+              color: "#F2CD37",
               fontSize: 10,
               lineHeight: 12,
               fontWeight: "800",
@@ -396,7 +396,7 @@ export function LegoLoaderNative({ message = "Looking up..." }: { message?: stri
                 height: 6,
                 borderRadius: 999,
                 backgroundColor:
-                  index === stageIndex ? "rgba(244,191,22,0.92)" : "rgba(247,242,232,0.18)",
+                  index === stageIndex ? "rgba(242,205,55,0.92)" : "rgba(247,242,232,0.18)",
               }}
             />
           ))}
@@ -470,7 +470,7 @@ export function LegoLoaderNative({ message = "Looking up..." }: { message?: stri
           width: 252,
           height: 252,
           borderRadius: 999,
-          backgroundColor: "rgba(244,191,22,0.14)",
+          backgroundColor: "rgba(242,205,55,0.14)",
           opacity: glowOpacity,
           transform: [{ scale: glowScale }],
         }}
@@ -483,7 +483,7 @@ export function LegoLoaderNative({ message = "Looking up..." }: { message?: stri
           height: 228,
           borderRadius: 999,
           borderWidth: 1,
-          borderColor: "rgba(244,191,22,0.36)",
+          borderColor: "rgba(242,205,55,0.36)",
           opacity: ringOpacity,
           transform: [{ scale: ringScale }],
         }}

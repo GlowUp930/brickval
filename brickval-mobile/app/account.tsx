@@ -490,7 +490,7 @@ function getStyles(c: ModeColors) {
     },
     backText: { color: c.text, fontSize: 12, fontWeight: "900" },
     header: { gap: 8 },
-    eyebrow: { color: colors.semantic.success, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+    eyebrow: { color: colors.lego.yellowPressed, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
     title: { color: c.text, fontSize: 34, fontWeight: "900" },
     body: { color: c.textMuted, fontSize: 14, lineHeight: 21, fontWeight: "700" },
     card: {
@@ -503,7 +503,7 @@ function getStyles(c: ModeColors) {
     },
     cardLabel: { color: c.textDisabled, fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
     cardTitle: { color: c.text, fontSize: 24, fontWeight: "900" },
-    cardMeta: { color: colors.semantic.success, fontSize: 14, fontWeight: "800" },
+    cardMeta: { color: colors.lego.yellowPressed, fontSize: 14, fontWeight: "800" },
     avatarPanel: {
       borderRadius: 8,
       borderWidth: 1,
@@ -532,8 +532,8 @@ function getStyles(c: ModeColors) {
       gap: 7,
     },
     avatarOptionActive: {
-      borderColor: colors.semantic.success,
-      backgroundColor: colors.semantic.successSoft,
+      borderColor: colors.lego.yellow,
+      backgroundColor: colors.lego.yellowSoft,
     },
     avatarOptionText: { color: c.textDisabled, fontSize: 9, fontWeight: "900" },
     avatarOptionTextActive: { color: c.text },
@@ -548,7 +548,7 @@ function getStyles(c: ModeColors) {
     action: {
       minHeight: 48,
       borderRadius: 8,
-      backgroundColor: colors.semantic.success,
+      backgroundColor: colors.lego.yellow,
       alignItems: "center",
       justifyContent: "center",
       paddingHorizontal: 16,
@@ -564,7 +564,7 @@ function getStyles(c: ModeColors) {
       borderColor: colors.semantic.danger,
     },
     actionDisabled: { opacity: 0.6 },
-    actionText: { color: c.textInverse, fontSize: 14, fontWeight: "900" },
+    actionText: { color: colors.light.text, fontSize: 14, fontWeight: "900" },
     actionTextSecondary: { color: c.text },
     actionTextDanger: { color: colors.semantic.danger },
     helpText: { color: c.textMuted, fontSize: 12, lineHeight: 18, fontWeight: "700" },
