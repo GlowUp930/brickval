@@ -1,8 +1,11 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
-import { Alert, Image, Linking, Platform, View, Text, StyleSheet, Pressable, ScrollView, type ImageSourcePropType } from "react-native";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
+import { SymbolView, type SFSymbol } from "expo-symbols";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { Alert, Image, Linking, Platform, View, Text, StyleSheet, Pressable, ScrollView, type ImageSourcePropType, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as SecureStore from "expo-secure-store";
+import { BadgeCheck, ChevronRight, Crown, RotateCcw, ScrollText, ShieldCheck, Trash2, Wrench } from "lucide-react-native";
 import { clearCollection, getCollection, getCollectionValue, type CollectionItem } from "../../lib/collection";
 import { getAuthToken } from "../../lib/api";
 import { warn } from "../../lib/haptics";
@@ -20,6 +23,7 @@ const PRIVACY_URL = "https://brickvalue.live/privacy";
 const TERMS_URL = "https://brickvalue.live/terms";
 
 type AvatarKey = "classic" | "ghost" | "wolf" | "knight";
+type FallbackIcon = typeof Crown;
 
 const AVATARS: { key: AvatarKey; label: string; meta: string; source: ImageSourcePropType }[] = [
   { key: "classic", label: "Classic", meta: "Blue cap", source: require("../../assets/account-icons/classic.webp") },
@@ -47,7 +51,8 @@ export default function SettingsScreen() {
   const [avatar, setAvatar] = useState<AvatarKey>("classic");
   const [proStatus, setProStatus] = useState<boolean | null>(null);
   const { triggerUpgrade, openAccountForSignIn, showDisclosure, handleDisclosureContinue, handleDisclosureDismiss } = useUpgrade();
-  const { colors, c } = useTheme();
+  const { colors } = useTheme();
+  const c = colors.dark;
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => getStyles(c, insets.top, insets.bottom), [c, insets.top, insets.bottom]);
 
@@ -139,11 +144,11 @@ export default function SettingsScreen() {
           <Text style={styles.body}>Manage your BrickVal account, Pro access, and the collection of sets, minifigures, and parts saved on this device.</Text>
         </View>
 
-        <View style={styles.passportCard}>
+        <GlassSurface style={styles.passportCard} tintColor="rgba(31, 32, 38, 0.84)">
           <View style={styles.studRail}>
             <View style={[styles.stud, { backgroundColor: colors.lego.yellow }]} />
             <View style={[styles.stud, { backgroundColor: colors.lego.yellow }]} />
-            <View style={[styles.stud, { backgroundColor: colors.light.borderStrong }]} />
+            <View style={[styles.stud, { backgroundColor: c.borderStrong }]} />
           </View>
           <View style={styles.passportTop}>
             <View style={styles.avatarBlock}>
@@ -172,7 +177,7 @@ export default function SettingsScreen() {
           >
             <Text style={styles.primaryActionText}>Open account</Text>
           </Pressable>
-        </View>
+        </GlassSurface>
 
         <View style={styles.summaryGrid}>
           <View style={styles.summaryTile}>
@@ -193,14 +198,15 @@ export default function SettingsScreen() {
                 <Text style={[styles.rowGlyphText, { color: colors.light.text }]}>PRO</Text>
               </View>
               <View style={styles.rowCopy}>
-                <Text style={[styles.rowTitle, { color: colors.light.text }]}>BrickVal Pro active</Text>
+                <Text style={styles.rowTitle}>BrickVal Pro active</Text>
                 <Text style={styles.rowMeta}>Unlimited scans unlocked on this device</Text>
               </View>
-              <Text style={[styles.rowArrow, { color: colors.lego.yellowPressed }]}>✓</Text>
+              <SettingsIcon symbol="checkmark.seal.fill" fallbackIcon={BadgeCheck} color={colors.lego.yellowPressed} />
             </View>
           ) : (
             <SettingsRow
-              code="PRO"
+              symbol="crown.fill"
+              fallbackIcon={Crown}
               title="BrickVal Pro"
               meta={`Native ${storeName} upgrade flow`}
               accent={colors.lego.yellow}
@@ -208,7 +214,8 @@ export default function SettingsScreen() {
             />
           )}
           <SettingsRow
-            code="RST"
+            symbol="arrow.clockwise.circle.fill"
+            fallbackIcon={RotateCcw}
             title="Restore purchases"
             meta={`Re-check ${storeName} access for this account`}
             accent={c.textMuted}
@@ -218,16 +225,30 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.group}>
+          <Text style={styles.groupTitle}>Design</Text>
+          <SettingsRow
+            symbol="wrench.and.screwdriver.fill"
+            fallbackIcon={Wrench}
+            title="Redesign playground"
+            meta="Preview component directions before changing the live app"
+            accent={colors.lego.yellow}
+            onPress={() => router.push("/playground")}
+          />
+        </View>
+
+        <View style={styles.group}>
           <Text style={styles.groupTitle}>Legal</Text>
           <SettingsRow
-            code="PRV"
+            symbol="lock.shield.fill"
+            fallbackIcon={ShieldCheck}
             title="Privacy policy"
             meta="How BrickVal handles scans, account data, and purchases"
             accent={c.textMuted}
             onPress={() => void openExternalUrl(PRIVACY_URL)}
           />
           <SettingsRow
-            code="TOS"
+            symbol="doc.text.fill"
+            fallbackIcon={ScrollText}
             title="Terms and subscription terms"
             meta="App terms, Apple purchase terms, and LEGO disclaimer"
             accent={colors.lego.yellow}
@@ -243,18 +264,19 @@ export default function SettingsScreen() {
               <Text style={styles.localLabel}>Sets</Text>
             </View>
             <View style={styles.localDivider} />
-          <View style={styles.localMetric}>
-            <Text style={styles.localValue}>{minifigureCount}</Text>
-            <Text style={styles.localLabel}>Minifigs</Text>
+            <View style={styles.localMetric}>
+              <Text style={styles.localValue}>{minifigureCount}</Text>
+              <Text style={styles.localLabel}>Minifigs</Text>
+            </View>
+            <View style={styles.localDivider} />
+            <View style={styles.localMetric}>
+              <Text style={styles.localValue}>{partCount}</Text>
+              <Text style={styles.localLabel}>Parts</Text>
+            </View>
           </View>
-          <View style={styles.localDivider} />
-          <View style={styles.localMetric}>
-            <Text style={styles.localValue}>{partCount}</Text>
-            <Text style={styles.localLabel}>Parts</Text>
-          </View>
-        </View>
           <SettingsRow
-            code="CLR"
+            symbol="trash.fill"
+            fallbackIcon={Trash2}
             title="Clear local collection"
             meta="Removes saved items from this phone only"
             accent={colors.semantic.danger}
@@ -273,7 +295,8 @@ export default function SettingsScreen() {
 }
 
 function AvatarImage({ source, size }: { source: ImageSourcePropType; size: number }) {
-  const { c } = useTheme();
+  const { colors } = useTheme();
+  const c = colors.dark;
   const s = getStyles(c);
   return (
     <View style={[s.avatarImageFrame, { width: size, height: size, borderRadius: size * 0.24 }]}>
@@ -282,40 +305,88 @@ function AvatarImage({ source, size }: { source: ImageSourcePropType; size: numb
   );
 }
 
+function GlassSurface({
+  children,
+  style,
+  tintColor,
+}: {
+  children: ReactNode;
+  style: StyleProp<ViewStyle>;
+  tintColor: string;
+}) {
+  if (Platform.OS === "ios" && isLiquidGlassAvailable()) {
+    return (
+      <GlassView glassEffectStyle="regular" colorScheme="dark" tintColor={tintColor} style={style}>
+        {children}
+      </GlassView>
+    );
+  }
+
+  return <View style={style}>{children}</View>;
+}
+
+function SettingsIcon({
+  symbol,
+  fallbackIcon: Fallback,
+  color,
+}: {
+  symbol: SFSymbol;
+  fallbackIcon: FallbackIcon;
+  color: string;
+}) {
+  return (
+    <SymbolView
+      name={symbol}
+      size={20}
+      type="hierarchical"
+      tintColor={color}
+      fallback={<Fallback size={20} color={color} strokeWidth={2.2} />}
+    />
+  );
+}
+
 function SettingsRow({
-  code,
+  symbol,
+  fallbackIcon,
   title,
   meta,
   accent,
   destructive,
   onPress,
 }: {
-  code: string;
+  symbol: SFSymbol;
+  fallbackIcon: FallbackIcon;
   title: string;
   meta: string;
   accent: string;
   destructive?: boolean;
   onPress: () => void;
 }) {
-  const { c } = useTheme();
+  const { colors } = useTheme();
+  const c = colors.dark;
   const s = getStyles(c);
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${title}. ${meta}`} style={s.row} onPress={onPress}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${title}. ${meta}`}
+      style={({ pressed }) => [s.row, pressed && s.rowPressed]}
+      onPress={onPress}
+    >
       <View style={[s.rowGlyph, { borderColor: accent }]}>
-        <Text style={[s.rowGlyphText, { color: accent }]}>{code}</Text>
+        <SettingsIcon symbol={symbol} fallbackIcon={fallbackIcon} color={accent} />
       </View>
       <View style={s.rowCopy}>
         <Text style={[s.rowTitle, destructive && s.rowTitleDanger]}>{title}</Text>
         <Text style={s.rowMeta}>{meta}</Text>
       </View>
-      <Text style={s.rowArrow}>›</Text>
+      <ChevronRight size={19} color={c.textDisabled} strokeWidth={2.5} />
     </Pressable>
   );
 }
 
 function getStyles(c: ModeColors, safeTop = 0, safeBottom = 0) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: c.surface },
+    root: { flex: 1, backgroundColor: c.background },
     content: {
       padding: 20,
       paddingTop: Math.max(58, safeTop + 18),
@@ -426,6 +497,10 @@ function getStyles(c: ModeColors, safeTop = 0, safeBottom = 0) {
       flexDirection: "row",
       alignItems: "center",
       gap: 12,
+    },
+    rowPressed: {
+      opacity: 0.78,
+      backgroundColor: c.backgroundMuted,
     },
     rowGlyph: {
       width: 44,

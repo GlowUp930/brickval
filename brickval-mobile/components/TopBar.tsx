@@ -2,15 +2,12 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useMemo } from "react";
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "../lib/ThemeProvider";
 import { colors as c } from "../lib/theme";
 import type { ThemeColors } from "../lib/theme";
 
 export function TopBar({ onAccountPress }: { onAccountPress: () => void }) {
   const insets = useSafeAreaInsets();
-  const { mode } = useTheme();
-  const dc = c[mode];
-  const styles = useMemo(() => getStyles(c), [mode]);
+  const styles = useMemo(() => getStyles(c), []);
 
   return (
     <BlurView
@@ -29,8 +26,8 @@ export function TopBar({ onAccountPress }: { onAccountPress: () => void }) {
             <View style={[styles.markLine, styles.markLineShort]} />
           </View>
           <View>
-            <Text style={[styles.wordmark, { color: dc.text }]}>BrickVal</Text>
-            <Text style={[styles.subtitle, { color: dc.textMuted }]}>Live set valuation</Text>
+            <Text style={styles.wordmark}>BrickVal</Text>
+            <Text style={styles.subtitle}>Live set valuation</Text>
           </View>
         </Pressable>
 
@@ -39,7 +36,7 @@ export function TopBar({ onAccountPress }: { onAccountPress: () => void }) {
           hitSlop={12}
           style={styles.accountBtn}
         >
-          <Text style={[styles.accountText, { color: dc.text }]}>Account</Text>
+          <Text style={styles.accountText}>Account</Text>
         </Pressable>
       </View>
     </BlurView>
@@ -82,8 +79,8 @@ function getStyles(c: ThemeColors) {
       backgroundColor: c.lego.yellow,
     },
     markLineShort: { width: 9, alignSelf: "flex-end", marginRight: 7 },
-    wordmark: { fontSize: 17, fontWeight: "900", letterSpacing: 0 },
-    subtitle: { fontSize: 11, fontWeight: "700", marginTop: 1 },
+    wordmark: { color: c.dark.text, fontSize: 17, fontWeight: "900", letterSpacing: 0 },
+    subtitle: { color: c.dark.textMuted, fontSize: 11, fontWeight: "700", marginTop: 1 },
     accountBtn: {
       minWidth: 76,
       height: 34,
@@ -95,6 +92,6 @@ function getStyles(c: ThemeColors) {
       justifyContent: "center",
       paddingHorizontal: 12,
     },
-    accountText: { fontWeight: "800", fontSize: 12 },
+    accountText: { color: c.dark.text, fontWeight: "800", fontSize: 12 },
   });
 }

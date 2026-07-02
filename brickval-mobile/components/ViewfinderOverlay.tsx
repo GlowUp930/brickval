@@ -19,6 +19,7 @@ const { width: INITIAL_SCREEN_W } = Dimensions.get("window");
 const INITIAL_FRAME_W = INITIAL_SCREEN_W * 0.78;
 const INITIAL_FRAME_H = INITIAL_FRAME_W * 1.25; // 4:5 portrait - fits a LEGO box nicely
 const FRAME_RADIUS = 12;
+const FRAME_VERTICAL_OFFSET = -34;
 
 interface Props {
   pulse: number; // 0..1, how close stability is to firing
@@ -38,7 +39,7 @@ export function ViewfinderOverlay({ pulse, scanning, mode, onModeChange, showMod
   });
   const frameW = layout.width * 0.78;
   const frameH = frameW * 1.25;
-  const frameTop = Math.max(0, (layout.height - frameH) / 2);
+  const frameTop = Math.max(118, (layout.height - frameH) / 2 + FRAME_VERTICAL_OFFSET);
   const frameSide = Math.max(0, (layout.width - frameW) / 2);
 
   useEffect(() => {
@@ -109,7 +110,10 @@ export function ViewfinderOverlay({ pulse, scanning, mode, onModeChange, showMod
         />
       </Svg>
 
-      <View pointerEvents="box-none" style={[styles.frame, { width: frameW, height: frameH }]}>
+      <View
+        pointerEvents="box-none"
+        style={[styles.frame, { width: frameW, height: frameH, top: frameTop, left: frameSide }]}
+      >
         {showModeSwitch ? (
           <View
             style={[
@@ -190,7 +194,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  frame: {},
+  frame: {
+    position: "absolute",
+  },
   modeSwitch: {
     position: "absolute",
     top: -50,

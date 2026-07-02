@@ -7,6 +7,7 @@ import Superwall, {
   PresentationResultPaywall,
   PresentationResultPaywallNotAvailable,
   PresentationResultPlacementNotFound,
+  PaywallPresentationHandler,
   PresentationResultUserIsSubscribed,
   PurchaseController,
   PurchaseResult,
@@ -27,7 +28,6 @@ const SUPERWALL_API_KEY = Platform.OS === "ios" ? SUPERWALL_IOS_KEY : SUPERWALL_
 const isExpoGo = Constants.appOwnership === "expo";
 const shouldInitNativePaywall = Constants.expoConfig?.extra?.enableNativePaywall === true;
 const CONFIG_TIMEOUT_MS = 15000;
-const PRESENT_TIMEOUT_MS = 15000;
 
 let didConfigure = false;
 let configurePromise: Promise<boolean> | null = null;
@@ -211,23 +211,35 @@ export async function presentUpgrade(): Promise<PaywallPresentationResult> {
     return { status: "skipped", reason };
   }
 
-  try {
-    const registerResult = await withTimeout(
-      Superwall.shared.register({
+  const handler = new PaywallPresentationHandler();
+  handler.onError((message) => {
+    capturePaywallError("register_error", new Error(message), {
+      placement: SUPERWALL_UPGRADE_PLACEMENT,
+    });
+  });
+  handler.onSkip((reason) => {
+    capturePaywallError(
+      "register_skipped_after_paywall_result",
+      new Error(reason.constructor.name),
+      {
         placement: SUPERWALL_UPGRADE_PLACEMENT,
-      }),
-      PRESENT_TIMEOUT_MS
+      }
     );
-    if (registerResult === "timeout") {
-      capturePaywallError("register_timeout", new Error("Paywall registration timed out"));
-      return { status: "timeout", reason: "register timeout" };
-    }
-    return { status: "presented" };
-  } catch (error) {
-    console.warn("Superwall register failed", error);
-    capturePaywallError("register_exception", error);
-    return { status: "error", reason: error instanceof Error ? error.message : String(error) };
-  }
+  });
+
+  void Superwall.shared
+    .register({
+      placement: SUPERWALL_UPGRADE_PLACEMENT,
+      handler,
+    })
+    .catch((error) => {
+      console.warn("Superwall register failed", error);
+      capturePaywallError("register_exception", error, {
+        placement: SUPERWALL_UPGRADE_PLACEMENT,
+      });
+    });
+
+  return { status: "presented" };
 }
 
 export function isAvailable(): boolean {

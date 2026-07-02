@@ -1,26 +1,29 @@
 import { Tabs } from "expo-router";
-import { BlurView } from "expo-blur";
+import { GlassView } from "expo-glass-effect";
+import { SymbolView, type SFSymbol } from "expo-symbols";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Archive, ScanLine, Settings } from "lucide-react-native";
 import { useTheme } from "../../lib/ThemeProvider";
 
-const tabIcons = {
-  index: require("../../assets/native-tab-icons/collection.png"),
-  scan: require("../../assets/native-tab-icons/scanning.png"),
-  settings: require("../../assets/native-tab-icons/gear.png"),
-} as const;
+type FallbackIcon = typeof Archive;
 
-const tabLabels: Record<string, string> = {
-  index: "Collection",
-  scan: "Scan",
-  settings: "Settings",
+const tabConfig: Record<string, { label: string; symbol: SFSymbol; fallback: FallbackIcon }> = {
+  index: { label: "Collection", symbol: "tray.full.fill", fallback: Archive },
+  scan: { label: "Scan", symbol: "viewfinder.circle.fill", fallback: ScanLine },
+  settings: { label: "Settings", symbol: "gearshape.fill", fallback: Settings },
 };
 
 export default function TabLayout() {
+  const { colors } = useTheme();
+
   return (
     <Tabs
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        sceneStyle: { backgroundColor: colors.dark.background },
+      }}
       tabBar={(props) => <BrickValTabBar {...props} />}
     >
       <Tabs.Screen name="index" options={{ title: "Collection" }} />
@@ -37,23 +40,26 @@ function BrickValTabBar({ state, navigation }: BottomTabBarProps) {
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: bottomInset }]}>
-      <BlurView
-        tint="light"
-        intensity={Platform.OS === "ios" ? 58 : 90}
-        experimentalBlurMethod="dimezisBlurView"
+      <GlassView
+        glassEffectStyle="regular"
+        colorScheme="dark"
+        tintColor="rgba(23, 24, 28, 0.82)"
+        isInteractive
         style={[
           styles.bar,
           {
-            backgroundColor: c.light.surfaceGlassStrong,
-            borderColor: c.light.border,
+            backgroundColor: c.dark.surfaceGlassStrong,
+            borderColor: c.dark.borderStrong,
             shadowColor: "#000000",
           },
         ]}
       >
         {state.routes.map((route, index) => {
           const selected = state.index === index;
-          const label = tabLabels[route.name] ?? route.name;
-          const icon = tabIcons[route.name as keyof typeof tabIcons];
+          const config = tabConfig[route.name] ?? tabConfig.index;
+          const label = config.label;
+          const Fallback = config.fallback;
+          const iconColor = selected ? c.dark.textInverse : c.dark.textDisabled;
 
           return (
             <Pressable
@@ -76,25 +82,21 @@ function BrickValTabBar({ state, navigation }: BottomTabBarProps) {
               hitSlop={8}
             >
               <View style={[styles.iconPlate, selected && { backgroundColor: c.lego.yellow }]}>
-                <Image
-                  source={icon}
-                  resizeMode="contain"
-                  style={[
-                    styles.icon,
-                    {
-                      tintColor: selected ? c.light.text : c.light.textDisabled,
-                      opacity: selected ? 1 : 0.78,
-                    },
-                  ]}
+                <SymbolView
+                  name={config.symbol}
+                  size={22}
+                  type="hierarchical"
+                  tintColor={iconColor}
+                  fallback={<Fallback size={22} color={iconColor} strokeWidth={2.3} />}
                 />
               </View>
-              <Text style={[styles.label, { color: selected ? c.light.text : c.light.textMuted }]}>
+              <Text style={[styles.label, { color: selected ? c.dark.text : c.dark.textMuted }]}>
                 {label}
               </Text>
             </Pressable>
           );
         })}
-      </BlurView>
+      </GlassView>
     </View>
   );
 }

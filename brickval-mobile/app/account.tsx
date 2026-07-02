@@ -35,7 +35,8 @@ function isAvatarKey(value: string | null): value is AvatarKey {
 }
 
 export default function AccountScreen() {
-  const { c } = useTheme();
+  const { colors } = useTheme();
+  const c = colors.dark;
   const styles = useMemo(() => getStyles(c), [c]);
 
   if (!isClerkConfigured) {
@@ -55,7 +56,8 @@ export default function AccountScreen() {
 }
 
 function ConfiguredAccountScreen() {
-  const { colors, c } = useTheme();
+  const { colors } = useTheme();
+  const c = colors.dark;
   const styles = useMemo(() => getStyles(c), [c]);
   const { upgrade } = useLocalSearchParams<{ upgrade?: string }>();
   const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
@@ -437,7 +439,8 @@ function ActionButton({
   disabled?: boolean;
   tone?: "primary" | "secondary" | "danger";
 }) {
-  const { c } = useTheme();
+  const { colors } = useTheme();
+  const c = colors.dark;
   const s = getStyles(c);
   return (
     <Pressable
@@ -465,7 +468,8 @@ function ActionButton({
 }
 
 function AvatarImage({ source, size }: { source: ImageSourcePropType; size: number }) {
-  const { c } = useTheme();
+  const { colors } = useTheme();
+  const c = colors.dark;
   const s = getStyles(c);
   return (
     <View style={[s.avatarImageFrame, { width: size, height: size, borderRadius: size * 0.24 }]}>
@@ -476,7 +480,7 @@ function AvatarImage({ source, size }: { source: ImageSourcePropType; size: numb
 
 function getStyles(c: ModeColors) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: c.surface },
+    root: { flex: 1, backgroundColor: c.background },
     content: { padding: 20, paddingTop: 56, paddingBottom: 96, gap: 18 },
     backBtn: {
       alignSelf: "flex-start",

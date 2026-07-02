@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Pressable, StyleSheet, Text, Animated } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { SymbolView } from "expo-symbols";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { ViewfinderOverlay } from "./ViewfinderOverlay";
@@ -153,7 +154,7 @@ export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoP
         showModeSwitch={enabled}
       />
 
-      <View style={[styles.bottomBar, { bottom: Math.max(96, insets.bottom + 70) }]}>
+      <View style={[styles.bottomBar, { bottom: Math.max(154, insets.bottom + 122) }]}>
         <View style={styles.leftStack}>
           <View style={styles.toolSpacer} />
           <Pressable
@@ -169,11 +170,13 @@ export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoP
             hitSlop={10}
           >
             <View style={styles.photoIconWrap}>
-              <PhotoStackIcon color={enabled ? INK : MUTED} />
-            </View>
-            <View style={styles.photoCopy}>
-              <Text style={[styles.photoText, !enabled && styles.photoTextDisabled]}>Use photo</Text>
-              <Text style={[styles.photoHint, !enabled && styles.photoTextDisabled]}>From library</Text>
+              <SymbolView
+                name="photo.on.rectangle"
+                size={28}
+                type="hierarchical"
+                tintColor={enabled ? INK : MUTED}
+                fallback={<PhotoStackIcon color={enabled ? INK : MUTED} />}
+              />
             </View>
           </Pressable>
         </View>
@@ -275,11 +278,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
   },
   leftStack: {
-    width: 126,
+    width: 104,
+    alignItems: "center",
     gap: 10,
   },
   toolBtn: {
-    width: 126,
+    width: 104,
     height: 52,
     borderRadius: 8,
     backgroundColor: "rgba(16,16,18,0.72)",
@@ -290,7 +294,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   toolSpacer: {
-    width: 126,
+    width: 104,
     height: 52,
   },
   modeStatus: {
@@ -325,29 +329,24 @@ const styles = StyleSheet.create({
   },
   captureLabel: { color: INK, fontSize: 12, fontWeight: "900" },
   photoBtn: {
+    width: 62,
     height: 62,
-    borderRadius: 10,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: "rgba(247,244,234,0.18)",
     backgroundColor: "rgba(247,244,234,0.06)",
-    flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    gap: 10,
+    justifyContent: "center",
   },
   photoBtnDisabled: { opacity: 0.45 },
   photoIconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(247,244,234,0.08)",
   },
-  photoCopy: { flex: 1, minWidth: 0 },
-  photoText: { color: INK, fontSize: 14, fontWeight: "900", lineHeight: 18 },
-  photoHint: { color: MUTED, fontSize: 10, fontWeight: "700", lineHeight: 12, marginTop: 1 },
-  photoTextDisabled: { color: MUTED },
   setPanel: {
     width: "100%",
     maxWidth: 340,

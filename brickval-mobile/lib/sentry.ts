@@ -11,6 +11,7 @@ export function initSentry() {
     environment: Constants.appOwnership === "expo" ? "development" : "production",
     tracesSampleRate: 0.2,
     enableNative: true,
+    appHangTimeoutInterval: 5,
     debug: false,
   });
 }

@@ -29,7 +29,8 @@
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "CAMERA",
-        "VIBRATE"
+        "VIBRATE",
+        "android.permission.CAMERA"
       ],
       "blockedPermissions": [
         "android.permission.ACTIVITY_RECOGNITION"
@@ -70,6 +71,12 @@
       "eas": {
         "projectId": "fa3ae6da-2a21-46f9-84c5-50c0cbe689d6"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/fa3ae6da-2a21-46f9-84c5-50c0cbe689d6"
     }
   }
 }
