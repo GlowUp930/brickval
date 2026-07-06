@@ -20,7 +20,7 @@ export function ScanIntentPicker({ value, onChange }: Props) {
       <View style={styles.swiftShell}>
         <Host
           colorScheme="dark"
-          seedColor="#02C400"
+          seedColor="#F2CD37"
           style={styles.swiftHost}
         >
           <TabView
@@ -29,7 +29,7 @@ export function ScanIntentPicker({ value, onChange }: Props) {
               if (next === "single" || next === "bulk") onChange(next);
             }}
             modifiers={[
-              tint("#02C400"),
+              tint("#F2CD37"),
               frame({ width: 276, height: 68 }),
               tabViewStyle({ type: "automatic" }),
             ]}

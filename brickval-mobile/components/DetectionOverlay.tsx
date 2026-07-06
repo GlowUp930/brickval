@@ -16,12 +16,23 @@ interface Props {
   resizeMode?: "contain" | "cover";
 }
 
-const ACCENT = "#02C400";
+const ACCENT = "#F2CD37";
+const INK = "#101012";
+const LIGHT = "#FFF9D8";
 const USD = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   maximumFractionDigits: 2,
 });
+
+function clamp(value: number, min: number, max: number) {
+  if (max < min) return min;
+  return Math.min(max, Math.max(min, value));
+}
+
+function shorten(value: string, maxLength: number) {
+  return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
+}
 
 export function DetectionOverlay({ detections, imageWidth, imageHeight, resizeMode = "contain" }: Props) {
   const boxes = useMemo(
@@ -38,15 +49,32 @@ export function DetectionOverlay({ detections, imageWidth, imageHeight, resizeMo
           const offsetX = (imageWidth - renderedWidth) / 2;
           const offsetY = (imageHeight - renderedHeight) / 2;
 
+          const label = priced.result?.name ?? `#${priced.detection.id}`;
+          const shortLabel = shorten(label, 18);
+          const price = priced.result?.pricing?.hero_new_avg_usd ?? null;
+          const priceText = price !== null ? USD.format(price) : priced.detection.score < 0.72 ? "Possible" : "Match";
+          const bubbleWidth = Math.min(168, Math.max(96, shortLabel.length * 6.2 + 30, priceText.length * 8.8 + 26));
+          const bubbleHeight = 44;
+          const boxX = offsetX + box.left * scale;
+          const boxY = offsetY + box.top * scale;
+          const boxWidth = (box.right - box.left) * scale;
+          const boxHeight = (box.bottom - box.top) * scale;
+          const bubbleX = clamp(boxX + boxWidth / 2 - bubbleWidth / 2, 8, imageWidth - bubbleWidth - 8);
+          const preferredBubbleY = boxY > bubbleHeight + 14 ? boxY - bubbleHeight - 8 : boxY + boxHeight + 8;
+
           return {
             id: priced.detection.id,
-            x: offsetX + box.left * scale,
-            y: offsetY + box.top * scale,
-            width: (box.right - box.left) * scale,
-            height: (box.bottom - box.top) * scale,
+            x: boxX,
+            y: boxY,
+            width: boxWidth,
+            height: boxHeight,
             score: priced.detection.score,
-            label: priced.result?.name ?? `#${priced.detection.id}`,
-            price: priced.result?.pricing?.hero_new_avg_usd ?? null,
+            bubbleX,
+            bubbleY: clamp(preferredBubbleY, 8, imageHeight - bubbleHeight - 8),
+            bubbleWidth,
+            bubbleHeight,
+            label: shortLabel,
+            priceText,
           };
         }),
     [detections, imageWidth, imageHeight, resizeMode]
@@ -69,34 +97,53 @@ export function DetectionOverlay({ detections, imageWidth, imageHeight, resizeMo
               y={box.y}
               width={Math.max(1, box.width)}
               height={Math.max(1, box.height)}
-              fill="none"
+              fill="rgba(242,205,55,0.08)"
               stroke={ACCENT}
-              strokeWidth={2.5}
-              rx={4}
-              opacity={0.88}
+              strokeWidth={3}
+              strokeDasharray={box.score < 0.72 ? "7 5" : undefined}
+              rx={10}
+              opacity={0.96}
             />
-            {box.price !== null ? (
+            <Rect
+              x={box.bubbleX}
+              y={box.bubbleY}
+              width={box.bubbleWidth}
+              height={box.bubbleHeight}
+              fill={box.score < 0.72 ? LIGHT : ACCENT}
+              rx={16}
+              opacity={0.98}
+            />
+            <SvgText
+              x={box.bubbleX + box.bubbleWidth / 2}
+              y={box.bubbleY + 18}
+              fill={INK}
+              fontSize={10}
+              fontWeight="900"
+              textAnchor="middle"
+            >
+              {box.label}
+            </SvgText>
+            <SvgText
+              x={box.bubbleX + box.bubbleWidth / 2}
+              y={box.bubbleY + 35}
+              fill={INK}
+              fontSize={15}
+              fontWeight="900"
+              textAnchor="middle"
+            >
+              {box.priceText}
+            </SvgText>
+            {box.score < 0.72 ? (
               <SvgText
-                x={box.x + box.width / 2}
-                y={box.y - 9}
-                fill={ACCENT}
-                fontSize={12}
-                fontWeight="900"
-                textAnchor="middle"
-              >
-                {USD.format(box.price)}
-              </SvgText>
-            ) : (
-              <SvgText
-                x={box.x + 8}
-                y={box.y - 9}
-                fill="rgba(255,255,255,0.9)"
+                x={box.x + 10}
+                y={box.y + 18}
+                fill={LIGHT}
                 fontSize={10}
-                fontWeight="800"
+                fontWeight="900"
               >
-                {box.label.length > 14 ? `${box.label.slice(0, 14)}...` : box.label}
+                Tap to confirm
               </SvgText>
-            )}
+            ) : null}
           </React.Fragment>
         ))}
       </Svg>

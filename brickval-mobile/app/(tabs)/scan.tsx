@@ -59,7 +59,7 @@ type Status = "idle" | "loading" | "result" | "bulkResult" | "candidates" | "det
 type BulkSelectionState = Record<string, { selected: boolean; condition: CollectionCondition }>;
 const FREE_COLLECTION_LIMIT = 10;
 const LOW_CONFIDENCE_THRESHOLD = 0.8;
-const BULK_GREEN = "#02C400";
+const BULK_GREEN = "#F2CD37";
 
 function getResultKey(item: LookupDetailResult) {
   return `${item.item_type}:${item.set_number}:${item.item_type === "part" ? item.part_info.color_id ?? "none" : "base"}`;
@@ -595,7 +595,7 @@ export default function ScanHome() {
         return;
       }
 
-      const identification = await identifySet(photoUri, "minifig");
+      const identification = await identifySet(photoUri, "minifig", { bulk: scanIntent === "bulk" });
       if (typeof identification.scansUsed === "number") {
         pendingServerScansUsed.current = identification.scansUsed;
       }
@@ -981,7 +981,14 @@ export default function ScanHome() {
           <View style={s.processingScrim} />
           <View style={s.processingPill}>
             <ActivityIndicator size="small" color={BULK_GREEN} />
-            <Text style={s.processingText}>{scanIntent === "bulk" ? "Counting value..." : loadingMsg}</Text>
+            <View style={s.processingCopy}>
+              <Text style={s.processingText}>
+                {scanIntent === "bulk" ? "Scanning minifigures..." : loadingMsg}
+              </Text>
+              {scanIntent === "bulk" ? (
+                <Text style={s.processingSubtext}>Finding matches and market values.</Text>
+              ) : null}
+            </View>
           </View>
         </View>
       ) : null}
@@ -1327,7 +1334,10 @@ export default function ScanHome() {
             <View style={s.bulkResultHeader}>
               <View>
                 <Text style={s.bulkResultEyebrow}>Bulk minifig scan</Text>
-                <Text style={s.bulkResultTitle}>{bulkResults.length} matched</Text>
+                <Text style={s.bulkResultTitle}>
+                  {bulkResults.length} minifig{bulkResults.length === 1 ? "" : "ures"} found
+                </Text>
+                <Text style={s.bulkResultSummary}>Estimated total {formatMoney(bulkTotalValue)}</Text>
               </View>
               <Pressable
                 accessibilityRole="button"
@@ -1551,28 +1561,38 @@ function getStyles(c: ThemeColors, m: ModeColors) {
   },
   processingScrim: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0,0,0,0.12)",
+    backgroundColor: "rgba(0,0,0,0.28)",
   },
   processingPill: {
     position: "absolute",
-    bottom: 168,
-    minHeight: 48,
-    borderRadius: 999,
+    minHeight: 76,
+    maxWidth: 320,
+    borderRadius: 26,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 13,
     paddingHorizontal: 20,
-    backgroundColor: "rgba(247,244,234,0.94)",
+    paddingVertical: 16,
+    backgroundColor: "rgba(247,244,234,0.96)",
     shadowColor: "#000",
     shadowOpacity: 0.22,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
     elevation: 12,
   },
+  processingCopy: {
+    flexShrink: 1,
+    gap: 3,
+  },
   processingText: {
-    color: "#3c3d3f",
+    color: "#101012",
     fontSize: 15,
     fontWeight: "900",
+  },
+  processingSubtext: {
+    color: "rgba(16,16,18,0.62)",
+    fontSize: 12,
+    fontWeight: "800",
   },
   scanIntentHeader: {
     position: "absolute",
@@ -1689,6 +1709,13 @@ function getStyles(c: ThemeColors, m: ModeColors) {
     lineHeight: 26,
     fontWeight: "900",
   },
+  bulkResultSummary: {
+    color: "rgba(247,244,234,0.62)",
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "800",
+    marginTop: 2,
+  },
   bulkCloseButton: {
     width: 48,
     height: 48,
@@ -1739,7 +1766,7 @@ function getStyles(c: ThemeColors, m: ModeColors) {
     gap: 8,
   },
   bulkValueText: {
-    color: "#02C400",
+    color: "#F2CD37",
     fontSize: 28,
     fontWeight: "900",
     letterSpacing: -0.5,
@@ -1767,7 +1794,7 @@ function getStyles(c: ThemeColors, m: ModeColors) {
     height: 74,
     borderRadius: 16,
     borderWidth: 3,
-    borderColor: "#02C400",
+    borderColor: "#F2CD37",
     backgroundColor: "#F7F4EA",
     alignItems: "center",
     justifyContent: "center",
@@ -1794,12 +1821,12 @@ function getStyles(c: ThemeColors, m: ModeColors) {
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#02C400",
+    backgroundColor: "#F2CD37",
     borderWidth: 2,
     borderColor: "#F7F4EA",
   },
   bulkChipCheckText: {
-    color: "#F7F4EA",
+    color: "#101012",
     fontSize: 14,
     fontWeight: "900",
   },
@@ -1823,7 +1850,7 @@ function getStyles(c: ThemeColors, m: ModeColors) {
     justifyContent: "center",
   },
   bulkConditionOptionActive: {
-    backgroundColor: "#02C400",
+    backgroundColor: "#F2CD37",
   },
   bulkConditionText: {
     color: "rgba(247,244,234,0.62)",
@@ -1831,30 +1858,30 @@ function getStyles(c: ThemeColors, m: ModeColors) {
     fontWeight: "900",
   },
   bulkConditionTextActive: {
-    color: "#F7F4EA",
+    color: "#101012",
   },
   bulkPrimaryButton: {
     minHeight: 66,
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#02C400",
+    backgroundColor: "#F2CD37",
   },
   bulkPrimaryButtonDisabled: {
     opacity: 0.42,
   },
   bulkPrimaryButtonAdded: {
-    backgroundColor: "rgba(2,196,0,0.24)",
+    backgroundColor: "rgba(242,205,55,0.18)",
     borderWidth: 1,
-    borderColor: "rgba(2,196,0,0.62)",
+    borderColor: "rgba(242,205,55,0.62)",
   },
   bulkPrimaryText: {
-    color: "#F7F4EA",
+    color: "#101012",
     fontSize: 20,
     fontWeight: "900",
   },
   bulkPrimaryTextAdded: {
-    color: "#A8F5A0",
+    color: "#F2CD37",
   },
   bulkSecondaryButton: {
     minHeight: 58,

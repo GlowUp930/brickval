@@ -4,6 +4,7 @@ import Jimp from "jimp";
 import { anthropic } from "@/lib/anthropic";
 import {
   buildBrickognizeBulkScanCrops,
+  buildBrickognizeRecoveryCrops,
   analyzeBrickognizeSearchResponse,
   normalizeBrickognizeDetections,
   normalizeBrickognizeSearchResponse,
@@ -51,7 +52,10 @@ function isAcceptedMediaType(type: string): type is AcceptedMediaType {
   return ACCEPTED_MEDIA_TYPES.includes(type as AcceptedMediaType);
 }
 
-async function identifyNonSet(imageFile: File): Promise<NonSetIdentifyResponse> {
+async function identifyNonSet(
+  imageFile: File,
+  options: { bulk?: boolean } = {}
+): Promise<NonSetIdentifyResponse> {
   async function postBrickognize(image: Blob, filename: string): Promise<Response | null> {
     const form = new FormData();
     form.append("query_image", image, filename);
@@ -91,10 +95,11 @@ async function identifyNonSet(imageFile: File): Promise<NonSetIdentifyResponse> 
         id: detection.id,
         type: detection.item_type,
         score: detection.score,
+        bounding_box: detection.bounding_box,
       }))
     ).all;
 
-  if (collectedDetections.length >= 2) {
+  if (!options.bulk && collectedDetections.length >= 2) {
     return { detections: mergeDetections() };
   }
 
@@ -119,7 +124,9 @@ async function identifyNonSet(imageFile: File): Promise<NonSetIdentifyResponse> 
   }
 
   const decodedImage = sourceImage;
-  const recoveryCrops = buildBrickognizeBulkScanCrops(searchData, searchWidth, searchHeight);
+  const recoveryCrops = options.bulk
+    ? buildBrickognizeBulkScanCrops(searchData, searchWidth, searchHeight)
+    : buildBrickognizeRecoveryCrops(searchData, searchWidth, searchHeight);
   if (!recoveryCrops.length) {
     return { detections: mergeDetections() };
   }
@@ -151,7 +158,21 @@ async function identifyNonSet(imageFile: File): Promise<NonSetIdentifyResponse> 
       return [];
     }
 
-    return normalizeBrickognizeSearchResponse(cropData).all;
+    return normalizeBrickognizeSearchResponse(cropData).all.map((detection) => {
+      if (!detection.bounding_box) return detection;
+
+      return {
+        ...detection,
+        bounding_box: {
+          left: crop.left + detection.bounding_box.left,
+          top: crop.top + detection.bounding_box.top,
+          right: crop.left + detection.bounding_box.right,
+          bottom: crop.top + detection.bounding_box.bottom,
+          imageWidth: searchWidth,
+          imageHeight: searchHeight,
+        },
+      };
+    });
   }
 
   const CROP_BATCH_SIZE = 4;
@@ -170,6 +191,7 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth();
 
   const mode = req.nextUrl.searchParams.get("mode") ?? "set";
+  const scan = req.nextUrl.searchParams.get("scan") ?? "";
   if (mode !== "set" && mode !== "minifig") {
     return NextResponse.json({ error: "Invalid scan mode" }, { status: 400 });
   }
@@ -213,7 +235,7 @@ export async function POST(req: NextRequest) {
 
   // ── Minifig mode: use Brickognize ─────────────────────────────────────────
   if (mode === "minifig") {
-    const identified = await identifyNonSet(imageFile);
+    const identified = await identifyNonSet(imageFile, { bulk: scan === "bulk" });
 
     if (!identified.detections.length) {
       return NextResponse.json({ detections: [] });

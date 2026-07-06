@@ -72,7 +72,11 @@ export interface IdentificationResult {
   isPro?: boolean;
 }
 
-export async function identifySet(photoUri: string, mode: ScanMode = "set"): Promise<IdentificationResult> {
+export async function identifySet(
+  photoUri: string,
+  mode: ScanMode = "set",
+  options: { bulk?: boolean } = {}
+): Promise<IdentificationResult> {
   const form = new FormData();
   form.append("image", {
     uri: photoUri,
@@ -80,7 +84,11 @@ export async function identifySet(photoUri: string, mode: ScanMode = "set"): Pro
     type: "image/jpeg",
   } as unknown as Blob);
 
-  const res = await fetch(`${API_BASE}/api/identify?mode=${mode}`, {
+  const identifyUrl = new URL(`${API_BASE}/api/identify`);
+  identifyUrl.searchParams.set("mode", mode);
+  if (options.bulk) identifyUrl.searchParams.set("scan", "bulk");
+
+  const res = await fetch(identifyUrl.toString(), {
     method: "POST",
     headers: { ...(await authHeader()) },
     body: form,

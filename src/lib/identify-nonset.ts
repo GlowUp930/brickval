@@ -47,7 +47,9 @@ export type BrickognizeCropRect = {
   height: number;
 };
 
-const BULK_SCAN_CROP_BUDGET = 8;
+export const MINIFIG_DETECTION_LIMIT = 20;
+const PART_DETECTION_LIMIT = 4;
+const BULK_SCAN_CROP_BUDGET = 25;
 
 export type BrickognizeSearchAnalysis = {
   detections: NormalizedDetections;
@@ -116,8 +118,8 @@ export function normalizeBrickognizeDetections(items: BrickognizeRawItem[]): Nor
   }
 
   const sorted = [...deduped.values()].sort((a, b) => b.score - a.score);
-  const minifigs = sorted.filter((item) => item.item_type === "minifig").slice(0, 12);
-  const parts = sorted.filter((item) => item.item_type === "part").slice(0, 4);
+  const minifigs = sorted.filter((item) => item.item_type === "minifig").slice(0, MINIFIG_DETECTION_LIMIT);
+  const parts = sorted.filter((item) => item.item_type === "part").slice(0, PART_DETECTION_LIMIT);
 
   return {
     minifigs,
@@ -370,6 +372,33 @@ function buildOverlappingTileCrops(imageWidth: number, imageHeight: number): Bri
   return crops;
 }
 
+function buildFocusedGridCrops(imageWidth: number, imageHeight: number): BrickognizeCropRect[] {
+  const columns = 5;
+  const rows = 5;
+  const cellWidth = imageWidth / columns;
+  const cellHeight = imageHeight / rows;
+  const paddingX = cellWidth * 0.24;
+  const paddingY = cellHeight * 0.24;
+  const crops: BrickognizeCropRect[] = [];
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < columns; column += 1) {
+      const left = Math.max(0, Math.floor(column * cellWidth - paddingX));
+      const top = Math.max(0, Math.floor(row * cellHeight - paddingY));
+      const right = Math.min(imageWidth, Math.ceil((column + 1) * cellWidth + paddingX));
+      const bottom = Math.min(imageHeight, Math.ceil((row + 1) * cellHeight + paddingY));
+      crops.push({
+        left,
+        top,
+        width: Math.max(1, right - left),
+        height: Math.max(1, bottom - top),
+      });
+    }
+  }
+
+  return crops;
+}
+
 function dedupeCrops(crops: BrickognizeCropRect[]): BrickognizeCropRect[] {
   const seen = new Set<string>();
   const deduped: BrickognizeCropRect[] = [];
@@ -390,12 +419,13 @@ export function buildBrickognizeBulkScanCrops(
   imageHeight: number
 ): BrickognizeCropRect[] {
   const analysis = analyzeBrickognizeSearchResponse(response);
-  if (analysis.detections.minifigs.length >= 12) return [];
+  if (analysis.detections.minifigs.length >= MINIFIG_DETECTION_LIMIT) return [];
 
   const normalizedWidth = Math.max(1, Math.round(imageWidth));
   const normalizedHeight = Math.max(1, Math.round(imageHeight));
   const recoveryCrops = buildBrickognizeRecoveryCrops(response, normalizedWidth, normalizedHeight);
+  const focusedCrops = buildFocusedGridCrops(normalizedWidth, normalizedHeight);
   const tiledCrops = buildOverlappingTileCrops(normalizedWidth, normalizedHeight);
 
-  return dedupeCrops([...recoveryCrops, ...tiledCrops]).slice(0, BULK_SCAN_CROP_BUDGET);
+  return dedupeCrops([...focusedCrops, ...recoveryCrops, ...tiledCrops]).slice(0, BULK_SCAN_CROP_BUDGET);
 }

@@ -8,7 +8,6 @@ import { tap, warn } from "../lib/haptics";
 import type { ScanIntent } from "./ScanIntentPicker";
 
 const GOLD = "#F2CD37";
-const GREEN = "#02C400";
 const INK = "#F7F4EA";
 const MUTED = "rgba(247,244,234,0.66)";
 
@@ -105,6 +104,13 @@ export function CameraScanner({
         <Text style={styles.statusPillText}>{pillText}</Text>
       </View>
 
+      {enabled && !scanning && scanIntent === "bulk" ? (
+        <View pointerEvents="none" style={[styles.bulkTips, { top: insets.top + 92 }]}>
+          <Text style={styles.bulkTipsTitle}>Bulk scan setup</Text>
+          <Text style={styles.bulkTipsText}>Space figures apart · Good lighting · Full figure visible</Text>
+        </View>
+      ) : null}
+
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={torch ? "Turn light off" : "Turn light on"}
@@ -161,8 +167,8 @@ export function CameraScanner({
             name="camera.fill"
             size={36}
             type="hierarchical"
-            tintColor={INK}
-            fallback={<CameraGlyph color={INK} />}
+            tintColor="#101012"
+            fallback={<CameraGlyph color="#101012" />}
           />
         </Pressable>
 
@@ -247,7 +253,32 @@ const styles = StyleSheet.create({
     backgroundColor: MUTED,
   },
   statusDotActive: {
-    backgroundColor: GREEN,
+    backgroundColor: GOLD,
+  },
+  bulkTips: {
+    position: "absolute",
+    alignSelf: "center",
+    maxWidth: 330,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: "rgba(242,205,55,0.32)",
+    backgroundColor: "rgba(6,7,9,0.72)",
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+    alignItems: "center",
+    gap: 4,
+  },
+  bulkTipsTitle: {
+    color: GOLD,
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 0.3,
+  },
+  bulkTipsText: {
+    color: INK,
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "center",
   },
   statusPillText: {
     color: INK,
@@ -274,8 +305,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   roundToolActive: {
-    backgroundColor: GREEN,
-    borderColor: "rgba(2,196,0,0.78)",
+    backgroundColor: GOLD,
+    borderColor: "rgba(242,205,55,0.78)",
   },
   flashButton: {
     position: "absolute",
@@ -295,10 +326,10 @@ const styles = StyleSheet.create({
     borderRadius: 46,
     borderWidth: 5,
     borderColor: "rgba(247,244,234,0.94)",
-    backgroundColor: GREEN,
+    backgroundColor: GOLD,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: GREEN,
+    shadowColor: GOLD,
     shadowOpacity: 0.34,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },

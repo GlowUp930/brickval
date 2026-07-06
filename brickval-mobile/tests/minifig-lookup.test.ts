@@ -19,9 +19,20 @@ test("sanitizeBulkMinifigNumbers dedupes, normalizes, and caps minifigure ids fo
     "sw0008",
     "sw0009",
     "sw0010",
+    "sw0011",
+    "sw0012",
+    "sw0013",
+    "sw0014",
+    "sw0015",
+    "sw0016",
+    "sw0017",
+    "sw0018",
+    "sw0019",
+    "sw0020",
+    "sw0021",
   ]);
 
   assert.equal(ids.length, MINIFIG_BATCH_LIMIT);
   assert.deepEqual(ids.slice(0, 3), ["sh0329", "figsh0115", "coltlbm16"]);
-  assert.equal(ids.includes("sw0010"), false);
+  assert.equal(ids.includes("sw0018"), false);
 });

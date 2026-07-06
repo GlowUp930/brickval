@@ -44,11 +44,19 @@ test("normalizeBrickognizeDetections keeps LEGO minifig and part matches, dedupe
     { id: "sw0011", type: "minifig", score: 0.64 },
     { id: "sw0012", type: "minifig", score: 0.62 },
     { id: "sw0013", type: "minifig", score: 0.6 },
+    { id: "sw0014", type: "minifig", score: 0.58 },
+    { id: "sw0015", type: "minifig", score: 0.56 },
+    { id: "sw0016", type: "minifig", score: 0.54 },
+    { id: "sw0017", type: "minifig", score: 0.52 },
+    { id: "sw0018", type: "minifig", score: 0.5 },
+    { id: "sw0019", type: "minifig", score: 0.48 },
+    { id: "sw0020", type: "minifig", score: 0.46 },
+    { id: "sw0021", type: "minifig", score: 0.44 },
     { id: "75192", type: "set", score: 0.99 },
     { id: "", type: "part", score: 0.9 },
   ]);
 
-  assert.equal(detections.minifigs.length, 12);
+  assert.equal(detections.minifigs.length, 20);
   assert.deepEqual(detections.minifigs.slice(0, 2), [
     { id: "sw0001", item_type: "minifig", score: 0.94 },
     { id: "sw0002", item_type: "minifig", score: 0.82 },

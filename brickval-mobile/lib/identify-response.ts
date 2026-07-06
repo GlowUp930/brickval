@@ -1,6 +1,8 @@
 import type { IdentificationCandidate, IdentificationDetection, ScanMode } from "./api";
 
 type BrickognizeCandidateType = "minifig" | "part";
+const MINIFIG_DETECTION_LIMIT = 20;
+const PART_DETECTION_LIMIT = 4;
 
 type BrickognizeRawCandidate = {
   id?: unknown;
@@ -136,8 +138,8 @@ export function normalizeBrickognizeDetections(
   );
 
   return {
-    minifigs: normalized.filter((item) => item.item_type === "minifig").slice(0, 12),
-    parts: normalized.filter((item) => item.item_type === "part").slice(0, 4),
+    minifigs: normalized.filter((item) => item.item_type === "minifig").slice(0, MINIFIG_DETECTION_LIMIT),
+    parts: normalized.filter((item) => item.item_type === "part").slice(0, PART_DETECTION_LIMIT),
   };
 }
 
@@ -157,8 +159,8 @@ export function normalizeBrickognizeSearchResponse(
       .filter((candidate): candidate is IdentificationDetection => candidate !== null);
 
     return {
-      minifigs: bestDetections.filter((item) => item.item_type === "minifig").slice(0, 12),
-      parts: bestDetections.filter((item) => item.item_type === "part").slice(0, 4),
+      minifigs: bestDetections.filter((item) => item.item_type === "minifig").slice(0, MINIFIG_DETECTION_LIMIT),
+      parts: bestDetections.filter((item) => item.item_type === "part").slice(0, PART_DETECTION_LIMIT),
     };
   }
 
@@ -169,8 +171,8 @@ export function normalizeBrickognizeSearchResponse(
 
   const normalized = dedupeDetections(flattened);
   return {
-    minifigs: normalized.filter((item) => item.item_type === "minifig").slice(0, 12),
-    parts: normalized.filter((item) => item.item_type === "part").slice(0, 4),
+    minifigs: normalized.filter((item) => item.item_type === "minifig").slice(0, MINIFIG_DETECTION_LIMIT),
+    parts: normalized.filter((item) => item.item_type === "part").slice(0, PART_DETECTION_LIMIT),
   };
 }
 
@@ -183,7 +185,7 @@ export function normalizeIdentificationDetections(
   }
 
   if (data.detections?.length) {
-    return data.detections.slice(0, 12);
+    return data.detections.slice(0, MINIFIG_DETECTION_LIMIT);
   }
 
   if (data.detected_items?.length) {
@@ -199,7 +201,7 @@ export function normalizeIdentificationDetections(
   }));
 
   if (candidateDetections.length > 0) {
-    return candidateDetections.slice(0, 12);
+    return candidateDetections.slice(0, MINIFIG_DETECTION_LIMIT);
   }
 
   if (data.set_number) {

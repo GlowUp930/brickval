@@ -2,7 +2,7 @@ import { getMinifigMarketData, type MinifigMarketData } from "./bricklink";
 import { sortByMostRecentDate } from "./sort-transactions";
 import type { MinifigInfo, MinifigPricing } from "../types/market";
 
-export const MINIFIG_BATCH_LIMIT = 12;
+export const MINIFIG_BATCH_LIMIT = 20;
 
 export type MinifigLookupPayload = {
   figInfo: MinifigInfo;
