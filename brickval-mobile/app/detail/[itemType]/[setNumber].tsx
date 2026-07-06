@@ -22,6 +22,7 @@ import { useTheme } from "../../../lib/ThemeProvider";
 import { type ThemeColors } from "../../../lib/theme";
 import { MarketRowsTable } from "../../../components/MarketRowsTable";
 const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const DETAIL_ACCENT = "#42DAD1";
 type Horizon = "1M" | "3M" | "6M";
 const HORIZON_DAYS: Record<Horizon, number> = {
   "1M": 30,
@@ -343,6 +344,8 @@ export default function ItemDetailScreen() {
 
   return (
     <View style={s.root}>
+      {item.image_url ? <Image source={{ uri: item.image_url }} style={s.backdropImage} blurRadius={28} /> : null}
+      <View style={s.backdropScrim} />
       <ScrollView contentContainerStyle={s.content}>
         <View style={s.header}>
           <Pressable accessibilityRole="button" accessibilityLabel="Go back" style={s.backBtn} onPress={() => router.back()}>
@@ -447,12 +450,12 @@ export default function ItemDetailScreen() {
               <Svg width={chartWidth} height={chartHeight} style={StyleSheet.absoluteFill}>
               <Defs>
                 <LinearGradient id="detailFill" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={c.lego.yellow} stopOpacity="0.12" />
-                  <Stop offset="1" stopColor={c.lego.yellow} stopOpacity="0" />
+                  <Stop offset="0" stopColor={DETAIL_ACCENT} stopOpacity="0.14" />
+                  <Stop offset="1" stopColor={DETAIL_ACCENT} stopOpacity="0" />
                 </LinearGradient>
               </Defs>
                 {chartAreaPath ? <Path ref={morphFillRef} d={chartAreaPath} fill="url(#detailFill)" /> : null}
-                {chartLinePath ? <Path ref={morphLineRef} d={chartLinePath} fill="none" stroke={c.lego.yellow} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /> : null}
+                {chartLinePath ? <Path ref={morphLineRef} d={chartLinePath} fill="none" stroke={DETAIL_ACCENT} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /> : null}
               </Svg>
             </View>
             <View style={[s.timeline, { width: chartWidth }]}>
@@ -522,35 +525,53 @@ function Stat({ s, label, value }: { s: any; label: string; value: string }) {
 function getStyles(c: ThemeColors) {
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: c.dark.background },
-  content: { padding: 20, paddingTop: 56, paddingBottom: 96, gap: 18 },
+  backdropImage: {
+    position: "absolute",
+    top: -90,
+    left: -40,
+    right: -40,
+    height: 360,
+    opacity: 0.2,
+    transform: [{ scale: 1.18 }],
+  },
+  backdropScrim: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "rgba(0,0,0,0.7)",
+  },
+  content: { padding: 20, paddingTop: 58, paddingBottom: 112, gap: 18 },
   header: { gap: 6 },
   backBtn: {
     alignSelf: "flex-start",
-    minHeight: 36,
+    minHeight: 42,
     paddingHorizontal: 14,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: c.dark.border,
+    borderColor: "rgba(245,247,247,0.14)",
+    backgroundColor: "rgba(8,9,10,0.64)",
     alignItems: "center",
     justifyContent: "center",
   },
   backText: { color: c.dark.text, fontSize: 12, fontWeight: "900" },
-  eyebrow: { color: c.lego.yellow, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+  eyebrow: { color: DETAIL_ACCENT, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
   title: { color: c.dark.text, fontSize: 30, fontWeight: "900", letterSpacing: -1.1, lineHeight: 34 },
   meta: { color: c.dark.textMuted, fontSize: 13, fontWeight: "700" },
   hero: {
-    borderRadius: 28,
+    borderRadius: 34,
     borderWidth: 1,
-    borderColor: c.dark.border,
-    backgroundColor: c.dark.backgroundElevated,
-    padding: 16,
-    gap: 16,
+    borderColor: "rgba(245,247,247,0.14)",
+    backgroundColor: "rgba(5,6,7,0.9)",
+    padding: 18,
+    gap: 18,
+    shadowColor: "#000",
+    shadowOpacity: 0.34,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 16 },
   },
-  heroTop: { flexDirection: "row", gap: 14, alignItems: "center" },
-  image: { width: 82, height: 82, borderRadius: 14, backgroundColor: "#171717" },
-  heroCopy: { flex: 1, gap: 5 },
+  heroTop: { gap: 16, alignItems: "center" },
+  image: { width: 188, height: 188, borderRadius: 26, backgroundColor: "#171717" },
+  heroCopy: { alignItems: "center", gap: 5 },
   valueLabel: { color: c.dark.textMuted, fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
-  value: { color: c.dark.text, fontSize: 32, fontWeight: "900", lineHeight: 36, letterSpacing: -0.8 },
+  value: { color: c.dark.text, fontSize: 42, fontWeight: "900", lineHeight: 46, letterSpacing: -1.4 },
   unitValue: { color: c.dark.textDisabled, fontSize: 12, fontWeight: "700" },
   statsRow: { flexDirection: "row", gap: 10 },
   stat: {
@@ -565,19 +586,19 @@ function getStyles(c: ThemeColors) {
   statLabel: { color: c.dark.textMuted, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
   statValue: { color: c.dark.text, fontSize: 13, fontWeight: "800", lineHeight: 17 },
   chartCard: {
-    borderRadius: 24,
+    borderRadius: 30,
     borderWidth: 1,
-    borderColor: c.dark.border,
-    backgroundColor: "rgba(255,255,255,0.015)",
-    padding: 16,
+    borderColor: "rgba(245,247,247,0.12)",
+    backgroundColor: "rgba(5,6,7,0.88)",
+    padding: 18,
     gap: 14,
   },
   marketCard: {
-    borderRadius: 18,
+    borderRadius: 28,
     borderWidth: 1,
-    borderColor: c.dark.border,
-    backgroundColor: c.dark.backgroundElevated,
-    padding: 16,
+    borderColor: "rgba(245,247,247,0.12)",
+    backgroundColor: "rgba(5,6,7,0.9)",
+    padding: 18,
     gap: 12,
   },
   chartHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
@@ -659,16 +680,16 @@ function getStyles(c: ThemeColors) {
     alignItems: "center",
     justifyContent: "center",
   },
-  horizonPillActive: { backgroundColor: c.lego.yellow, borderColor: c.lego.yellow },
+  horizonPillActive: { backgroundColor: DETAIL_ACCENT, borderColor: DETAIL_ACCENT },
   horizonText: { color: c.dark.textDisabled, fontSize: 11, fontWeight: "900" },
   horizonTextActive: { color: "#07100c" },
   noSalesText: { color: c.dark.textMuted, fontSize: 12, fontWeight: "700", lineHeight: 18 },
   collectorCard: {
-    borderRadius: 24,
+    borderRadius: 28,
     borderWidth: 1,
-    borderColor: c.dark.border,
-    backgroundColor: "rgba(255,255,255,0.02)",
-    padding: 16,
+    borderColor: "rgba(245,247,247,0.12)",
+    backgroundColor: "rgba(255,255,255,0.035)",
+    padding: 18,
     gap: 12,
   },
   collectorTitle: { color: c.dark.text, fontSize: 14, fontWeight: "900" },
@@ -695,7 +716,7 @@ function getStyles(c: ThemeColors) {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: c.lego.yellow,
+    backgroundColor: DETAIL_ACCENT,
     borderWidth: 2,
     borderColor: "#0b0f0d",
     zIndex: 3,

@@ -132,7 +132,7 @@ export const ManualEntrySheet = forwardRef<ManualEntryHandle, Props>(
 );
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.55)" },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.55)" },
   kav: { flex: 1, justifyContent: "flex-end" },
   sheet: {
     backgroundColor: "#15151a",

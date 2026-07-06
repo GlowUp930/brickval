@@ -7,9 +7,6 @@
     "icon": "./assets/brickval-loader-logo.png",
     "userInterfaceStyle": "dark",
     "scheme": "brickval",
-    "splash": {
-      "backgroundColor": "#0d0d0f"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.brickval.app",
@@ -56,7 +53,18 @@
           "enableSourceMaps": false
         }
       ],
-      "expo-video"
+      "expo-video",
+      "expo-font",
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0d0d0f",
+          "image": "./assets/brickval-loader-logo.png",
+          "imageWidth": 160,
+          "resizeMode": "contain"
+        }
+      ]
     ],
     "extra": {
       "enableNativePaywall": true,

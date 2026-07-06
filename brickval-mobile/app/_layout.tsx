@@ -11,7 +11,7 @@ import {
   syncSuperwallSubscriptionState,
   getNativeProStatus,
 } from "../lib/paywall";
-import { initSentry } from "../lib/sentry";
+import { initSentry, Sentry } from "../lib/sentry";
 import { ThemeProvider } from "../lib/ThemeProvider";
 
 initSentry();
@@ -61,7 +61,7 @@ function AuthenticatedAppStack() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const app = !isClerkConfigured ? (
     <PlainStack />
   ) : (
@@ -72,3 +72,5 @@ export default function RootLayout() {
 
   return <ThemeProvider initial="dark">{app}</ThemeProvider>;
 }
+
+export default Sentry.wrap(RootLayout);

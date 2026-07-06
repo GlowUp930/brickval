@@ -1,30 +1,54 @@
 import { Tabs } from "expo-router";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
-import { SymbolView, type SFSymbol } from "expo-symbols";
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Archive, ScanLine, Settings as SettingsIcon } from "lucide-react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Archive, ScanLine, Settings } from "lucide-react-native";
 import { useTheme } from "../../lib/ThemeProvider";
 
-type FallbackIcon = typeof Archive;
-
-const tabConfig: Record<string, { label: string; symbol: SFSymbol; fallback: FallbackIcon }> = {
-  index: { label: "Collection", symbol: "tray.full.fill", fallback: Archive },
-  scan: { label: "Scan", symbol: "viewfinder.circle.fill", fallback: ScanLine },
-  settings: { label: "Settings", symbol: "gearshape.fill", fallback: Settings },
+const tabConfig = {
+  index: { label: "Collection", Icon: Archive },
+  scan: { label: "Scan", Icon: ScanLine },
+  settings: { label: "Settings", Icon: SettingsIcon },
 };
 
+type TabName = keyof typeof tabConfig;
+type BrickValTabBarProps = {
+  state: {
+    index: number;
+    routes: Array<{ key: string; name: string; params?: object }>;
+  };
+  descriptors: Record<
+    string,
+    {
+      options: {
+        title?: string;
+        tabBarLabel?: unknown;
+        tabBarAccessibilityLabel?: string;
+      };
+    }
+  >;
+  navigation: {
+    emit: (event: { type: string; target: string; canPreventDefault?: boolean }) => {
+      defaultPrevented?: boolean;
+    };
+    navigate: (name: string, params?: object) => void;
+  };
+};
+
+function isTabName(value: string): value is TabName {
+  return value in tabConfig;
+}
+
 export default function TabLayout() {
-  const { colors } = useTheme();
+  const { c } = useTheme();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: colors.dark.background },
+        tabBarHideOnKeyboard: true,
+        sceneStyle: { backgroundColor: c.background },
       }}
-      tabBar={(props) => <BrickValTabBar {...props} />}
+      tabBar={(props) => <BrickValTabBar {...(props as unknown as BrickValTabBarProps)} />}
     >
       <Tabs.Screen name="index" options={{ title: "Collection" }} />
       <Tabs.Screen name="scan" options={{ title: "Scan" }} />
@@ -33,126 +57,104 @@ export default function TabLayout() {
   );
 }
 
-function BrickValTabBar({ state, navigation }: BottomTabBarProps) {
+function BrickValTabBar({ state, descriptors, navigation }: BrickValTabBarProps) {
+  const { colors, c } = useTheme();
   const insets = useSafeAreaInsets();
-  const { colors: c } = useTheme();
-  const bottomInset = Math.max(insets.bottom, 10);
-
-  const barStyle = [
-    styles.bar,
-    {
-      backgroundColor: c.dark.surfaceGlassStrong,
-      borderColor: c.dark.borderStrong,
-      shadowColor: "#000000",
-    },
-  ];
-
-  const inner = state.routes.map((route, index) => {
-    const selected = state.index === index;
-    const config = tabConfig[route.name] ?? tabConfig.index;
-    const label = config.label;
-    const Fallback = config.fallback;
-    const iconColor = selected ? c.dark.textInverse : c.dark.textDisabled;
-
-    return (
-      <Pressable
-        key={route.key}
-        accessibilityRole="button"
-        accessibilityLabel={`${label} tab`}
-        accessibilityState={selected ? { selected: true } : undefined}
-        onPress={() => {
-          const event = navigation.emit({
-            type: "tabPress",
-            target: route.key,
-            canPreventDefault: true,
-          });
-
-          if (!selected && !event.defaultPrevented) {
-            navigation.navigate(route.name);
-          }
-        }}
-        style={styles.item}
-        hitSlop={8}
-      >
-        <View style={[styles.iconPlate, selected && { backgroundColor: c.lego.yellow }]}>
-          <SymbolView
-            name={config.symbol}
-            size={22}
-            type="hierarchical"
-            tintColor={iconColor}
-            fallback={<Fallback size={22} color={iconColor} strokeWidth={2.3} />}
-          />
-        </View>
-        <Text style={[styles.label, { color: selected ? c.dark.text : c.dark.textMuted }]}>
-          {label}
-        </Text>
-      </Pressable>
-    );
-  });
 
   return (
-    <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: bottomInset }]}>
-      {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
-        <GlassView
-          glassEffectStyle="regular"
-          colorScheme="dark"
-          tintColor="rgba(23, 24, 28, 0.82)"
-          isInteractive
-          style={barStyle}
-        >
-          {inner}
-        </GlassView>
-      ) : (
-        <View style={barStyle}>{inner}</View>
-      )}
+    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+      <View style={[styles.bar, { backgroundColor: c.backgroundElevated, borderColor: c.border }]}>
+        {state.routes.map((route, index) => {
+          if (!isTabName(route.name)) return null;
+          const focused = state.index === index;
+          const { options } = descriptors[route.key];
+          const label =
+            typeof options.tabBarLabel === "string"
+              ? String(options.tabBarLabel)
+              : options.title !== undefined
+                ? options.title
+                : tabConfig[route.name].label;
+          const Icon = tabConfig[route.name].Icon;
+          const color = focused ? colors.lego.yellow : c.textMuted;
+
+          return (
+            <Pressable
+              key={route.key}
+              accessibilityRole="button"
+              accessibilityState={focused ? { selected: true } : {}}
+              accessibilityLabel={options.tabBarAccessibilityLabel ?? label}
+              onPress={() => {
+                const event = navigation.emit({
+                  type: "tabPress",
+                  target: route.key,
+                  canPreventDefault: true,
+                });
+                if (!focused && !event.defaultPrevented) {
+                  navigation.navigate(route.name, route.params);
+                }
+              }}
+              onLongPress={() => {
+                navigation.emit({ type: "tabLongPress", target: route.key });
+              }}
+              style={styles.tab}
+            >
+              <View
+                style={[
+                  styles.iconPlate,
+                  focused && {
+                    backgroundColor: "rgba(242,205,55,0.16)",
+                    borderColor: "rgba(242,205,55,0.52)",
+                  },
+                ]}
+              >
+                <Icon size={focused ? 27 : 25} strokeWidth={focused ? 3.2 : 2.8} color={color} />
+              </View>
+              <Text style={[styles.label, { color }, focused && styles.labelFocused]}>{label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
+    backgroundColor: "rgba(6,7,9,0.98)",
     paddingHorizontal: 14,
+    paddingTop: 8,
   },
   bar: {
-    height: 74,
-    borderRadius: 28,
+    minHeight: 82,
+    borderRadius: 26,
     borderWidth: 1,
-    overflow: "hidden",
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.16,
-    shadowRadius: 28,
-    elevation: 14,
+    justifyContent: "space-around",
+    paddingHorizontal: 8,
   },
-  item: {
+  tab: {
     flex: 1,
-    minWidth: 0,
-    height: "100%",
+    minHeight: 70,
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
+    gap: 5,
   },
   iconPlate: {
-    width: 34,
-    height: 28,
-    borderRadius: 12,
+    width: 48,
+    height: 38,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "transparent",
-  },
-  icon: {
-    width: 23,
-    height: 23,
   },
   label: {
     fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "800",
+  },
+  labelFocused: {
     fontWeight: "900",
-    letterSpacing: 0,
   },
 });

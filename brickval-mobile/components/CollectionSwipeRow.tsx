@@ -162,6 +162,11 @@ export function CollectionSwipeRow({ item, index, onPress, onDelete }: Props) {
 
   const itemLabel = item.item_type === "part" ? "Part" : item.item_type === "minifig" ? "Minifig" : "Set";
   const totalValue = item.market_value_usd === null ? null : Math.round(item.market_value_usd * (item.quantity ?? 1));
+  const primaryMarketRow = item.market_rows?.[0] ?? null;
+  const primaryMarketPrice =
+    primaryMarketRow === null
+      ? null
+      : `$${primaryMarketRow.priceUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   const actionOpacity = translateX.interpolate({
     inputRange: [-DELETE_WIDTH, 0],
     outputRange: [1, 0],
@@ -204,15 +209,7 @@ export function CollectionSwipeRow({ item, index, onPress, onDelete }: Props) {
           style={styles.item}
           disabled={isDeleting}
         >
-          {item.image_url ? (
-            <Image source={{ uri: item.image_url }} style={styles.thumb} resizeMode="cover" />
-          ) : (
-            <QuestionMarkPlaceholder style={styles.thumb} />
-          )}
-          <View style={styles.itemCopy}>
-            <Text style={styles.itemName} numberOfLines={2}>
-              {item.name}
-            </Text>
+          <View style={styles.cardTop}>
             <View
               style={[
                 styles.itemConditionBadge,
@@ -228,13 +225,35 @@ export function CollectionSwipeRow({ item, index, onPress, onDelete }: Props) {
                 {formatConditionTag(item.condition)}
               </Text>
             </View>
+            <Text style={styles.rankLabel}>#{index + 1}</Text>
+          </View>
+
+          <View style={styles.imageStage}>
+            {item.image_url ? (
+              <Image source={{ uri: item.image_url }} style={styles.thumb} resizeMode="contain" />
+            ) : (
+              <QuestionMarkPlaceholder style={styles.thumb} />
+            )}
+          </View>
+
+          <View style={styles.itemCopy}>
+            <Text style={styles.itemName} numberOfLines={2}>
+              {item.name}
+            </Text>
             <Text style={styles.itemMeta} numberOfLines={1}>
-              #{index + 1} · {itemLabel} {item.set_number} · {item.theme}
+              {itemLabel} {item.set_number} · {item.theme}
             </Text>
             <Text style={styles.itemSubMeta} numberOfLines={1}>
               Qty {item.quantity} · {formatCondition(item.condition)}
               {item.item_type === "part" && item.color_name ? ` · ${item.color_name}` : ""}
             </Text>
+          </View>
+
+          <View style={styles.valuePanel}>
+            <View style={styles.itemPriceBlock}>
+              <Text style={styles.itemValue}>{totalValue === null ? "N/A" : `$${totalValue.toLocaleString()}`}</Text>
+              <Text style={styles.itemSource}>Saved value</Text>
+            </View>
             <Text
               style={[
                 styles.itemDelta,
@@ -248,10 +267,17 @@ export function CollectionSwipeRow({ item, index, onPress, onDelete }: Props) {
               {formatRetailComparison(item.gain_pct)}
             </Text>
           </View>
-          <View style={styles.itemPriceBlock}>
-            <Text style={styles.itemValue}>{totalValue === null ? "N/A" : `$${totalValue.toLocaleString()}`}</Text>
-            <Text style={styles.itemSource}>Total</Text>
-          </View>
+
+          {primaryMarketRow ? (
+            <View style={styles.marketStrip}>
+              <Text style={styles.marketStripLabel} numberOfLines={1}>
+                {primaryMarketRow.label}
+              </Text>
+              <Text style={styles.marketStripValue} numberOfLines={1}>
+                {primaryMarketPrice} · {primaryMarketRow.meta}
+              </Text>
+            </View>
+          ) : null}
         </Pressable>
       </Animated.View>
     </View>
@@ -268,7 +294,7 @@ const styles = StyleSheet.create({
     backgroundColor: SURFACE,
   },
   actionRail: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "flex-end",
     justifyContent: "center",
     backgroundColor: "#22100f",
@@ -294,15 +320,34 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   item: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 13,
+    padding: 14,
     gap: 12,
     backgroundColor: SURFACE,
   },
-  thumb: { width: 56, height: 56, borderRadius: 10, backgroundColor: "rgba(247,244,234,0.08)" },
-  itemCopy: { flex: 1, gap: 4, minWidth: 0 },
-  itemName: { color: INK, fontSize: 15, fontWeight: "900", lineHeight: 20 },
+  cardTop: {
+    minHeight: 26,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  rankLabel: {
+    color: SOFT,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  imageStage: {
+    minHeight: 148,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(247,244,234,0.07)",
+    borderWidth: 1,
+    borderColor: "rgba(247,244,234,0.1)",
+  },
+  thumb: { width: 136, height: 136, borderRadius: 18, backgroundColor: "rgba(247,244,234,0.08)" },
+  itemCopy: { gap: 4, minWidth: 0 },
+  itemName: { color: INK, fontSize: 17, fontWeight: "900", lineHeight: 22 },
   itemConditionBadge: {
     alignSelf: "flex-start",
     borderRadius: 999,
@@ -314,13 +359,47 @@ const styles = StyleSheet.create({
   itemConditionText: { fontSize: 9, fontWeight: "900", textTransform: "uppercase" },
   itemConditionTextNew: { color: "#8ed1b0" },
   itemConditionTextUsed: { color: "#f5d36a" },
-  itemMeta: { color: MUTED, fontSize: 11, fontWeight: "800" },
-  itemSubMeta: { color: SOFT, fontSize: 10, fontWeight: "700" },
-  itemDelta: { fontSize: 11, fontWeight: "900" },
+  itemMeta: { color: MUTED, fontSize: 12, fontWeight: "800" },
+  itemSubMeta: { color: SOFT, fontSize: 11, fontWeight: "700" },
+  itemDelta: { fontSize: 12, fontWeight: "900", textAlign: "right", flexShrink: 1 },
   muted: { color: MUTED },
   positive: { color: "#62c79a" },
   negative: { color: DANGER },
-  itemPriceBlock: { alignItems: "flex-end", gap: 3 },
-  itemValue: { color: INK, fontSize: 16, fontWeight: "900" },
+  valuePanel: {
+    minHeight: 56,
+    borderRadius: 18,
+    backgroundColor: "rgba(247,244,234,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(247,244,234,0.08)",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  itemPriceBlock: { gap: 3 },
+  itemValue: { color: INK, fontSize: 22, fontWeight: "900", letterSpacing: -0.2 },
   itemSource: { color: SOFT, fontSize: 10, fontWeight: "800", textTransform: "uppercase" },
+  marketStrip: {
+    minHeight: 48,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    backgroundColor: "rgba(98,199,154,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(98,199,154,0.16)",
+    gap: 3,
+  },
+  marketStripLabel: {
+    color: "#8ed1b0",
+    fontSize: 10,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+  marketStripValue: {
+    color: INK,
+    fontSize: 12,
+    fontWeight: "800",
+  },
 });

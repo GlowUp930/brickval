@@ -14,7 +14,7 @@ import {
 import { LookupDetailResult } from "../lib/api";
 import type { CollectionCondition } from "../lib/collection";
 import { buildMarketSnapshot } from "../lib/market-snapshot";
-import { buildMarketRows } from "../lib/market-rows";
+import { buildConditionMarketRows } from "../lib/market-rows";
 import { MarketRowsTable } from "./MarketRowsTable";
 import { QuestionMarkPlaceholder } from "./QuestionMarkPlaceholder";
 import { useTheme, type ModeColors } from "../lib/ThemeProvider";
@@ -173,7 +173,7 @@ export function ResultCard({
   const snapshot = buildMarketSnapshot(result, condition);
   const usedSnapshot = buildMarketSnapshot(result, "used");
   const newSnapshot = buildMarketSnapshot(result, "new_sealed");
-  const marketRows = buildMarketRows(result);
+  const marketRows = buildConditionMarketRows(result, condition);
   const selectedUnitValue = snapshot.price_usd;
   const confidenceText =
     snapshot.confidence === "high"
@@ -221,9 +221,8 @@ export function ResultCard({
     selectedUnitValue === null ? "Unavailable" : `$${Math.round(selectedUnitValue * quantity).toLocaleString()}`;
   const formatCompactPrice = (value: number | null) =>
     value === null ? "N/A" : `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-  const handleQuickAdd = (nextCondition: CollectionCondition) => {
-    setCondition(nextCondition);
-    onAddToCollection(result, { quantity, condition: nextCondition });
+  const handleAdd = () => {
+    onAddToCollection(result, { quantity, condition });
   };
   const contentTranslateY = content.interpolate({
     inputRange: [0, 1],
@@ -413,22 +412,12 @@ export function ResultCard({
           <Animated.View style={[s.quickActions, { transform: [{ scale: savePulse }] }]}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={addedToCollection ? "Added to collection" : "Add as used"}
-              style={[s.secondaryQuick, addedToCollection && s.primarySaved]}
-              onPress={() => handleQuickAdd("used")}
-            >
-              <Text style={[s.secondaryQuickText, addedToCollection && s.primarySavedText]}>
-                {addedToCollection ? "Added" : "Add as Used"}
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={addedToCollection ? "Added to collection" : "Add as new"}
+              accessibilityLabel={addedToCollection ? "Added to collection" : "Add to collection"}
               style={[s.primary, addedToCollection && s.primarySaved]}
-              onPress={() => handleQuickAdd("new_sealed")}
+              onPress={handleAdd}
             >
               <Text style={[s.primaryText, addedToCollection && s.primarySavedText]}>
-                {addedToCollection ? "Added" : "Add as New"}
+                {addedToCollection ? "Added" : "Add to Collection"}
               </Text>
             </Pressable>
           </Animated.View>
@@ -450,7 +439,7 @@ export function ResultCard({
 }
 
 function getStyles(c: ModeColors) { return StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.58)" },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.58)" },
   sheet: {
     position: "absolute",
     left: 0,
@@ -716,10 +705,12 @@ function getStyles(c: ModeColors) { return StyleSheet.create({
   },
   primary: {
     flex: 1,
+    minHeight: 54,
     backgroundColor: themeColors.lego.yellow,
     borderRadius: 8,
     paddingVertical: 16,
     alignItems: "center",
+    justifyContent: "center",
   },
   primarySaved: {
     backgroundColor: hexToRgba(themeColors.lego.yellow, 0.26),

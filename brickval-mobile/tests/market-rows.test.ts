@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildMarketRows, normalizeMarketRows } from "../lib/market-rows";
+import type { LookupDetailResult } from "../lib/api";
+import { buildConditionMarketRows, buildMarketRows, normalizeMarketRows } from "../lib/market-rows";
 
 test("buildMarketRows returns display rows for minifigure sold and listing details", () => {
   const rows = buildMarketRows({
@@ -58,4 +59,52 @@ test("normalizeMarketRows keeps only rows with positive prices", () => {
     ]),
     [{ id: "valid", label: "BrickLink sold", meta: "Jun 1", priceUsd: 5.5 }]
   );
+});
+
+test("buildConditionMarketRows returns only rows for the selected minifigure condition", () => {
+  const result: LookupDetailResult = {
+    item_type: "minifig",
+    set_number: "sw0001",
+    name: "Battle Droid",
+    theme: "Star Wars",
+    pieces: null,
+    image_url: null,
+    market_history: [],
+    fig_info: {
+      fig_number: "sw0001",
+      year_released: null,
+    },
+    pricing: {
+      hero_new_avg_usd: 7,
+      rrp_usd: null,
+      gain_pct: null,
+      bricklink_new_qty: 1,
+      data_source: "sold",
+      used_sold_avg_usd: 5.5,
+      used_sold_min_usd: 5.5,
+      used_sold_max_usd: 5.5,
+      used_sold_qty: 2,
+      used_stock_avg_usd: 6.25,
+      used_stock_qty: 4,
+      new_sold_avg_usd: 7,
+      new_sold_min_usd: 7,
+      new_sold_max_usd: 7,
+      new_sold_qty: 1,
+      new_stock_avg_usd: 8,
+      new_stock_qty: 2,
+      sold_details: [{ date: "2026-06-01", price_usd: 5.5, quantity: 1, country: "US" }],
+      stock_details: [{ price_usd: 6.25, quantity: 4, country: "AU" }],
+      sold_new_details: [{ date: "2026-06-02T12:00:00.000Z", price_usd: 7, quantity: 1, country: "GB" }],
+      stock_new_details: [{ price_usd: 8, quantity: 2, country: "US" }],
+    },
+  };
+
+  assert.deepEqual(buildConditionMarketRows(result, "new_sealed"), [
+    { id: "fig-sold-new-0", label: "BrickLink sold new", meta: "Jun 2 · GB", priceUsd: 7 },
+    { id: "fig-stock-new-0", label: "BrickLink new listing", meta: "US · qty 2", priceUsd: 8 },
+  ]);
+  assert.deepEqual(buildConditionMarketRows(result, "used"), [
+    { id: "fig-sold-used-0", label: "BrickLink sold used", meta: "Jun 1 · US", priceUsd: 5.5 },
+    { id: "fig-stock-used-0", label: "BrickLink used listing", meta: "AU · qty 4", priceUsd: 6.25 },
+  ]);
 });

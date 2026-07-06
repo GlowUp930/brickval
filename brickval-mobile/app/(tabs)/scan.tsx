@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Animated, Easing, View, StyleSheet, Pressable, Text, ScrollView, TextInput, Image, Modal } from "react-native";
+import { ActivityIndicator, Alert, Animated, Easing, View, StyleSheet, Pressable, Text, ScrollView, TextInput, Image, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import { router, useFocusEffect } from "expo-router";
-import { TopBar } from "../../components/TopBar";
+import { router } from "expo-router";
 import { CameraScanner } from "../../components/CameraScanner";
 import { ResultCard } from "../../components/ResultCard";
 import { DetectionOverlay } from "../../components/DetectionOverlay";
 import { LegoLoaderNative } from "../../components/LegoLoaderNative";
 import { ManualEntrySheet, type ManualEntryHandle } from "../../components/ManualEntrySheet";
+import { ScanIntentPicker, type ScanIntent } from "../../components/ScanIntentPicker";
 import {
   bulkLookupMinifigs,
   fetchPartColors,
@@ -22,7 +22,6 @@ import {
   type LookupDetailResult,
   type LookupItemType,
   type PartColorOption,
-  type ScanMode,
 } from "../../lib/api";
 import {
   getBatchableMinifigIds,
@@ -44,20 +43,23 @@ import {
   prepareLookupAccess,
   GUEST_SCAN_LIMIT,
 } from "../../lib/guest-scan-limits";
-import { getSmartAutoScanPreference } from "../../lib/preferences";
 import { useUpgrade } from "../../lib/useUpgrade";
 import { PrePurchaseDisclosure } from "../../components/PrePurchaseDisclosure";
 import { useTheme, type ModeColors } from "../../lib/ThemeProvider";
 import type { ThemeColors } from "../../lib/theme";
+import { buildMarketSnapshot } from "../../lib/market-snapshot";
+import { sanitizeBulkMinifigNumbers } from "../../lib/minifig-lookup";
 
 /**
  * Native scan screen — fullscreen camera, manual capture, result sheet over
  * the dimmed camera background, and native detail drill-down when needed.
  */
 
-type Status = "idle" | "loading" | "result" | "candidates" | "detections" | "partColor";
+type Status = "idle" | "loading" | "result" | "bulkResult" | "candidates" | "detections" | "partColor";
+type BulkSelectionState = Record<string, { selected: boolean; condition: CollectionCondition }>;
 const FREE_COLLECTION_LIMIT = 10;
 const LOW_CONFIDENCE_THRESHOLD = 0.8;
+const BULK_GREEN = "#02C400";
 
 function getResultKey(item: LookupDetailResult) {
   return `${item.item_type}:${item.set_number}:${item.item_type === "part" ? item.part_info.color_id ?? "none" : "base"}`;
@@ -153,7 +155,7 @@ const previewMinifigResult: LookupDetailResult = {
 };
 
 export default function ScanHome() {
-  const [mode, setMode] = useState<ScanMode>("minifig");
+  const [scanIntent, setScanIntent] = useState<ScanIntent>("single");
   const [status, setStatus] = useState<Status>("idle");
   const [loadingMsg, setLoadingMsg] = useState("Finding minifigures and parts...");
   const [result, setResult] = useState<LookupDetailResult | null>(null);
@@ -168,8 +170,10 @@ export default function ScanHome() {
   const [selectedBulkMinifigIds, setSelectedBulkMinifigIds] = useState<string[]>([]);
   const [bulkMinifigQueue, setBulkMinifigQueue] = useState<string[]>([]);
   const [bulkMinifigResultQueue, setBulkMinifigResultQueue] = useState<LookupDetailResult[]>([]);
+  const [bulkResults, setBulkResults] = useState<LookupDetailResult[]>([]);
+  const [bulkSelections, setBulkSelections] = useState<BulkSelectionState>({});
+  const [bulkAdded, setBulkAdded] = useState(false);
   const [guestScansUsed, setGuestScansUsedState] = useState(0);
-  const [smartAutoScanEnabled, setSmartAutoScanEnabled] = useState(true);
   const [capturedPhotoUri, setCapturedPhotoUri] = useState<string | null>(null);
   const [photoLayout, setPhotoLayout] = useState({ width: 0, height: 0 });
   const [collectionLimitPromptVisible, setCollectionLimitPromptVisible] = useState(false);
@@ -236,18 +240,6 @@ export default function ScanHome() {
     void syncGuestScansUsed();
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-      getSmartAutoScanPreference().then((enabled) => {
-        if (active) setSmartAutoScanEnabled(enabled);
-      });
-      return () => {
-        active = false;
-      };
-    }, [])
-  );
-
   useEffect(() => {
     return () => {
       if (collectionLimitPromptTimer.current) {
@@ -304,7 +296,7 @@ export default function ScanHome() {
 
   const beginLookup = async (
     identifier: string,
-    itemType: LookupItemType = mode,
+    itemType: LookupItemType = "set",
     options?: { colorId?: number }
   ) => {
     setLoadingMsg("Fetching market prices...");
@@ -360,11 +352,7 @@ export default function ScanHome() {
     }
 
     setCandidateOptions(identification.candidates.slice(0, 4));
-    setCandidateMessage(
-      mode === "minifig"
-        ? "We found a few possible minifigures. Pick the closest match."
-        : "We found a few possible set numbers. Pick the closest match."
-    );
+    setCandidateMessage("We found a few possible minifigures. Pick the closest match.");
     setStatus("candidates");
     return true;
   };
@@ -438,6 +426,9 @@ export default function ScanHome() {
     setErrorMessage(null);
     setBulkMinifigQueue([]);
     setBulkMinifigResultQueue([]);
+    setBulkResults([]);
+    setBulkSelections({});
+    setBulkAdded(false);
     if (detection.item_type === "part") {
       await openPartColorPicker(detection);
       return;
@@ -450,46 +441,45 @@ export default function ScanHome() {
     setSelectedBulkMinifigIds((current) => toggleBulkMinifigSelection(current, id));
   };
 
-  const handleBulkMinifigPricing = async () => {
-    if (selectedBulkMinifigIds.length === 0) return;
-    const figIds = Array.from(
-      new Set(
-        selectedBulkMinifigIds
-          .map((id) => id.trim().replace(/[^a-z0-9]/gi, "").toLowerCase())
-          .filter((id) => id.length >= 3)
-      )
-    );
+  const fetchBulkMinifigResults = async (figIds: string[]) => {
+    let rows: BulkMinifigLookupRow[];
+    try {
+      rows = await bulkLookupMinifigs(figIds);
+    } catch {
+      rows = [];
+    }
+
+    if (rows.length === 0) {
+      rows = await Promise.all(
+        figIds.map(async (figNumber): Promise<BulkMinifigLookupRow> => {
+          try {
+            const data = await lookupSet(figNumber, "minifig");
+            return data.item_type === "minifig"
+              ? { figNumber, result: data, error: null }
+              : { figNumber, result: null, error: "not_found" };
+          } catch {
+            return { figNumber, result: null, error: "not_found" };
+          }
+        })
+      );
+    }
+
+    return rows
+      .map((row) => row.result)
+      .filter((row): row is NonNullable<BulkMinifigLookupRow["result"]> => row !== null);
+  };
+
+  const handleBulkMinifigPricing = async (ids = selectedBulkMinifigIds) => {
+    if (ids.length === 0) return;
+    const figIds = sanitizeBulkMinifigNumbers(ids);
     if (figIds.length === 0) return;
 
     setStatus("loading");
-    setLoadingMsg(`Fetching prices for ${figIds.length} minifigures...`);
+    setLoadingMsg(`Counting value for ${figIds.length} minifigures...`);
     await yieldToRender();
 
     try {
-      let rows: BulkMinifigLookupRow[];
-      try {
-        rows = await bulkLookupMinifigs(figIds);
-      } catch {
-        rows = [];
-      }
-      if (rows.length === 0) {
-        const fallbackRows = await Promise.all(
-          figIds.map(async (figNumber): Promise<BulkMinifigLookupRow> => {
-            try {
-              const result = await lookupSet(figNumber, "minifig");
-              return result.item_type === "minifig"
-                ? { figNumber, result, error: null }
-                : { figNumber, result: null, error: "not_found" };
-            } catch {
-              return { figNumber, result: null, error: "not_found" };
-            }
-          })
-        );
-        rows = fallbackRows;
-      }
-      const pricedResults = rows
-        .map((row) => row.result)
-        .filter((row): row is NonNullable<typeof row> => row !== null);
+      const pricedResults = await fetchBulkMinifigResults(figIds);
 
       if (pricedResults.length === 0) {
         pendingGuestScan.current = false;
@@ -507,14 +497,20 @@ export default function ScanHome() {
       pendingGuestScan.current = false;
       pendingServerScansUsed.current = null;
 
-      const [firstResult, ...remainingResults] = pricedResults;
       setBulkMinifigQueue([]);
-      setBulkMinifigResultQueue(remainingResults);
-      setResult(firstResult);
-      setLatestLookupResult(firstResult);
+      setBulkMinifigResultQueue([]);
+      setBulkResults(pricedResults);
+      const nextSelections: BulkSelectionState = {};
+      for (const item of pricedResults) {
+        nextSelections[getResultKey(item)] = { selected: true, condition: "new_sealed" };
+      }
+      setBulkSelections(nextSelections);
+      setBulkAdded(false);
+      setResult(null);
+      setLatestLookupResult(pricedResults[0]);
       setAddedResultKey(null);
       promptedOnCurrentResult.current = false;
-      setStatus("result");
+      setStatus("bulkResult");
     } catch {
       pendingGuestScan.current = false;
       pendingServerScansUsed.current = null;
@@ -585,13 +581,12 @@ export default function ScanHome() {
     setSelectedBulkMinifigIds([]);
     setBulkMinifigQueue([]);
     setBulkMinifigResultQueue([]);
+    setBulkResults([]);
+    setBulkSelections({});
+    setBulkAdded(false);
     setCapturedPhotoUri(photoUri);
-    if (mode === "set") {
-      manualRef.current?.open();
-      return;
-    }
     setStatus("loading");
-    setLoadingMsg("Finding minifigures and parts...");
+    setLoadingMsg(scanIntent === "bulk" ? "Finding minifigures..." : "Finding minifigure...");
     try {
       const access = await prepareLookupAccess();
       if (!access.allowed) {
@@ -600,7 +595,7 @@ export default function ScanHome() {
         return;
       }
 
-      const identification = await identifySet(photoUri, mode);
+      const identification = await identifySet(photoUri, "minifig");
       if (typeof identification.scansUsed === "number") {
         pendingServerScansUsed.current = identification.scansUsed;
       }
@@ -612,6 +607,34 @@ export default function ScanHome() {
         setStatus("idle");
         return;
       }
+
+      const minifigDetections = identification.detections.filter((item) => item.item_type === "minifig");
+      if (scanIntent === "bulk") {
+        if (minifigDetections.length === 0) {
+          warn();
+          pendingServerScansUsed.current = null;
+          setErrorMessage("We couldn't find any minifigures in this frame. Try spreading them out with the front side visible.");
+          setStatus("idle");
+          return;
+        }
+
+        const consume = await prepareLookupAccess();
+        if (!consume.allowed) {
+          setStatus("idle");
+          openAccountForUpgrade();
+          return;
+        }
+        if (!consume.hasToken) {
+          pendingGuestScan.current = true;
+        }
+
+        const figIds = getBatchableMinifigIds(minifigDetections);
+        setDetections(minifigDetections);
+        setSelectedBulkMinifigIds(figIds);
+        await handleBulkMinifigPricing(figIds);
+        return;
+      }
+
       if (!shouldPauseForDetectionChoice(identification.detections, LOW_CONFIDENCE_THRESHOLD)) {
         const consume = await prepareLookupAccess();
         if (!consume.allowed) {
@@ -642,11 +665,7 @@ export default function ScanHome() {
       pendingGuestScan.current = false;
       pendingServerScansUsed.current = null;
       warn();
-      setErrorMessage(
-        mode === "minifig"
-          ? "Something went wrong reading the photo. Try again in a moment."
-          : "Something went wrong reading the photo. Try again in a moment or enter it manually."
-      );
+      setErrorMessage("Something went wrong reading the photo. Try again in a moment.");
       setStatus("idle");
       return;
     }
@@ -654,10 +673,6 @@ export default function ScanHome() {
 
   const handlePhotoPress = async () => {
     if (status !== "idle") return;
-    if (mode === "set") {
-      manualRef.current?.open();
-      return;
-    }
     setErrorMessage(null);
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -687,6 +702,9 @@ export default function ScanHome() {
     setSelectedBulkMinifigIds([]);
     setBulkMinifigQueue([]);
     setBulkMinifigResultQueue([]);
+    setBulkResults([]);
+    setBulkSelections({});
+    setBulkAdded(false);
     try {
       const access = await prepareLookupAccess();
       if (!access.allowed) {
@@ -699,7 +717,7 @@ export default function ScanHome() {
       setStatus("loading");
       setLoadingMsg(`Looking up set #${identifier}`);
       await yieldToRender();
-      await beginLookup(identifier);
+      await beginLookup(identifier, "set");
     } catch (e) {
       if (e instanceof Error && e.message.includes("401")) {
         pendingGuestScan.current = false;
@@ -712,11 +730,7 @@ export default function ScanHome() {
         pendingGuestScan.current = false;
         pendingServerScansUsed.current = null;
         warn();
-        setErrorMessage(
-          mode === "minifig"
-            ? "We couldn't find market data for that minifigure. Try a different ID or clearer scan."
-            : "We don't have data for that set number. Double-check it and try again."
-        );
+        setErrorMessage("We don't have data for that set number. Double-check it and try again.");
         setStatus("idle");
         return;
       }
@@ -742,9 +756,12 @@ export default function ScanHome() {
     setSelectedBulkMinifigIds([]);
     setBulkMinifigQueue([]);
     setBulkMinifigResultQueue([]);
+    setBulkResults([]);
+    setBulkSelections({});
+    setBulkAdded(false);
     setStatus("loading");
     try {
-      await beginLookup(identifier);
+      await beginLookup(identifier, "minifig");
     } catch (e) {
       if (e instanceof Error && e.message.includes("401")) {
         pendingGuestScan.current = false;
@@ -757,11 +774,7 @@ export default function ScanHome() {
         pendingGuestScan.current = false;
         pendingServerScansUsed.current = null;
         warn();
-        setErrorMessage(
-          mode === "minifig"
-            ? "We couldn't find market data for that minifigure. Try a different ID."
-            : "We don't have data for that set number. Double-check it and try again."
-        );
+        setErrorMessage("We couldn't find market data for that minifigure. Try a different ID.");
         setStatus("idle");
         return;
       }
@@ -775,11 +788,7 @@ export default function ScanHome() {
       pendingGuestScan.current = false;
       pendingServerScansUsed.current = null;
       warn();
-      setErrorMessage(
-        mode === "minifig"
-          ? "We couldn't find market data for that minifigure. Try a clearer scan."
-          : "We couldn't find market data for that set number. Double-check it and try again."
-      );
+      setErrorMessage("We couldn't find market data for that minifigure. Try a clearer scan.");
       setStatus("idle");
     }
   };
@@ -799,7 +808,17 @@ export default function ScanHome() {
     promptedOnCurrentResult.current = false;
     setBulkMinifigQueue([]);
     setBulkMinifigResultQueue([]);
-    const preview = mode === "minifig" ? previewMinifigResult : previewResult;
+    setDetections([]);
+    const preview = previewMinifigResult;
+    if (scanIntent === "bulk") {
+      setBulkResults([preview]);
+      setBulkSelections({ [getResultKey(preview)]: { selected: true, condition: "new_sealed" } });
+      setBulkAdded(false);
+      setResult(null);
+      setLatestLookupResult(preview);
+      setStatus("bulkResult");
+      return;
+    }
     setResult(preview);
     setLatestLookupResult(preview);
     setAddedResultKey(null);
@@ -837,6 +856,47 @@ export default function ScanHome() {
     }
   };
 
+  const handleAddBulkToCollection = async () => {
+    const selectedEntries = bulkResults
+      .map((item) => ({ item, selection: bulkSelections[getResultKey(item)] ?? { selected: true, condition: "new_sealed" as const } }))
+      .filter((entry) => entry.selection.selected);
+
+    if (selectedEntries.length === 0 || bulkAdded) return;
+    const existing = await getCollection();
+    const currentCollectionQuantity = existing.reduce((total, entry) => total + (entry.quantity ?? 1), 0);
+    const isPro = Boolean(await getNativeProStatus());
+
+    if (
+      shouldBlockCollectionAdd({
+        currentQuantity: currentCollectionQuantity,
+        addQuantity: selectedEntries.length,
+        isPro,
+        limit: FREE_COLLECTION_LIMIT,
+      })
+    ) {
+      showCollectionLimitPrompt();
+      return;
+    }
+
+    for (const entry of selectedEntries) {
+      await addToCollection(entry.item, { quantity: 1, condition: entry.selection.condition });
+    }
+    setBulkAdded(true);
+    success();
+  };
+
+  const dismissBulkResult = () => {
+    promptedOnCurrentResult.current = false;
+    setBulkResults([]);
+    setBulkSelections({});
+    setBulkAdded(false);
+    setDetections([]);
+    setSelectedBulkMinifigIds([]);
+    setBulkMinifigQueue([]);
+    setBulkMinifigResultQueue([]);
+    setStatus("idle");
+  };
+
   const errorTranslateY = errorProgress.interpolate({
     inputRange: [0, 1],
     outputRange: [-10, 0],
@@ -856,53 +916,57 @@ export default function ScanHome() {
     color.color_name.toLowerCase().includes(partColorQuery.trim().toLowerCase())
   );
   const canReturnToDetectionSheet = detections.length > 1;
+  const formatMoney = (value: number | null) =>
+    value === null
+      ? "N/A"
+      : `$${value.toLocaleString(undefined, {
+          minimumFractionDigits: value < 100 ? 2 : 0,
+          maximumFractionDigits: value < 100 ? 2 : 0,
+        })}`;
+  const bulkEntries = bulkResults.map((item) => {
+    const key = getResultKey(item);
+    const selection = bulkSelections[key] ?? { selected: true, condition: "new_sealed" as const };
+    return {
+      key,
+      item,
+      selection,
+      snapshot: buildMarketSnapshot(item, selection.condition),
+    };
+  });
+  const selectedBulkEntries = bulkEntries.filter((entry) => entry.selection.selected);
+  const bulkTotalValue = selectedBulkEntries.reduce((total, entry) => total + (entry.snapshot.price_usd ?? 0), 0);
+  const bulkOverlayDetections = detections
+    .filter((detection) => detection.item_type === "minifig")
+    .map((detection) => ({
+      detection,
+      result:
+        bulkResults.find(
+          (item) => item.item_type === "minifig" && item.set_number.toLowerCase() === detection.id.toLowerCase()
+        ) ?? null,
+    }));
+  const updateBulkSelection = (key: string, updates: Partial<BulkSelectionState[string]>) => {
+    setBulkSelections((current) => {
+      const existing = current[key] ?? { selected: true, condition: "new_sealed" as const };
+      return { ...current, [key]: { ...existing, ...updates } };
+    });
+    setBulkAdded(false);
+  };
 
   return (
     <View style={s.root}>
       <CameraScanner
         enabled={status === "idle"}
-        mode={mode}
-        smartAutoScanEnabled={smartAutoScanEnabled}
-        onModeChange={setMode}
+        scanIntent={scanIntent}
         onCapture={handleCapture}
         onPhotoPress={handlePhotoPress}
         onManualPress={() => {
           setErrorMessage(null);
           manualRef.current?.open();
         }}
-        showModeSwitch={false}
       />
 
-      <TopBar onAccountPress={openAccountForSignIn} />
-
-      <View pointerEvents="box-none" style={[s.modeHeader, { top: insets.top + 66 }]}>
-        <View style={s.modeSegment}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ selected: mode === "minifig" }}
-            accessibilityLabel="Scan minifigures and parts"
-            style={[s.modeSegmentBtn, mode === "minifig" && s.modeSegmentBtnActive]}
-            onPress={() => setMode("minifig")}
-          >
-            <Text style={[s.modeSegmentText, mode === "minifig" && s.modeSegmentTextActive]}>
-              Minifigures
-            </Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ selected: mode === "set" }}
-            accessibilityLabel="Enter set number"
-            style={[s.modeSegmentBtn, mode === "set" && s.modeSegmentBtnActive]}
-            onPress={() => {
-              setMode("set");
-              setTimeout(() => manualRef.current?.open(), 200);
-            }}
-          >
-            <Text style={[s.modeSegmentText, mode === "set" && s.modeSegmentTextActive]}>
-              Sets
-            </Text>
-          </Pressable>
-        </View>
+      <View pointerEvents="box-none" style={[s.scanIntentHeader, { top: insets.top + 18 }]}>
+        <ScanIntentPicker value={scanIntent} onChange={setScanIntent} />
       </View>
 
       {__DEV__ && status === "idle" && (
@@ -911,7 +975,18 @@ export default function ScanHome() {
         </Pressable>
       )}
 
-      {status === "loading" && <LegoLoaderNative message={loadingMsg} />}
+      {status === "loading" && capturedPhotoUri ? (
+        <View style={s.processingOverlay}>
+          <Image source={{ uri: capturedPhotoUri }} style={s.processingImage} resizeMode="cover" />
+          <View style={s.processingScrim} />
+          <View style={s.processingPill}>
+            <ActivityIndicator size="small" color={BULK_GREEN} />
+            <Text style={s.processingText}>{scanIntent === "bulk" ? "Counting value..." : loadingMsg}</Text>
+          </View>
+        </View>
+      ) : null}
+
+      {status === "loading" && !capturedPhotoUri && <LegoLoaderNative message={loadingMsg} />}
 
       {status === "detections" && detections.length > 0 ? (
         <Animated.View
@@ -1226,16 +1301,13 @@ export default function ScanHome() {
           <View style={s.errorActions}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={mode === "minifig" ? "Dismiss scan issue" : "Enter set number manually"}
+              accessibilityLabel="Dismiss scan issue"
               style={s.errorPrimary}
               onPress={() => {
                 setErrorMessage(null);
-                if (mode === "set") {
-                  manualRef.current?.open();
-                }
               }}
             >
-              <Text style={s.errorPrimaryText}>{mode === "minifig" ? "Try again" : "Enter manually"}</Text>
+              <Text style={s.errorPrimaryText}>Try again</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -1247,6 +1319,156 @@ export default function ScanHome() {
             </Pressable>
           </View>
         </Animated.View>
+      ) : null}
+
+      {status === "bulkResult" && bulkResults.length > 0 ? (
+        <View style={s.bulkResultOverlay}>
+          <View style={[s.bulkResultSheet, { paddingBottom: Math.max(22, insets.bottom + 12) }]}>
+            <View style={s.bulkResultHeader}>
+              <View>
+                <Text style={s.bulkResultEyebrow}>Bulk minifig scan</Text>
+                <Text style={s.bulkResultTitle}>{bulkResults.length} matched</Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Retake bulk minifig scan"
+                onPress={dismissBulkResult}
+                style={s.bulkCloseButton}
+                hitSlop={8}
+              >
+                <Text style={s.bulkCloseText}>X</Text>
+              </Pressable>
+            </View>
+
+            <View
+              style={s.bulkPhotoFrame}
+              onLayout={(e) => {
+                const { width, height } = e.nativeEvent.layout;
+                setPhotoLayout({ width, height });
+              }}
+            >
+              {capturedPhotoUri ? (
+                <Image source={{ uri: capturedPhotoUri }} style={s.bulkPhotoImage} resizeMode="cover" />
+              ) : (
+                <View style={s.bulkPhotoFallback}>
+                  <Text style={s.bulkPhotoFallbackText}>Bulk scan preview</Text>
+                </View>
+              )}
+              <View style={s.bulkValuePill}>
+                <Text style={s.bulkValueText}>{formatMoney(bulkTotalValue)}</Text>
+                <Text style={s.bulkValueMeta}>· {selectedBulkEntries.length} selected</Text>
+              </View>
+              {photoLayout.width > 0 && bulkOverlayDetections.length > 0 ? (
+                <DetectionOverlay
+                  detections={bulkOverlayDetections}
+                  imageWidth={photoLayout.width}
+                  imageHeight={photoLayout.height}
+                  resizeMode="cover"
+                />
+              ) : null}
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.bulkChipTrack}
+            >
+              {bulkEntries.map(({ key, item, snapshot, selection }) => (
+                <Pressable
+                  key={key}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: selection.selected }}
+                  style={[s.bulkChip, !selection.selected && s.bulkChipOff]}
+                  onPress={() => updateBulkSelection(key, { selected: !selection.selected })}
+                >
+                  <View style={[s.bulkChipImageWrap, !selection.selected && s.bulkChipImageWrapOff]}>
+                    {item.image_url ? (
+                      <Image source={{ uri: item.image_url }} style={s.bulkChipImage} resizeMode="contain" />
+                    ) : (
+                      <View style={s.bulkChipImageFallback} />
+                    )}
+                    {selection.selected ? (
+                      <View style={s.bulkChipCheck}>
+                        <Text style={s.bulkChipCheckText}>✓</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text style={s.bulkChipPrice}>{formatMoney(snapshot.price_usd)}</Text>
+                  <View style={s.bulkConditionToggle}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: selection.condition === "new_sealed" }}
+                      style={[s.bulkConditionOption, selection.condition === "new_sealed" && s.bulkConditionOptionActive]}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        updateBulkSelection(key, { condition: "new_sealed", selected: true });
+                      }}
+                    >
+                      <Text
+                        style={[
+                          s.bulkConditionText,
+                          selection.condition === "new_sealed" && s.bulkConditionTextActive,
+                        ]}
+                      >
+                        New
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: selection.condition === "used" }}
+                      style={[s.bulkConditionOption, selection.condition === "used" && s.bulkConditionOptionActive]}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        updateBulkSelection(key, { condition: "used", selected: true });
+                      }}
+                    >
+                      <Text
+                        style={[
+                          s.bulkConditionText,
+                          selection.condition === "used" && s.bulkConditionTextActive,
+                        ]}
+                      >
+                        Used
+                      </Text>
+                    </Pressable>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={bulkAdded ? "Bulk minifigures added to collection" : `Add ${selectedBulkEntries.length} minifigures to collection`}
+              accessibilityState={{ disabled: selectedBulkEntries.length === 0 || bulkAdded }}
+              style={[
+                s.bulkPrimaryButton,
+                selectedBulkEntries.length === 0 && s.bulkPrimaryButtonDisabled,
+                bulkAdded && s.bulkPrimaryButtonAdded,
+              ]}
+              disabled={selectedBulkEntries.length === 0 || bulkAdded}
+              onPress={() => {
+                void handleAddBulkToCollection();
+              }}
+            >
+              <Text style={[s.bulkPrimaryText, bulkAdded && s.bulkPrimaryTextAdded]}>
+                {bulkAdded
+                  ? "Added"
+                  : selectedBulkEntries.length > 0
+                    ? `Add ${selectedBulkEntries.length} to Collection`
+                    : "Select items to add"}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Retake bulk minifig scan"
+              style={s.bulkSecondaryButton}
+              onPress={dismissBulkResult}
+            >
+              <Text style={s.bulkSecondaryText}>Retake</Text>
+            </Pressable>
+          </View>
+        </View>
       ) : null}
 
       <ResultCard
@@ -1302,7 +1524,7 @@ export default function ScanHome() {
         </View>
       </Modal>
 
-      <ManualEntrySheet ref={manualRef} mode={mode} onSubmit={handleManualSubmit} />
+      <ManualEntrySheet ref={manualRef} mode="set" onSubmit={handleManualSubmit} />
       <PrePurchaseDisclosure
         visible={showDisclosure}
         onContinue={handleDisclosureContinue}
@@ -1315,42 +1537,50 @@ export default function ScanHome() {
 function getStyles(c: ThemeColors, m: ModeColors) {
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: m.background },
-  modeHeader: {
+  processingOverlay: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#050605",
+  },
+  processingImage: {
+    ...StyleSheet.absoluteFill,
+    width: "100%",
+    height: "100%",
+  },
+  processingScrim: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "rgba(0,0,0,0.12)",
+  },
+  processingPill: {
+    position: "absolute",
+    bottom: 168,
+    minHeight: 48,
+    borderRadius: 999,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 20,
+    backgroundColor: "rgba(247,244,234,0.94)",
+    shadowColor: "#000",
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+  },
+  processingText: {
+    color: "#3c3d3f",
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  scanIntentHeader: {
     position: "absolute",
     left: 0,
     right: 0,
     zIndex: 12,
     alignItems: "center",
     paddingHorizontal: 20,
-  },
-  modeSegment: {
-    flexDirection: "row",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    backgroundColor: "rgba(13,13,15,0.84)",
-    padding: 4,
-    gap: 4,
-    width: "100%",
-    maxWidth: 320,
-  },
-  modeSegmentBtn: {
-    flex: 1,
-    minHeight: 38,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modeSegmentBtnActive: {
-    backgroundColor: palette.lego.yellow,
-  },
-  modeSegmentText: {
-    color: "rgba(255,255,255,0.56)",
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  modeSegmentTextActive: {
-    color: "#0D0D0F",
   },
   previewBtn: {
     position: "absolute",
@@ -1423,6 +1653,219 @@ function getStyles(c: ThemeColors, m: ModeColors) {
   errorSecondaryText: {
     color: m.text,
     fontSize: 12,
+    fontWeight: "900",
+  },
+  bulkResultOverlay: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 34,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.42)",
+  },
+  bulkResultSheet: {
+    marginHorizontal: 14,
+    marginBottom: 10,
+    borderRadius: 28,
+    backgroundColor: "#070807",
+    padding: 16,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: "rgba(247,244,234,0.12)",
+  },
+  bulkResultHeader: {
+    minHeight: 42,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  bulkResultEyebrow: {
+    color: "rgba(247,244,234,0.56)",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  bulkResultTitle: {
+    color: "#F7F4EA",
+    fontSize: 21,
+    lineHeight: 26,
+    fontWeight: "900",
+  },
+  bulkCloseButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(247,244,234,0.16)",
+    backgroundColor: "rgba(247,244,234,0.08)",
+  },
+  bulkCloseText: {
+    color: "#F7F4EA",
+    fontSize: 26,
+    lineHeight: 29,
+    fontWeight: "600",
+  },
+  bulkPhotoFrame: {
+    height: 420,
+    borderRadius: 26,
+    overflow: "hidden",
+    backgroundColor: "#111411",
+  },
+  bulkPhotoImage: {
+    width: "100%",
+    height: "100%",
+  },
+  bulkPhotoFallback: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#111411",
+  },
+  bulkPhotoFallbackText: {
+    color: "rgba(247,244,234,0.62)",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  bulkValuePill: {
+    position: "absolute",
+    top: 18,
+    alignSelf: "center",
+    minHeight: 58,
+    borderRadius: 999,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(247,244,234,0.96)",
+    gap: 8,
+  },
+  bulkValueText: {
+    color: "#02C400",
+    fontSize: 28,
+    fontWeight: "900",
+    letterSpacing: -0.5,
+  },
+  bulkValueMeta: {
+    color: "rgba(16,16,18,0.58)",
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  bulkChipTrack: {
+    gap: 12,
+    paddingHorizontal: 2,
+    paddingVertical: 2,
+  },
+  bulkChip: {
+    width: 100,
+    alignItems: "center",
+    gap: 7,
+  },
+  bulkChipOff: {
+    opacity: 0.52,
+  },
+  bulkChipImageWrap: {
+    width: 74,
+    height: 74,
+    borderRadius: 16,
+    borderWidth: 3,
+    borderColor: "#02C400",
+    backgroundColor: "#F7F4EA",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bulkChipImageWrapOff: {
+    borderColor: "rgba(247,244,234,0.22)",
+  },
+  bulkChipImage: {
+    width: 58,
+    height: 58,
+  },
+  bulkChipImageFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(16,16,18,0.1)",
+  },
+  bulkChipCheck: {
+    position: "absolute",
+    right: -8,
+    top: -8,
+    width: 27,
+    height: 27,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#02C400",
+    borderWidth: 2,
+    borderColor: "#F7F4EA",
+  },
+  bulkChipCheckText: {
+    color: "#F7F4EA",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  bulkChipPrice: {
+    color: "#F7F4EA",
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  bulkConditionToggle: {
+    minHeight: 28,
+    width: 96,
+    borderRadius: 999,
+    backgroundColor: "rgba(247,244,234,0.12)",
+    flexDirection: "row",
+    padding: 3,
+  },
+  bulkConditionOption: {
+    flex: 1,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bulkConditionOptionActive: {
+    backgroundColor: "#02C400",
+  },
+  bulkConditionText: {
+    color: "rgba(247,244,234,0.62)",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  bulkConditionTextActive: {
+    color: "#F7F4EA",
+  },
+  bulkPrimaryButton: {
+    minHeight: 66,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#02C400",
+  },
+  bulkPrimaryButtonDisabled: {
+    opacity: 0.42,
+  },
+  bulkPrimaryButtonAdded: {
+    backgroundColor: "rgba(2,196,0,0.24)",
+    borderWidth: 1,
+    borderColor: "rgba(2,196,0,0.62)",
+  },
+  bulkPrimaryText: {
+    color: "#F7F4EA",
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  bulkPrimaryTextAdded: {
+    color: "#A8F5A0",
+  },
+  bulkSecondaryButton: {
+    minHeight: 58,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(247,244,234,0.1)",
+  },
+  bulkSecondaryText: {
+    color: "#F7F4EA",
+    fontSize: 17,
     fontWeight: "900",
   },
   collectionLimitModal: {
