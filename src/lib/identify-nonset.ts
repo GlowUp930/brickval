@@ -3,6 +3,14 @@ export type BrickognizeRawItem = {
   external_id?: string;
   score?: number;
   type?: string;
+  bounding_box?: {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+    imageWidth: number;
+    imageHeight: number;
+  };
 };
 
 export type BrickognizeSearchCandidate = {
@@ -58,6 +66,14 @@ export type NonSetDetection = {
   id: string;
   item_type: "minifig" | "part";
   score: number;
+  bounding_box?: {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+    imageWidth: number;
+    imageHeight: number;
+  };
 };
 
 export type NormalizedDetections = {
@@ -88,7 +104,10 @@ export function normalizeBrickognizeDetections(items: BrickognizeRawItem[]): Nor
 
     if (!itemType || !id || !Number.isFinite(score) || score <= 0) continue;
 
-    const detection: NonSetDetection = { id, item_type: itemType, score };
+    const detection: NonSetDetection = item.bounding_box
+      ? { id, item_type: itemType, score, bounding_box: item.bounding_box }
+      : { id, item_type: itemType, score };
+
     const key = `${itemType}:${id}`;
     const existing = deduped.get(key);
     if (!existing || existing.score < score) {
@@ -114,31 +133,49 @@ export function normalizeBrickognizeSearchResponse(response: BrickognizeSearchRe
 export function analyzeBrickognizeSearchResponse(response: BrickognizeSearchResponse): BrickognizeSearchAnalysis {
   const items: BrickognizeRawItem[] = [];
   let topScore: number | null = null;
-  let topBox: BrickognizeSearchAnalysis["topBox"] = null;
+  let topBox: BrickognizeSearchAnalysis["topBox"] | null = null;
 
   for (const detectedItem of response.detected_items ?? []) {
     const box = detectedItem.bounding_boxes?.[0];
     const boxScore = Number(box?.score ?? 0);
-    if (box && Number.isFinite(boxScore) && boxScore > 0 && (topScore === null || boxScore > topScore)) {
+    const normalizedBox = (box && Number.isFinite(boxScore) && boxScore > 0) ? {
+      imageWidth: Number(box.image_width ?? 0),
+      imageHeight: Number(box.image_height ?? 0),
+      left: Number(box.left ?? 0),
+      top: Number(box.upper ?? 0),
+      right: Number(box.right ?? 0),
+      bottom: Number(box.lower ?? 0),
+    } : null;
+
+    if (normalizedBox && (topScore === null || boxScore > topScore)) {
       topScore = boxScore;
-      const imageWidth = Number(box.image_width ?? 0);
-      const imageHeight = Number(box.image_height ?? 0);
       topBox = {
-        left: Number(box.left ?? 0),
-        top: Number(box.upper ?? 0),
-        right: Number(box.right ?? 0),
-        bottom: Number(box.lower ?? 0),
-        imageWidth: Number.isFinite(imageWidth) && imageWidth > 0 ? imageWidth : 0,
-        imageHeight: Number.isFinite(imageHeight) && imageHeight > 0 ? imageHeight : 0,
+        left: normalizedBox.left,
+        top: normalizedBox.top,
+        right: normalizedBox.right,
+        bottom: normalizedBox.bottom,
+        imageWidth: normalizedBox.imageWidth,
+        imageHeight: normalizedBox.imageHeight,
       };
     }
 
     for (const candidate of detectedItem.candidate_items ?? []) {
-      items.push({
+      const item: BrickognizeRawItem = {
         id: candidate.external_items?.[0]?.external_id ?? candidate.id,
         type: candidate.type,
         score: candidate.score,
-      });
+      };
+      if (normalizedBox && normalizedBox.imageWidth > 0 && normalizedBox.imageHeight > 0) {
+        item.bounding_box = {
+          left: normalizedBox.left,
+          top: normalizedBox.top,
+          right: normalizedBox.right,
+          bottom: normalizedBox.bottom,
+          imageWidth: normalizedBox.imageWidth,
+          imageHeight: normalizedBox.imageHeight,
+        };
+      }
+      items.push(item);
     }
   }
 

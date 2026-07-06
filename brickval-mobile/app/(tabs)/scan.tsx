@@ -5,6 +5,7 @@ import { router, useFocusEffect } from "expo-router";
 import { TopBar } from "../../components/TopBar";
 import { CameraScanner } from "../../components/CameraScanner";
 import { ResultCard } from "../../components/ResultCard";
+import { DetectionOverlay } from "../../components/DetectionOverlay";
 import { LegoLoaderNative } from "../../components/LegoLoaderNative";
 import { ManualEntrySheet, type ManualEntryHandle } from "../../components/ManualEntrySheet";
 import {
@@ -168,6 +169,8 @@ export default function ScanHome() {
   const [bulkMinifigResultQueue, setBulkMinifigResultQueue] = useState<LookupDetailResult[]>([]);
   const [guestScansUsed, setGuestScansUsedState] = useState(0);
   const [smartAutoScanEnabled, setSmartAutoScanEnabled] = useState(true);
+  const [capturedPhotoUri, setCapturedPhotoUri] = useState<string | null>(null);
+  const [photoLayout, setPhotoLayout] = useState({ width: 0, height: 0 });
   const [collectionLimitPromptVisible, setCollectionLimitPromptVisible] = useState(false);
   const [detectionMessage, setDetectionMessage] = useState<string>(
     "We found LEGO minifigures and parts in this photo. Pick one to view its value."
@@ -219,6 +222,13 @@ export default function ScanHome() {
       useNativeDriver: true,
     }).start();
   }, [candidateProgress, status]);
+
+  useEffect(() => {
+    if (status === "idle") {
+      setCapturedPhotoUri(null);
+      setPhotoLayout({ width: 0, height: 0 });
+    }
+  }, [status]);
 
   useEffect(() => {
     void syncGuestScansUsed();
@@ -573,6 +583,7 @@ export default function ScanHome() {
     setSelectedBulkMinifigIds([]);
     setBulkMinifigQueue([]);
     setBulkMinifigResultQueue([]);
+    setCapturedPhotoUri(photoUri);
     if (mode === "set") {
       manualRef.current?.open();
       return;
@@ -887,6 +898,34 @@ export default function ScanHome() {
             },
           ]}
         >
+          {capturedPhotoUri ? (
+            <Animated.View
+              style={[
+                s.photoPreview,
+                {
+                  opacity: candidateProgress,
+                },
+              ]}
+              onLayout={(e) => {
+                const { width, height } = e.nativeEvent.layout;
+                setPhotoLayout({ width, height });
+              }}
+            >
+              <Image source={{ uri: capturedPhotoUri }} style={s.photoImage} resizeMode="contain" />
+              {photoLayout.width > 0 ? (
+                <DetectionOverlay
+                  detections={detections.map((d) => {
+                    const priced = bulkMinifigResultQueue.find(
+                      (r) => r.item_type === "minifig" && r.set_number === d.id
+                    );
+                    return { detection: d, result: priced ?? null };
+                  })}
+                  imageWidth={photoLayout.width}
+                  imageHeight={photoLayout.height}
+                />
+              ) : null}
+            </Animated.View>
+          ) : null}
           <View style={s.bulkReviewHeader}>
             <View style={s.bulkReviewCopy}>
               <Text style={s.candidateTitle}>{detectionReviewTitle}</Text>
@@ -1405,7 +1444,20 @@ function getStyles(c: ThemeColors, m: ModeColors) {
     gap: 10,
   },
   detectionSheet: {
-    maxHeight: 460,
+    maxHeight: 360,
+  },
+  photoPreview: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: m.border,
+    overflow: "hidden",
+    minHeight: 160,
+    marginBottom: 4,
+  },
+  photoImage: {
+    width: "100%",
+    height: 220,
+    borderRadius: 13,
   },
   colorSheet: {
     maxHeight: 520,

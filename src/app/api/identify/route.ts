@@ -42,7 +42,7 @@ type IdentificationResponse = {
   candidates?: Candidate[];
 };
 type NonSetIdentifyResponse = {
-  detections: { id: string; item_type: "minifig" | "part"; score: number }[];
+  detections: { id: string; item_type: "minifig" | "part"; score: number; bounding_box?: { left: number; top: number; right: number; bottom: number; imageWidth: number; imageHeight: number } }[];
   scansUsed?: number;
   isPro?: boolean;
 };
