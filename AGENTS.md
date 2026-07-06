@@ -15,31 +15,41 @@ The existing Next.js app remains the hosted API/web backend at `brickvalue.live`
 ### What's working
 - ✅ Expo Router native app shell in `brickval-mobile`
 - ✅ Three-tab native structure: Home, Scan, Settings
-- ✅ Native first-launch onboarding flow with local goal pick
+- ✅ Native first-launch onboarding flow with local goal pick (now with MotiView entrance animations, larger dark phone frame)
 - ✅ Local on-device collection list with portfolio-style total value dashboard
 - ✅ Curved historical market-value chart with dynamic tooltip and timeline labels from saved item transaction history
-- ✅ Home tab now reflects active Pro state with an unlimited-scans status banner instead of the free-plan inventory prompt
-- ✅ Native scan mode switch for LEGO sets vs minifigures
-- ✅ Fullscreen native camera scanner with stability detection and manual shutter
+- ✅ Home tab reflects active Pro state with unlimited-scans status banner
+- ✅ Home dashboard: card-grid inventory with filter pills (All/Sets/Minifigs/All), expanded chart horizons (1D/1W/1M/3M/1Y/ALL)
+- ✅ Native scan mode switch: full-width segmented control at top of scan screen (Minifigures / Sets)
+- ✅ Fullscreen native camera scanner with smart auto-scan for minifigs (captures when steady), stability detection/manual shutter, status pill overlay
+- ✅ Smart auto-scan toggle in Settings
 - ✅ Manual set number entry sheet for LEGO sets only
-- ✅ Native result card with price count-up reveal
-- ✅ Add-to-collection action from the native result card
+- ✅ On-photo detection overlay: SVG bounding boxes with item labels/prices over captured photo (from Brickognize bounding boxes)
+- ✅ Bulk minifigure scanning + pricing pipeline (Brickognize multi-detection + bulk-lookup API)
+- ✅ Native result card with price count-up reveal, Used/New condition price cards, split save buttons, market rows table
+- ✅ Add-to-collection action with market_rows stored per saved item
 - ✅ WebView modal for account, upgrade, and full result pages on `brickvalue.live`
 - ✅ API bridge from the native app to hosted `/api/identify` and `/api/lookup`
-- ✅ Native Superwall placement trigger for the upgrade flow
-- ✅ Clerk auth token handoff now includes the Clerk user id for native identity sync
-- ✅ Native account login is now working across email, Google, and Apple sign-in
-- ✅ iOS production build now patches CocoaPods modular headers for Clerk Google Sign-In so EAS pod install succeeds with the native paywall stack
+- ✅ Native Superwall placement trigger for the upgrade flow (awaited register, proper error handling)
+- ✅ Clerk auth token handoff includes the Clerk user id for native identity sync
+- ✅ Native account login across email, Google, and Apple sign-in
+- ✅ iOS production build patches CocoaPods modular headers for Clerk Google Sign-In (withGoogleStaticSwiftPods.js)
 - ✅ Android APK preview build profile via EAS
-- ✅ iOS bundle identifier is present in Expo config for the shared native app
-- ✅ Hosted backend still supports Codex Vision set number detection, BrickLink, eBay, Brickset, Frankfurter, Supabase cache, Clerk, and Stripe webhook flow
+- ✅ iOS bundle identifier present in Expo config
+- ✅ Theme system: persisted preference (system/dark/light), loaded from SecureStore, all screens use theme-aware mode colors
+- ✅ OTA updates via EAS Update (runtimeVersion policy, channel assignment)
+- ✅ EAS Update OTA: config in app.json + expo-updates dependency
+- ✅ All tests pass (36 test suite)
+- ✅ Hosted backend: Codex Vision set detection, BrickLink, eBay, Brickset, Frankfurter, Supabase cache, Clerk, Stripe webhook
 
 ### What's NOT working / stubbed
-- ⏸️ Native paywall now opens a live Superwall placement with localized StoreKit pricing variables, but the dashboard campaign still needs to stay in sync with the app placement name and product state in App Store Connect
+- ⏸️ Native paywall opens a live Superwall placement with localized StoreKit pricing variables, but the dashboard campaign still needs to stay in sync with the app placement name and product state in App Store Connect
 - ⏸️ Paywall flow still needs final on-device verification through purchase completion after the recent pricing-template fix
 - ⏸️ Collection storage is local-device only for the MVP; backend sync is future work
 - ⏸️ eBay Marketplace Insights: awaiting Application Growth Check approval, falls back to Browse API (active listings)
-- ⏸️ No native test coverage configured
+- ⏸️ Brickset free tier: 100 requests/day limit — may throttle under high load
+- ⏸️ Bulk scan post-pricing overlay: detection boxes show before pricing, but no "Add all to collection" overlay with prices after bulk pricing yet
+- ⏸️ No native test coverage configured beyond unit tests
 
 ## Tech Stack
 - Expo 55, Expo Router, React Native 0.84, React 19, TypeScript 5.9
@@ -67,6 +77,8 @@ brickval-mobile/
 │   └── webview-modal.tsx         # Hosted web screens inside native modal
 ├── components/
 │   ├── CameraScanner.tsx         # Fullscreen camera + auto-capture on stability
+│   ├── DetectionOverlay.tsx      # SVG detection boxes over captured photo
+│   ├── MarketRowsTable.tsx       # Market transaction rows with expand/collapse
 │   ├── ViewfinderOverlay.tsx     # Scan frame, dim overlay, scanline, hint
 │   ├── ResultCard.tsx            # Native result sheet + price reveal animation
 │   ├── ManualEntrySheet.tsx      # Native manual LEGO set number input sheet
@@ -75,6 +87,11 @@ brickval-mobile/
 ├── lib/
 │   ├── api.ts                    # Native API bridge + set/minifig result normalization
 │   ├── collection.ts             # Local collection storage + per-item market history
+│   ├── collection-core.ts        # Collection item types, normalization, upsert, limit checking
+│   ├── detection-choice.ts       # Brickognize detection review/batch logic
+│   ├── market-rows.ts            # Build/normalize market row display data from API results
+│   ├── preferences.ts            # Persistent user preferences (theme, smart auto-scan)
+│   ├── ThemeProvider.tsx          # Theme context with persisted system/dark/light
 │   ├── haptics.ts                # Native haptic helpers
 │   ├── onboarding.ts             # First-launch onboarding state helpers
 │   ├── paywall.ts                # Superwall trigger + identity helpers
@@ -288,11 +305,18 @@ This is not optional — it is in the success criteria.
 - `brickval-mobile/app/(tabs)/settings.tsx` — settings tab
 - `brickval-mobile/app/webview-modal.tsx` — hosted web screens inside native modal
 - `brickval-mobile/components/CameraScanner.tsx` — fullscreen camera scanner
+- `brickval-mobile/components/DetectionOverlay.tsx` — SVG detection boxes over captured photo
 - `brickval-mobile/components/ResultCard.tsx` — native result card + price reveal
 - `brickval-mobile/components/ManualEntrySheet.tsx` — manual LEGO set number input
 - `brickval-mobile/lib/api.ts` — native API bridge to `brickvalue.live` plus set/minifig result normalization
 - `brickval-mobile/lib/collection.ts` — local collection storage, item type tagging, and per-item market history
-- `brickval-mobile/eas.json` — Android APK preview + production build profiles
+- `brickval-mobile/lib/collection-core.ts` — collection item types, normalization, upsert, limit checking
+- `brickval-mobile/lib/detection-choice.ts` — Brickognize detection review and batch minifig selection
+- `brickval-mobile/lib/market-rows.ts` — build/normalize market row display data from API results
+- `brickval-mobile/lib/preferences.ts` — persistent user preferences (theme, smart auto-scan)
+- `brickval-mobile/lib/ThemeProvider.tsx` — theme context with persisted system/dark/light
+- `brickval-mobile/lib/stability.ts` — camera stability detector for auto-scan
+- `brickval-mobile/eas.json` — Android APK preview + production build profiles, iOS TestFlight submit config
 - `brickval-mobile/app.json` — Expo app config, Android package, future iOS bundle ID
 - `src/lib/ebay.ts` — eBay OAuth 2.0, Browse API + Marketplace Insights, multi-marketplace
 - `src/lib/bricklink.ts` — BrickLink OAuth 1.0, price guide (sold + stock), item info
@@ -316,6 +340,8 @@ This is not optional — it is in the success criteria.
 ## Dev Commands
 - From `brickval-mobile`: `npm run start` — start Expo
 - From `brickval-mobile`: `npm run android` — run Expo Android workflow
+- From `brickval-mobile`: `npm run build:ios` — build iOS production archive via EAS
+- From `brickval-mobile`: `npm run submit:ios` — submit iOS build to TestFlight
 - From `brickval-mobile`: `npm run build:preview` — build Android APK for internal preview
 - From `brickval-mobile`: `npm run build:android` — build Android production app bundle
 - From repo root: `npm run dev` — start hosted Next.js backend/web app when needed
