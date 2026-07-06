@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Animated, Easing, View, StyleSheet, Pressable, Text, ScrollView, TextInput, Image, Modal } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { router, useFocusEffect } from "expo-router";
 import { TopBar } from "../../components/TopBar";
@@ -186,6 +187,7 @@ export default function ScanHome() {
   const { triggerUpgrade, openAccountForUpgrade, openAccountForSignIn, showDisclosure, handleDisclosureContinue, handleDisclosureDismiss } = useUpgrade();
   const { colors: palette, c: activeColors, mode: themeMode } = useTheme();
   const s = useMemo(() => getStyles(palette, activeColors), [palette, activeColors, themeMode]);
+  const insets = useSafeAreaInsets();
 
   const syncGuestScansUsed = async () => {
     const count = await getGuestScansUsed();
@@ -868,9 +870,40 @@ export default function ScanHome() {
           setErrorMessage(null);
           manualRef.current?.open();
         }}
+        showModeSwitch={false}
       />
 
       <TopBar onAccountPress={openAccountForSignIn} />
+
+      <View pointerEvents="box-none" style={[s.modeHeader, { top: insets.top + 66 }]}>
+        <View style={s.modeSegment}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ selected: mode === "minifig" }}
+            accessibilityLabel="Scan minifigures and parts"
+            style={[s.modeSegmentBtn, mode === "minifig" && s.modeSegmentBtnActive]}
+            onPress={() => setMode("minifig")}
+          >
+            <Text style={[s.modeSegmentText, mode === "minifig" && s.modeSegmentTextActive]}>
+              Minifigures
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ selected: mode === "set" }}
+            accessibilityLabel="Enter set number"
+            style={[s.modeSegmentBtn, mode === "set" && s.modeSegmentBtnActive]}
+            onPress={() => {
+              setMode("set");
+              setTimeout(() => manualRef.current?.open(), 200);
+            }}
+          >
+            <Text style={[s.modeSegmentText, mode === "set" && s.modeSegmentTextActive]}>
+              Sets
+            </Text>
+          </Pressable>
+        </View>
+      </View>
 
       {__DEV__ && status === "idle" && (
         <Pressable style={s.previewBtn} onPress={showPreviewResult}>
@@ -1282,6 +1315,43 @@ export default function ScanHome() {
 function getStyles(c: ThemeColors, m: ModeColors) {
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: m.background },
+  modeHeader: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    zIndex: 12,
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  modeSegment: {
+    flexDirection: "row",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(13,13,15,0.84)",
+    padding: 4,
+    gap: 4,
+    width: "100%",
+    maxWidth: 320,
+  },
+  modeSegmentBtn: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modeSegmentBtnActive: {
+    backgroundColor: palette.lego.yellow,
+  },
+  modeSegmentText: {
+    color: "rgba(255,255,255,0.56)",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  modeSegmentTextActive: {
+    color: "#0D0D0F",
+  },
   previewBtn: {
     position: "absolute",
     top: 188,

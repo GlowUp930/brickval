@@ -18,13 +18,14 @@ interface Props {
   enabled: boolean; // false while a result card is up
   mode: ScanMode;
   smartAutoScanEnabled: boolean;
+  showModeSwitch: boolean;
   onModeChange: (mode: ScanMode) => void;
   onCapture: (photoUri: string) => void;
   onPhotoPress: () => void;
   onManualPress: () => void;
 }
 
-export function CameraScanner({ enabled, mode, smartAutoScanEnabled, onModeChange, onCapture, onPhotoPress, onManualPress }: Props) {
+export function CameraScanner({ enabled, mode, smartAutoScanEnabled, showModeSwitch, onModeChange, onCapture, onPhotoPress, onManualPress }: Props) {
   const cameraRef = useRef<CameraView>(null);
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
@@ -189,7 +190,7 @@ export function CameraScanner({ enabled, mode, smartAutoScanEnabled, onModeChang
         scanning={scanning}
         mode={mode}
         onModeChange={onModeChange}
-        showModeSwitch={enabled}
+        showModeSwitch={showModeSwitch}
       />
 
       <View style={[styles.statusPill, { bottom: Math.max(254, insets.bottom + 222) }]}>
