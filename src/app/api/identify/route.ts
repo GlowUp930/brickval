@@ -5,6 +5,7 @@ import { anthropic } from "@/lib/anthropic";
 import {
   buildBrickognizeBulkScanCrops,
   buildBrickognizeRecoveryCrops,
+  MINIFIG_DETECTION_LIMIT,
   analyzeBrickognizeSearchResponse,
   normalizeBrickognizeDetections,
   normalizeBrickognizeSearchResponse,
@@ -176,7 +177,7 @@ async function identifyNonSet(
   }
 
   const CROP_BATCH_SIZE = 4;
-  for (let i = 0; i < recoveryCrops.length && mergeDetections().length < 12; i += CROP_BATCH_SIZE) {
+  for (let i = 0; i < recoveryCrops.length && mergeDetections().length < MINIFIG_DETECTION_LIMIT; i += CROP_BATCH_SIZE) {
     const cropBatch = recoveryCrops.slice(i, i + CROP_BATCH_SIZE);
     const cropResults = await Promise.all(cropBatch.map((crop) => identifyCrop(crop)));
     collectedDetections.push(...cropResults.flat());
