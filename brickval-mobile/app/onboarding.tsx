@@ -22,7 +22,7 @@ type ScreenId = "value" | "demo" | "goal" | "trust" | "review";
 
 const SCREENS: ScreenId[] = ["value", "demo", "goal", "trust", "review"];
 
-const r2d2Image = { uri: "https://img.bricklink.com/ItemImage/SN/0/75308-1.png" };
+const r2d2Image = require("../assets/onboarding-r2d2.png");
 const demoVideo = require("../assets/onboarding-demo.mp4");
 const shieldIcon = require("../assets/onboarding-shield.png");
 const bricklinkLogo = require("../assets/onboarding-bricklink.png");
