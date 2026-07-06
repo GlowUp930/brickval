@@ -2,7 +2,7 @@ import { router, useFocusEffect } from "expo-router";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import { Alert, Image, Linking, Platform, View, Text, StyleSheet, Pressable, ScrollView, type ImageSourcePropType, type StyleProp, type ViewStyle } from "react-native";
+import { Alert, Image, Linking, Platform, View, Text, StyleSheet, Pressable, ScrollView, Switch, type ImageSourcePropType, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as SecureStore from "expo-secure-store";
 import { BadgeCheck, ChevronRight, Crown, RotateCcw, ScrollText, ShieldCheck, Trash2, Wrench } from "lucide-react-native";
@@ -17,6 +17,11 @@ import { useUpgrade } from "../../lib/useUpgrade";
 import { useTheme, type ModeColors } from "../../lib/ThemeProvider";
 import { PrePurchaseDisclosure } from "../../components/PrePurchaseDisclosure";
 import { colors } from "../../lib/theme";
+import {
+  getSmartAutoScanPreference,
+  setSmartAutoScanPreference,
+  type ThemePreference,
+} from "../../lib/preferences";
 
 const AVATAR_KEY = "brickval_account_avatar";
 const PRIVACY_URL = "https://brickvalue.live/privacy";
@@ -50,9 +55,9 @@ export default function SettingsScreen() {
   const [items, setItems] = useState<CollectionItem[]>([]);
   const [avatar, setAvatar] = useState<AvatarKey>("classic");
   const [proStatus, setProStatus] = useState<boolean | null>(null);
+  const [smartAutoScanEnabled, setSmartAutoScanEnabled] = useState(true);
   const { triggerUpgrade, openAccountForSignIn, showDisclosure, handleDisclosureContinue, handleDisclosureDismiss } = useUpgrade();
-  const { colors } = useTheme();
-  const c = colors.dark;
+  const { colors: palette, c, preference, setPreference } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => getStyles(c, insets.top, insets.bottom), [c, insets.top, insets.bottom]);
 
@@ -60,14 +65,16 @@ export default function SettingsScreen() {
     useCallback(() => {
       let active = true;
       async function loadCollection() {
-        const [collection, savedAvatar, nextProStatus] = await Promise.all([
+        const [collection, savedAvatar, nextProStatus, smartAutoScan] = await Promise.all([
           getCollection(),
           SecureStore.getItemAsync(AVATAR_KEY),
           getNativeProStatus(),
+          getSmartAutoScanPreference(),
         ]);
         if (!active) return;
         setItems(collection);
         setProStatus(nextProStatus);
+        setSmartAutoScanEnabled(smartAutoScan);
         if (isAvatarKey(savedAvatar)) {
           setAvatar(savedAvatar);
         }
@@ -85,6 +92,15 @@ export default function SettingsScreen() {
   const partCount = items.reduce((total, item) => total + (item.item_type === "part" ? item.quantity ?? 1 : 0), 0);
   const selectedAvatar = getAvatarOption(avatar);
   const storeName = Platform.OS === "ios" ? "App Store" : "Google Play";
+
+  const updateSmartAutoScan = (enabled: boolean) => {
+    setSmartAutoScanEnabled(enabled);
+    void setSmartAutoScanPreference(enabled);
+  };
+
+  const updateThemePreference = (nextPreference: ThemePreference) => {
+    setPreference(nextPreference);
+  };
 
   const openAccount = () => {
     router.push("/account");
@@ -146,8 +162,8 @@ export default function SettingsScreen() {
 
         <GlassSurface style={styles.passportCard} tintColor="rgba(31, 32, 38, 0.84)">
           <View style={styles.studRail}>
-            <View style={[styles.stud, { backgroundColor: colors.lego.yellow }]} />
-            <View style={[styles.stud, { backgroundColor: colors.lego.yellow }]} />
+            <View style={[styles.stud, { backgroundColor: palette.lego.yellow }]} />
+            <View style={[styles.stud, { backgroundColor: palette.lego.yellow }]} />
             <View style={[styles.stud, { backgroundColor: c.borderStrong }]} />
           </View>
           <View style={styles.passportTop}>
@@ -193,15 +209,15 @@ export default function SettingsScreen() {
         <View style={styles.group}>
           <Text style={styles.groupTitle}>Access</Text>
           {proStatus ? (
-            <View style={[styles.row, { borderColor: colors.lego.yellowBorder }]}>
-              <View style={[styles.rowGlyph, { borderColor: colors.lego.yellow, backgroundColor: colors.lego.yellowSoft }]}>
-                <Text style={[styles.rowGlyphText, { color: colors.light.text }]}>PRO</Text>
+            <View style={[styles.row, { borderColor: palette.lego.yellowBorder }]}>
+              <View style={[styles.rowGlyph, { borderColor: palette.lego.yellow, backgroundColor: palette.lego.yellowSoft }]}>
+                <Text style={[styles.rowGlyphText, { color: palette.light.text }]}>PRO</Text>
               </View>
               <View style={styles.rowCopy}>
                 <Text style={styles.rowTitle}>BrickVal Pro active</Text>
                 <Text style={styles.rowMeta}>Unlimited scans unlocked on this device</Text>
               </View>
-              <SettingsIcon symbol="checkmark.seal.fill" fallbackIcon={BadgeCheck} color={colors.lego.yellowPressed} />
+              <SettingsIcon symbol="checkmark.seal.fill" fallbackIcon={BadgeCheck} color={palette.lego.yellowPressed} />
             </View>
           ) : (
             <SettingsRow
@@ -209,7 +225,7 @@ export default function SettingsScreen() {
               fallbackIcon={Crown}
               title="BrickVal Pro"
               meta={`Native ${storeName} upgrade flow`}
-              accent={colors.lego.yellow}
+              accent={palette.lego.yellow}
               onPress={() => void triggerUpgrade()}
             />
           )}
@@ -231,9 +247,40 @@ export default function SettingsScreen() {
             fallbackIcon={Wrench}
             title="Redesign playground"
             meta="Preview component directions before changing the live app"
-            accent={colors.lego.yellow}
+            accent={palette.lego.yellow}
             onPress={() => router.push("/playground")}
           />
+        </View>
+
+        <View style={styles.group}>
+          <Text style={styles.groupTitle}>Scan and appearance</Text>
+          <SettingsSwitchRow
+            title="Smart auto-scan"
+            meta="Capture automatically when the camera is steady"
+            value={smartAutoScanEnabled}
+            onValueChange={updateSmartAutoScan}
+          />
+          <View style={styles.themePanel}>
+            <View style={styles.rowCopy}>
+              <Text style={styles.rowTitle}>App theme</Text>
+              <Text style={styles.rowMeta}>Dark remains the default premium BrickVal look</Text>
+            </View>
+            <View style={styles.themeOptions}>
+              {(["system", "dark", "light"] as ThemePreference[]).map((option) => (
+                <Pressable
+                  key={option}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: preference === option }}
+                  style={[styles.themeOption, preference === option && styles.themeOptionActive]}
+                  onPress={() => updateThemePreference(option)}
+                >
+                  <Text style={[styles.themeOptionText, preference === option && styles.themeOptionTextActive]}>
+                    {option === "system" ? "System" : option === "dark" ? "Dark" : "Light"}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
         </View>
 
         <View style={styles.group}>
@@ -251,7 +298,7 @@ export default function SettingsScreen() {
             fallbackIcon={ScrollText}
             title="Terms and subscription terms"
             meta="App terms, Apple purchase terms, and LEGO disclaimer"
-            accent={colors.lego.yellow}
+            accent={palette.lego.yellow}
             onPress={() => void openExternalUrl(TERMS_URL)}
           />
         </View>
@@ -279,7 +326,7 @@ export default function SettingsScreen() {
             fallbackIcon={Trash2}
             title="Clear local collection"
             meta="Removes saved items from this phone only"
-            accent={colors.semantic.danger}
+            accent={palette.semantic.danger}
             destructive
             onPress={handleClearCollection}
           />
@@ -295,8 +342,7 @@ export default function SettingsScreen() {
 }
 
 function AvatarImage({ source, size }: { source: ImageSourcePropType; size: number }) {
-  const { colors } = useTheme();
-  const c = colors.dark;
+  const { c } = useTheme();
   const s = getStyles(c);
   return (
     <View style={[s.avatarImageFrame, { width: size, height: size, borderRadius: size * 0.24 }]}>
@@ -362,8 +408,7 @@ function SettingsRow({
   destructive?: boolean;
   onPress: () => void;
 }) {
-  const { colors } = useTheme();
-  const c = colors.dark;
+  const { c } = useTheme();
   const s = getStyles(c);
   return (
     <Pressable
@@ -381,6 +426,38 @@ function SettingsRow({
       </View>
       <ChevronRight size={19} color={c.textDisabled} strokeWidth={2.5} />
     </Pressable>
+  );
+}
+
+function SettingsSwitchRow({
+  title,
+  meta,
+  value,
+  onValueChange,
+}: {
+  title: string;
+  meta: string;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+}) {
+  const { c } = useTheme();
+  const s = getStyles(c);
+  return (
+    <View style={s.row}>
+      <View style={s.rowCopy}>
+        <Text style={s.rowTitle}>{title}</Text>
+        <Text style={s.rowMeta}>{meta}</Text>
+      </View>
+      <Switch
+        accessibilityRole="switch"
+        accessibilityLabel={title}
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: c.backgroundMuted, true: colors.lego.yellow }}
+        thumbColor={value ? colors.light.text : c.textMuted}
+        ios_backgroundColor={c.backgroundMuted}
+      />
+    </View>
   );
 }
 
@@ -530,5 +607,38 @@ function getStyles(c: ModeColors, safeTop = 0, safeBottom = 0) {
     localValue: { color: c.text, fontSize: 22, fontWeight: "900" },
     localLabel: { color: c.textDisabled, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
     localDivider: { width: 1, height: 42, backgroundColor: c.border },
+    themePanel: {
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+      padding: 14,
+      gap: 14,
+    },
+    themeOptions: {
+      flexDirection: "row",
+      gap: 8,
+      borderRadius: 999,
+      backgroundColor: c.backgroundMuted,
+      padding: 4,
+    },
+    themeOption: {
+      flex: 1,
+      minHeight: 36,
+      borderRadius: 999,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    themeOptionActive: {
+      backgroundColor: colors.lego.yellow,
+    },
+    themeOptionText: {
+      color: c.textMuted,
+      fontSize: 12,
+      fontWeight: "900",
+    },
+    themeOptionTextActive: {
+      color: colors.light.text,
+    },
   });
 }

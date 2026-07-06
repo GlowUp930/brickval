@@ -40,7 +40,18 @@ export function getDetectionReviewSummary(detections: IdentificationDetection[])
 }
 
 export function getBatchableMinifigIds(detections: IdentificationDetection[]): string[] {
-  return detections.filter((item) => item.item_type === "minifig").map((item) => item.id);
+  const seen = new Set<string>();
+  const ids: string[] = [];
+
+  for (const item of detections) {
+    if (item.item_type !== "minifig") continue;
+    const id = item.id.trim().replace(/[^a-z0-9]/gi, "").toLowerCase();
+    if (id.length < 3 || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+
+  return ids;
 }
 
 export function toggleBulkMinifigSelection(selectedIds: string[], id: string): string[] {

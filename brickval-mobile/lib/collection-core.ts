@@ -1,5 +1,6 @@
 import type { MarketHistoryPoint, LookupItemType, ScanMode } from "./api";
 import { normalizeImageUrl } from "./image-url";
+import { normalizeMarketRows, type MarketRow } from "./market-rows";
 
 export type CollectionItemType = LookupItemType;
 export type CollectionCondition = "new_sealed" | "used";
@@ -22,6 +23,7 @@ export interface CollectionItem {
   color_id?: number | null;
   color_name?: string | null;
   market_history: MarketHistoryPoint[];
+  market_rows?: MarketRow[];
   added_at: string;
 }
 
@@ -30,6 +32,13 @@ export interface CollectionItemIdentifier {
   item_type: CollectionItemType;
   condition: CollectionCondition;
   color_id?: number | null;
+}
+
+export interface CollectionAddLimitCheck {
+  currentQuantity: number;
+  addQuantity: number;
+  isPro: boolean;
+  limit: number;
 }
 
 function isSameCollectionSlot(entry: CollectionItem, item: CollectionItem): boolean {
@@ -55,6 +64,16 @@ export function normalizeCondition(value: unknown): CollectionCondition {
   return value === "used" ? "used" : "new_sealed";
 }
 
+export function shouldBlockCollectionAdd({
+  currentQuantity,
+  addQuantity,
+  isPro,
+  limit,
+}: CollectionAddLimitCheck): boolean {
+  if (isPro) return false;
+  return currentQuantity + normalizeQuantity(addQuantity) > limit;
+}
+
 export function normalizeCollectionItem(item: CollectionItem): CollectionItem {
   return {
     ...item,
@@ -73,6 +92,7 @@ export function normalizeCollectionItem(item: CollectionItem): CollectionItem {
         date: normalizeHistoryDate(point.date) ?? "",
       }))
       .filter((point) => point.date && Number.isFinite(point.price_usd) && point.price_usd > 0),
+    market_rows: normalizeMarketRows((item as Partial<CollectionItem>).market_rows),
   };
 }
 

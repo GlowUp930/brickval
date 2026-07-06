@@ -227,17 +227,17 @@ export async function presentUpgrade(): Promise<PaywallPresentationResult> {
     );
   });
 
-  void Superwall.shared
-    .register({
+  try {
+    await Superwall.shared.register({
       placement: SUPERWALL_UPGRADE_PLACEMENT,
       handler,
-    })
-    .catch((error) => {
-      console.warn("Superwall register failed", error);
-      capturePaywallError("register_exception", error, {
-        placement: SUPERWALL_UPGRADE_PLACEMENT,
-      });
     });
+  } catch (error: any) {
+    capturePaywallError("register_exception", error, {
+      placement: SUPERWALL_UPGRADE_PLACEMENT,
+    });
+    return { status: "error", reason: error?.message ?? "Paywall registration failed" };
+  }
 
   return { status: "presented" };
 }

@@ -80,9 +80,12 @@ async function lookupOneMinifig(figNumber: string): Promise<BulkMinifigLookupRow
 }
 
 export async function POST(req: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let userId: string | null = null;
+  try {
+    const session = await auth();
+    userId = session.userId;
+  } catch (error) {
+    console.warn("[bulk-lookup] Auth unavailable; continuing as guest.", error);
   }
 
   let body: { setNumbers?: unknown; figNumbers?: unknown; mode?: unknown };
@@ -121,27 +124,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No valid minifigure numbers" }, { status: 400 });
   }
 
-  // Gate: one check per bulk job (stubbed — returns allowed: true)
-  let gate;
-  try {
-    gate = await checkAndIncrementScan(userId);
-  } catch (err) {
-    console.error("[bulk-lookup] Scan gate error:", err);
-    return NextResponse.json(
-      { error: "internal", message: "Something went wrong. Please try again." },
-      { status: 500 }
-    );
-  }
+  // Gate signed-in users once per bulk job. Guests are limited on-device by the native app.
+  if (userId) {
+    let gate;
+    try {
+      gate = await checkAndIncrementScan(userId);
+    } catch (err) {
+      console.error("[bulk-lookup] Scan gate error:", err);
+      return NextResponse.json(
+        { error: "internal", message: "Something went wrong. Please try again." },
+        { status: 500 }
+      );
+    }
 
-  if (!gate.allowed) {
-    return NextResponse.json(
-      {
-        error: "paywall",
-        message: "You've used all 5 free scans. Upgrade to Brickvalue Pro to continue.",
-        scansUsed: gate.scansUsed,
-      },
-      { status: 402 }
-    );
+    if (!gate.allowed) {
+      return NextResponse.json(
+        {
+          error: "paywall",
+          message: "You've used all 5 free scans. Upgrade to Brickvalue Pro to continue.",
+          scansUsed: gate.scansUsed,
+        },
+        { status: 402 }
+      );
+    }
   }
 
   if (mode === "minifig") {

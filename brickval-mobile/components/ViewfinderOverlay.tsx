@@ -180,7 +180,7 @@ export function ViewfinderOverlay({ pulse, scanning, mode, onModeChange, showMod
       <Animated.View pointerEvents="none" style={[styles.hintWrap, { opacity: hint }]}>
         <Text style={styles.hint}>
           {mode === "minifig"
-            ? "Center minifigures or parts, then tap capture."
+            ? "Center minifigures or parts. BrickVal scans when steady."
             : "Set mode uses manual entry. Tap Enter set number below."}
         </Text>
       </Animated.View>

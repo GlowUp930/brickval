@@ -7,6 +7,7 @@ import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { ViewfinderOverlay } from "./ViewfinderOverlay";
 import { tap, success, warn } from "../lib/haptics";
 import type { ScanMode } from "../lib/api";
+import { useStabilityDetector } from "../lib/stability";
 
 const SET_ACCENT = "#F2CD37";
 const MINIFIG_ACCENT = "#F2CD37";
@@ -16,24 +17,28 @@ const MUTED = "rgba(245,245,247,0.68)";
 interface Props {
   enabled: boolean; // false while a result card is up
   mode: ScanMode;
+  smartAutoScanEnabled: boolean;
   onModeChange: (mode: ScanMode) => void;
   onCapture: (photoUri: string) => void;
   onPhotoPress: () => void;
   onManualPress: () => void;
 }
 
-export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoPress, onManualPress }: Props) {
+export function CameraScanner({ enabled, mode, smartAutoScanEnabled, onModeChange, onCapture, onPhotoPress, onManualPress }: Props) {
   const cameraRef = useRef<CameraView>(null);
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [torch, setTorch] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [autoCooldown, setAutoCooldown] = useState(false);
+  const autoResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeAccent = mode === "minifig" ? MINIFIG_ACCENT : SET_ACCENT;
 
-  const handleCapturePress = async () => {
-    if (!cameraRef.current || scanning) return;
+  const handleCapturePress = async (source: "manual" | "auto" = "manual") => {
+    if (!enabled || !cameraRef.current || scanning) return;
+    if (source === "auto" && autoCooldown) return;
     setScanning(true);
-    tap();
+    if (source === "manual") tap();
     try {
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.7,
@@ -43,11 +48,19 @@ export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoP
       if (photo?.uri) onCapture(photo.uri);
     } catch (e) {
       warn();
+      setScanning(false);
     } finally {
       // CameraScanner stays "scanning" until parent disables `enabled`,
       // which resets via the effect below.
     }
   };
+
+  const { pulse, reset } = useStabilityDetector(
+    Boolean(enabled && permission?.granted && mode === "minifig" && smartAutoScanEnabled && !scanning && !autoCooldown),
+    () => {
+      void handleCapturePress("auto");
+    }
+  );
 
   // Drive the pulse circle with RN's built-in Animated API
   const pulseAnim = useRef(new Animated.Value(0)).current;
@@ -72,8 +85,33 @@ export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoP
   useEffect(() => {
     if (enabled) {
       setScanning(false);
+      setAutoCooldown(true);
+      if (autoResetTimer.current) {
+        clearTimeout(autoResetTimer.current);
+      }
+      autoResetTimer.current = setTimeout(() => {
+        setAutoCooldown(false);
+        reset();
+      }, 1200);
     }
-  }, [enabled]);
+  }, [enabled, reset]);
+
+  useEffect(() => {
+    return () => {
+      if (autoResetTimer.current) {
+        clearTimeout(autoResetTimer.current);
+      }
+    };
+  }, []);
+
+  const scanPillText =
+    !enabled
+      ? scanning ? "Checking value" : "Match found"
+      : mode === "set"
+        ? "Enter set number"
+        : smartAutoScanEnabled
+          ? pulse > 0.55 ? "Hold steady" : "Looking for LEGO..."
+          : "Tap to scan";
 
   if (!permission) return <View style={styles.black} />;
   if (mode === "set") {
@@ -147,12 +185,17 @@ export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoP
         enableTorch={torch}
       />
       <ViewfinderOverlay
-        pulse={0}
+        pulse={pulse}
         scanning={scanning}
         mode={mode}
         onModeChange={onModeChange}
         showModeSwitch={enabled}
       />
+
+      <View style={[styles.statusPill, { bottom: Math.max(254, insets.bottom + 222) }]}>
+        <View style={[styles.statusDot, scanning && styles.statusDotActive]} />
+        <Text style={styles.statusPillText}>{scanPillText}</Text>
+      </View>
 
       <View style={[styles.bottomBar, { bottom: Math.max(154, insets.bottom + 122) }]}>
         <View style={styles.leftStack}>
@@ -185,8 +228,9 @@ export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoP
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Scan minifigures and parts"
-            onPress={handleCapturePress}
+            onPress={() => handleCapturePress("manual")}
             style={styles.captureWrap}
+            disabled={!enabled}
             hitSlop={12}
           >
             <Animated.View
@@ -204,7 +248,7 @@ export function CameraScanner({ enabled, mode, onModeChange, onCapture, onPhotoP
               <View style={styles.captureDot} />
             </View>
           </Pressable>
-          <Text style={styles.captureLabel}>Tap to scan</Text>
+          <Text style={styles.captureLabel}>{smartAutoScanEnabled ? "Manual scan" : "Tap to scan"}</Text>
         </View>
 
         <Pressable
@@ -328,6 +372,33 @@ const styles = StyleSheet.create({
     opacity: 0.72,
   },
   captureLabel: { color: INK, fontSize: 12, fontWeight: "900" },
+  statusPill: {
+    position: "absolute",
+    alignSelf: "center",
+    minHeight: 42,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "rgba(0,0,0,0.64)",
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: MUTED,
+  },
+  statusDotActive: {
+    backgroundColor: SET_ACCENT,
+  },
+  statusPillText: {
+    color: INK,
+    fontSize: 14,
+    fontWeight: "800",
+  },
   photoBtn: {
     width: 62,
     height: 62,

@@ -29,8 +29,7 @@
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "CAMERA",
-        "VIBRATE",
-        "android.permission.CAMERA"
+        "VIBRATE"
       ],
       "blockedPermissions": [
         "android.permission.ACTIVITY_RECOGNITION"

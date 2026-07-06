@@ -14,6 +14,8 @@ import {
 import { LookupDetailResult } from "../lib/api";
 import type { CollectionCondition } from "../lib/collection";
 import { buildMarketSnapshot } from "../lib/market-snapshot";
+import { buildMarketRows } from "../lib/market-rows";
+import { MarketRowsTable } from "./MarketRowsTable";
 import { QuestionMarkPlaceholder } from "./QuestionMarkPlaceholder";
 import { useTheme, type ModeColors } from "../lib/ThemeProvider";
 import { colors as themeColors } from "../lib/theme";
@@ -48,8 +50,8 @@ export function ResultCard({
   onViewDetails,
 }: Props) {
   const { height: screenHeight } = useWindowDimensions();
-  const { colors, c, mode } = useTheme();
-  const s = useMemo(() => getStyles(c), [c, mode]);
+  const { colors, c } = useTheme();
+  const s = useMemo(() => getStyles(c), [c]);
   const sheetMaxHeight = Math.round(screenHeight * 0.82);
   const slide = useRef(new Animated.Value(screenHeight)).current;
   const backdrop = useRef(new Animated.Value(0)).current;
@@ -169,6 +171,9 @@ export function ResultCard({
   const gain = pricing.gain_pct;
   const partColor = result.item_type === "part" ? result.part_info.color_name ?? "Color required" : null;
   const snapshot = buildMarketSnapshot(result, condition);
+  const usedSnapshot = buildMarketSnapshot(result, "used");
+  const newSnapshot = buildMarketSnapshot(result, "new_sealed");
+  const marketRows = buildMarketRows(result);
   const selectedUnitValue = snapshot.price_usd;
   const confidenceText =
     snapshot.confidence === "high"
@@ -214,6 +219,12 @@ export function ResultCard({
         : "Retail estimate unavailable";
   const collectionValue =
     selectedUnitValue === null ? "Unavailable" : `$${Math.round(selectedUnitValue * quantity).toLocaleString()}`;
+  const formatCompactPrice = (value: number | null) =>
+    value === null ? "N/A" : `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  const handleQuickAdd = (nextCondition: CollectionCondition) => {
+    setCondition(nextCondition);
+    onAddToCollection(result, { quantity, condition: nextCondition });
+  };
   const contentTranslateY = content.interpolate({
     inputRange: [0, 1],
     outputRange: [12, 0],
@@ -253,32 +264,6 @@ export function ResultCard({
               },
             ]}
           >
-            <View style={s.pricePanel}>
-              <View style={s.priceHeader}>
-                <Text style={s.priceLabel}>Market price</Text>
-                <View style={[s.confidencePill, confidencePillStyle]}>
-                  <Text style={s.confidenceText}>{confidenceText}</Text>
-                </View>
-              </View>
-              <Text style={s.price}>{displayPrice}</Text>
-              <Text style={s.rrp}>{rrpText}</Text>
-
-              <View style={s.snapshotStrip}>
-                <View style={s.snapshotCell}>
-                  <Text style={s.snapshotLabel}>Source</Text>
-                  <Text style={s.snapshotValue} numberOfLines={1}>{snapshot.source_name}</Text>
-                </View>
-                <View style={[s.snapshotCell, s.snapshotCellDivider]}>
-                  <Text style={s.snapshotLabel}>Basis</Text>
-                  <Text style={s.snapshotValue} numberOfLines={1}>{snapshotTypeText}</Text>
-                </View>
-                <View style={s.snapshotCell}>
-                  <Text style={s.snapshotLabel}>Count</Text>
-                  <Text style={s.snapshotValue} numberOfLines={1}>{snapshotCountText}</Text>
-                </View>
-              </View>
-            </View>
-
             <View style={s.heroRow}>
               {result.image_url ? (
                 <Image source={{ uri: result.image_url }} style={s.thumb} />
@@ -286,6 +271,9 @@ export function ResultCard({
                 <QuestionMarkPlaceholder style={s.thumb} />
               )}
               <View style={s.identity}>
+                <View style={s.matchPill}>
+                  <Text style={s.matchPillText}>Match found</Text>
+                </View>
                 <Text style={s.name} numberOfLines={2}>
                   {result.name}
                 </Text>
@@ -297,6 +285,37 @@ export function ResultCard({
                   {itemLabel} #{result.set_number}
                   {partColor ? ` · ${partColor}` : ""}
                 </Text>
+              </View>
+            </View>
+
+            <View style={s.pricePanel}>
+              <View style={s.priceHeader}>
+                <Text style={s.priceLabel}>Market value</Text>
+                <View style={[s.confidencePill, confidencePillStyle]}>
+                  <Text style={s.confidenceText}>{confidenceText}</Text>
+                </View>
+              </View>
+              <Text style={s.price}>{displayPrice}</Text>
+              <Text style={s.rrp}>{rrpText}</Text>
+              <View style={s.conditionPriceRow}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Use used market price"
+                  style={[s.conditionPriceCard, condition === "used" && s.conditionPriceCardActive]}
+                  onPress={() => setCondition("used")}
+                >
+                  <Text style={s.conditionPriceLabel}>Used</Text>
+                  <Text style={s.conditionPriceValue}>{formatCompactPrice(usedSnapshot.price_usd)}</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Use new market price"
+                  style={[s.conditionPriceCard, condition === "new_sealed" && s.conditionPriceCardActive]}
+                  onPress={() => setCondition("new_sealed")}
+                >
+                  <Text style={s.conditionPriceLabel}>New</Text>
+                  <Text style={s.conditionPriceValue}>{formatCompactPrice(newSnapshot.price_usd)}</Text>
+                </Pressable>
               </View>
             </View>
 
@@ -363,43 +382,53 @@ export function ResultCard({
                 </View>
               </View>
 
-              <View style={s.conditionRow}>
-                {[
-                  { key: "new_sealed" as const, label: "New / sealed" },
-                  { key: "used" as const, label: "Used" },
-                ].map((option) => (
-                  <Pressable
-                    key={option.key}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: condition === option.key }}
-                    accessibilityLabel={option.label}
-                    style={[s.conditionPill, condition === option.key && s.conditionPillActive]}
-                    onPress={() => setCondition(option.key)}
-                  >
-                    <Text style={[s.conditionText, condition === option.key && s.conditionTextActive]}>
-                      {option.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-
               <Text style={s.collectionNote}>
                 Saved value: {collectionValue}
               </Text>
+            </View>
+
+            <View style={s.snapshotStrip}>
+              <View style={s.snapshotCell}>
+                <Text style={s.snapshotLabel}>Source</Text>
+                <Text style={s.snapshotValue} numberOfLines={1}>{snapshot.source_name}</Text>
+              </View>
+              <View style={[s.snapshotCell, s.snapshotCellDivider]}>
+                <Text style={s.snapshotLabel}>Basis</Text>
+                <Text style={s.snapshotValue} numberOfLines={1}>{snapshotTypeText}</Text>
+              </View>
+              <View style={s.snapshotCell}>
+                <Text style={s.snapshotLabel}>Count</Text>
+                <Text style={s.snapshotValue} numberOfLines={1}>{snapshotCountText}</Text>
+              </View>
+            </View>
+
+            <View style={s.marketRowsBlock}>
+              <Text style={s.marketRowsTitle}>Market rows</Text>
+              <MarketRowsTable rows={marketRows} colors={colors} activeColors={c} />
             </View>
           </Animated.View>
         </ScrollView>
 
         <View style={s.actions}>
-          <Animated.View style={{ transform: [{ scale: savePulse }] }}>
+          <Animated.View style={[s.quickActions, { transform: [{ scale: savePulse }] }]}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={addedToCollection ? "Added to collection" : "Save to collection"}
+              accessibilityLabel={addedToCollection ? "Added to collection" : "Add as used"}
+              style={[s.secondaryQuick, addedToCollection && s.primarySaved]}
+              onPress={() => handleQuickAdd("used")}
+            >
+              <Text style={[s.secondaryQuickText, addedToCollection && s.primarySavedText]}>
+                {addedToCollection ? "Added" : "Add as Used"}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={addedToCollection ? "Added to collection" : "Add as new"}
               style={[s.primary, addedToCollection && s.primarySaved]}
-              onPress={() => onAddToCollection(result, { quantity, condition })}
+              onPress={() => handleQuickAdd("new_sealed")}
             >
               <Text style={[s.primaryText, addedToCollection && s.primarySavedText]}>
-                {addedToCollection ? "Added to collection" : "Save to collection"}
+                {addedToCollection ? "Added" : "Add as New"}
               </Text>
             </Pressable>
           </Animated.View>
@@ -453,8 +482,24 @@ function getStyles(c: ModeColors) { return StyleSheet.create({
     gap: 18,
   },
   heroRow: { flexDirection: "row", alignItems: "center" },
-  thumb: { width: 76, height: 76, borderRadius: 8 },
+  thumb: { width: 82, height: 82, borderRadius: 8 },
   identity: { flex: 1, marginLeft: 14, gap: 4 },
+  matchPill: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    backgroundColor: hexToRgba(themeColors.semantic.success, 0.14),
+    borderWidth: 1,
+    borderColor: hexToRgba(themeColors.semantic.success, 0.36),
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    marginBottom: 2,
+  },
+  matchPillText: {
+    color: themeColors.semantic.success,
+    fontSize: 10,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
   name: { color: c.text, fontWeight: "800", fontSize: 17, lineHeight: 22 },
   meta: { color: c.textMuted, fontSize: 13, lineHeight: 18 },
   setNo: { color: themeColors.lego.yellow, fontSize: 12, fontWeight: "800", marginTop: 2 },
@@ -466,6 +511,38 @@ function getStyles(c: ModeColors) { return StyleSheet.create({
     padding: 16,
     alignItems: "flex-start",
     gap: 8,
+  },
+  conditionPriceRow: {
+    width: "100%",
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 6,
+  },
+  conditionPriceCard: {
+    flex: 1,
+    minHeight: 72,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.surface,
+    padding: 12,
+    justifyContent: "center",
+    gap: 4,
+  },
+  conditionPriceCardActive: {
+    borderColor: hexToRgba(themeColors.lego.yellow, 0.55),
+    backgroundColor: hexToRgba(themeColors.lego.yellow, 0.12),
+  },
+  conditionPriceLabel: {
+    color: c.textMuted,
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+  conditionPriceValue: {
+    color: c.text,
+    fontSize: 22,
+    fontWeight: "900",
   },
   priceHeader: {
     width: "100%",
@@ -609,8 +686,36 @@ function getStyles(c: ModeColors) { return StyleSheet.create({
   conditionText: { color: c.textMuted, fontSize: 12, fontWeight: "800" },
   conditionTextActive: { color: c.text },
   collectionNote: { color: c.textMuted, fontSize: 12, fontWeight: "700" },
+  marketRowsBlock: {
+    gap: 10,
+  },
+  marketRowsTitle: {
+    color: c.text,
+    fontSize: 14,
+    fontWeight: "900",
+  },
   actions: { gap: 10 },
+  quickActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  secondaryQuick: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryQuickText: {
+    color: c.text,
+    fontSize: 15,
+    fontWeight: "900",
+  },
   primary: {
+    flex: 1,
     backgroundColor: themeColors.lego.yellow,
     borderRadius: 8,
     paddingVertical: 16,

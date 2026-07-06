@@ -15,6 +15,7 @@ import {
   getConditionMarketValueUsd,
   type LookupDetailResult,
 } from "./api";
+import { buildMarketRows } from "./market-rows";
 
 const COLLECTION_KEY = "brickval_collection";
 let fallbackCollection: CollectionItem[] = [];
@@ -78,6 +79,7 @@ export async function addToCollection(
     color_id: result.item_type === "part" ? result.part_info.color_id : null,
     color_name: result.item_type === "part" ? result.part_info.color_name : null,
     market_history: getConditionMarketHistory(result, condition),
+    market_rows: buildMarketRows(result),
     added_at: new Date().toISOString(),
   };
   const next = upsertCollectionItem(existing, item);

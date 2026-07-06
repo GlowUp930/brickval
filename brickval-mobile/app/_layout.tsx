@@ -70,5 +70,5 @@ export default function RootLayout() {
     </ClerkProvider>
   );
 
-  return <ThemeProvider initial="light">{app}</ThemeProvider>;
+  return <ThemeProvider initial="dark">{app}</ThemeProvider>;
 }

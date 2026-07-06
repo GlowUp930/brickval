@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { upsertCollectionItem, normalizeCollectionItem, removeCollectionItem, type CollectionItem } from "../lib/collection-core";
+import {
+  shouldBlockCollectionAdd,
+  upsertCollectionItem,
+  normalizeCollectionItem,
+  removeCollectionItem,
+  type CollectionItem,
+} from "../lib/collection-core";
 
 test("normalizeCollectionItem preserves explicit part type and color metadata", () => {
   const normalized = normalizeCollectionItem({
@@ -19,6 +25,7 @@ test("normalizeCollectionItem preserves explicit part type and color metadata", 
     color_id: 5,
     color_name: "Red",
     market_history: [{ date: "2026-04-20T12:00:00.000Z", price_usd: 0.24, source: "bricklink" }],
+    market_rows: [{ id: "sold-1", label: "BrickLink sold", meta: "Apr 20 · US", priceUsd: 0.24 }],
     added_at: "2026-04-20T00:00:00.000Z",
   } satisfies CollectionItem);
 
@@ -27,6 +34,7 @@ test("normalizeCollectionItem preserves explicit part type and color metadata", 
   assert.equal(normalized.color_name, "Red");
   assert.equal(normalized.image_url, "https://example.com/3001.png");
   assert.equal(normalized.market_history[0]?.date, "2026-04-20");
+  assert.equal(normalized.market_rows?.[0]?.label, "BrickLink sold");
 });
 
 test("removeCollectionItem only removes the matching part color and condition", () => {
@@ -212,4 +220,10 @@ test("upsertCollectionItem increases quantity for the same part color and condit
   assert.equal(next.length, 1);
   assert.equal(next[0].quantity, 7);
   assert.equal(next[0].market_value_usd, 0.26);
+});
+
+test("shouldBlockCollectionAdd blocks free users only when the add would exceed the limit", () => {
+  assert.equal(shouldBlockCollectionAdd({ currentQuantity: 9, addQuantity: 1, isPro: false, limit: 10 }), false);
+  assert.equal(shouldBlockCollectionAdd({ currentQuantity: 9, addQuantity: 2, isPro: false, limit: 10 }), true);
+  assert.equal(shouldBlockCollectionAdd({ currentQuantity: 10, addQuantity: 1, isPro: true, limit: 10 }), false);
 });

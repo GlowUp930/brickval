@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Animated, Easing, View, StyleSheet, Pressable, Text, ScrollView, TextInput, Image, Modal } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { TopBar } from "../../components/TopBar";
 import { CameraScanner } from "../../components/CameraScanner";
 import { ResultCard } from "../../components/ResultCard";
@@ -16,6 +16,7 @@ import {
   type IdentificationCandidate,
   type IdentificationDetection,
   type IdentificationResult,
+  type BulkMinifigLookupRow,
   type LookupDetailResult,
   type LookupItemType,
   type PartColorOption,
@@ -31,6 +32,7 @@ import {
 } from "../../lib/detection-choice";
 import { getBrickLinkPreviewImageUrl } from "../../lib/image-url";
 import { addToCollection, getCollection, type CollectionCondition } from "../../lib/collection";
+import { shouldBlockCollectionAdd } from "../../lib/collection-core";
 import { success, warn } from "../../lib/haptics";
 import { getNativeProStatus } from "../../lib/paywall";
 import { setLatestLookupResult } from "../../lib/live-result";
@@ -40,9 +42,10 @@ import {
   prepareLookupAccess,
   GUEST_SCAN_LIMIT,
 } from "../../lib/guest-scan-limits";
+import { getSmartAutoScanPreference } from "../../lib/preferences";
 import { useUpgrade } from "../../lib/useUpgrade";
 import { PrePurchaseDisclosure } from "../../components/PrePurchaseDisclosure";
-import { useTheme } from "../../lib/ThemeProvider";
+import { useTheme, type ModeColors } from "../../lib/ThemeProvider";
 import type { ThemeColors } from "../../lib/theme";
 
 /**
@@ -164,6 +167,7 @@ export default function ScanHome() {
   const [bulkMinifigQueue, setBulkMinifigQueue] = useState<string[]>([]);
   const [bulkMinifigResultQueue, setBulkMinifigResultQueue] = useState<LookupDetailResult[]>([]);
   const [guestScansUsed, setGuestScansUsedState] = useState(0);
+  const [smartAutoScanEnabled, setSmartAutoScanEnabled] = useState(true);
   const [collectionLimitPromptVisible, setCollectionLimitPromptVisible] = useState(false);
   const [detectionMessage, setDetectionMessage] = useState<string>(
     "We found LEGO minifigures and parts in this photo. Pick one to view its value."
@@ -177,8 +181,8 @@ export default function ScanHome() {
   const pendingServerScansUsed = useRef<number | null>(null);
   const promptedOnCurrentResult = useRef(false);
   const { triggerUpgrade, openAccountForUpgrade, openAccountForSignIn, showDisclosure, handleDisclosureContinue, handleDisclosureDismiss } = useUpgrade();
-  const { colors: c, mode: themeMode } = useTheme();
-  const s = useMemo(() => getStyles(c), [c, themeMode]);
+  const { colors: palette, c: activeColors, mode: themeMode } = useTheme();
+  const s = useMemo(() => getStyles(palette, activeColors), [palette, activeColors, themeMode]);
 
   const syncGuestScansUsed = async () => {
     const count = await getGuestScansUsed();
@@ -220,6 +224,18 @@ export default function ScanHome() {
     void syncGuestScansUsed();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      getSmartAutoScanPreference().then((enabled) => {
+        if (active) setSmartAutoScanEnabled(enabled);
+      });
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
+
   useEffect(() => {
     return () => {
       if (collectionLimitPromptTimer.current) {
@@ -249,6 +265,7 @@ export default function ScanHome() {
   const showCollectionLimitPrompt = useCallback(() => {
     if (collectionLimitPromptTimer.current) {
       clearTimeout(collectionLimitPromptTimer.current);
+      collectionLimitPromptTimer.current = null;
     }
 
     setCollectionLimitPromptVisible(true);
@@ -259,11 +276,7 @@ export default function ScanHome() {
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
-
-    collectionLimitPromptTimer.current = setTimeout(() => {
-      hideCollectionLimitPrompt();
-    }, 3800);
-  }, [collectionLimitProgress, hideCollectionLimitPrompt]);
+  }, [collectionLimitProgress]);
 
   const handleCollectionLimitSignIn = useCallback(() => {
     hideCollectionLimitPrompt();
@@ -427,12 +440,41 @@ export default function ScanHome() {
 
   const handleBulkMinifigPricing = async () => {
     if (selectedBulkMinifigIds.length === 0) return;
+    const figIds = Array.from(
+      new Set(
+        selectedBulkMinifigIds
+          .map((id) => id.trim().replace(/[^a-z0-9]/gi, "").toLowerCase())
+          .filter((id) => id.length >= 3)
+      )
+    );
+    if (figIds.length === 0) return;
+
     setStatus("loading");
-    setLoadingMsg(`Fetching prices for ${selectedBulkMinifigIds.length} minifigures...`);
+    setLoadingMsg(`Fetching prices for ${figIds.length} minifigures...`);
     await yieldToRender();
 
     try {
-      const rows = await bulkLookupMinifigs(selectedBulkMinifigIds);
+      let rows: BulkMinifigLookupRow[];
+      try {
+        rows = await bulkLookupMinifigs(figIds);
+      } catch {
+        rows = [];
+      }
+      if (rows.length === 0) {
+        const fallbackRows = await Promise.all(
+          figIds.map(async (figNumber): Promise<BulkMinifigLookupRow> => {
+            try {
+              const result = await lookupSet(figNumber, "minifig");
+              return result.item_type === "minifig"
+                ? { figNumber, result, error: null }
+                : { figNumber, result: null, error: "not_found" };
+            } catch {
+              return { figNumber, result: null, error: "not_found" };
+            }
+          })
+        );
+        rows = fallbackRows;
+      }
       const pricedResults = rows
         .map((row) => row.result)
         .filter((row): row is NonNullable<typeof row> => row !== null);
@@ -757,14 +799,18 @@ export default function ScanHome() {
   ) => {
     const existing = await getCollection();
     const currentCollectionQuantity = existing.reduce((total, entry) => total + (entry.quantity ?? 1), 0);
-    const nextCollectionQuantity = currentCollectionQuantity + options.quantity;
+    const isPro = Boolean(await getNativeProStatus());
 
-    if (nextCollectionQuantity > FREE_COLLECTION_LIMIT) {
-      const isPro = await getNativeProStatus();
-      if (!isPro) {
-        showCollectionLimitPrompt();
-        return;
-      }
+    if (
+      shouldBlockCollectionAdd({
+        currentQuantity: currentCollectionQuantity,
+        addQuantity: options.quantity,
+        isPro,
+        limit: FREE_COLLECTION_LIMIT,
+      })
+    ) {
+      showCollectionLimitPrompt();
+      return;
     }
 
     await addToCollection(item, options);
@@ -803,6 +849,7 @@ export default function ScanHome() {
       <CameraScanner
         enabled={status === "idle"}
         mode={mode}
+        smartAutoScanEnabled={smartAutoScanEnabled}
         onModeChange={setMode}
         onCapture={handleCapture}
         onPhotoPress={handlePhotoPress}
@@ -1038,7 +1085,7 @@ export default function ScanHome() {
             value={partColorQuery}
             onChangeText={setPartColorQuery}
             placeholder="Search colors"
-            placeholderTextColor={c.dark.textDisabled}
+            placeholderTextColor={activeColors.textDisabled}
             style={s.colorSearch}
             autoCorrect={false}
             autoCapitalize="words"
@@ -1156,9 +1203,9 @@ export default function ScanHome() {
           >
             <View style={s.collectionLimitAccent} />
             <View style={s.collectionLimitCopy}>
-              <Text style={s.collectionLimitTitle}>Free limit reached</Text>
+              <Text style={s.collectionLimitTitle}>Collection limit reached</Text>
               <Text style={s.collectionLimitBody}>
-                You have saved 10 items. Sign in and upgrade to Pro for unlimited collection space.
+                You have saved the maximum 10 free items. Upgrade to Pro to add unlimited LEGO sets, minifigures, and parts.
               </Text>
             </View>
             <View style={s.collectionLimitActions}>
@@ -1193,9 +1240,9 @@ export default function ScanHome() {
   );
 }
 
-function getStyles(c: ThemeColors) {
+function getStyles(c: ThemeColors, m: ModeColors) {
   return StyleSheet.create({
-  root: { flex: 1, backgroundColor: c.dark.background },
+  root: { flex: 1, backgroundColor: m.background },
   previewBtn: {
     position: "absolute",
     top: 188,
@@ -1203,13 +1250,13 @@ function getStyles(c: ThemeColors) {
     zIndex: 20,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: c.dark.border,
-    backgroundColor: c.dark.backgroundMuted,
+    borderColor: m.border,
+    backgroundColor: m.backgroundMuted,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
   previewText: {
-    color: c.dark.text,
+    color: m.text,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -1222,7 +1269,7 @@ function getStyles(c: ThemeColors) {
     borderRadius: 16,
     borderWidth: 1,
     borderColor: c.semantic.danger,
-    backgroundColor: c.dark.background,
+    backgroundColor: m.background,
     padding: 14,
     gap: 10,
   },
@@ -1233,7 +1280,7 @@ function getStyles(c: ThemeColors) {
     textTransform: "uppercase",
   },
   errorBody: {
-    color: c.dark.text,
+    color: m.text,
     fontSize: 13,
     fontWeight: "700",
     lineHeight: 19,
@@ -1251,7 +1298,7 @@ function getStyles(c: ThemeColors) {
     justifyContent: "center",
   },
   errorPrimaryText: {
-    color: c.dark.textInverse,
+    color: m.textInverse,
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1260,26 +1307,30 @@ function getStyles(c: ThemeColors) {
     paddingHorizontal: 16,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: c.dark.border,
+    borderColor: m.border,
     alignItems: "center",
     justifyContent: "center",
   },
   errorSecondaryText: {
-    color: c.dark.text,
+    color: m.text,
     fontSize: 12,
     fontWeight: "900",
   },
   collectionLimitModal: {
     flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 18,
-    paddingTop: 110,
+    backgroundColor: "rgba(0,0,0,0.52)",
   },
   collectionLimitPrompt: {
+    width: "100%",
+    maxWidth: 360,
     overflow: "hidden",
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: c.lego.yellow,
-    backgroundColor: c.dark.background,
+    borderColor: "rgba(242,205,55,0.42)",
+    backgroundColor: m.backgroundElevated,
     shadowColor: "#000",
     shadowOpacity: 0.28,
     shadowRadius: 18,
@@ -1302,7 +1353,7 @@ function getStyles(c: ThemeColors) {
     textTransform: "uppercase",
   },
   collectionLimitBody: {
-    color: c.dark.text,
+    color: m.text,
     fontSize: 14,
     fontWeight: "700",
     lineHeight: 20,
@@ -1318,12 +1369,12 @@ function getStyles(c: ThemeColors) {
     flex: 1,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: c.dark.border,
+    borderColor: m.border,
     alignItems: "center",
     justifyContent: "center",
   },
   collectionLimitSecondaryText: {
-    color: c.dark.text,
+    color: m.text,
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1336,7 +1387,7 @@ function getStyles(c: ThemeColors) {
     justifyContent: "center",
   },
   collectionLimitPrimaryText: {
-    color: c.dark.textInverse,
+    color: m.textInverse,
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1348,8 +1399,8 @@ function getStyles(c: ThemeColors) {
     zIndex: 35,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: c.dark.border,
-    backgroundColor: c.dark.surface,
+    borderColor: m.border,
+    backgroundColor: m.surface,
     padding: 16,
     gap: 10,
   },
@@ -1360,13 +1411,13 @@ function getStyles(c: ThemeColors) {
     maxHeight: 520,
   },
   candidateTitle: {
-    color: c.dark.text,
+    color: m.text,
     fontSize: 12,
     fontWeight: "900",
     textTransform: "uppercase",
   },
   candidateBody: {
-    color: c.dark.text,
+    color: m.text,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "700",
@@ -1384,7 +1435,7 @@ function getStyles(c: ThemeColors) {
     gap: 4,
   },
   bulkReviewSummary: {
-    color: c.dark.textMuted,
+    color: m.textMuted,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -1396,7 +1447,7 @@ function getStyles(c: ThemeColors) {
     justifyContent: "center",
     borderWidth: 1,
     borderColor: c.lego.yellow,
-    backgroundColor: c.dark.backgroundMuted,
+    backgroundColor: m.backgroundMuted,
   },
   bulkReviewBadgeText: {
     color: c.lego.yellow,
@@ -1420,7 +1471,7 @@ function getStyles(c: ThemeColors) {
     gap: 8,
   },
   detectionSectionTitle: {
-    color: c.dark.textMuted,
+    color: m.textMuted,
     fontSize: 11,
     fontWeight: "900",
     textTransform: "uppercase",
@@ -1433,14 +1484,14 @@ function getStyles(c: ThemeColors) {
     gap: 12,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: c.dark.border,
-    backgroundColor: c.dark.surface,
+    borderColor: m.border,
+    backgroundColor: m.surface,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   candidateRowSelected: {
     borderColor: c.lego.yellow,
-    backgroundColor: c.dark.backgroundMuted,
+    backgroundColor: m.backgroundMuted,
   },
   candidateThumb: {
     width: 42,
@@ -1448,8 +1499,8 @@ function getStyles(c: ThemeColors) {
     borderRadius: 13,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: c.dark.border,
-    backgroundColor: c.dark.surface,
+    borderColor: m.border,
+    backgroundColor: m.surface,
   },
   candidateThumbImage: {
     width: "100%",
@@ -1464,7 +1515,7 @@ function getStyles(c: ThemeColors) {
     backgroundColor: c.lego.yellow,
   },
   candidateRankText: {
-    color: c.dark.textInverse,
+    color: m.textInverse,
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1473,12 +1524,12 @@ function getStyles(c: ThemeColors) {
     gap: 2,
   },
   candidateId: {
-    color: c.dark.text,
+    color: m.text,
     fontSize: 14,
     fontWeight: "900",
   },
   candidateScore: {
-    color: c.dark.textMuted,
+    color: m.textMuted,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -1494,10 +1545,10 @@ function getStyles(c: ThemeColors) {
     height: 26,
     borderRadius: 13,
     borderWidth: 1,
-    borderColor: c.dark.border,
+    borderColor: m.border,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: c.dark.surface,
+    backgroundColor: m.surface,
   },
   bulkCheckSelected: {
     borderColor: c.lego.yellow,
@@ -1510,7 +1561,7 @@ function getStyles(c: ThemeColors) {
     lineHeight: 16,
   },
   bulkCheckTextSelected: {
-    color: c.dark.textInverse,
+    color: m.textInverse,
   },
   candidateActions: {
     flexDirection: "row",
@@ -1521,12 +1572,12 @@ function getStyles(c: ThemeColors) {
     flex: 1,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: c.dark.border,
+    borderColor: m.border,
     alignItems: "center",
     justifyContent: "center",
   },
   candidateSecondaryText: {
-    color: c.dark.text,
+    color: m.text,
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1542,7 +1593,7 @@ function getStyles(c: ThemeColors) {
     opacity: 0.45,
   },
   candidatePrimaryText: {
-    color: c.dark.textInverse,
+    color: m.textInverse,
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1550,9 +1601,9 @@ function getStyles(c: ThemeColors) {
     minHeight: 44,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: c.dark.border,
-    backgroundColor: c.dark.surface,
-    color: c.dark.text,
+    borderColor: m.border,
+    backgroundColor: m.surface,
+    color: m.text,
     paddingHorizontal: 14,
     fontSize: 14,
     fontWeight: "700",
@@ -1561,25 +1612,25 @@ function getStyles(c: ThemeColors) {
     minHeight: 52,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: c.dark.border,
-    backgroundColor: c.dark.surface,
+    borderColor: m.border,
+    backgroundColor: m.surface,
     paddingHorizontal: 14,
     paddingVertical: 10,
     justifyContent: "center",
     gap: 2,
   },
   colorName: {
-    color: c.dark.text,
+    color: m.text,
     fontSize: 14,
     fontWeight: "900",
   },
   colorMeta: {
-    color: c.dark.textMuted,
+    color: m.textMuted,
     fontSize: 11,
     fontWeight: "700",
   },
   colorEmpty: {
-    color: c.dark.textMuted,
+    color: m.textMuted,
     fontSize: 13,
     fontWeight: "700",
     textAlign: "center",

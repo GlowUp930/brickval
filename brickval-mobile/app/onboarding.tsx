@@ -12,6 +12,7 @@ import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as StoreReview from "expo-store-review";
 import { useVideoPlayer, VideoView } from "expo-video";
+import { MotiView } from "moti";
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { setCompletedOnboarding, setPrimaryGoal, type PrimaryGoal } from "../lib/onboarding";
@@ -189,7 +190,12 @@ function ValueScreen({ s, c }: { s: ReturnType<typeof getStyles>; c: ThemeColors
         subtitle="Scan sets and minifigures, check value, and track your collection."
       />
 
-      <View style={s.valueCard}>
+      <MotiView
+        from={{ opacity: 0, scale: 0.96, translateY: 18 }}
+        animate={{ opacity: 1, scale: 1, translateY: 0 }}
+        transition={{ type: "timing", duration: 420 }}
+        style={s.valueCard}
+      >
         <Image source={r2d2Image} style={s.setImage} resizeMode="contain" />
         <View>
           <Text style={s.label}>Set</Text>
@@ -203,7 +209,12 @@ function ValueScreen({ s, c }: { s: ReturnType<typeof getStyles>; c: ThemeColors
           </View>
           <Text style={s.gain}>+24%</Text>
         </View>
-        <View style={s.chartBox}>
+        <MotiView
+          from={{ opacity: 0, translateY: 12 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 520, delay: 160 }}
+          style={s.chartBox}
+        >
           <Svg width="100%" height="100%" viewBox="0 0 260 92">
             <Defs>
               <LinearGradient id="chartFill" x1="0" x2="0" y1="16" y2="92">
@@ -225,8 +236,8 @@ function ValueScreen({ s, c }: { s: ReturnType<typeof getStyles>; c: ThemeColors
             />
             <Circle cx={258} cy={5} r={4.5} fill={c.lego.yellow} stroke="#FFFFFF" strokeWidth={3} />
           </Svg>
-        </View>
-      </View>
+        </MotiView>
+      </MotiView>
     </>
   );
 }
@@ -301,7 +312,12 @@ function GoalScreen({
 function TrustScreen({ s }: { s: ReturnType<typeof getStyles> }) {
   return (
     <>
-      <View style={s.trustVisual}>
+      <MotiView
+        from={{ opacity: 0, scale: 0.94, rotate: "-3deg" }}
+        animate={{ opacity: 1, scale: 1, rotate: "0deg" }}
+        transition={{ type: "timing", duration: 460 }}
+        style={s.trustVisual}
+      >
         <View style={s.trustCanvas}>
           <View style={s.trustOrbit} />
           <View style={[s.sourceChip, s.bricklinkChip]}>
@@ -316,7 +332,7 @@ function TrustScreen({ s }: { s: ReturnType<typeof getStyles> }) {
             <Image source={shieldIcon} style={s.shieldIcon} resizeMode="contain" />
           </View>
         </View>
-      </View>
+      </MotiView>
 
       <HeroText
         s={s}
@@ -347,9 +363,14 @@ function ReviewScreen({ s }: { s: ReturnType<typeof getStyles> }) {
           <View style={[s.indiePill, s.indiePillRight]}>
             <Text style={s.indiePillText}>Made by a fan</Text>
           </View>
-          <View style={s.indieLogoCircle}>
+          <MotiView
+            from={{ opacity: 0, scale: 0.82 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", delay: 120 }}
+            style={s.indieLogoCircle}
+          >
             <Image source={appLogo} style={s.indieLogo} resizeMode="contain" />
-          </View>
+          </MotiView>
         </View>
 
         <View style={s.reviewCard}>
@@ -546,13 +567,14 @@ function getStyles(c: ThemeColors) {
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
+      marginTop: -8,
     },
     demoPhoneFrame: {
-      width: 188,
-      height: 390,
-      borderRadius: 38,
-      padding: 8,
-      backgroundColor: c.light.borderStrong,
+      width: 244,
+      height: 506,
+      borderRadius: 48,
+      padding: 7,
+      backgroundColor: "#08090A",
       shadowColor: "#111111",
       shadowOpacity: 0.18,
       shadowRadius: 28,
@@ -561,14 +583,16 @@ function getStyles(c: ThemeColors) {
     },
     demoPhoneScreen: {
       flex: 1,
-      borderRadius: 30,
+      borderRadius: 41,
       overflow: "hidden",
-      backgroundColor: c.light.text,
+      backgroundColor: "#08090A",
       borderWidth: 1,
-      borderColor: "rgba(17, 17, 17, 0.22)",
+      borderColor: "rgba(255, 255, 255, 0.16)",
     },
     demoVideo: {
-      flex: 1,
+      width: "100%",
+      height: "100%",
+      backgroundColor: "#08090A",
     },
     goalList: {
       flex: 1,

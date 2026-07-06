@@ -12,20 +12,15 @@ import {
   type GestureResponderEvent,
 } from "react-native";
 import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
-import { normalizeHistoryDate, type BrickLinkDetail, type EbaySale, type LookupDetailResult } from "../../lib/api";
+import { normalizeHistoryDate } from "../../lib/api";
 import { getLatestLookupResult } from "../../lib/live-result";
 import { QuestionMarkPlaceholder } from "../../components/QuestionMarkPlaceholder";
 import { useTheme } from "../../lib/ThemeProvider";
 import { type ThemeColors } from "../../lib/theme";
+import { buildMarketRows } from "../../lib/market-rows";
+import { MarketRowsTable } from "../../components/MarketRowsTable";
 const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const USD_DECIMAL = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-type MarketRow = {
-  id: string;
-  label: string;
-  meta: string;
-  priceUsd: number;
-};
 
 type CollectorField = {
   label: string;
@@ -36,13 +31,6 @@ function formatRetailComparison(value: number | null) {
   if (value === null) return "No retail comparison";
   if (value >= 0) return `${Math.round(value)}% higher than retail`;
   return `${Math.round(Math.abs(value))}% below retail`;
-}
-
-function formatDate(value: string | undefined) {
-  if (!value) return "Current listing";
-  const normalized = normalizeHistoryDate(value);
-  if (!normalized) return "Current listing";
-  return new Date(`${normalized}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function formatTimelineLabel(value: string) {
@@ -67,94 +55,6 @@ function getSmoothPath(points: { x: number; y: number }[]) {
     const cp2y = point.y - (next.y - previous.y) * smoothing;
     return `${path} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${point.x} ${point.y}`;
   }, "");
-}
-
-function buildSetRows(result: Extract<LookupDetailResult, { item_type: "set" }>): MarketRow[] {
-  const soldRows = result.pricing.bricklink_sold_new_details.length
-    ? result.pricing.bricklink_sold_new_details.slice(0, 4).map((row, index) => ({
-        id: `bl-sold-new-${index}`,
-        label: "BrickLink sold",
-        meta: `${formatDate(row.date)}${row.country ? ` · ${row.country}` : ""}`,
-        priceUsd: row.price_usd,
-      }))
-    : result.pricing.bricklink_sold_used_details.slice(0, 4).map((row, index) => ({
-        id: `bl-sold-used-${index}`,
-        label: "BrickLink sold used",
-        meta: `${formatDate(row.date)}${row.country ? ` · ${row.country}` : ""}`,
-        priceUsd: row.price_usd,
-      }));
-
-  const stockRows = result.pricing.bricklink_stock_new_details.length
-    ? result.pricing.bricklink_stock_new_details.slice(0, 3).map((row, index) => ({
-        id: `bl-stock-new-${index}`,
-        label: "BrickLink listing",
-        meta: `${row.country ? `${row.country} · ` : ""}qty ${row.quantity}`,
-        priceUsd: row.price_usd,
-      }))
-    : result.pricing.bricklink_stock_used_details.slice(0, 3).map((row, index) => ({
-        id: `bl-stock-used-${index}`,
-        label: "BrickLink used listing",
-        meta: `${row.country ? `${row.country} · ` : ""}qty ${row.quantity}`,
-        priceUsd: row.price_usd,
-      }));
-
-  const ebayRows = (result.pricing.ebay_new_sales.length
-    ? result.pricing.ebay_new_sales
-    : result.pricing.ebay_used_sales
-  )
-    .slice(0, 3)
-    .map((row: EbaySale, index: number) => ({
-      id: `ebay-${index}`,
-      label: "eBay market",
-      meta: `${formatDate(row.sold_date)}${row.marketplace ? ` · ${row.marketplace}` : ""}`,
-      priceUsd: row.price_usd,
-    }));
-
-  return [...soldRows, ...stockRows, ...ebayRows];
-}
-
-function buildMinifigRows(result: Extract<LookupDetailResult, { item_type: "minifig" }>): MarketRow[] {
-  const soldRows = [...result.pricing.sold_new_details, ...result.pricing.sold_details]
-    .slice(0, 5)
-    .map((row: BrickLinkDetail, index: number) => ({
-      id: `fig-sold-${index}`,
-      label: "BrickLink sold",
-      meta: `${formatDate(row.date)}${row.country ? ` · ${row.country}` : ""}`,
-      priceUsd: row.price_usd,
-    }));
-
-  const stockRows = [...result.pricing.stock_new_details, ...result.pricing.stock_details]
-    .slice(0, 4)
-    .map((row: BrickLinkDetail, index: number) => ({
-      id: `fig-stock-${index}`,
-      label: "BrickLink listing",
-      meta: `${row.country ? `${row.country} · ` : ""}qty ${row.quantity}`,
-      priceUsd: row.price_usd,
-    }));
-
-  return [...soldRows, ...stockRows];
-}
-
-function buildPartRows(result: Extract<LookupDetailResult, { item_type: "part" }>): MarketRow[] {
-  const soldRows = [...result.pricing.sold_details, ...result.pricing.sold_used_details]
-    .slice(0, 5)
-    .map((row: BrickLinkDetail, index: number) => ({
-      id: `part-sold-${index}`,
-      label: "BrickLink sold",
-      meta: `${formatDate(row.date)}${row.country ? ` · ${row.country}` : ""}`,
-      priceUsd: row.price_usd,
-    }));
-
-  const stockRows = [...result.pricing.stock_details, ...result.pricing.stock_used_details]
-    .slice(0, 4)
-    .map((row: BrickLinkDetail, index: number) => ({
-      id: `part-stock-${index}`,
-      label: "BrickLink listing",
-      meta: `${row.country ? `${row.country} · ` : ""}qty ${row.quantity}`,
-      priceUsd: row.price_usd,
-    }));
-
-  return [...soldRows, ...stockRows];
 }
 
 export default function LiveDetailScreen() {
@@ -237,8 +137,7 @@ export default function LiveDetailScreen() {
     outputRange: [8, 0],
   });
   const heroPrice = result.pricing.hero_new_avg_usd;
-  const marketRows =
-    result.item_type === "set" ? buildSetRows(result) : result.item_type === "part" ? buildPartRows(result) : buildMinifigRows(result);
+  const marketRows = buildMarketRows(result);
   const collectorFields: CollectorField[] = (
     result.item_type === "set"
       ? [
@@ -378,19 +277,7 @@ export default function LiveDetailScreen() {
             <Text style={s.chartTitle}>Market rows</Text>
             <Text style={s.chartMeta}>{marketRows.length} shown</Text>
           </View>
-          {marketRows.length === 0 ? (
-            <Text style={s.emptyRows}>No detailed market rows came back for this scan.</Text>
-          ) : (
-            marketRows.map((row) => (
-              <View key={row.id} style={s.marketRow}>
-                <View style={s.marketCopy}>
-                  <Text style={s.marketLabel}>{row.label}</Text>
-                  <Text style={s.marketMeta}>{row.meta}</Text>
-                </View>
-                <Text style={s.marketValue}>{USD_DECIMAL.format(row.priceUsd)}</Text>
-              </View>
-            ))
-          )}
+          <MarketRowsTable rows={marketRows} colors={c} />
         </View>
 
         <View style={s.collectorCard}>
@@ -523,19 +410,6 @@ function getStyles(c: ThemeColors) {
     padding: 16,
     gap: 10,
   },
-  marketRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.06)",
-  },
-  marketCopy: { flex: 1, gap: 3 },
-  marketLabel: { color: c.dark.text, fontSize: 13, fontWeight: "800" },
-  marketMeta: { color: c.dark.textDisabled, fontSize: 11, fontWeight: "700" },
-  marketValue: { color: c.lego.yellow, fontSize: 13, fontWeight: "900" },
-  emptyRows: { color: c.dark.textMuted, fontSize: 13, fontWeight: "700", lineHeight: 18 },
   collectorCard: {
     borderRadius: 8,
     borderWidth: 1,

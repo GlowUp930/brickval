@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  Image,
   useWindowDimensions,
   type GestureResponderEvent,
 } from "react-native";
@@ -25,9 +26,9 @@ import {
 } from "../../lib/collection";
 import { getNativeProStatus } from "../../lib/paywall";
 import { normalizeHistoryDate } from "../../lib/api";
-import { CollectionSwipeRow } from "../../components/CollectionSwipeRow";
 import { buildChartAreaPath, interpolateChartLine, sampleChartLine } from "../../lib/chart-motion";
-import { useTheme, type ThemeColors } from "../../lib/ThemeProvider";
+import { useTheme, type ModeColors, type ThemeColors } from "../../lib/ThemeProvider";
+import { QuestionMarkPlaceholder } from "../../components/QuestionMarkPlaceholder";
 
 const HISTORY_TIP_KEY = "brickval_home_history_tip_seen";
 
@@ -37,12 +38,16 @@ const usdFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
-type Horizon = "1M" | "3M" | "6M";
+type Horizon = "1D" | "1W" | "1M" | "3M" | "1Y" | "ALL";
+type CollectionFilter = "all" | "set" | "minifig" | "part";
 
 const HORIZON_DAYS: Record<Horizon, number> = {
+  "1D": 1,
+  "1W": 7,
   "1M": 30,
   "3M": 90,
-  "6M": 180,
+  "1Y": 365,
+  "ALL": 3650,
 };
 
 function formatSignedPercent(value: number | null) {
@@ -147,13 +152,14 @@ function getHistoricalCollectionSeries(items: CollectionItem[], horizon: Horizon
 }
 
 export default function HomeDashboard() {
-  const { colors: c, mode } = useTheme();
+  const { colors: palette, c, mode } = useTheme();
   const insets = useSafeAreaInsets();
-  const s = useMemo(() => getStyles(c, insets.top, insets.bottom), [c, mode, insets.top, insets.bottom]);
+  const s = useMemo(() => getStyles(palette, c, insets.top, insets.bottom), [palette, c, mode, insets.top, insets.bottom]);
   const { width: screenWidth } = useWindowDimensions();
   const [items, setItems] = useState<CollectionItem[]>([]);
-  const [horizon, setHorizon] = useState<Horizon>("6M");
-  const [chartHorizon, setChartHorizon] = useState<Horizon>("6M");
+  const [horizon, setHorizon] = useState<Horizon>("1M");
+  const [chartHorizon, setChartHorizon] = useState<Horizon>("1M");
+  const [collectionFilter, setCollectionFilter] = useState<CollectionFilter>("all");
   const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<number | null>(null);
   const [showHistoryTip, setShowHistoryTip] = useState(false);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
@@ -217,6 +223,7 @@ export default function HomeDashboard() {
   const minifigureCount = items.reduce((total, item) => total + (item.item_type === "minifig" ? item.quantity ?? 1 : 0), 0);
   const partCount = items.reduce((total, item) => total + (item.item_type === "part" ? item.quantity ?? 1 : 0), 0);
   const topItems = [...items].sort((a, b) => getItemTotalValue(b) - getItemTotalValue(a));
+  const filteredItems = topItems.filter((item) => collectionFilter === "all" || item.item_type === collectionFilter);
   const displayHistory = getHistoricalCollectionSeries(items, chartHorizon);
   const firstHistoryValue = displayHistory[0]?.total_value_usd ?? 0;
   const historyDelta = firstHistoryValue > 0 ? ((totalValue - firstHistoryValue) / firstHistoryValue) * 100 : null;
@@ -481,8 +488,8 @@ export default function HomeDashboard() {
               <Svg width={chartWidth} height={chartHeight} style={StyleSheet.absoluteFill}>
                 <Defs>
                   <LinearGradient id="portfolioFill" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor={c.lego.yellow} stopOpacity="0.12" />
-                    <Stop offset="1" stopColor={c.lego.yellow} stopOpacity="0" />
+                    <Stop offset="0" stopColor={palette.lego.yellow} stopOpacity="0.12" />
+                    <Stop offset="1" stopColor={palette.lego.yellow} stopOpacity="0" />
                   </LinearGradient>
                 </Defs>
                 {chartAreaPath ? <Path ref={morphFillRef} d={chartAreaPath} fill="url(#portfolioFill)" /> : null}
@@ -491,7 +498,7 @@ export default function HomeDashboard() {
                     ref={morphLineRef}
                     d={chartLinePath}
                     fill="none"
-                    stroke={c.lego.yellow}
+                    stroke={palette.lego.yellow}
                     strokeWidth={2.5}
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -507,7 +514,7 @@ export default function HomeDashboard() {
               ))}
             </View>
             <View style={s.horizonRow}>
-              {(["1M", "3M", "6M"] as Horizon[]).map((option) => (
+              {(["1D", "1W", "1M", "3M", "1Y", "ALL"] as Horizon[]).map((option) => (
                 <Pressable
                   key={option}
                   accessibilityRole="button"
@@ -536,7 +543,28 @@ export default function HomeDashboard() {
 
         <View style={s.sectionHeader}>
           <Text style={s.sectionTitle}>Saved inventory</Text>
-          <Text style={s.sectionMeta}>{items.length} total</Text>
+          <Text style={s.sectionMeta}>{filteredItems.length} shown</Text>
+        </View>
+        <View style={s.filterRow}>
+          {[
+            { key: "all" as const, label: "All", count: items.length },
+            { key: "set" as const, label: "Sets", count: setCount },
+            { key: "minifig" as const, label: "Minifigs", count: minifigureCount },
+            { key: "part" as const, label: "Parts", count: partCount },
+          ].map((option) => (
+            <Pressable
+              key={option.key}
+              accessibilityRole="button"
+              accessibilityState={{ selected: collectionFilter === option.key }}
+              accessibilityLabel={`Show ${option.label}`}
+              style={[s.filterPill, collectionFilter === option.key && s.filterPillActive]}
+              onPress={() => setCollectionFilter(option.key)}
+            >
+              <Text style={[s.filterText, collectionFilter === option.key && s.filterTextActive]}>
+                {option.label} {option.count}
+              </Text>
+            </Pressable>
+          ))}
         </View>
         {proStatus ? (
           <Animated.View
@@ -583,13 +611,12 @@ export default function HomeDashboard() {
             </Pressable>
           </View>
         ) : (
-          <View style={s.list}>
-            {topItems.map((item, index) => {
+          <View style={s.cardGrid}>
+            {filteredItems.map((item) => {
               return (
-                <CollectionSwipeRow
+                <CollectionCard
                   key={`${item.item_type}-${item.set_number}-${item.condition}-${item.color_id ?? "base"}`}
                   item={item}
-                  index={index}
                   onPress={() =>
                     router.push({
                       pathname: "/detail/[itemType]/[setNumber]",
@@ -602,6 +629,7 @@ export default function HomeDashboard() {
                     })
                   }
                   onDelete={handleDeleteItem}
+                  styles={s}
                 />
               );
             })}
@@ -612,11 +640,76 @@ export default function HomeDashboard() {
   );
 }
 
-function getStyles(c: ThemeColors, safeTop: number, safeBottom: number) {
-  const accentRgb = `${parseInt(c.lego.yellow.slice(1, 3), 16)}, ${parseInt(c.lego.yellow.slice(3, 5), 16)}, ${parseInt(c.lego.yellow.slice(5, 7), 16)}`;
-  const textRgb = `${parseInt(c.dark.text.slice(1, 3), 16)}, ${parseInt(c.dark.text.slice(3, 5), 16)}, ${parseInt(c.dark.text.slice(5, 7), 16)}`;
+function CollectionCard({
+  item,
+  onPress,
+  onDelete,
+  styles,
+}: {
+  item: CollectionItem;
+  onPress: () => void;
+  onDelete: (target: {
+    set_number: string;
+    item_type: CollectionItem["item_type"];
+    condition: CollectionItem["condition"];
+    color_id?: number | null;
+  }) => Promise<void>;
+  styles: ReturnType<typeof getStyles>;
+}) {
+  const totalValue = item.market_value_usd === null ? null : Math.round(item.market_value_usd * (item.quantity ?? 1));
+  const itemLabel = item.item_type === "part" ? "Part" : item.item_type === "minifig" ? "Minifig" : "Set";
+  const conditionLabel = item.condition === "used" ? "Used" : "New";
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open details for ${item.name}`}
+      style={({ pressed }) => [styles.collectionCard, pressed && styles.collectionCardPressed]}
+      onPress={onPress}
+    >
+      <View style={styles.cardImageWrap}>
+        {item.image_url ? (
+          <Image source={{ uri: item.image_url }} style={styles.cardImage} resizeMode="contain" />
+        ) : (
+          <QuestionMarkPlaceholder style={styles.cardImage} />
+        )}
+      </View>
+      <View style={styles.cardBody}>
+        <Text style={styles.cardName} numberOfLines={2}>{item.name}</Text>
+        <Text style={styles.cardValue}>{totalValue === null ? "N/A" : usdFormatter.format(totalValue)}</Text>
+        <Text style={styles.cardMeta} numberOfLines={1}>
+          #{item.set_number} · {itemLabel} · x{item.quantity}
+        </Text>
+        <Text style={styles.cardMeta} numberOfLines={1}>
+          {conditionLabel}{item.item_type === "part" && item.color_name ? ` · ${item.color_name}` : ""}
+        </Text>
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Remove ${item.name}`}
+        style={styles.cardRemove}
+        onPress={(event) => {
+          event.stopPropagation?.();
+          void onDelete({
+            set_number: item.set_number,
+            item_type: item.item_type,
+            condition: item.condition,
+            color_id: item.item_type === "part" ? item.color_id ?? null : undefined,
+          })
+        }}
+        hitSlop={8}
+      >
+        <Text style={styles.cardRemoveText}>Remove</Text>
+      </Pressable>
+    </Pressable>
+  );
+}
+
+function getStyles(palette: ThemeColors, m: ModeColors, safeTop: number, safeBottom: number) {
+  const accentRgb = `${parseInt(palette.lego.yellow.slice(1, 3), 16)}, ${parseInt(palette.lego.yellow.slice(3, 5), 16)}, ${parseInt(palette.lego.yellow.slice(5, 7), 16)}`;
+  const textRgb = `${parseInt(m.text.slice(1, 3), 16)}, ${parseInt(m.text.slice(3, 5), 16)}, ${parseInt(m.text.slice(5, 7), 16)}`;
   return StyleSheet.create({
-  root: { flex: 1, backgroundColor: c.dark.background },
+  root: { flex: 1, backgroundColor: m.background },
   content: {
     padding: 20,
     paddingTop: Math.max(58, safeTop + 18),
@@ -628,32 +721,32 @@ function getStyles(c: ThemeColors, safeTop: number, safeBottom: number) {
     alignItems: "center",
     justifyContent: "space-between",
   },
-  brand: { color: c.dark.text, fontSize: 26, fontWeight: "900", letterSpacing: -0.4 },
-  pro: { color: c.lego.yellow, fontSize: 11, fontWeight: "900" },
-  brandMeta: { color: c.dark.textMuted, fontSize: 12, fontWeight: "800", marginTop: 3 },
+  brand: { color: m.text, fontSize: 26, fontWeight: "900", letterSpacing: -0.4 },
+  pro: { color: palette.lego.yellow, fontSize: 11, fontWeight: "900" },
+  brandMeta: { color: m.textMuted, fontSize: 12, fontWeight: "800", marginTop: 3 },
   scanButton: {
     minHeight: 40,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: c.dark.border,
+    borderColor: m.border,
     backgroundColor: `rgba(${accentRgb}, 0.08)`,
     paddingHorizontal: 14,
     alignItems: "center",
     justifyContent: "center",
   },
-  scanButtonText: { color: c.dark.text, fontSize: 12, fontWeight: "900" },
+  scanButtonText: { color: m.text, fontSize: 12, fontWeight: "900" },
   hero: {
     minHeight: 450,
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: c.dark.border,
-    backgroundColor: c.dark.backgroundElevated,
+    borderColor: m.border,
+    backgroundColor: m.backgroundElevated,
     padding: 18,
     overflow: "hidden",
   },
-  eyebrow: { color: c.lego.yellow, fontSize: 12, fontWeight: "900", textAlign: "center" },
-  total: { color: c.dark.text, fontSize: 47, fontWeight: "900", lineHeight: 58, textAlign: "center", letterSpacing: -1.8 },
-  caption: { color: c.dark.textMuted, fontSize: 12, fontWeight: "800", textAlign: "center" },
+  eyebrow: { color: palette.lego.yellow, fontSize: 12, fontWeight: "900", textAlign: "center" },
+  total: { color: m.text, fontSize: 47, fontWeight: "900", lineHeight: 58, textAlign: "center", letterSpacing: -1.8 },
+  caption: { color: m.textMuted, fontSize: 12, fontWeight: "800", textAlign: "center" },
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -661,8 +754,8 @@ function getStyles(c: ThemeColors, safeTop: number, safeBottom: number) {
     gap: 10,
   },
   stat: { flex: 1, alignItems: "center", gap: 5 },
-  statValue: { color: c.dark.text, fontSize: 15, fontWeight: "900" },
-  statLabel: { color: c.dark.textDisabled, fontSize: 10, fontWeight: "800", textTransform: "uppercase", textAlign: "center" },
+  statValue: { color: m.text, fontSize: 15, fontWeight: "900" },
+  statLabel: { color: m.textDisabled, fontSize: 10, fontWeight: "800", textTransform: "uppercase", textAlign: "center" },
   historyBlock: {
     marginTop: 28,
   },
@@ -672,7 +765,7 @@ function getStyles(c: ThemeColors, safeTop: number, safeBottom: number) {
     alignItems: "center",
     gap: 12,
   },
-  historyTitle: { color: c.dark.text, fontSize: 14, fontWeight: "900" },
+  historyTitle: { color: m.text, fontSize: 14, fontWeight: "900" },
   historyTip: {
     marginTop: 10,
     alignSelf: "flex-start",
@@ -683,7 +776,7 @@ function getStyles(c: ThemeColors, safeTop: number, safeBottom: number) {
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
-  historyTipText: { color: c.dark.text, fontSize: 10, fontWeight: "800", lineHeight: 14 },
+  historyTipText: { color: m.text, fontSize: 10, fontWeight: "800", lineHeight: 14 },
   horizonRow: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -702,10 +795,10 @@ function getStyles(c: ThemeColors, safeTop: number, safeBottom: number) {
     justifyContent: "center",
   },
   horizonPillActive: {
-    backgroundColor: c.lego.yellow,
-    borderColor: c.lego.yellow,
+    backgroundColor: palette.lego.yellow,
+    borderColor: palette.lego.yellow,
   },
-  horizonText: { color: c.dark.textDisabled, fontSize: 11, fontWeight: "900" },
+  horizonText: { color: m.textDisabled, fontSize: 11, fontWeight: "900" },
   horizonTextActive: { color: "#07100c" },
   valueGraph: {
     marginTop: 18,
@@ -757,13 +850,13 @@ function getStyles(c: ThemeColors, safeTop: number, safeBottom: number) {
     borderColor: "rgba(255,255,255,0.08)",
   },
   chartPopupLabel: {
-    color: c.dark.textDisabled,
+    color: m.textDisabled,
     fontSize: 9,
     fontWeight: "900",
     textTransform: "uppercase",
   },
   chartPopupValue: {
-    color: c.dark.text,
+    color: m.text,
     fontSize: 15,
     fontWeight: "900",
     marginTop: 2,
@@ -773,7 +866,7 @@ function getStyles(c: ThemeColors, safeTop: number, safeBottom: number) {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: c.lego.yellow,
+    backgroundColor: palette.lego.yellow,
     borderWidth: 2,
     borderColor: "#0b0f0d",
     zIndex: 3,
@@ -786,7 +879,7 @@ function getStyles(c: ThemeColors, safeTop: number, safeBottom: number) {
     paddingHorizontal: 2,
   },
   graphTimelineLabel: {
-    color: c.dark.textMuted,
+    color: m.textMuted,
     flex: 1,
     fontSize: 8,
     fontWeight: "900",
@@ -800,15 +893,43 @@ function getStyles(c: ThemeColors, safeTop: number, safeBottom: number) {
     justifyContent: "space-between",
     gap: 16,
   },
-  graphText: { flex: 1, color: c.dark.textDisabled, fontSize: 11, fontWeight: "800" },
-  graphDelta: { color: c.semantic.success, fontSize: 11, fontWeight: "900" },
+  graphText: { flex: 1, color: m.textDisabled, fontSize: 11, fontWeight: "800" },
+  graphDelta: { color: palette.semantic.success, fontSize: 11, fontWeight: "900" },
   sectionHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
-  sectionTitle: { color: c.dark.text, fontSize: 20, fontWeight: "900" },
-  sectionMeta: { color: c.dark.textMuted, fontSize: 12, fontWeight: "700" },
+  sectionTitle: { color: m.text, fontSize: 20, fontWeight: "900" },
+  sectionMeta: { color: m.textMuted, fontSize: 12, fontWeight: "700" },
+  filterRow: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+    marginTop: -10,
+  },
+  filterPill: {
+    minHeight: 38,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: m.border,
+    backgroundColor: m.surface,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterPillActive: {
+    borderColor: palette.lego.yellow,
+    backgroundColor: `rgba(${accentRgb}, 0.14)`,
+  },
+  filterText: {
+    color: m.textMuted,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  filterTextActive: {
+    color: m.text,
+  },
   collectionLimit: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: c.dark.border,
+    borderColor: m.border,
     backgroundColor: "rgba(247,244,234,0.03)",
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -828,35 +949,99 @@ function getStyles(c: ThemeColors, safeTop: number, safeBottom: number) {
   proStatusPill: {
     minHeight: 28,
     borderRadius: 999,
-    backgroundColor: c.lego.yellow,
+    backgroundColor: palette.lego.yellow,
     paddingHorizontal: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   proStatusPillText: { color: "#07100c", fontSize: 10, fontWeight: "900" },
-  collectionLimitLabel: { color: c.dark.textDisabled, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
-  collectionLimitLabelPro: { color: c.lego.yellow },
-  collectionLimitText: { color: c.dark.textMuted, fontSize: 12, lineHeight: 17, fontWeight: "700" },
-  collectionLimitTextPro: { color: c.dark.text, fontSize: 13, lineHeight: 18 },
+  collectionLimitLabel: { color: m.textDisabled, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
+  collectionLimitLabelPro: { color: palette.lego.yellow },
+  collectionLimitText: { color: m.textMuted, fontSize: 12, lineHeight: 17, fontWeight: "700" },
+  collectionLimitTextPro: { color: m.text, fontSize: 13, lineHeight: 18 },
   empty: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: c.dark.border,
-    backgroundColor: c.dark.surface,
+    borderColor: m.border,
+    backgroundColor: m.surface,
     padding: 18,
     gap: 12,
   },
-  emptyTitle: { color: c.dark.text, fontSize: 18, fontWeight: "900" },
-  emptyBody: { color: c.dark.textMuted, fontSize: 14, lineHeight: 21 },
+  emptyTitle: { color: m.text, fontSize: 18, fontWeight: "900" },
+  emptyBody: { color: m.textMuted, fontSize: 14, lineHeight: 21 },
   emptyAction: {
     minHeight: 44,
     borderRadius: 10,
-    backgroundColor: c.lego.yellow,
+    backgroundColor: palette.lego.yellow,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 4,
   },
   emptyActionText: { color: "#07100c", fontSize: 14, fontWeight: "900" },
-  list: { gap: 12 },
+  cardGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  collectionCard: {
+    width: "48%",
+    minHeight: 246,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: m.border,
+    backgroundColor: m.surface,
+    overflow: "hidden",
+  },
+  collectionCardPressed: {
+    opacity: 0.78,
+  },
+  cardImageWrap: {
+    minHeight: 118,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: m.backgroundMuted,
+    padding: 12,
+  },
+  cardImage: {
+    width: "100%",
+    height: 98,
+    borderRadius: 10,
+  },
+  cardBody: {
+    padding: 12,
+    gap: 4,
+  },
+  cardName: {
+    color: m.text,
+    fontSize: 14,
+    fontWeight: "900",
+    lineHeight: 18,
+    minHeight: 36,
+  },
+  cardValue: {
+    color: palette.lego.yellow,
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  cardMeta: {
+    color: m.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  cardRemove: {
+    marginHorizontal: 12,
+    marginBottom: 12,
+    minHeight: 32,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: m.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardRemoveText: {
+    color: m.textMuted,
+    fontSize: 11,
+    fontWeight: "900",
+  },
   });
 }

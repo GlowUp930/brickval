@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Accelerometer } from "expo-sensors";
 
 /**
@@ -26,11 +26,11 @@ export function useStabilityDetector(
   const onStableRef = useRef(onStable);
   onStableRef.current = onStable;
 
-  const reset = () => {
+  const reset = useCallback(() => {
     stableSinceRef.current = null;
     firedRef.current = false;
     setPulse(0);
-  };
+  }, []);
 
   useEffect(() => {
     if (!enabled) {

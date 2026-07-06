@@ -1,8 +1,8 @@
 import { Tabs } from "expo-router";
-import { GlassView } from "expo-glass-effect";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Archive, ScanLine, Settings } from "lucide-react-native";
 import { useTheme } from "../../lib/ThemeProvider";
@@ -38,65 +38,73 @@ function BrickValTabBar({ state, navigation }: BottomTabBarProps) {
   const { colors: c } = useTheme();
   const bottomInset = Math.max(insets.bottom, 10);
 
+  const barStyle = [
+    styles.bar,
+    {
+      backgroundColor: c.dark.surfaceGlassStrong,
+      borderColor: c.dark.borderStrong,
+      shadowColor: "#000000",
+    },
+  ];
+
+  const inner = state.routes.map((route, index) => {
+    const selected = state.index === index;
+    const config = tabConfig[route.name] ?? tabConfig.index;
+    const label = config.label;
+    const Fallback = config.fallback;
+    const iconColor = selected ? c.dark.textInverse : c.dark.textDisabled;
+
+    return (
+      <Pressable
+        key={route.key}
+        accessibilityRole="button"
+        accessibilityLabel={`${label} tab`}
+        accessibilityState={selected ? { selected: true } : undefined}
+        onPress={() => {
+          const event = navigation.emit({
+            type: "tabPress",
+            target: route.key,
+            canPreventDefault: true,
+          });
+
+          if (!selected && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        }}
+        style={styles.item}
+        hitSlop={8}
+      >
+        <View style={[styles.iconPlate, selected && { backgroundColor: c.lego.yellow }]}>
+          <SymbolView
+            name={config.symbol}
+            size={22}
+            type="hierarchical"
+            tintColor={iconColor}
+            fallback={<Fallback size={22} color={iconColor} strokeWidth={2.3} />}
+          />
+        </View>
+        <Text style={[styles.label, { color: selected ? c.dark.text : c.dark.textMuted }]}>
+          {label}
+        </Text>
+      </Pressable>
+    );
+  });
+
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: bottomInset }]}>
-      <GlassView
-        glassEffectStyle="regular"
-        colorScheme="dark"
-        tintColor="rgba(23, 24, 28, 0.82)"
-        isInteractive
-        style={[
-          styles.bar,
-          {
-            backgroundColor: c.dark.surfaceGlassStrong,
-            borderColor: c.dark.borderStrong,
-            shadowColor: "#000000",
-          },
-        ]}
-      >
-        {state.routes.map((route, index) => {
-          const selected = state.index === index;
-          const config = tabConfig[route.name] ?? tabConfig.index;
-          const label = config.label;
-          const Fallback = config.fallback;
-          const iconColor = selected ? c.dark.textInverse : c.dark.textDisabled;
-
-          return (
-            <Pressable
-              key={route.key}
-              accessibilityRole="button"
-              accessibilityLabel={`${label} tab`}
-              accessibilityState={selected ? { selected: true } : undefined}
-              onPress={() => {
-                const event = navigation.emit({
-                  type: "tabPress",
-                  target: route.key,
-                  canPreventDefault: true,
-                });
-
-                if (!selected && !event.defaultPrevented) {
-                  navigation.navigate(route.name);
-                }
-              }}
-              style={styles.item}
-              hitSlop={8}
-            >
-              <View style={[styles.iconPlate, selected && { backgroundColor: c.lego.yellow }]}>
-                <SymbolView
-                  name={config.symbol}
-                  size={22}
-                  type="hierarchical"
-                  tintColor={iconColor}
-                  fallback={<Fallback size={22} color={iconColor} strokeWidth={2.3} />}
-                />
-              </View>
-              <Text style={[styles.label, { color: selected ? c.dark.text : c.dark.textMuted }]}>
-                {label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </GlassView>
+      {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
+        <GlassView
+          glassEffectStyle="regular"
+          colorScheme="dark"
+          tintColor="rgba(23, 24, 28, 0.82)"
+          isInteractive
+          style={barStyle}
+        >
+          {inner}
+        </GlassView>
+      ) : (
+        <View style={barStyle}>{inner}</View>
+      )}
     </View>
   );
 }

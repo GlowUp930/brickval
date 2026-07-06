@@ -80,8 +80,9 @@ test("getDetectionReviewSummary summarizes minifigure and part counts", () => {
 test("getBatchableMinifigIds excludes parts from batch pricing", () => {
   assert.deepEqual(
     getBatchableMinifigIds([
-      { id: "sw0001", item_type: "minifig", score: 0.91 },
+      { id: "SW-0001", item_type: "minifig", score: 0.91 },
       { id: "3001", item_type: "part", score: 0.72 },
+      { id: "sw0001", item_type: "minifig", score: 0.88 },
       { id: "sw0002", item_type: "minifig", score: 0.82 },
     ]),
     ["sw0001", "sw0002"]

@@ -20,6 +20,7 @@ import { QuestionMarkPlaceholder } from "../../../components/QuestionMarkPlaceho
 import { buildChartAreaPath, interpolateChartLine, sampleChartLine } from "../../../lib/chart-motion";
 import { useTheme } from "../../../lib/ThemeProvider";
 import { type ThemeColors } from "../../../lib/theme";
+import { MarketRowsTable } from "../../../components/MarketRowsTable";
 const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 type Horizon = "1M" | "3M" | "6M";
 const HORIZON_DAYS: Record<Horizon, number> = {
@@ -483,6 +484,14 @@ export default function ItemDetailScreen() {
           </View>
         </View>
 
+        <View style={s.marketCard}>
+          <View style={s.chartHeader}>
+            <Text style={s.chartTitle}>Market rows</Text>
+            <Text style={s.chartMeta}>{(item.market_rows ?? []).length} saved</Text>
+          </View>
+          <MarketRowsTable rows={item.market_rows ?? []} colors={c} />
+        </View>
+
         <View style={s.collectorCard}>
           <Text style={s.collectorTitle}>Collector Details</Text>
           <View style={s.collectorGrid}>
@@ -562,6 +571,14 @@ function getStyles(c: ThemeColors) {
     backgroundColor: "rgba(255,255,255,0.015)",
     padding: 16,
     gap: 14,
+  },
+  marketCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: c.dark.border,
+    backgroundColor: c.dark.backgroundElevated,
+    padding: 16,
+    gap: 12,
   },
   chartHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   chartTitle: { color: c.dark.text, fontSize: 15, fontWeight: "900", letterSpacing: -0.2 },
