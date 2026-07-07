@@ -18,3 +18,6 @@ build/
 
 # Design previews (not app resources)
 previews/
+
+*storybook.log
+storybook-static

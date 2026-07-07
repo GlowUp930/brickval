@@ -165,6 +165,7 @@ Model: Codex-sonnet-4-5, max_tokens: 64, base64 image source.
 - Build ONLY what is in the current task. Nothing extra.
 - No helper functions, utilities, or abstractions for one-time operations.
 - No "future proofing." No unused fields. No optional features.
+- When working on UI components in `brickval-mobile`, use the `brickval-storybook` MCP tools first when Storybook is running. Check existing stories and docs before inventing new props or states.
 - All external API calls (Anthropic, eBay, BrickLink, Frankfurter, Brickset) must be
   made server-side via Route Handlers or Server Actions. API keys must NEVER use
   NEXT_PUBLIC_ prefix.
