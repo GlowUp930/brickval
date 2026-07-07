@@ -14,6 +14,7 @@ import {
   fetchPartColors,
   getAuthToken,
   identifySet,
+  isApiRequestError,
   lookupSet,
   type IdentificationCandidate,
   type IdentificationDetection,
@@ -406,7 +407,7 @@ export default function ScanHome() {
     try {
       await beginLookup(id, "minifig");
     } catch (e) {
-      if (e instanceof Error && e.message.includes("404")) {
+      if (isApiRequestError(e) && e.status === 404) {
         pendingGuestScan.current = false;
         pendingServerScansUsed.current = null;
         warn();
@@ -557,7 +558,7 @@ export default function ScanHome() {
       await beginLookup(selectedPart.id, "part", { colorId: color.color_id });
       setSelectedPart(null);
     } catch (e) {
-      if (e instanceof Error && e.message.includes("404")) {
+      if (isApiRequestError(e) && e.status === 404) {
         pendingGuestScan.current = false;
         pendingServerScansUsed.current = null;
         warn();
@@ -655,7 +656,7 @@ export default function ScanHome() {
       );
       return;
     } catch (e) {
-      if (e instanceof Error && e.message.includes("402")) {
+      if (isApiRequestError(e) && e.status === 402) {
         pendingGuestScan.current = false;
         pendingServerScansUsed.current = null;
         triggerUpgrade();
@@ -719,14 +720,14 @@ export default function ScanHome() {
       await yieldToRender();
       await beginLookup(identifier, "set");
     } catch (e) {
-      if (e instanceof Error && e.message.includes("401")) {
+      if (isApiRequestError(e) && e.status === 401) {
         pendingGuestScan.current = false;
         pendingServerScansUsed.current = null;
         openAccountForSignIn();
         setStatus("idle");
         return;
       }
-      if (e instanceof Error && e.message.includes("404")) {
+      if (isApiRequestError(e) && e.status === 404) {
         pendingGuestScan.current = false;
         pendingServerScansUsed.current = null;
         warn();
@@ -734,7 +735,7 @@ export default function ScanHome() {
         setStatus("idle");
         return;
       }
-      if (e instanceof Error && e.message.includes("402")) {
+      if (isApiRequestError(e) && e.status === 402) {
         pendingGuestScan.current = false;
         pendingServerScansUsed.current = null;
         triggerUpgrade();
@@ -763,14 +764,14 @@ export default function ScanHome() {
     try {
       await beginLookup(identifier, "minifig");
     } catch (e) {
-      if (e instanceof Error && e.message.includes("401")) {
+      if (isApiRequestError(e) && e.status === 401) {
         pendingGuestScan.current = false;
         pendingServerScansUsed.current = null;
         openAccountForSignIn();
         setStatus("idle");
         return;
       }
-      if (e instanceof Error && e.message.includes("404")) {
+      if (isApiRequestError(e) && e.status === 404) {
         pendingGuestScan.current = false;
         pendingServerScansUsed.current = null;
         warn();
@@ -778,7 +779,7 @@ export default function ScanHome() {
         setStatus("idle");
         return;
       }
-      if (e instanceof Error && e.message.includes("402")) {
+      if (isApiRequestError(e) && e.status === 402) {
         pendingGuestScan.current = false;
         pendingServerScansUsed.current = null;
         triggerUpgrade();

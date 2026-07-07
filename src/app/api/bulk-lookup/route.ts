@@ -12,6 +12,7 @@ import {
   sanitizeBulkMinifigNumbers,
   type MinifigLookupPayload,
 } from "@/lib/minifig-lookup";
+import { shouldChargeScan } from "@/lib/scan-charge-policy";
 import type { EbaySale, SetInfo, ComputedPricing } from "@/types/market";
 
 const LOOKUP_CACHE_TTL_HOURS = 24;
@@ -124,8 +125,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No valid minifigure numbers" }, { status: 400 });
   }
 
-  // Gate signed-in users once per bulk job. Guests are limited on-device by the native app.
-  if (userId) {
+  // Gate signed-in users once per chargeable bulk job. Minifig scans are charged by identify.
+  if (userId && shouldChargeScan("bulk-lookup", mode)) {
     let gate;
     try {
       gate = await checkAndIncrementScan(userId);

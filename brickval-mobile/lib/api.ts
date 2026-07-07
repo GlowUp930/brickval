@@ -23,6 +23,39 @@ export const API_BASE = "https://brickvalue.live";
 export const INTERNAL_TESTING_UNLIMITED_SCANS =
   Constants.expoConfig?.extra?.internalTestingUnlimitedScans === true;
 
+export class ApiRequestError extends Error {
+  status: number;
+  payload: unknown;
+
+  constructor(endpoint: string, status: number, payload: unknown) {
+    const message =
+      typeof payload === "object" &&
+      payload !== null &&
+      "message" in payload &&
+      typeof (payload as { message?: unknown }).message === "string"
+        ? (payload as { message: string }).message
+        : `${endpoint} failed: ${status}`;
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
+export function isApiRequestError(error: unknown): error is ApiRequestError {
+  return error instanceof ApiRequestError;
+}
+
+async function throwApiError(res: Response, endpoint: string): Promise<never> {
+  let payload: unknown = null;
+  try {
+    payload = await res.json();
+  } catch {
+    payload = null;
+  }
+  throw new ApiRequestError(endpoint, res.status, payload);
+}
+
 export async function getAuthToken(): Promise<string | null> {
   return getClerkAuthToken();
 }
@@ -84,17 +117,15 @@ export async function identifySet(
     type: "image/jpeg",
   } as unknown as Blob);
 
-  const identifyUrl = new URL(`${API_BASE}/api/identify`);
-  identifyUrl.searchParams.set("mode", mode);
-  if (options.bulk) identifyUrl.searchParams.set("scan", "bulk");
+  const identifyUrl = `${API_BASE}/api/identify?mode=${mode}${options.bulk ? "&scan=bulk" : ""}`;
 
-  const res = await fetch(identifyUrl.toString(), {
+  const res = await fetch(identifyUrl, {
     method: "POST",
     headers: { ...(await authHeader()) },
     body: form,
   });
 
-  if (!res.ok) throw new Error(`identify failed: ${res.status}`);
+  if (!res.ok) await throwApiError(res, "identify");
   const data = (await res.json()) as {
     set_number: string | null;
     confidence?: number | null;
@@ -131,7 +162,7 @@ export async function lookupSet(
     body: JSON.stringify({ setNumber, mode, colorId: options?.colorId ?? null }),
   });
 
-  if (!res.ok) throw new Error(`lookup failed: ${res.status}`);
+  if (!res.ok) await throwApiError(res, "lookup");
   const data = await res.json();
   if (mode === "minifig") return withScanMeta(normalizeMinifigResult(data), data);
   if (mode === "part") return withScanMeta(normalizePartResult(data), data);
@@ -154,7 +185,7 @@ export async function bulkLookupMinifigs(figNumbers: string[]): Promise<BulkMini
     body: JSON.stringify({ mode: "minifig", figNumbers }),
   });
 
-  if (!res.ok) throw new Error(`bulk minifig lookup failed: ${res.status}`);
+  if (!res.ok) await throwApiError(res, "bulk minifig lookup");
   const data = (await res.json()) as {
     results?: Array<{
       figNumber?: string;
@@ -192,7 +223,7 @@ export async function fetchPartColors(): Promise<PartColorOption[]> {
     headers: { ...(await authHeader()) },
   });
 
-  if (!res.ok) throw new Error(`part-colors failed: ${res.status}`);
+  if (!res.ok) await throwApiError(res, "part-colors");
   const data = (await res.json()) as { colors?: PartColorOption[] };
   return (data.colors ?? []).filter(
     (color) => Number.isFinite(color.color_id) && typeof color.color_name === "string" && color.color_name.trim().length > 0
