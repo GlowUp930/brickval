@@ -1,67 +1,122 @@
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { SymbolView } from "expo-symbols";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { tap, warn } from "../lib/haptics";
+import { useStabilityDetector } from "../lib/stability";
 import type { ScanIntent } from "./ScanIntentPicker";
 
 const GOLD = "#F2CD37";
 const INK = "#F7F4EA";
 const MUTED = "rgba(247,244,234,0.66)";
+type AutoScanPreviewState = "scanning" | "holdSteady" | "processing" | "matchFound";
 
 interface Props {
   enabled: boolean;
+  autoCaptureEnabled?: boolean;
   scanIntent: ScanIntent;
   onCapture: (photoUri: string) => void;
   onPhotoPress: () => void;
   onManualPress: () => void;
+  cameraPreview?: ReactNode;
+  permissionGranted?: boolean;
+  autoScanPreviewState?: AutoScanPreviewState;
 }
 
 export function CameraScanner({
   enabled,
+  autoCaptureEnabled = true,
   scanIntent,
   onCapture,
   onPhotoPress,
   onManualPress,
+  cameraPreview,
+  permissionGranted,
+  autoScanPreviewState,
 }: Props) {
   const cameraRef = useRef<CameraView>(null);
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [torch, setTorch] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [showMoveCloser, setShowMoveCloser] = useState(false);
+  const isSingleScan = scanIntent === "single";
+  const isPreview = Boolean(cameraPreview || autoScanPreviewState || permissionGranted !== undefined);
+  const hasCameraPermission = permissionGranted ?? permission?.granted ?? false;
 
-  const capturePhoto = async () => {
-    if (!enabled || !cameraRef.current || scanning) return;
-    tap();
+  const capturePhoto = useCallback(async (source: "manual" | "auto" = "manual") => {
+    if (!enabled || scanning) return;
+    if (!cameraPreview && (!cameraRef.current || !cameraReady)) return;
+    if (source === "manual") tap();
     setScanning(true);
     try {
-      const photo = await cameraRef.current.takePictureAsync({
+      if (cameraPreview) {
+        onCapture("storybook://camera-scan.jpg");
+        return;
+      }
+      const camera = cameraRef.current;
+      if (!camera) {
+        setScanning(false);
+        return;
+      }
+      const photo = await camera.takePictureAsync({
         quality: 0.72,
-        skipProcessing: true,
+        skipProcessing: false,
+        shutterSound: source === "manual",
       });
       if (photo?.uri) onCapture(photo.uri);
     } catch {
       warn();
       setScanning(false);
     }
-  };
+  }, [cameraPreview, cameraReady, enabled, onCapture, scanning]);
+
+  const autoStabilityEnabled =
+    enabled && autoCaptureEnabled && isSingleScan && cameraReady && !scanning && !isPreview;
+  const { pulse } = useStabilityDetector(autoStabilityEnabled, () => {
+    void capturePhoto("auto");
+  });
 
   useEffect(() => {
     if (enabled) setScanning(false);
   }, [enabled]);
 
-  const pillText =
-    !enabled || scanning
-      ? "Counting value..."
-      : scanIntent === "bulk"
-        ? "Frame bulk minifigs, then capture"
-        : "Frame a minifig, then capture";
+  useEffect(() => {
+    setShowMoveCloser(false);
+    if (!autoStabilityEnabled) return;
 
-  if (!permission) return <View style={styles.black} />;
+    const timer = setTimeout(() => {
+      setShowMoveCloser(true);
+    }, 5200);
 
-  if (!permission.granted) {
+    return () => clearTimeout(timer);
+  }, [autoStabilityEnabled]);
+
+  useEffect(() => {
+    if (pulse > 0.2) setShowMoveCloser(false);
+  }, [pulse]);
+
+  const previewPulse =
+    autoScanPreviewState === "holdSteady" ? 0.72 : autoScanPreviewState === "processing" ? 1 : 0;
+  const autoPulse = isPreview ? previewPulse : pulse;
+  const isProcessing = scanning || autoScanPreviewState === "processing";
+  const statusActive = isProcessing || autoPulse > 0.2 || autoScanPreviewState === "matchFound";
+  const pillText = getPillText({
+    enabled,
+    isSingleScan,
+    cameraReady: cameraReady || isPreview,
+    isProcessing,
+    pulse: autoPulse,
+    showMoveCloser,
+    previewState: autoScanPreviewState,
+  });
+
+  if (!permission && permissionGranted === undefined) return <View style={styles.black} />;
+
+  if (!hasCameraPermission) {
     return (
       <View style={styles.permWrap}>
         <Text style={styles.permTitle}>Camera access</Text>
@@ -75,14 +130,16 @@ export function CameraScanner({
           >
             <Text style={styles.permBtnText}>Allow camera</Text>
           </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Enter set number manually"
-            style={styles.permBtnSecondary}
-            onPress={onManualPress}
-          >
-            <Text style={styles.permBtnSecondaryText}>Enter set number</Text>
-          </Pressable>
+          {!isSingleScan ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Enter set number manually"
+              style={styles.permBtnSecondary}
+              onPress={onManualPress}
+            >
+              <Text style={styles.permBtnSecondaryText}>Enter set number</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     );
@@ -90,17 +147,32 @@ export function CameraScanner({
 
   return (
     <View style={StyleSheet.absoluteFill}>
-      <CameraView
-        ref={cameraRef}
-        style={StyleSheet.absoluteFill}
-        facing="back"
-        enableTorch={torch}
-      />
+      {cameraPreview ? (
+        <View style={StyleSheet.absoluteFill}>{cameraPreview}</View>
+      ) : (
+        <CameraView
+          ref={cameraRef}
+          style={StyleSheet.absoluteFill}
+          facing="back"
+          enableTorch={torch}
+          animateShutter={false}
+          onCameraReady={() => setCameraReady(true)}
+          onMountError={() => {
+            setCameraReady(false);
+            warn();
+          }}
+        />
+      )}
 
       <View pointerEvents="none" style={styles.softVignette} />
 
-      <View style={[styles.statusPill, { bottom: Math.max(210, insets.bottom + 176) }]}>
-        <View style={[styles.statusDot, scanning && styles.statusDotActive]} />
+      <View
+        style={[
+          styles.statusPill,
+          { bottom: isSingleScan ? Math.max(112, insets.bottom + 82) : Math.max(210, insets.bottom + 176) },
+        ]}
+      >
+        <View style={[styles.statusDot, statusActive && styles.statusDotActive]} />
         <Text style={styles.statusPillText}>{pillText}</Text>
       </View>
 
@@ -131,7 +203,13 @@ export function CameraScanner({
         />
       </Pressable>
 
-      <View style={[styles.bottomBar, { bottom: Math.max(112, insets.bottom + 82) }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          isSingleScan && styles.singleBottomBar,
+          { bottom: Math.max(112, insets.bottom + 82) },
+        ]}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Use photo from library"
@@ -153,49 +231,79 @@ export function CameraScanner({
           />
         </Pressable>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Capture LEGO photo"
-          onPress={() => {
-            void capturePhoto();
-          }}
-          disabled={!enabled || scanning}
-          style={[styles.captureButton, (!enabled || scanning) && styles.disabled]}
-          hitSlop={10}
-        >
-          <SymbolView
-            name="camera.fill"
-            size={36}
-            type="hierarchical"
-            tintColor="#101012"
-            fallback={<CameraGlyph color="#101012" />}
-          />
-        </Pressable>
+        {!isSingleScan ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Capture LEGO photo"
+            onPress={() => {
+              void capturePhoto("manual");
+            }}
+            disabled={!enabled || scanning || (!cameraPreview && !cameraReady)}
+            style={[styles.captureButton, (!enabled || scanning || (!cameraPreview && !cameraReady)) && styles.disabled]}
+            hitSlop={10}
+          >
+            <SymbolView
+              name="camera.fill"
+              size={36}
+              type="hierarchical"
+              tintColor="#101012"
+              fallback={<CameraGlyph color="#101012" />}
+            />
+          </Pressable>
+        ) : null}
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Enter LEGO set number manually"
-          onPress={() => {
-            if (!enabled) return;
-            tap();
-            onManualPress();
-          }}
-          disabled={!enabled}
-          style={[styles.manualSetButton, !enabled && styles.disabled]}
-          hitSlop={10}
-        >
-          <SymbolView
-            name="number.square"
-            size={20}
-            type="hierarchical"
-            tintColor="#101012"
-            fallback={<Text style={styles.manualSetIcon}>#</Text>}
-          />
-          <Text style={styles.manualSetText}>Set #</Text>
-        </Pressable>
+        {!isSingleScan ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Enter LEGO set number manually"
+            onPress={() => {
+              if (!enabled) return;
+              tap();
+              onManualPress();
+            }}
+            disabled={!enabled}
+            style={[styles.manualSetButton, !enabled && styles.disabled]}
+            hitSlop={10}
+          >
+            <SymbolView
+              name="number.square"
+              size={20}
+              type="hierarchical"
+              tintColor="#101012"
+              fallback={<Text style={styles.manualSetIcon}>#</Text>}
+            />
+            <Text style={styles.manualSetText}>Set #</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
+}
+
+function getPillText({
+  enabled,
+  isSingleScan,
+  cameraReady,
+  isProcessing,
+  pulse,
+  showMoveCloser,
+  previewState,
+}: {
+  enabled: boolean;
+  isSingleScan: boolean;
+  cameraReady: boolean;
+  isProcessing: boolean;
+  pulse: number;
+  showMoveCloser: boolean;
+  previewState?: AutoScanPreviewState;
+}) {
+  if (!isSingleScan) return isProcessing || !enabled ? "Counting value..." : "Frame bulk minifigs, then capture";
+  if (previewState === "matchFound") return "Match found";
+  if (!enabled || isProcessing) return "Match found";
+  if (!cameraReady) return "Starting camera...";
+  if (pulse > 0.25) return "Hold steady";
+  if (showMoveCloser) return "Move closer";
+  return "Scanning...";
 }
 
 const styles = StyleSheet.create({
@@ -293,6 +401,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 28,
+  },
+  singleBottomBar: {
+    justifyContent: "flex-start",
   },
   roundTool: {
     width: 62,

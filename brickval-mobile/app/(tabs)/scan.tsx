@@ -185,10 +185,12 @@ export default function ScanHome() {
   const candidateProgress = useRef(new Animated.Value(0)).current;
   const collectionLimitProgress = useRef(new Animated.Value(0)).current;
   const collectionLimitPromptTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const singleScanCooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const manualRef = useRef<ManualEntryHandle>(null);
   const pendingGuestScan = useRef(false);
   const pendingServerScansUsed = useRef<number | null>(null);
   const promptedOnCurrentResult = useRef(false);
+  const [singleAutoScanCoolingDown, setSingleAutoScanCoolingDown] = useState(false);
   const { triggerUpgrade, openAccountForUpgrade, openAccountForSignIn, showDisclosure, handleDisclosureContinue, handleDisclosureDismiss } = useUpgrade();
   const { colors: palette, c: activeColors, mode: themeMode } = useTheme();
   const s = useMemo(() => getStyles(palette, activeColors), [palette, activeColors, themeMode]);
@@ -246,7 +248,21 @@ export default function ScanHome() {
       if (collectionLimitPromptTimer.current) {
         clearTimeout(collectionLimitPromptTimer.current);
       }
+      if (singleScanCooldownTimer.current) {
+        clearTimeout(singleScanCooldownTimer.current);
+      }
     };
+  }, []);
+
+  const startSingleScanCooldown = useCallback(() => {
+    if (singleScanCooldownTimer.current) {
+      clearTimeout(singleScanCooldownTimer.current);
+    }
+    setSingleAutoScanCoolingDown(true);
+    singleScanCooldownTimer.current = setTimeout(() => {
+      singleScanCooldownTimer.current = null;
+      setSingleAutoScanCoolingDown(false);
+    }, 1800);
   }, []);
 
   const hideCollectionLimitPrompt = useCallback(() => {
@@ -605,6 +621,7 @@ export default function ScanHome() {
         warn();
         pendingServerScansUsed.current = null;
         setErrorMessage("We couldn't identify the minifigure or part. Try a clearer front-facing shot.");
+        if (scanIntent === "single") startSingleScanCooldown();
         setStatus("idle");
         return;
       }
@@ -667,6 +684,7 @@ export default function ScanHome() {
       pendingServerScansUsed.current = null;
       warn();
       setErrorMessage("Something went wrong reading the photo. Try again in a moment.");
+      if (scanIntent === "single") startSingleScanCooldown();
       setStatus("idle");
       return;
     }
@@ -801,6 +819,7 @@ export default function ScanHome() {
     }
     promptedOnCurrentResult.current = false;
     setResult(null);
+    if (scanIntent === "single") startSingleScanCooldown();
     setStatus("idle");
   };
 
@@ -957,6 +976,7 @@ export default function ScanHome() {
     <View style={s.root}>
       <CameraScanner
         enabled={status === "idle"}
+        autoCaptureEnabled={status === "idle" && scanIntent === "single" && !singleAutoScanCoolingDown}
         scanIntent={scanIntent}
         onCapture={handleCapture}
         onPhotoPress={handlePhotoPress}
