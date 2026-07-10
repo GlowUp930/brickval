@@ -1,9 +1,11 @@
 import * as SecureStore from "expo-secure-store";
 
 export type ThemePreference = "system" | "dark" | "light";
+export type AccentPreference = "yellow" | "blue";
 
 const SMART_AUTO_SCAN_KEY = "brickval_smart_auto_scan";
 const THEME_PREFERENCE_KEY = "brickval_theme_preference";
+const ACCENT_PREFERENCE_KEY = "brickval_accent_preference";
 
 export function isThemePreference(value: string | null): value is ThemePreference {
   return value === "system" || value === "dark" || value === "light";
@@ -38,6 +40,23 @@ export async function getThemePreference(): Promise<ThemePreference> {
 export async function setStoredThemePreference(preference: ThemePreference): Promise<void> {
   try {
     await SecureStore.setItemAsync(THEME_PREFERENCE_KEY, preference);
+  } catch {
+    // Preference storage is non-critical; keep the in-memory UI responsive.
+  }
+}
+
+export async function getAccentPreference(): Promise<AccentPreference> {
+  try {
+    const value = await SecureStore.getItemAsync(ACCENT_PREFERENCE_KEY);
+    return value === "blue" ? "blue" : "yellow";
+  } catch {
+    return "yellow";
+  }
+}
+
+export async function setStoredAccentPreference(preference: AccentPreference): Promise<void> {
+  try {
+    await SecureStore.setItemAsync(ACCENT_PREFERENCE_KEY, preference);
   } catch {
     // Preference storage is non-critical; keep the in-memory UI responsive.
   }

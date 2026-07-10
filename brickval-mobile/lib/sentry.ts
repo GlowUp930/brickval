@@ -28,4 +28,24 @@ export function capturePaywallError(
   });
 }
 
+export function captureScanError(
+  stage: string,
+  error: unknown,
+  extra?: Record<string, unknown>
+) {
+  Sentry.captureException(error, {
+    tags: { module: "scan-session", stage },
+    extra,
+  });
+}
+
+export function recordScanTimings(extra: Record<string, number | string>) {
+  Sentry.addBreadcrumb({
+    category: "scan-session",
+    level: "info",
+    message: "Scan session completed",
+    data: extra,
+  });
+}
+
 export { Sentry };

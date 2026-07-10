@@ -11,6 +11,7 @@ import {
   Easing,
   useWindowDimensions,
 } from "react-native";
+import { SymbolView } from "expo-symbols";
 import { LookupDetailResult } from "../lib/api";
 import type { CollectionCondition } from "../lib/collection";
 import { buildMarketSnapshot } from "../lib/market-snapshot";
@@ -224,6 +225,8 @@ export function ResultCard({
   const handleAdd = () => {
     onAddToCollection(result, { quantity, condition });
   };
+  const isCompactMinifig = result.item_type === "minifig";
+  const sourceFootnote = `${snapshot.source_name} ${snapshot.source_type === "sold" ? "sold average" : snapshot.source_type === "listing" ? "listing guide" : "market data"}${snapshot.count ? ` · ${snapshot.count.toLocaleString()} ${snapshot.source_type === "listing" ? "listings" : "recent sales"}` : ""}`;
   const contentTranslateY = content.interpolate({
     inputRange: [0, 1],
     outputRange: [12, 0],
@@ -244,6 +247,7 @@ export function ResultCard({
       <Animated.View
         style={[
           s.sheet,
+          isCompactMinifig && s.minifigSheet,
           { maxHeight: sheetMaxHeight, transform: [{ translateY: slide }] },
         ]}
       >
@@ -263,6 +267,80 @@ export function ResultCard({
               },
             ]}
           >
+            {isCompactMinifig ? (
+              <>
+                <View style={s.minifigIdentityRow}>
+                  {result.image_url ? (
+                    <Image source={{ uri: result.image_url }} style={s.minifigThumb} resizeMode="contain" />
+                  ) : (
+                    <QuestionMarkPlaceholder style={s.minifigThumb} />
+                  )}
+                  <View style={s.minifigIdentityCopy}>
+                    <View style={s.minifigMatchRow}>
+                      <View style={s.minifigMatchPill}>
+                        <SymbolView
+                          name={{ ios: "checkmark.circle.fill", android: "check_circle", web: "check_circle" }}
+                          size={13}
+                          type="hierarchical"
+                          tintColor={themeColors.lego.yellow}
+                          fallback={<Text style={s.minifigSymbolFallback}>✓</Text>}
+                        />
+                        <Text style={s.minifigMatchText}>MATCH FOUND</Text>
+                      </View>
+                      <Pressable accessibilityRole="button" accessibilityLabel="Close result" style={s.minifigClose} onPress={onDismiss}>
+                        <SymbolView
+                          name={{ ios: "xmark", android: "close", web: "close" }}
+                          size={20}
+                          tintColor={c.text}
+                          fallback={<Text style={s.minifigCloseFallback}>×</Text>}
+                        />
+                      </Pressable>
+                    </View>
+                    <Text style={s.minifigName} numberOfLines={2}>{result.name}</Text>
+                    <Text style={s.minifigMeta} numberOfLines={1}>{result.theme} · {result.fig_info.fig_number}</Text>
+                    <Text style={s.minifigDetail} numberOfLines={1}>
+                      {result.fig_info.year_released ? `${result.fig_info.year_released}` : "Release year unavailable"}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={s.minifigPricePair}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Use used market price"
+                    style={s.minifigConditionPrice}
+                    onPress={() => setCondition("used")}
+                  >
+                    <Text style={[s.minifigConditionLabel, condition === "used" && s.minifigConditionLabelSelected]}>USED</Text>
+                    <Text style={s.minifigConditionValue}>{formatCompactPrice(usedSnapshot.price_usd)}</Text>
+                  </Pressable>
+                  <View style={s.minifigPriceDivider} />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Use new market price"
+                    style={s.minifigConditionPrice}
+                    onPress={() => setCondition("new_sealed")}
+                  >
+                    <Text style={[s.minifigConditionLabel, condition === "new_sealed" && s.minifigConditionLabelSelected]}>NEW</Text>
+                    <Text style={s.minifigConditionValue}>{formatCompactPrice(newSnapshot.price_usd)}</Text>
+                  </Pressable>
+                </View>
+
+                <Pressable accessibilityRole="button" accessibilityLabel="Wrong minifigure, scan another" style={s.minifigCorrectionRow} onPress={onDismiss}>
+                  <View>
+                    <Text style={s.minifigCorrectionTitle}>Wrong minifigure?</Text>
+                    <Text style={s.minifigCorrectionMeta}>Scan again for a different match</Text>
+                  </View>
+                  <SymbolView
+                    name={{ ios: "chevron.right", android: "chevron_right", web: "chevron_right" }}
+                    size={22}
+                    tintColor={c.text}
+                    fallback={<Text style={s.minifigCloseFallback}>›</Text>}
+                  />
+                </Pressable>
+              </>
+            ) : (
+              <>
             <View style={s.heroRow}>
               {result.image_url ? (
                 <Image source={{ uri: result.image_url }} style={s.thumb} />
@@ -405,6 +483,8 @@ export function ResultCard({
               <Text style={s.marketRowsTitle}>Market rows</Text>
               <MarketRowsTable rows={marketRows} colors={colors} activeColors={c} />
             </View>
+              </>
+            )}
           </Animated.View>
         </ScrollView>
 
@@ -413,14 +493,26 @@ export function ResultCard({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={addedToCollection ? "Added to collection" : "Add to collection"}
-              style={[s.primary, addedToCollection && s.primarySaved]}
+              style={[s.primary, isCompactMinifig && s.minifigPrimary, addedToCollection && s.primarySaved]}
               onPress={handleAdd}
             >
+              {isCompactMinifig ? (
+                <SymbolView
+                  name={{ ios: addedToCollection ? "checkmark.circle.fill" : "plus.circle.fill", android: addedToCollection ? "check_circle" : "add_circle", web: addedToCollection ? "check_circle" : "add_circle" }}
+                  size={22}
+                  type="hierarchical"
+                  tintColor={addedToCollection ? c.text : themeColors.light.text}
+                  fallback={<Text style={s.minifigPrimaryIconFallback}>{addedToCollection ? "✓" : "+"}</Text>}
+                />
+              ) : null}
               <Text style={[s.primaryText, addedToCollection && s.primarySavedText]}>
                 {addedToCollection ? "Added" : "Add to Collection"}
               </Text>
             </Pressable>
           </Animated.View>
+          {isCompactMinifig ? <Text style={s.minifigSourceFootnote}>{sourceFootnote}</Text> : null}
+          {!isCompactMinifig ? (
+            <>
           <Pressable accessibilityRole="button" accessibilityLabel="Scan another item" style={s.secondary} onPress={onDismiss}>
             <Text style={s.secondaryText}>Scan another</Text>
           </Pressable>
@@ -432,6 +524,8 @@ export function ResultCard({
           >
             <Text style={s.tertiaryText}>View details</Text>
           </Pressable>
+            </>
+          ) : null}
         </View>
       </Animated.View>
     </Modal>
@@ -452,6 +546,17 @@ function getStyles(c: ModeColors) { return StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 20,
   },
+  minifigSheet: {
+    left: 12,
+    right: 12,
+    bottom: 12,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: hexToRgba(c.text, 0.15),
+    backgroundColor: c.backgroundElevated,
+    paddingHorizontal: 18,
+    paddingBottom: 22,
+  },
   handle: {
     width: 40,
     height: 4,
@@ -469,6 +574,145 @@ function getStyles(c: ModeColors) { return StyleSheet.create({
   },
   revealContent: {
     gap: 18,
+  },
+  minifigIdentityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  minifigThumb: {
+    width: 88,
+    height: 88,
+    borderRadius: 16,
+    backgroundColor: themeColors.light.background,
+  },
+  minifigIdentityCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  minifigMatchRow: {
+    minHeight: 34,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  minifigMatchPill: {
+    minHeight: 26,
+    borderRadius: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 8,
+    backgroundColor: hexToRgba(themeColors.lego.yellow, 0.11),
+    borderWidth: 1,
+    borderColor: hexToRgba(themeColors.lego.yellow, 0.28),
+  },
+  minifigMatchText: {
+    color: themeColors.lego.yellow,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+  },
+  minifigSymbolFallback: {
+    color: themeColors.lego.yellow,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  minifigClose: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: hexToRgba(c.text, 0.07),
+    borderWidth: 1,
+    borderColor: hexToRgba(c.text, 0.12),
+  },
+  minifigCloseFallback: {
+    color: c.text,
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  minifigName: {
+    color: c.text,
+    fontSize: 24,
+    lineHeight: 29,
+    fontWeight: "900",
+    marginTop: 3,
+  },
+  minifigMeta: {
+    color: c.textMuted,
+    fontSize: 13,
+    fontWeight: "800",
+    marginTop: 3,
+  },
+  minifigDetail: {
+    color: c.text,
+    fontSize: 12,
+    fontWeight: "800",
+    marginTop: 7,
+  },
+  minifigPricePair: {
+    minHeight: 96,
+    borderRadius: 22,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: c.background,
+    borderWidth: 1,
+    borderColor: hexToRgba(c.text, 0.1),
+  },
+  minifigConditionPrice: {
+    flex: 1,
+    minHeight: 94,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  minifigConditionLabel: {
+    color: themeColors.semantic.danger,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  minifigConditionLabelSelected: {
+    color: themeColors.lego.yellow,
+  },
+  minifigConditionValue: {
+    color: c.text,
+    fontSize: 26,
+    fontWeight: "900",
+  },
+  minifigPriceDivider: {
+    width: 1,
+    height: 56,
+    backgroundColor: hexToRgba(c.text, 0.09),
+  },
+  minifigCorrectionRow: {
+    minHeight: 60,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: hexToRgba(c.text, 0.04),
+  },
+  minifigCorrectionTitle: {
+    color: c.text,
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  minifigCorrectionMeta: {
+    color: c.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 3,
+  },
+  minifigSourceFootnote: {
+    color: c.textMuted,
+    fontSize: 10,
+    fontWeight: "700",
+    textAlign: "center",
   },
   heroRow: { flexDirection: "row", alignItems: "center" },
   thumb: { width: 82, height: 82, borderRadius: 8 },
@@ -711,6 +955,17 @@ function getStyles(c: ModeColors) { return StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
+  },
+  minifigPrimary: {
+    minHeight: 58,
+    borderRadius: 19,
+    flexDirection: "row",
+    gap: 9,
+  },
+  minifigPrimaryIconFallback: {
+    color: themeColors.light.text,
+    fontSize: 18,
+    fontWeight: "900",
   },
   primarySaved: {
     backgroundColor: hexToRgba(themeColors.lego.yellow, 0.26),

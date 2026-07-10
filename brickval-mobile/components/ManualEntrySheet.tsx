@@ -12,8 +12,8 @@ import {
   Platform,
 } from "react-native";
 import type { ScanMode } from "../lib/api";
+import { useTheme } from "../lib/ThemeProvider";
 
-const GOLD = "#F2CD37";
 const { height: SCREEN_H } = Dimensions.get("window");
 const SHEET_H = Math.min(340, Math.round(SCREEN_H * 0.44));
 
@@ -29,6 +29,7 @@ interface Props {
 
 export const ManualEntrySheet = forwardRef<ManualEntryHandle, Props>(
   ({ mode, onSubmit }, ref) => {
+    const { accent } = useTheme();
     const [visible, setVisible] = useState(false);
     const [value, setValue] = useState("");
     const [error, setError] = useState("");
@@ -89,7 +90,7 @@ export const ManualEntrySheet = forwardRef<ManualEntryHandle, Props>(
               { transform: [{ translateY: slide }] },
             ]}
           >
-            <View style={styles.handle} />
+            <View style={[styles.handle, { backgroundColor: accent.primary }]} />
             <Text style={styles.title}>
               {mode === "minifig" ? "Enter minifigure ID" : "Enter set number"}
             </Text>
@@ -117,6 +118,7 @@ export const ManualEntrySheet = forwardRef<ManualEntryHandle, Props>(
             <Pressable
               style={[
                 styles.btn,
+                { backgroundColor: accent.primary },
                 value.trim().replace(mode === "minifig" ? /[^a-z0-9]/gi : /[^0-9]/g, "").length < (mode === "minifig" ? 3 : 4) && styles.btnDisabled,
               ]}
               disabled={value.trim().replace(mode === "minifig" ? /[^a-z0-9]/gi : /[^0-9]/g, "").length < (mode === "minifig" ? 3 : 4)}
@@ -147,7 +149,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: GOLD,
     alignSelf: "center",
     marginBottom: 10,
   },
@@ -172,7 +173,6 @@ const styles = StyleSheet.create({
     marginTop: -2,
   },
   btn: {
-    backgroundColor: GOLD,
     borderRadius: 999,
     paddingVertical: 15,
     alignItems: "center",

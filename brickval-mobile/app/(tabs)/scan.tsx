@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Animated, Easing, View, StyleSheet, Pressable, Text, ScrollView, TextInput, Image, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
+import { SymbolView } from "expo-symbols";
 import { router } from "expo-router";
 import { CameraScanner } from "../../components/CameraScanner";
 import { ResultCard } from "../../components/ResultCard";
 import { DetectionOverlay } from "../../components/DetectionOverlay";
 import { LegoLoaderNative } from "../../components/LegoLoaderNative";
-import { ManualEntrySheet, type ManualEntryHandle } from "../../components/ManualEntrySheet";
 import { ScanIntentPicker, type ScanIntent } from "../../components/ScanIntentPicker";
 import {
   bulkLookupMinifigs,
@@ -50,6 +50,8 @@ import { useTheme, type ModeColors } from "../../lib/ThemeProvider";
 import type { ThemeColors } from "../../lib/theme";
 import { buildMarketSnapshot } from "../../lib/market-snapshot";
 import { sanitizeBulkMinifigNumbers } from "../../lib/minifig-lookup";
+import { runMinifigScanSession, ScanSessionError } from "../../lib/scan-session";
+import { captureScanError, recordScanTimings } from "../../lib/sentry";
 
 /**
  * Native scan screen — fullscreen camera, manual capture, result sheet over
@@ -60,7 +62,6 @@ type Status = "idle" | "loading" | "result" | "bulkResult" | "candidates" | "det
 type BulkSelectionState = Record<string, { selected: boolean; condition: CollectionCondition }>;
 const FREE_COLLECTION_LIMIT = 10;
 const LOW_CONFIDENCE_THRESHOLD = 0.8;
-const BULK_GREEN = "#F2CD37";
 
 function getResultKey(item: LookupDetailResult) {
   return `${item.item_type}:${item.set_number}:${item.item_type === "part" ? item.part_info.color_id ?? "none" : "base"}`;
@@ -186,7 +187,6 @@ export default function ScanHome() {
   const collectionLimitProgress = useRef(new Animated.Value(0)).current;
   const collectionLimitPromptTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const singleScanCooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const manualRef = useRef<ManualEntryHandle>(null);
   const pendingGuestScan = useRef(false);
   const pendingServerScansUsed = useRef<number | null>(null);
   const promptedOnCurrentResult = useRef(false);
@@ -311,13 +311,7 @@ export default function ScanHome() {
 
   const yieldToRender = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
-  const beginLookup = async (
-    identifier: string,
-    itemType: LookupItemType = "set",
-    options?: { colorId?: number }
-  ) => {
-    setLoadingMsg("Fetching market prices...");
-    const data = await lookupSet(identifier, itemType, options);
+  const completeLookup = async (data: LookupDetailResult) => {
     setResult(data);
     setLatestLookupResult(data);
     setAddedResultKey(null);
@@ -358,6 +352,16 @@ export default function ScanHome() {
     }
   };
 
+  const beginLookup = async (
+    identifier: string,
+    itemType: LookupItemType = "set",
+    options?: { colorId?: number }
+  ) => {
+    setLoadingMsg("Fetching market prices...");
+    const data = await lookupSet(identifier, itemType, options);
+    await completeLookup(data);
+  };
+
   const maybeShowCandidates = (identification: IdentificationResult) => {
     const topScore = identification.confidence ?? identification.candidates[0]?.score ?? null;
     const shouldPauseForChoice =
@@ -374,8 +378,12 @@ export default function ScanHome() {
     return true;
   };
 
-  const openDetectionSheet = async (nextDetections: IdentificationDetection[], message: string) => {
-    const access = await prepareLookupAccess();
+  const openDetectionSheet = async (
+    nextDetections: IdentificationDetection[],
+    message: string,
+    preparedAccess?: { allowed: boolean; hasToken: boolean }
+  ) => {
+    const access = preparedAccess ?? await prepareLookupAccess();
     if (!access.allowed) {
       openAccountForUpgrade();
       setStatus("idle");
@@ -605,19 +613,27 @@ export default function ScanHome() {
     setStatus("loading");
     setLoadingMsg(scanIntent === "bulk" ? "Finding minifigures..." : "Finding minifigure...");
     try {
-      const access = await prepareLookupAccess();
-      if (!access.allowed) {
+      const outcome = await runMinifigScanSession(photoUri, scanIntent, {
+        prepareAccess: prepareLookupAccess,
+        identify: identifySet,
+        bulkLookup: bulkLookupMinifigs,
+        lookup: (identifier, mode) => lookupSet(identifier, mode),
+        now: () => performance.now(),
+      });
+      recordScanTimings({ intent: scanIntent, outcome: outcome.kind, ...outcome.timings });
+
+      if (outcome.kind === "access-denied") {
         setStatus("idle");
         openAccountForUpgrade();
         return;
       }
 
-      const identification = await identifySet(photoUri, "minifig", { bulk: scanIntent === "bulk" });
+      const identification = outcome.identification;
       if (typeof identification.scansUsed === "number") {
         pendingServerScansUsed.current = identification.scansUsed;
       }
 
-      if (!identification.detections.length) {
+      if (outcome.kind === "not-found") {
         warn();
         pendingServerScansUsed.current = null;
         setErrorMessage("We couldn't identify the minifigure or part. Try a clearer front-facing shot.");
@@ -626,9 +642,8 @@ export default function ScanHome() {
         return;
       }
 
-      const minifigDetections = identification.detections.filter((item) => item.item_type === "minifig");
-      if (scanIntent === "bulk") {
-        if (minifigDetections.length === 0) {
+      if (outcome.kind === "bulk-results") {
+        if (outcome.detections.length === 0) {
           warn();
           pendingServerScansUsed.current = null;
           setErrorMessage("We couldn't find any minifigures in this frame. Try spreading them out with the front side visible.");
@@ -636,44 +651,57 @@ export default function ScanHome() {
           return;
         }
 
-        const consume = await prepareLookupAccess();
-        if (!consume.allowed) {
-          setStatus("idle");
-          openAccountForUpgrade();
-          return;
-        }
-        if (!consume.hasToken) {
+        if (!outcome.access.hasToken) {
           pendingGuestScan.current = true;
         }
+        if (outcome.results.length === 0) {
+          pendingGuestScan.current = false;
+          pendingServerScansUsed.current = null;
+          warn();
+          setErrorMessage("We found the minifigures, but couldn't fetch market prices. Try again in a moment.");
+          setStatus("idle");
+          return;
+        }
 
-        const figIds = getBatchableMinifigIds(minifigDetections);
-        setDetections(minifigDetections);
-        setSelectedBulkMinifigIds(figIds);
-        await handleBulkMinifigPricing(figIds);
+        if (pendingGuestScan.current) {
+          const latestGuestScansUsed = await syncGuestScansUsed();
+          await commitGuestScansUsed(latestGuestScansUsed + 1);
+        }
+        pendingGuestScan.current = false;
+        pendingServerScansUsed.current = null;
+        setDetections(outcome.detections);
+        setSelectedBulkMinifigIds(getBatchableMinifigIds(outcome.detections));
+        setBulkResults(outcome.results);
+        const nextSelections: BulkSelectionState = {};
+        for (const item of outcome.results) {
+          nextSelections[getResultKey(item)] = { selected: true, condition: "new_sealed" };
+        }
+        setBulkSelections(nextSelections);
+        setLatestLookupResult(outcome.results[0]);
+        setStatus("bulkResult");
         return;
       }
 
-      if (!shouldPauseForDetectionChoice(identification.detections, LOW_CONFIDENCE_THRESHOLD)) {
-        const consume = await prepareLookupAccess();
-        if (!consume.allowed) {
-          setStatus("idle");
-          openAccountForUpgrade();
-          return;
-        }
-        if (!consume.hasToken) {
-          pendingGuestScan.current = true;
-        }
-
-        await handleDetectionPick(identification.detections[0]);
+      if (outcome.kind === "single-match") {
+        pendingGuestScan.current = !outcome.access.hasToken;
+        await completeLookup(outcome.result);
         return;
       }
+
       await openDetectionSheet(
         identification.detections,
-        getDetectionChoiceMessage(identification.detections, LOW_CONFIDENCE_THRESHOLD)
+        getDetectionChoiceMessage(identification.detections, LOW_CONFIDENCE_THRESHOLD),
+        outcome.access
       );
       return;
     } catch (e) {
-      if (isApiRequestError(e) && e.status === 402) {
+      const stage = e instanceof ScanSessionError ? e.stage : "unknown";
+      const rootError = e instanceof ScanSessionError ? e.cause : e;
+      captureScanError(stage, rootError, {
+        intent: scanIntent,
+        ...(e instanceof ScanSessionError ? e.timings : {}),
+      });
+      if (isApiRequestError(rootError) && rootError.status === 402) {
         pendingGuestScan.current = false;
         pendingServerScansUsed.current = null;
         triggerUpgrade();
@@ -980,15 +1008,27 @@ export default function ScanHome() {
         scanIntent={scanIntent}
         onCapture={handleCapture}
         onPhotoPress={handlePhotoPress}
-        onManualPress={() => {
-          setErrorMessage(null);
-          manualRef.current?.open();
-        }}
       />
 
-      <View pointerEvents="box-none" style={[s.scanIntentHeader, { top: insets.top + 18 }]}>
+      <View pointerEvents="box-none" style={[s.scanIntentHeader, { top: insets.top + 30 }]}>
         <ScanIntentPicker value={scanIntent} onChange={setScanIntent} />
       </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open profile"
+        style={[s.profileButton, { top: insets.top + 22 }]}
+        onPress={() => router.push("/account")}
+        hitSlop={12}
+      >
+        <SymbolView
+          name={{ ios: "person.crop.circle.fill", android: "account_circle", web: "account_circle" }}
+          size={25}
+          type="hierarchical"
+          tintColor="#F7F4EA"
+          fallback={<Text style={s.profileFallback}>●</Text>}
+        />
+      </Pressable>
 
       {__DEV__ && status === "idle" && (
         <Pressable style={s.previewBtn} onPress={showPreviewResult}>
@@ -1001,7 +1041,7 @@ export default function ScanHome() {
           <Image source={{ uri: capturedPhotoUri }} style={s.processingImage} resizeMode="cover" />
           <View style={s.processingScrim} />
           <View style={s.processingPill}>
-            <ActivityIndicator size="small" color={BULK_GREEN} />
+            <ActivityIndicator size="small" color={activeColors.primary} />
             <View style={s.processingCopy}>
               <Text style={s.processingText}>
                 {scanIntent === "bulk" ? "Scanning minifigures..." : loadingMsg}
@@ -1220,17 +1260,6 @@ export default function ScanHome() {
               }}
             >
               <Text style={s.candidateSecondaryText}>Try again</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              style={s.candidatePrimary}
-              onPress={() => {
-                setCandidateOptions([]);
-                setStatus("idle");
-                manualRef.current?.open();
-              }}
-            >
-              <Text style={s.candidatePrimaryText}>Enter manually</Text>
             </Pressable>
           </View>
         </Animated.View>
@@ -1555,7 +1584,6 @@ export default function ScanHome() {
         </View>
       </Modal>
 
-      <ManualEntrySheet ref={manualRef} mode="set" onSubmit={handleManualSubmit} />
       <PrePurchaseDisclosure
         visible={showDisclosure}
         onContinue={handleDisclosureContinue}
@@ -1623,6 +1651,23 @@ function getStyles(c: ThemeColors, m: ModeColors) {
     alignItems: "center",
     paddingHorizontal: 20,
   },
+  profileButton: {
+    position: "absolute",
+    right: 22,
+    zIndex: 13,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    borderWidth: 1,
+    borderColor: "rgba(247,244,234,0.16)",
+    backgroundColor: "rgba(16,16,18,0.74)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileFallback: {
+    color: "#F7F4EA",
+    fontSize: 20,
+  },
   previewBtn: {
     position: "absolute",
     top: 188,
@@ -1673,7 +1718,7 @@ function getStyles(c: ThemeColors, m: ModeColors) {
     minHeight: 40,
     flex: 1,
     borderRadius: 999,
-    backgroundColor: c.lego.yellow,
+    backgroundColor: m.primary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1787,7 +1832,7 @@ function getStyles(c: ThemeColors, m: ModeColors) {
     gap: 8,
   },
   bulkValueText: {
-    color: "#F2CD37",
+    color: m.primary,
     fontSize: 28,
     fontWeight: "900",
     letterSpacing: -0.5,
@@ -1815,7 +1860,7 @@ function getStyles(c: ThemeColors, m: ModeColors) {
     height: 74,
     borderRadius: 16,
     borderWidth: 3,
-    borderColor: "#F2CD37",
+    borderColor: m.primary,
     backgroundColor: "#F7F4EA",
     alignItems: "center",
     justifyContent: "center",
@@ -1842,7 +1887,7 @@ function getStyles(c: ThemeColors, m: ModeColors) {
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F2CD37",
+    backgroundColor: m.primary,
     borderWidth: 2,
     borderColor: "#F7F4EA",
   },
@@ -1871,7 +1916,7 @@ function getStyles(c: ThemeColors, m: ModeColors) {
     justifyContent: "center",
   },
   bulkConditionOptionActive: {
-    backgroundColor: "#F2CD37",
+    backgroundColor: m.primary,
   },
   bulkConditionText: {
     color: "rgba(247,244,234,0.62)",
@@ -1886,7 +1931,7 @@ function getStyles(c: ThemeColors, m: ModeColors) {
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F2CD37",
+    backgroundColor: m.primary,
   },
   bulkPrimaryButtonDisabled: {
     opacity: 0.42,
@@ -1902,7 +1947,7 @@ function getStyles(c: ThemeColors, m: ModeColors) {
     fontWeight: "900",
   },
   bulkPrimaryTextAdded: {
-    color: "#F2CD37",
+    color: m.primary,
   },
   bulkSecondaryButton: {
     minHeight: 58,
@@ -1939,7 +1984,7 @@ function getStyles(c: ThemeColors, m: ModeColors) {
   },
   collectionLimitAccent: {
     height: 4,
-    backgroundColor: c.lego.yellow,
+    backgroundColor: m.primary,
   },
   collectionLimitCopy: {
     paddingHorizontal: 16,

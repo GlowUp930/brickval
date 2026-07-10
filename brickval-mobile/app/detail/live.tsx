@@ -19,9 +19,10 @@ import { useTheme } from "../../lib/ThemeProvider";
 import { type ThemeColors } from "../../lib/theme";
 import { buildMarketRows } from "../../lib/market-rows";
 import { MarketRowsTable } from "../../components/MarketRowsTable";
+import { BlurView } from "expo-blur";
+import { buildValuationChart } from "../../lib/item-valuation";
 const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const USD_DECIMAL = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const DETAIL_ACCENT = "#42DAD1";
 
 type CollectorField = {
   label: string;
@@ -41,27 +42,10 @@ function formatTimelineLabel(value: string) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function getSmoothPath(points: { x: number; y: number }[]) {
-  if (points.length === 0) return "";
-  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
-  const smoothing = 0.18;
-  return points.reduce((path, point, index) => {
-    if (index === 0) return `M ${point.x} ${point.y}`;
-    const previous = points[index - 1];
-    const next = points[index + 1] ?? point;
-    const previousControl = points[index - 2] ?? previous;
-    const cp1x = previous.x + (point.x - previousControl.x) * smoothing;
-    const cp1y = previous.y + (point.y - previousControl.y) * smoothing;
-    const cp2x = point.x - (next.x - previous.x) * smoothing;
-    const cp2y = point.y - (next.y - previous.y) * smoothing;
-    return `${path} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${point.x} ${point.y}`;
-  }, "");
-}
-
 export default function LiveDetailScreen() {
   const { width: screenWidth } = useWindowDimensions();
-  const { colors: c } = useTheme();
-  const s = useMemo(() => getStyles(c), [c]);
+  const { colors: c, accent } = useTheme();
+  const s = useMemo(() => getStyles(c, accent.primary), [accent.primary, c]);
   const result = getLatestLookupResult();
   const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<number | null>(null);
   const popupProgress = useRef(new Animated.Value(0)).current;
@@ -84,20 +68,10 @@ export default function LiveDetailScreen() {
   const chartWidth = Math.min(360, Math.max(260, screenWidth - 40));
   const chartHeight = 220;
   const chartBottom = chartHeight - 26;
-  const minHistoryValue = history.length ? Math.min(...history.map((point) => point.price_usd)) : 0;
-  const maxHistoryValue = history.length ? Math.max(...history.map((point) => point.price_usd)) : 0;
-  const historyRange = Math.max(maxHistoryValue - minHistoryValue, 1);
-  const chartPoints = history.map((point, index) => {
-    const x = history.length > 1 ? (index * chartWidth) / (history.length - 1) : chartWidth / 2;
-    const y = chartBottom - ((point.price_usd - minHistoryValue) / historyRange) * 150;
-    return { ...point, x, y };
-  });
-  const chartLinePath = getSmoothPath(chartPoints);
-  const firstPoint = chartPoints[0];
-  const lastPoint = chartPoints[chartPoints.length - 1];
-  const chartAreaPath = chartLinePath && firstPoint && lastPoint
-    ? `${chartLinePath} L ${lastPoint.x} ${chartBottom} L ${firstPoint.x} ${chartBottom} Z`
-    : "";
+  const chartModel = buildValuationChart(history, chartWidth, chartHeight, chartBottom);
+  const chartPoints = chartModel.points;
+  const chartLinePath = chartModel.linePath;
+  const chartAreaPath = chartModel.areaPath;
   const chartStep = chartPoints.length > 1 ? chartWidth / (chartPoints.length - 1) : chartWidth;
   const uniqueTimelinePoints = chartPoints.filter((point, index) => {
     if (index === 0) return true;
@@ -164,7 +138,8 @@ export default function LiveDetailScreen() {
 
   return (
     <View style={s.root}>
-      {result.image_url ? <Image source={{ uri: result.image_url }} style={s.backdropImage} blurRadius={28} /> : null}
+      {result.image_url ? <Image source={{ uri: result.image_url }} style={s.backdropImage} resizeMode="cover" /> : null}
+      <BlurView intensity={72} tint="dark" style={s.backdropBlur} />
       <View style={s.backdropScrim} />
       <ScrollView contentContainerStyle={s.content}>
         <Pressable accessibilityRole="button" style={s.backBtn} onPress={() => router.back()}>
@@ -258,12 +233,12 @@ export default function LiveDetailScreen() {
             <Svg width={chartWidth} height={chartHeight} style={StyleSheet.absoluteFill}>
               <Defs>
                 <LinearGradient id="detailFill" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={DETAIL_ACCENT} stopOpacity="0.14" />
-                  <Stop offset="1" stopColor={DETAIL_ACCENT} stopOpacity="0" />
+                  <Stop offset="0" stopColor={accent.primary} stopOpacity="0.18" />
+                  <Stop offset="1" stopColor={accent.primary} stopOpacity="0" />
                 </LinearGradient>
               </Defs>
               {chartAreaPath ? <Path d={chartAreaPath} fill="url(#detailFill)" /> : null}
-              {chartLinePath ? <Path d={chartLinePath} fill="none" stroke={DETAIL_ACCENT} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /> : null}
+              {chartLinePath ? <Path d={chartLinePath} fill="none" stroke={accent.primary} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /> : null}
             </Svg>
           </View>
             <View style={s.timeline}>
@@ -310,7 +285,7 @@ function Stat({ s, label, value }: { s: any; label: string; value: string }) {
   );
 }
 
-function getStyles(c: ThemeColors) {
+function getStyles(c: ThemeColors, accent: string) {
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: c.dark.background },
   backdropImage: {
@@ -322,6 +297,7 @@ function getStyles(c: ThemeColors) {
     opacity: 0.2,
     transform: [{ scale: 1.18 }],
   },
+  backdropBlur: { position: "absolute", top: 0, left: 0, right: 0, height: 430 },
   backdropScrim: {
     ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.7)",
@@ -341,7 +317,7 @@ function getStyles(c: ThemeColors) {
   },
   backText: { color: c.dark.text, fontSize: 12, fontWeight: "900" },
   header: { gap: 6 },
-  eyebrow: { color: DETAIL_ACCENT, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+  eyebrow: { color: accent, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
   title: { color: c.dark.text, fontSize: 30, fontWeight: "900", lineHeight: 34 },
   body: { color: c.dark.textMuted, fontSize: 14, lineHeight: 20, fontWeight: "700", textAlign: "center" },
   meta: { color: c.dark.textMuted, fontSize: 13, fontWeight: "700" },
@@ -463,7 +439,7 @@ function getStyles(c: ThemeColors) {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: DETAIL_ACCENT,
+    backgroundColor: accent,
     borderWidth: 2,
     borderColor: "#0b0f0d",
     zIndex: 3,

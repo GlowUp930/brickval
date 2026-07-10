@@ -35,9 +35,9 @@ function isAvatarKey(value: string | null): value is AvatarKey {
 }
 
 export default function AccountScreen() {
-  const { colors } = useTheme();
+  const { colors, accent } = useTheme();
   const c = colors.dark;
-  const styles = useMemo(() => getStyles(c), [c]);
+  const styles = useMemo(() => getStyles(c, accent.primary, accent.softDark, accent.contrast), [accent, c]);
 
   if (!isClerkConfigured) {
     return (
@@ -56,9 +56,9 @@ export default function AccountScreen() {
 }
 
 function ConfiguredAccountScreen() {
-  const { colors } = useTheme();
+  const { colors, accent, accentPreference, setAccentPreference } = useTheme();
   const c = colors.dark;
-  const styles = useMemo(() => getStyles(c), [c]);
+  const styles = useMemo(() => getStyles(c, accent.primary, accent.softDark, accent.contrast), [accent, c]);
   const { upgrade } = useLocalSearchParams<{ upgrade?: string }>();
   const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
   const { user } = useUser();
@@ -363,6 +363,36 @@ function ConfiguredAccountScreen() {
           </View>
         </View>
 
+        <View style={styles.appearancePanel}>
+          <View>
+            <Text style={styles.cardLabel}>App accent</Text>
+            <Text style={styles.avatarTitle}>Choose your highlight color</Text>
+          </View>
+          <View style={styles.accentOptions}>
+            {(["yellow", "blue"] as const).map((option) => {
+              const selected = accentPreference === option;
+              const swatch = option === "yellow" ? "#F2CD37" : "#42DAD1";
+              return (
+                <Pressable
+                  key={option}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  onPress={() => {
+                    tap();
+                    setAccentPreference(option);
+                  }}
+                  style={[styles.accentOption, selected && styles.accentOptionActive]}
+                >
+                  <View style={[styles.accentSwatch, { backgroundColor: swatch }]} />
+                  <Text style={[styles.accentOptionText, selected && styles.accentOptionTextActive]}>
+                    {option === "yellow" ? "Brick yellow" : "Market blue"}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
         {!isLoaded ? null : !isSignedIn ? (
           <View style={styles.section}>
             <ActionButton
@@ -439,9 +469,9 @@ function ActionButton({
   disabled?: boolean;
   tone?: "primary" | "secondary" | "danger";
 }) {
-  const { colors } = useTheme();
+  const { colors, accent } = useTheme();
   const c = colors.dark;
-  const s = getStyles(c);
+  const s = getStyles(c, accent.primary, accent.softDark, accent.contrast);
   return (
     <Pressable
       accessibilityRole="button"
@@ -468,9 +498,9 @@ function ActionButton({
 }
 
 function AvatarImage({ source, size }: { source: ImageSourcePropType; size: number }) {
-  const { colors } = useTheme();
+  const { colors, accent } = useTheme();
   const c = colors.dark;
-  const s = getStyles(c);
+  const s = getStyles(c, accent.primary, accent.softDark, accent.contrast);
   return (
     <View style={[s.avatarImageFrame, { width: size, height: size, borderRadius: size * 0.24 }]}>
       <Image source={source} style={s.avatarImage} resizeMode="cover" />
@@ -478,7 +508,7 @@ function AvatarImage({ source, size }: { source: ImageSourcePropType; size: numb
   );
 }
 
-function getStyles(c: ModeColors) {
+function getStyles(c: ModeColors, accent: string, accentSoft: string, accentContrast: string) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: c.background },
     content: { padding: 20, paddingTop: 56, paddingBottom: 96, gap: 18 },
@@ -494,7 +524,7 @@ function getStyles(c: ModeColors) {
     },
     backText: { color: c.text, fontSize: 12, fontWeight: "900" },
     header: { gap: 8 },
-    eyebrow: { color: colors.lego.yellowPressed, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
+    eyebrow: { color: accent, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
     title: { color: c.text, fontSize: 34, fontWeight: "900" },
     body: { color: c.textMuted, fontSize: 14, lineHeight: 21, fontWeight: "700" },
     card: {
@@ -507,7 +537,7 @@ function getStyles(c: ModeColors) {
     },
     cardLabel: { color: c.textDisabled, fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
     cardTitle: { color: c.text, fontSize: 24, fontWeight: "900" },
-    cardMeta: { color: colors.lego.yellowPressed, fontSize: 14, fontWeight: "800" },
+    cardMeta: { color: accent, fontSize: 14, fontWeight: "800" },
     avatarPanel: {
       borderRadius: 8,
       borderWidth: 1,
@@ -516,6 +546,30 @@ function getStyles(c: ModeColors) {
       padding: 14,
       gap: 12,
     },
+    appearancePanel: {
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.backgroundElevated,
+      padding: 14,
+      gap: 12,
+    },
+    accentOptions: { flexDirection: "row", gap: 10 },
+    accentOption: {
+      flex: 1,
+      minHeight: 58,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.border,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 9,
+    },
+    accentOptionActive: { borderColor: accent, backgroundColor: accentSoft },
+    accentSwatch: { width: 18, height: 18, borderRadius: 9 },
+    accentOptionText: { color: c.textMuted, fontSize: 12, fontWeight: "800" },
+    accentOptionTextActive: { color: c.text },
     avatarHeader: {
       flexDirection: "row",
       alignItems: "center",
@@ -536,8 +590,8 @@ function getStyles(c: ModeColors) {
       gap: 7,
     },
     avatarOptionActive: {
-      borderColor: colors.lego.yellow,
-      backgroundColor: colors.lego.yellowSoft,
+      borderColor: accent,
+      backgroundColor: accentSoft,
     },
     avatarOptionText: { color: c.textDisabled, fontSize: 9, fontWeight: "900" },
     avatarOptionTextActive: { color: c.text },
@@ -552,7 +606,7 @@ function getStyles(c: ModeColors) {
     action: {
       minHeight: 48,
       borderRadius: 8,
-      backgroundColor: colors.lego.yellow,
+      backgroundColor: accent,
       alignItems: "center",
       justifyContent: "center",
       paddingHorizontal: 16,
@@ -568,7 +622,7 @@ function getStyles(c: ModeColors) {
       borderColor: colors.semantic.danger,
     },
     actionDisabled: { opacity: 0.6 },
-    actionText: { color: colors.light.text, fontSize: 14, fontWeight: "900" },
+    actionText: { color: accentContrast, fontSize: 14, fontWeight: "900" },
     actionTextSecondary: { color: c.text },
     actionTextDanger: { color: colors.semantic.danger },
     helpText: { color: c.textMuted, fontSize: 12, lineHeight: 18, fontWeight: "700" },

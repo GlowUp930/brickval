@@ -11,9 +11,12 @@ import {
   Pressable,
   useWindowDimensions,
   Image,
+  Share,
   type GestureResponderEvent,
 } from "react-native";
 import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
+import { BlurView } from "expo-blur";
+import { SymbolView } from "expo-symbols";
 import { CollectionItem, getCollection, getItemTotalValue } from "../../../lib/collection";
 import { normalizeHistoryDate } from "../../../lib/api";
 import { QuestionMarkPlaceholder } from "../../../components/QuestionMarkPlaceholder";
@@ -21,8 +24,8 @@ import { buildChartAreaPath, interpolateChartLine, sampleChartLine } from "../..
 import { useTheme } from "../../../lib/ThemeProvider";
 import { type ThemeColors } from "../../../lib/theme";
 import { MarketRowsTable } from "../../../components/MarketRowsTable";
+import { smoothPath } from "../../../lib/item-valuation";
 const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-const DETAIL_ACCENT = "#42DAD1";
 type Horizon = "1M" | "3M" | "6M";
 const HORIZON_DAYS: Record<Horizon, number> = {
   "1M": 30,
@@ -86,23 +89,6 @@ function countSalesInWindow(history: HistoryPoint[], horizon: Horizon) {
   }).length;
 }
 
-function getSmoothPath(points: { x: number; y: number }[]) {
-  if (points.length === 0) return "";
-  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
-  const smoothing = 0.18;
-  return points.reduce((path, point, index) => {
-    if (index === 0) return `M ${point.x} ${point.y}`;
-    const previous = points[index - 1];
-    const next = points[index + 1] ?? point;
-    const previousControl = points[index - 2] ?? previous;
-    const cp1x = previous.x + (point.x - previousControl.x) * smoothing;
-    const cp1y = previous.y + (point.y - previousControl.y) * smoothing;
-    const cp2x = point.x - (next.x - previous.x) * smoothing;
-    const cp2y = point.y - (next.y - previous.y) * smoothing;
-    return `${path} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${point.x} ${point.y}`;
-  }, "");
-}
-
 function buildChartCoordinates(
   history: HistoryPoint[],
   chartWidth: number,
@@ -127,8 +113,8 @@ function buildChartCoordinates(
 
 export default function ItemDetailScreen() {
   const { width: screenWidth } = useWindowDimensions();
-  const { colors: c } = useTheme();
-  const s = useMemo(() => getStyles(c), [c]);
+  const { colors: c, accent } = useTheme();
+  const s = useMemo(() => getStyles(c, accent.primary), [accent.primary, c]);
   const params = useLocalSearchParams<{
     itemType?: string | string[];
     setNumber?: string | string[];
@@ -194,7 +180,7 @@ export default function ItemDetailScreen() {
       ? [{ date: isoDate(new Date(item.added_at)), price_usd: unitValue ?? 0, source: "bricklink" as const, x: chartWidth / 2, y: chartBottom / 2, total: totalValue }]
       : [];
   const activeChartPoints = sampleChartLine(chartPoints, chartWidth);
-  const chartLinePath = getSmoothPath(activeChartPoints);
+  const chartLinePath = smoothPath(activeChartPoints);
   const chartAreaPath = buildChartAreaPath(activeChartPoints, chartBottom);
   const chartStep = chartPoints.length > 1 ? chartWidth / (chartPoints.length - 1) : chartWidth;
   const uniqueTimelinePoints = chartPoints.filter((point, index) => {
@@ -284,7 +270,7 @@ export default function ItemDetailScreen() {
       const eased = Easing.out(Easing.cubic)(Math.min(1, (now - start) / duration));
       const nextFrame = interpolateChartLine(currentShape, nextShape, eased);
       currentMorphShapeRef.current = nextFrame;
-      const nextLinePath = getSmoothPath(nextFrame);
+      const nextLinePath = smoothPath(nextFrame);
       const nextFillPath = buildChartAreaPath(nextFrame, chartBottom);
       lineTarget?.setNativeProps?.({ d: nextLinePath });
       fillTarget?.setNativeProps?.({ d: nextFillPath });
@@ -344,22 +330,27 @@ export default function ItemDetailScreen() {
 
   return (
     <View style={s.root}>
-      {item.image_url ? <Image source={{ uri: item.image_url }} style={s.backdropImage} blurRadius={28} /> : null}
+      {item.image_url ? <Image source={{ uri: item.image_url }} style={s.backdropImage} resizeMode="cover" /> : null}
+      <BlurView intensity={72} tint="dark" style={s.backdropBlur} />
       <View style={s.backdropScrim} />
       <ScrollView contentContainerStyle={s.content}>
         <View style={s.header}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Go back" style={s.backBtn} onPress={() => router.back()}>
-            <Text style={s.backText}>Back</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Go back" style={s.roundControl} onPress={() => router.back()}>
+            <SymbolView name="chevron.left" size={21} tintColor={c.dark.text} />
           </Pressable>
-          <Text style={s.eyebrow}>
-            {item.item_type === "part" ? "Part details" : item.item_type === "minifig" ? "Minifigure details" : "Set details"}
-          </Text>
-          <Text style={s.title}>{item.name}</Text>
-          <Text style={s.meta}>
-            {item.set_number}
-            {item.item_type === "part" && item.color_name ? ` · ${item.color_name}` : ""}
-            {` · ${item.quantity}× · ${formatCondition(item.condition)}`}
-          </Text>
+          <View style={s.headerActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Share item"
+              style={s.roundControl}
+              onPress={() => void Share.share({ message: `${item.name} · ${USD.format(totalValue)} on BrickValue` })}
+            >
+              <SymbolView name="square.and.arrow.up" size={20} tintColor={c.dark.text} />
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="More item options" style={s.roundControl}>
+              <SymbolView name="ellipsis" size={21} tintColor={c.dark.text} />
+            </Pressable>
+          </View>
         </View>
 
         <View style={s.hero}>
@@ -370,6 +361,15 @@ export default function ItemDetailScreen() {
               <QuestionMarkPlaceholder style={s.image} />
             )}
             <View style={s.heroCopy}>
+              <Text style={s.title}>{item.name}</Text>
+              <Text style={s.meta}>
+                {item.theme ? `${item.theme} · ` : ""}{item.set_number}
+              </Text>
+              <Text style={s.submeta}>
+                {item.item_type === "part" ? "Part" : item.item_type === "minifig" ? "Minifigure" : "Set"}
+                {item.year_released ? ` · ${item.year_released}` : ""}
+                {` · Quantity ${item.quantity}`}
+              </Text>
               <Text style={s.valueLabel}>Collection value</Text>
               <Text style={s.value}>{USD.format(totalValue)}</Text>
               <Text style={s.unitValue}>
@@ -450,12 +450,12 @@ export default function ItemDetailScreen() {
               <Svg width={chartWidth} height={chartHeight} style={StyleSheet.absoluteFill}>
               <Defs>
                 <LinearGradient id="detailFill" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={DETAIL_ACCENT} stopOpacity="0.14" />
-                  <Stop offset="1" stopColor={DETAIL_ACCENT} stopOpacity="0" />
+                  <Stop offset="0" stopColor={accent.primary} stopOpacity="0.18" />
+                  <Stop offset="1" stopColor={accent.primary} stopOpacity="0" />
                 </LinearGradient>
               </Defs>
                 {chartAreaPath ? <Path ref={morphFillRef} d={chartAreaPath} fill="url(#detailFill)" /> : null}
-                {chartLinePath ? <Path ref={morphLineRef} d={chartLinePath} fill="none" stroke={DETAIL_ACCENT} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /> : null}
+                {chartLinePath ? <Path ref={morphLineRef} d={chartLinePath} fill="none" stroke={accent.primary} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" /> : null}
               </Svg>
             </View>
             <View style={[s.timeline, { width: chartWidth }]}>
@@ -522,24 +522,26 @@ function Stat({ s, label, value }: { s: any; label: string; value: string }) {
   );
 }
 
-function getStyles(c: ThemeColors) {
+function getStyles(c: ThemeColors, accent: string) {
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: c.dark.background },
   backdropImage: {
     position: "absolute",
-    top: -90,
-    left: -40,
-    right: -40,
-    height: 360,
-    opacity: 0.2,
-    transform: [{ scale: 1.18 }],
+    top: -30,
+    left: -60,
+    right: -60,
+    height: 560,
+    opacity: 0.62,
+    transform: [{ scale: 1.22 }],
   },
+  backdropBlur: { position: "absolute", top: 0, left: 0, right: 0, height: 570 },
   backdropScrim: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0,0,0,0.7)",
+    backgroundColor: "rgba(0,0,0,0.58)",
   },
   content: { padding: 20, paddingTop: 58, paddingBottom: 112, gap: 18 },
-  header: { gap: 6 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  headerActions: { flexDirection: "row", gap: 10 },
   backBtn: {
     alignSelf: "flex-start",
     minHeight: 42,
@@ -552,14 +554,24 @@ function getStyles(c: ThemeColors) {
     justifyContent: "center",
   },
   backText: { color: c.dark.text, fontSize: 12, fontWeight: "900" },
-  eyebrow: { color: DETAIL_ACCENT, fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
-  title: { color: c.dark.text, fontSize: 30, fontWeight: "900", letterSpacing: -1.1, lineHeight: 34 },
-  meta: { color: c.dark.textMuted, fontSize: 13, fontWeight: "700" },
+  roundControl: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(245,247,247,0.14)",
+    backgroundColor: "rgba(8,9,10,0.64)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: { color: c.dark.text, fontSize: 29, fontWeight: "900", letterSpacing: -1.1, lineHeight: 34, textAlign: "center" },
+  meta: { color: c.dark.textMuted, fontSize: 13, fontWeight: "800", textAlign: "center" },
+  submeta: { color: c.dark.textDisabled, fontSize: 12, fontWeight: "700", textAlign: "center", marginBottom: 8 },
   hero: {
     borderRadius: 34,
     borderWidth: 1,
     borderColor: "rgba(245,247,247,0.14)",
-    backgroundColor: "rgba(5,6,7,0.9)",
+    backgroundColor: "rgba(5,6,7,0.82)",
     padding: 18,
     gap: 18,
     shadowColor: "#000",
@@ -568,7 +580,7 @@ function getStyles(c: ThemeColors) {
     shadowOffset: { width: 0, height: 16 },
   },
   heroTop: { gap: 16, alignItems: "center" },
-  image: { width: 188, height: 188, borderRadius: 26, backgroundColor: "#171717" },
+  image: { width: 252, height: 252, borderRadius: 28, backgroundColor: "rgba(23,23,23,0.7)" },
   heroCopy: { alignItems: "center", gap: 5 },
   valueLabel: { color: c.dark.textMuted, fontSize: 11, fontWeight: "900", textTransform: "uppercase" },
   value: { color: c.dark.text, fontSize: 42, fontWeight: "900", lineHeight: 46, letterSpacing: -1.4 },
@@ -680,7 +692,7 @@ function getStyles(c: ThemeColors) {
     alignItems: "center",
     justifyContent: "center",
   },
-  horizonPillActive: { backgroundColor: DETAIL_ACCENT, borderColor: DETAIL_ACCENT },
+  horizonPillActive: { backgroundColor: accent, borderColor: accent },
   horizonText: { color: c.dark.textDisabled, fontSize: 11, fontWeight: "900" },
   horizonTextActive: { color: "#07100c" },
   noSalesText: { color: c.dark.textMuted, fontSize: 12, fontWeight: "700", lineHeight: 18 },
@@ -716,7 +728,7 @@ function getStyles(c: ThemeColors) {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: DETAIL_ACCENT,
+    backgroundColor: accent,
     borderWidth: 2,
     borderColor: "#0b0f0d",
     zIndex: 3,

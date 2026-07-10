@@ -129,6 +129,23 @@ export const colors = {
   },
 } as const;
 
+export const accents = {
+  yellow: {
+    primary: '#F2CD37',
+    pressed: '#D9B52F',
+    softLight: '#FFF7D6',
+    softDark: 'rgba(242, 205, 55, 0.14)',
+    contrast: '#101012',
+  },
+  blue: {
+    primary: '#42DAD1',
+    pressed: '#2DBCB4',
+    softLight: '#DDF8F6',
+    softDark: 'rgba(66, 218, 209, 0.14)',
+    contrast: '#071817',
+  },
+} as const;
+
 export const gradients = {
   /**
    * Main app background.
@@ -264,10 +281,18 @@ export const theme = {
 } as const;
 
 export type Theme = typeof theme;
-export type ThemeColors = typeof colors;
-export type ModeColors = ThemeColors['light'] | ThemeColors['dark'];
 export type ColorMode = 'light' | 'dark';
+export type AccentName = keyof typeof accents;
+export type ThemeColors = typeof colors;
 
-export const getThemeColors = (mode: ColorMode = 'light') => {
-  return colors[mode];
+export const getThemeColors = (mode: ColorMode = 'light', accentName: AccentName = 'yellow') => {
+  const accent = accents[accentName];
+  return {
+    ...colors[mode],
+    primary: accent.primary,
+    primaryPressed: accent.pressed,
+    primarySoft: mode === 'light' ? accent.softLight : accent.softDark,
+  };
 };
+
+export type ModeColors = ReturnType<typeof getThemeColors>;

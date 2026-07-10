@@ -19,3 +19,7 @@ _Avoid_: Duplicate item, repeated row
 **Review Bulk Scan**:
 A scan result that contains multiple detected collectibles and requires the collector to confirm which matches should be priced or added.
 _Avoid_: Auto-add bulk scan, bulk import
+
+**Scan Session**:
+The complete camera-to-review workflow for one captured image, including access validation, identification, market lookup, timing, and a review-ready outcome.
+_Avoid_: Scan handler, camera request chain

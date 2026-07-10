@@ -7,8 +7,8 @@ import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { tap, warn } from "../lib/haptics";
 import { useStabilityDetector } from "../lib/stability";
 import type { ScanIntent } from "./ScanIntentPicker";
+import { useTheme } from "../lib/ThemeProvider";
 
-const GOLD = "#F2CD37";
 const INK = "#F7F4EA";
 const MUTED = "rgba(247,244,234,0.66)";
 type AutoScanPreviewState = "scanning" | "holdSteady" | "processing" | "matchFound";
@@ -19,7 +19,6 @@ interface Props {
   scanIntent: ScanIntent;
   onCapture: (photoUri: string) => void;
   onPhotoPress: () => void;
-  onManualPress: () => void;
   cameraPreview?: ReactNode;
   permissionGranted?: boolean;
   autoScanPreviewState?: AutoScanPreviewState;
@@ -31,12 +30,12 @@ export function CameraScanner({
   scanIntent,
   onCapture,
   onPhotoPress,
-  onManualPress,
   cameraPreview,
   permissionGranted,
   autoScanPreviewState,
 }: Props) {
   const cameraRef = useRef<CameraView>(null);
+  const { accent } = useTheme();
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [torch, setTorch] = useState(false);
@@ -63,7 +62,7 @@ export function CameraScanner({
         return;
       }
       const photo = await camera.takePictureAsync({
-        quality: 0.72,
+        quality: 0.68,
         skipProcessing: false,
         shutterSound: source === "manual",
       });
@@ -125,21 +124,11 @@ export function CameraScanner({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Allow camera access"
-            style={styles.permBtn}
+          style={[styles.permBtn, { backgroundColor: accent.primary }]}
             onPress={requestPermission}
           >
             <Text style={styles.permBtnText}>Allow camera</Text>
           </Pressable>
-          {!isSingleScan ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Enter set number manually"
-              style={styles.permBtnSecondary}
-              onPress={onManualPress}
-            >
-              <Text style={styles.permBtnSecondaryText}>Enter set number</Text>
-            </Pressable>
-          ) : null}
         </View>
       </View>
     );
@@ -172,13 +161,13 @@ export function CameraScanner({
           { bottom: isSingleScan ? Math.max(112, insets.bottom + 82) : Math.max(210, insets.bottom + 176) },
         ]}
       >
-        <View style={[styles.statusDot, statusActive && styles.statusDotActive]} />
+        <View style={[styles.statusDot, statusActive && { backgroundColor: accent.primary }]} />
         <Text style={styles.statusPillText}>{pillText}</Text>
       </View>
 
       {enabled && !scanning && scanIntent === "bulk" ? (
         <View pointerEvents="none" style={[styles.bulkTips, { top: insets.top + 92 }]}>
-          <Text style={styles.bulkTipsTitle}>Bulk scan setup</Text>
+          <Text style={[styles.bulkTipsTitle, { color: accent.primary }]}>Bulk scan setup</Text>
           <Text style={styles.bulkTipsText}>Space figures apart · Good lighting · Full figure visible</Text>
         </View>
       ) : null}
@@ -191,7 +180,7 @@ export function CameraScanner({
           tap();
           setTorch((current) => !current);
         }}
-        style={[styles.flashButton, { top: insets.top + 22 }, torch && styles.roundToolActive]}
+        style={[styles.flashButton, { top: insets.top + 22 }, torch && { backgroundColor: accent.primary, borderColor: accent.pressed }]}
         hitSlop={12}
       >
         <SymbolView
@@ -239,7 +228,11 @@ export function CameraScanner({
               void capturePhoto("manual");
             }}
             disabled={!enabled || scanning || (!cameraPreview && !cameraReady)}
-            style={[styles.captureButton, (!enabled || scanning || (!cameraPreview && !cameraReady)) && styles.disabled]}
+            style={[
+              styles.captureButton,
+              { backgroundColor: accent.primary, shadowColor: accent.primary },
+              (!enabled || scanning || (!cameraPreview && !cameraReady)) && styles.disabled,
+            ]}
             hitSlop={10}
           >
             <SymbolView
@@ -252,29 +245,6 @@ export function CameraScanner({
           </Pressable>
         ) : null}
 
-        {!isSingleScan ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Enter LEGO set number manually"
-            onPress={() => {
-              if (!enabled) return;
-              tap();
-              onManualPress();
-            }}
-            disabled={!enabled}
-            style={[styles.manualSetButton, !enabled && styles.disabled]}
-            hitSlop={10}
-          >
-            <SymbolView
-              name="number.square"
-              size={20}
-              type="hierarchical"
-              tintColor="#101012"
-              fallback={<Text style={styles.manualSetIcon}>#</Text>}
-            />
-            <Text style={styles.manualSetText}>Set #</Text>
-          </Pressable>
-        ) : null}
       </View>
     </View>
   );
@@ -325,7 +295,6 @@ const styles = StyleSheet.create({
   permActions: { gap: 10, alignItems: "center", marginTop: 12 },
   permBtn: {
     minWidth: 190,
-    backgroundColor: GOLD,
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 999,
@@ -360,9 +329,6 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: MUTED,
   },
-  statusDotActive: {
-    backgroundColor: GOLD,
-  },
   bulkTips: {
     position: "absolute",
     alignSelf: "center",
@@ -377,7 +343,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   bulkTipsTitle: {
-    color: GOLD,
     fontSize: 13,
     fontWeight: "900",
     letterSpacing: 0.3,
@@ -399,13 +364,15 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
     paddingHorizontal: 28,
   },
   singleBottomBar: {
     justifyContent: "flex-start",
   },
   roundTool: {
+    position: "absolute",
+    left: 28,
     width: 62,
     height: 62,
     borderRadius: 31,
@@ -415,13 +382,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  roundToolActive: {
-    backgroundColor: GOLD,
-    borderColor: "rgba(242,205,55,0.78)",
-  },
   flashButton: {
     position: "absolute",
-    right: 22,
+    left: 22,
     width: 58,
     height: 58,
     borderRadius: 29,
@@ -437,35 +400,12 @@ const styles = StyleSheet.create({
     borderRadius: 46,
     borderWidth: 5,
     borderColor: "rgba(247,244,234,0.94)",
-    backgroundColor: GOLD,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: GOLD,
     shadowOpacity: 0.34,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
     elevation: 10,
-  },
-  manualSetButton: {
-    minWidth: 86,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: GOLD,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 18,
-  },
-  manualSetIcon: {
-    color: "#101012",
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  manualSetText: {
-    color: "#101012",
-    fontSize: 16,
-    fontWeight: "900",
   },
   disabled: {
     opacity: 0.45,

@@ -8,11 +8,16 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  Alert,
+  ActivityIndicator,
   Image,
+  Platform,
   useWindowDimensions,
   type GestureResponderEvent,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { SymbolView } from "expo-symbols";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { Paths, File } from "expo-file-system";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,12 +28,14 @@ import {
   getCollectionValue,
   getItemTotalValue,
   removeFromCollection,
+  addToCollection,
 } from "../../lib/collection";
 import { getNativeProStatus } from "../../lib/paywall";
-import { normalizeHistoryDate } from "../../lib/api";
+import { lookupSet, normalizeHistoryDate } from "../../lib/api";
 import { buildChartAreaPath, interpolateChartLine, sampleChartLine } from "../../lib/chart-motion";
 import { useTheme, type ModeColors, type ThemeColors } from "../../lib/ThemeProvider";
 import { QuestionMarkPlaceholder } from "../../components/QuestionMarkPlaceholder";
+import { ManualEntrySheet, type ManualEntryHandle } from "../../components/ManualEntrySheet";
 
 const HISTORY_TIP_KEY = "brickval_home_history_tip_seen";
 
@@ -152,7 +159,7 @@ function getHistoricalCollectionSeries(items: CollectionItem[], horizon: Horizon
 }
 
 export default function HomeDashboard() {
-  const { colors: palette, c, mode } = useTheme();
+  const { colors: palette, c, mode, accent } = useTheme();
   const insets = useSafeAreaInsets();
   const s = useMemo(() => getStyles(palette, c, insets.top, insets.bottom), [palette, c, mode, insets.top, insets.bottom]);
   const { width: screenWidth } = useWindowDimensions();
@@ -171,22 +178,8 @@ export default function HomeDashboard() {
   const currentMorphShapeRef = useRef<{ x: number; y: number }[]>([]);
   const morphLineRef = useRef<any>(null);
   const morphFillRef = useRef<any>(null);
-  const indexTapCount = useRef(0);
-  const indexTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleIndexTap = () => {
-    indexTapCount.current += 1;
-    if (indexTapTimer.current) clearTimeout(indexTapTimer.current);
-    if (indexTapCount.current >= 5) {
-      indexTapCount.current = 0;
-      SecureStore.deleteItemAsync("has_completed_onboarding").catch(() => {});
-      SecureStore.deleteItemAsync("primary_goal").catch(() => {});
-      router.replace("/onboarding");
-      return;
-    }
-    indexTapTimer.current = setTimeout(() => { indexTapCount.current = 0; }, 2000);
-  };
-
+  const manualEntryRef = useRef<ManualEntryHandle>(null);
+  const [manualLookupBusy, setManualLookupBusy] = useState(false);
   useEffect(() => {
     let active = true;
     AccessibilityInfo.isReduceMotionEnabled().then((value) => {
@@ -320,6 +313,23 @@ export default function HomeDashboard() {
     setItems(next);
   };
 
+  const handleManualSetSubmit = async (setNumber: string) => {
+    setManualLookupBusy(true);
+    try {
+      const result = await lookupSet(setNumber, "set");
+      const next = await addToCollection(result, { quantity: 1, condition: "new_sealed" });
+      setItems(next);
+      router.push({
+        pathname: "/detail/[itemType]/[setNumber]",
+        params: { itemType: "set", setNumber, condition: "new_sealed" },
+      });
+    } catch {
+      Alert.alert("Set not found", "Check the set number and try again.");
+    } finally {
+      setManualLookupBusy(false);
+    }
+  };
+
   useEffect(() => {
     Animated.timing(popupProgress, {
       toValue: selectedHistoryPoint ? 1 : 0,
@@ -386,17 +396,20 @@ export default function HomeDashboard() {
     <View style={s.root}>
       <ScrollView contentContainerStyle={s.content}>
         <View style={s.topRail}>
-          <View>
-            <Text style={s.brand}>BrickVal <Pressable onPress={handleIndexTap}><Text style={s.pro}>INDEX</Text></Pressable></Text>
-            <Text style={s.brandMeta}>Sets + minifigures + parts</Text>
-          </View>
+          <Text style={s.brand}>BrickValue</Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Scan item"
-            style={s.scanButton}
-            onPress={() => router.push("/scan")}
+            accessibilityLabel="Open profile"
+            style={s.profileButton}
+            onPress={() => router.push("/account")}
           >
-            <Text style={s.scanButtonText}>Scan item</Text>
+            <SymbolView
+              name={{ ios: "person.crop.circle.fill", android: "account_circle", web: "account_circle" }}
+              size={27}
+              type="hierarchical"
+              tintColor={c.text}
+              fallback={<Text style={s.profileFallback}>●</Text>}
+            />
           </Pressable>
         </View>
 
@@ -488,8 +501,8 @@ export default function HomeDashboard() {
               <Svg width={chartWidth} height={chartHeight} style={StyleSheet.absoluteFill}>
                 <Defs>
                   <LinearGradient id="portfolioFill" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor={palette.lego.yellow} stopOpacity="0.12" />
-                    <Stop offset="1" stopColor={palette.lego.yellow} stopOpacity="0" />
+                    <Stop offset="0" stopColor={accent.primary} stopOpacity="0.12" />
+                    <Stop offset="1" stopColor={accent.primary} stopOpacity="0" />
                   </LinearGradient>
                 </Defs>
                 {chartAreaPath ? <Path ref={morphFillRef} d={chartAreaPath} fill="url(#portfolioFill)" /> : null}
@@ -498,7 +511,7 @@ export default function HomeDashboard() {
                     ref={morphLineRef}
                     d={chartLinePath}
                     fill="none"
-                    stroke={palette.lego.yellow}
+                    stroke={accent.primary}
                     strokeWidth={2.5}
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -636,6 +649,29 @@ export default function HomeDashboard() {
           </View>
         )}
       </ScrollView>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Add a LEGO set by number"
+        disabled={manualLookupBusy}
+        onPress={() => manualEntryRef.current?.open()}
+        style={[s.manualFabPosition, { bottom: Math.max(104, insets.bottom + 82) }]}
+      >
+        {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
+          <GlassView
+            glassEffectStyle="regular"
+            colorScheme="dark"
+            tintColor={accent.primary}
+            style={s.manualFab}
+          >
+            {manualLookupBusy ? <ActivityIndicator color={c.text} /> : <SymbolView name="plus" size={25} tintColor={c.text} />}
+          </GlassView>
+        ) : (
+          <View style={[s.manualFab, { backgroundColor: accent.primary }]}>
+            {manualLookupBusy ? <ActivityIndicator color={accent.contrast} /> : <SymbolView name="plus" size={25} tintColor={accent.contrast} />}
+          </View>
+        )}
+      </Pressable>
+      <ManualEntrySheet ref={manualEntryRef} mode="set" onSubmit={handleManualSetSubmit} />
     </View>
   );
 }
@@ -706,10 +742,21 @@ function CollectionCard({
 }
 
 function getStyles(palette: ThemeColors, m: ModeColors, safeTop: number, safeBottom: number) {
-  const accentRgb = `${parseInt(palette.lego.yellow.slice(1, 3), 16)}, ${parseInt(palette.lego.yellow.slice(3, 5), 16)}, ${parseInt(palette.lego.yellow.slice(5, 7), 16)}`;
+  const accentRgb = `${parseInt(m.primary.slice(1, 3), 16)}, ${parseInt(m.primary.slice(3, 5), 16)}, ${parseInt(m.primary.slice(5, 7), 16)}`;
   const textRgb = `${parseInt(m.text.slice(1, 3), 16)}, ${parseInt(m.text.slice(3, 5), 16)}, ${parseInt(m.text.slice(5, 7), 16)}`;
   return StyleSheet.create({
   root: { flex: 1, backgroundColor: m.background },
+  manualFabPosition: { position: "absolute", right: 20, zIndex: 20, borderRadius: 30 },
+  manualFab: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: `rgba(${accentRgb}, 0.62)`,
+  },
   content: {
     padding: 20,
     paddingTop: Math.max(58, safeTop + 18),
@@ -722,19 +769,17 @@ function getStyles(palette: ThemeColors, m: ModeColors, safeTop: number, safeBot
     justifyContent: "space-between",
   },
   brand: { color: m.text, fontSize: 26, fontWeight: "900", letterSpacing: -0.4 },
-  pro: { color: palette.lego.yellow, fontSize: 11, fontWeight: "900" },
-  brandMeta: { color: m.textMuted, fontSize: 12, fontWeight: "800", marginTop: 3 },
-  scanButton: {
-    minHeight: 40,
-    borderRadius: 999,
+  profileButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: m.border,
     backgroundColor: `rgba(${accentRgb}, 0.08)`,
-    paddingHorizontal: 14,
     alignItems: "center",
     justifyContent: "center",
   },
-  scanButtonText: { color: m.text, fontSize: 12, fontWeight: "900" },
+  profileFallback: { color: m.text, fontSize: 20 },
   hero: {
     minHeight: 450,
     borderRadius: 28,
@@ -744,7 +789,7 @@ function getStyles(palette: ThemeColors, m: ModeColors, safeTop: number, safeBot
     padding: 18,
     overflow: "hidden",
   },
-  eyebrow: { color: palette.lego.yellow, fontSize: 12, fontWeight: "900", textAlign: "center" },
+  eyebrow: { color: m.primary, fontSize: 12, fontWeight: "900", textAlign: "center" },
   total: { color: m.text, fontSize: 47, fontWeight: "900", lineHeight: 58, textAlign: "center", letterSpacing: -1.8 },
   caption: { color: m.textMuted, fontSize: 12, fontWeight: "800", textAlign: "center" },
   statsRow: {
@@ -795,8 +840,8 @@ function getStyles(palette: ThemeColors, m: ModeColors, safeTop: number, safeBot
     justifyContent: "center",
   },
   horizonPillActive: {
-    backgroundColor: palette.lego.yellow,
-    borderColor: palette.lego.yellow,
+    backgroundColor: m.primary,
+    borderColor: m.primary,
   },
   horizonText: { color: m.textDisabled, fontSize: 11, fontWeight: "900" },
   horizonTextActive: { color: "#07100c" },
@@ -866,7 +911,7 @@ function getStyles(palette: ThemeColors, m: ModeColors, safeTop: number, safeBot
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: palette.lego.yellow,
+    backgroundColor: m.primary,
     borderWidth: 2,
     borderColor: "#0b0f0d",
     zIndex: 3,
@@ -915,7 +960,7 @@ function getStyles(palette: ThemeColors, m: ModeColors, safeTop: number, safeBot
     justifyContent: "center",
   },
   filterPillActive: {
-    borderColor: palette.lego.yellow,
+    borderColor: m.primary,
     backgroundColor: `rgba(${accentRgb}, 0.14)`,
   },
   filterText: {
@@ -949,14 +994,14 @@ function getStyles(palette: ThemeColors, m: ModeColors, safeTop: number, safeBot
   proStatusPill: {
     minHeight: 28,
     borderRadius: 999,
-    backgroundColor: palette.lego.yellow,
+    backgroundColor: m.primary,
     paddingHorizontal: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   proStatusPillText: { color: "#07100c", fontSize: 10, fontWeight: "900" },
   collectionLimitLabel: { color: m.textDisabled, fontSize: 10, fontWeight: "900", textTransform: "uppercase" },
-  collectionLimitLabelPro: { color: palette.lego.yellow },
+  collectionLimitLabelPro: { color: m.primary },
   collectionLimitText: { color: m.textMuted, fontSize: 12, lineHeight: 17, fontWeight: "700" },
   collectionLimitTextPro: { color: m.text, fontSize: 13, lineHeight: 18 },
   empty: {
@@ -972,7 +1017,7 @@ function getStyles(palette: ThemeColors, m: ModeColors, safeTop: number, safeBot
   emptyAction: {
     minHeight: 44,
     borderRadius: 10,
-    backgroundColor: palette.lego.yellow,
+    backgroundColor: m.primary,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 4,
@@ -1019,7 +1064,7 @@ function getStyles(palette: ThemeColors, m: ModeColors, safeTop: number, safeBot
     minHeight: 36,
   },
   cardValue: {
-    color: palette.lego.yellow,
+    color: m.primary,
     fontSize: 20,
     fontWeight: "900",
   },

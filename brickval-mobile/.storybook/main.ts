@@ -1,5 +1,9 @@
 import type { StorybookConfig } from '@storybook/react-native-web-vite';
 import type { UserConfig } from "vite";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
 const config: StorybookConfig = {
   stories: ["../components/**/*.stories.@(ts|tsx)"],
@@ -21,6 +25,8 @@ const config: StorybookConfig = {
     const excluded = new Set(optimizeDeps.exclude ?? []);
     for (const pkg of [
       "expo",
+      "expo-camera",
+      "expo-haptics",
       "expo-modules-core",
       "expo-constants",
       "expo-file-system",
@@ -28,6 +34,7 @@ const config: StorybookConfig = {
       "expo-router",
       "expo-secure-store",
       "expo-symbols",
+      "expo-sensors",
       "expo-web-browser",
       "@expo/ui",
     ]) {
@@ -36,6 +43,16 @@ const config: StorybookConfig = {
 
     return {
       ...baseConfig,
+      resolve: {
+        ...(baseConfig.resolve ?? {}),
+        alias: {
+          ...(baseConfig.resolve?.alias ?? {}),
+          "expo-camera": path.resolve(currentDir, "mocks/expo-camera.tsx"),
+          "expo-haptics": path.resolve(currentDir, "mocks/expo-haptics.ts"),
+          "expo-sensors": path.resolve(currentDir, "mocks/expo-sensors.ts"),
+          "expo-symbols": path.resolve(currentDir, "mocks/expo-symbols.tsx"),
+        },
+      },
       optimizeDeps: {
         ...optimizeDeps,
         exclude: [...excluded],

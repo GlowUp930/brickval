@@ -14,7 +14,6 @@ const meta = {
     cameraPreview: <MockCameraPreview />,
     onCapture: fn(),
     onPhotoPress: fn(),
-    onManualPress: fn(),
   },
   render: (args) => (
     <View style={styles.phone}>

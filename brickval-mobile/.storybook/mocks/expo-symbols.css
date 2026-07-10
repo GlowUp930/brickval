@@ -1,0 +1,6 @@
+@font-face {
+  font-family: "BrickVal Material Symbols";
+  src: url("../../node_modules/@expo-google-fonts/material-symbols/400Regular/MaterialSymbols_400Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+}
