@@ -1,4 +1,5 @@
 import Constants from "expo-constants";
+import { File } from "expo-file-system";
 import { getClerkAuthToken } from "./clerk";
 import { normalizeImageUrl } from "./image-url";
 import { normalizeIdentificationDetections } from "./identify-response";
@@ -111,11 +112,7 @@ export async function identifySet(
   options: { bulk?: boolean } = {}
 ): Promise<IdentificationResult> {
   const form = new FormData();
-  form.append("image", {
-    uri: photoUri,
-    name: "scan.jpg",
-    type: "image/jpeg",
-  } as unknown as Blob);
+  form.append("image", new File(photoUri));
 
   const identifyUrl = `${API_BASE}/api/identify?mode=${mode}${options.bulk ? "&scan=bulk" : ""}`;
 
