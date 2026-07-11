@@ -6,12 +6,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { tap, warn } from "../lib/haptics";
 import { useStabilityDetector } from "../lib/stability";
+import { getScannerPillText, type AutoScanPreviewState } from "../lib/scanner-status";
 import type { ScanIntent } from "./ScanIntentPicker";
 import { useTheme } from "../lib/ThemeProvider";
 
 const INK = "#F7F4EA";
 const MUTED = "rgba(247,244,234,0.66)";
-type AutoScanPreviewState = "scanning" | "holdSteady" | "processing" | "matchFound";
 
 interface Props {
   enabled: boolean;
@@ -103,7 +103,7 @@ export function CameraScanner({
   const autoPulse = isPreview ? previewPulse : pulse;
   const isProcessing = scanning || autoScanPreviewState === "processing";
   const statusActive = isProcessing || autoPulse > 0.2 || autoScanPreviewState === "matchFound";
-  const pillText = getPillText({
+  const pillText = getScannerPillText({
     enabled,
     isSingleScan,
     cameraReady: cameraReady || isPreview,
@@ -248,32 +248,6 @@ export function CameraScanner({
       </View>
     </View>
   );
-}
-
-function getPillText({
-  enabled,
-  isSingleScan,
-  cameraReady,
-  isProcessing,
-  pulse,
-  showMoveCloser,
-  previewState,
-}: {
-  enabled: boolean;
-  isSingleScan: boolean;
-  cameraReady: boolean;
-  isProcessing: boolean;
-  pulse: number;
-  showMoveCloser: boolean;
-  previewState?: AutoScanPreviewState;
-}) {
-  if (!isSingleScan) return isProcessing || !enabled ? "Counting value..." : "Frame bulk minifigs, then capture";
-  if (previewState === "matchFound") return "Match found";
-  if (!enabled || isProcessing) return "Match found";
-  if (!cameraReady) return "Starting camera...";
-  if (pulse > 0.25) return "Hold steady";
-  if (showMoveCloser) return "Move closer";
-  return "Scanning...";
 }
 
 const styles = StyleSheet.create({

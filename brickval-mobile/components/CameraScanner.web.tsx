@@ -2,12 +2,12 @@ import { type ReactNode, useEffect, useState } from "react";
 import { SymbolView } from "expo-symbols";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getScannerPillText, type AutoScanPreviewState } from "../lib/scanner-status";
 import type { ScanIntent } from "./ScanIntentPicker";
 
 const GOLD = "#F2CD37";
 const INK = "#F7F4EA";
 const MUTED = "rgba(247,244,234,0.66)";
-type AutoScanPreviewState = "scanning" | "holdSteady" | "processing" | "matchFound";
 
 interface Props {
   enabled: boolean;
@@ -34,10 +34,13 @@ export function CameraScanner({
   const [torch, setTorch] = useState(false);
   const isSingleScan = scanIntent === "single";
   const isProcessing = autoScanPreviewState === "processing";
-  const pillText = getPillText({
+  const pillText = getScannerPillText({
     enabled,
     isSingleScan,
+    cameraReady: true,
     isProcessing,
+    pulse: autoScanPreviewState === "holdSteady" ? 0.72 : 0,
+    showMoveCloser: false,
     previewState: autoScanPreviewState,
   });
 
@@ -142,24 +145,6 @@ export function CameraScanner({
       </View>
     </View>
   );
-}
-
-function getPillText({
-  enabled,
-  isSingleScan,
-  isProcessing,
-  previewState,
-}: {
-  enabled: boolean;
-  isSingleScan: boolean;
-  isProcessing: boolean;
-  previewState?: AutoScanPreviewState;
-}) {
-  if (!isSingleScan) return isProcessing || !enabled ? "Counting value..." : "Frame bulk minifigs, then capture";
-  if (previewState === "matchFound") return "Match found";
-  if (!enabled || isProcessing) return "Match found";
-  if (previewState === "holdSteady") return "Hold steady";
-  return "Scanning...";
 }
 
 const styles = StyleSheet.create({

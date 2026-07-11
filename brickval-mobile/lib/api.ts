@@ -1,6 +1,9 @@
 import Constants from "expo-constants";
 import { File } from "expo-file-system";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
+import { Image } from "react-native";
 import { getClerkAuthToken } from "./clerk";
+import { getScanImageResize } from "./scan-image";
 import { normalizeImageUrl } from "./image-url";
 import { normalizeIdentificationDetections } from "./identify-response";
 import {
@@ -111,8 +114,25 @@ export async function identifySet(
   mode: ScanMode = "set",
   options: { bulk?: boolean } = {}
 ): Promise<IdentificationResult> {
+  let uploadFile = new File(photoUri);
+  const dimensions = await Image.getSize(photoUri);
+  const resize = getScanImageResize(dimensions.width, dimensions.height, uploadFile.size);
+  if (resize) {
+    const context = ImageManipulator.manipulate(photoUri);
+    let image: Awaited<ReturnType<typeof context.renderAsync>> | null = null;
+    try {
+      context.resize(resize);
+      image = await context.renderAsync();
+      const compressed = await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.72 });
+      uploadFile = new File(compressed.uri);
+    } finally {
+      context.release();
+      image?.release();
+    }
+  }
+
   const form = new FormData();
-  form.append("image", new File(photoUri));
+  form.append("image", uploadFile);
 
   const identifyUrl = `${API_BASE}/api/identify?mode=${mode}${options.bulk ? "&scan=bulk" : ""}`;
 
