@@ -321,7 +321,7 @@ export default function HomeDashboard() {
       setItems(next);
       router.push({
         pathname: "/detail/[itemType]/[setNumber]",
-        params: { itemType: "set", setNumber, condition: "new_sealed" },
+        params: { itemType: "set", setNumber: result.set_number, condition: "new_sealed" },
       });
     } catch {
       Alert.alert("Set not found", "Check the set number and try again.");
