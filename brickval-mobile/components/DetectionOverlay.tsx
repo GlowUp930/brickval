@@ -39,7 +39,7 @@ export function DetectionOverlay({ detections, imageWidth, imageHeight, resizeMo
     () =>
       detections
         .filter((d) => d.detection.bounding_box && d.detection.bounding_box.imageWidth > 0)
-        .map((priced) => {
+        .map((priced, index) => {
           const box = priced.detection.bounding_box!;
           const scaleX = imageWidth / box.imageWidth;
           const scaleY = imageHeight / box.imageHeight;
@@ -63,7 +63,7 @@ export function DetectionOverlay({ detections, imageWidth, imageHeight, resizeMo
           const preferredBubbleY = boxY > bubbleHeight + 14 ? boxY - bubbleHeight - 8 : boxY + boxHeight + 8;
 
           return {
-            id: priced.detection.id,
+            id: priced.detection.regionId ?? `${priced.detection.id}-${index}`,
             x: boxX,
             y: boxY,
             width: boxWidth,

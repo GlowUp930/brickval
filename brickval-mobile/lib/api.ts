@@ -6,6 +6,7 @@ import { getClerkAuthToken } from "./clerk";
 import { getScanImageResize } from "./scan-image";
 import { normalizeImageUrl } from "./image-url";
 import { normalizeIdentificationDetections } from "./identify-response";
+import type { PreparedBulkCapture } from "./bulk-capture";
 import {
   getConditionMarketHistory,
   getConditionMarketValueUsd,
@@ -85,6 +86,8 @@ export interface IdentificationDetection {
   id: string;
   item_type: "minifig" | "part";
   score: number;
+  regionId?: string;
+  alternatives?: IdentificationCandidate[];
   bounding_box?: {
     left: number;
     top: number;
@@ -112,7 +115,7 @@ export interface IdentificationResult {
 export async function identifySet(
   photoUri: string,
   mode: ScanMode = "set",
-  options: { bulk?: boolean } = {}
+  options: { bulk?: boolean; guided?: boolean } = {}
 ): Promise<IdentificationResult> {
   let uploadFile = new File(photoUri);
   const dimensions = await Image.getSize(photoUri);
@@ -134,7 +137,8 @@ export async function identifySet(
   const form = new FormData();
   form.append("image", uploadFile);
 
-  const identifyUrl = `${API_BASE}/api/identify?mode=${mode}${options.bulk ? "&scan=bulk" : ""}`;
+  const scanQuery = options.guided ? "&scan=guided-single" : options.bulk ? "&scan=bulk" : "";
+  const identifyUrl = `${API_BASE}/api/identify?mode=${mode}${scanQuery}`;
 
   const res = await fetch(identifyUrl, {
     method: "POST",
@@ -151,6 +155,35 @@ export async function identifySet(
     scansUsed?: number;
     isPro?: boolean;
   };
+  return normalizeIdentificationPayload(mode, data);
+}
+
+export async function identifyGuidedBulkMinifigs(
+  capture: PreparedBulkCapture
+): Promise<IdentificationResult> {
+  const form = new FormData();
+  for (const uri of capture.imageUris) form.append("images", new File(uri));
+  form.append("manifest", JSON.stringify(capture.manifest));
+  const res = await fetch(`${API_BASE}/api/identify?mode=minifig&scan=guided-bulk`, {
+    method: "POST",
+    headers: { ...(await authHeader()) },
+    body: form,
+  });
+  if (!res.ok) await throwApiError(res, "guided bulk identify");
+  return normalizeIdentificationPayload("minifig", await res.json());
+}
+
+function normalizeIdentificationPayload(
+  mode: ScanMode,
+  data: {
+    set_number?: string | null;
+    confidence?: number | null;
+    candidates?: IdentificationCandidate[];
+    detections?: IdentificationDetection[];
+    scansUsed?: number;
+    isPro?: boolean;
+  }
+): IdentificationResult {
   return {
     set_number: data.set_number ?? null,
     confidence: typeof data.confidence === "number" ? data.confidence : null,

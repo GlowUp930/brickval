@@ -4,6 +4,7 @@ import test from "node:test";
 import { MINIFIG_BATCH_LIMIT, sanitizeBulkMinifigNumbers } from "../lib/minifig-lookup";
 
 test("sanitizeBulkMinifigNumbers dedupes, normalizes, and caps minifigure ids for batch pricing", () => {
+  assert.equal(MINIFIG_BATCH_LIMIT, 40);
   const ids = sanitizeBulkMinifigNumbers([
     " SH0329 ",
     "sh0329",
@@ -30,9 +31,29 @@ test("sanitizeBulkMinifigNumbers dedupes, normalizes, and caps minifigure ids fo
     "sw0019",
     "sw0020",
     "sw0021",
+    "sw0022",
+    "sw0023",
+    "sw0024",
+    "sw0025",
+    "sw0026",
+    "sw0027",
+    "sw0028",
+    "sw0029",
+    "sw0030",
+    "sw0031",
+    "sw0032",
+    "sw0033",
+    "sw0034",
+    "sw0035",
+    "sw0036",
+    "sw0037",
+    "sw0038",
+    "sw0039",
+    "sw0040",
+    "sw0041",
   ]);
 
   assert.equal(ids.length, MINIFIG_BATCH_LIMIT);
   assert.deepEqual(ids.slice(0, 3), ["sh0329", "figsh0115", "coltlbm16"]);
-  assert.equal(ids.includes("sw0018"), false);
+  assert.equal(ids.includes("sw0038"), false);
 });

@@ -36,14 +36,6 @@
       "expo-router",
       "expo-secure-store",
       "@clerk/expo",
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Brickvalue uses your camera to scan LEGO sets, minifigures, and parts for market prices.",
-          "microphonePermission": false,
-          "recordAudioAndroid": false
-        }
-      ],
       "./plugins/withGoogleStaticSwiftPods",
       "expo-apple-authentication",
       "expo-web-browser",

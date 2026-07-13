@@ -13,7 +13,7 @@ import { Accelerometer } from "expo-sensors";
  */
 
 const STILL_THRESHOLD = 0.05; // g
-const STABILITY_WINDOW_MS = 800;
+const STABILITY_WINDOW_MS = 600;
 const SAMPLE_INTERVAL_MS = 60;
 
 export function useStabilityDetector(

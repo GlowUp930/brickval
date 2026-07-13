@@ -37,6 +37,23 @@ test("shouldPauseForDetectionChoice skips the picker for one confident detection
   );
 });
 
+test("shouldPauseForDetectionChoice requires an eight-point lead over the runner-up", () => {
+  assert.equal(
+    shouldPauseForDetectionChoice([
+      {
+        id: "sw0001",
+        item_type: "minifig",
+        score: 0.91,
+        alternatives: [
+          { id: "sw0001", score: 0.91 },
+          { id: "sw0002", score: 0.86 },
+        ],
+      },
+    ], 0.8),
+    true
+  );
+});
+
 test("getDetectionChoiceMessage changes based on confidence and count", () => {
   assert.equal(
     getDetectionChoiceMessage([{ id: "a", item_type: "minifig", score: 0.61 }], 0.8),

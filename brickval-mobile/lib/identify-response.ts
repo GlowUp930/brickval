@@ -1,7 +1,7 @@
 import type { IdentificationCandidate, IdentificationDetection, ScanMode } from "./api";
 
 type BrickognizeCandidateType = "minifig" | "part";
-const MINIFIG_DETECTION_LIMIT = 20;
+const MINIFIG_DETECTION_LIMIT = 40;
 const PART_DETECTION_LIMIT = 4;
 
 type BrickognizeRawCandidate = {

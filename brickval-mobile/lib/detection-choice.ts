@@ -6,7 +6,11 @@ export function shouldPauseForDetectionChoice(
 ): boolean {
   if (detections.length === 0) return false;
   if (detections.length > 1) return true;
-  return detections[0].score < lowConfidenceThreshold;
+  const detection = detections[0];
+  if (detection.score < lowConfidenceThreshold) return true;
+  const alternatives = [...(detection.alternatives ?? [])].sort((a, b) => b.score - a.score);
+  const runnerUp = alternatives.find((candidate) => candidate.id.toLowerCase() !== detection.id.toLowerCase());
+  return runnerUp ? detection.score - runnerUp.score < 0.08 : false;
 }
 
 export function getDetectionChoiceMessage(

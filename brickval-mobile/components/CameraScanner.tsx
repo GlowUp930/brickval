@@ -1,14 +1,26 @@
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import {
+  Camera,
+  type CameraRef,
+  useCameraPermission,
+  usePhotoOutput,
+} from "react-native-vision-camera";
 import { SymbolView } from "expo-symbols";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { tap, warn } from "../lib/haptics";
 import { useStabilityDetector } from "../lib/stability";
 import { getScannerPillText, type AutoScanPreviewState } from "../lib/scanner-status";
+import {
+  createAutoScanSession,
+  observeAutoScanFrame,
+  type MinifigureObservation,
+} from "../lib/auto-scan";
 import type { ScanIntent } from "./ScanIntentPicker";
 import { useTheme } from "../lib/ThemeProvider";
+import { prepareMinifigureCapture } from "../lib/scan-capture";
+import { useMinifigureDetector } from "../lib/minifigure-detector";
 
 const INK = "#F7F4EA";
 const MUTED = "rgba(247,244,234,0.66)";
@@ -17,11 +29,17 @@ interface Props {
   enabled: boolean;
   autoCaptureEnabled?: boolean;
   scanIntent: ScanIntent;
-  onCapture: (photoUri: string) => void;
+  onCapture: (photoUri: string, context?: CameraCaptureContext) => void;
   onPhotoPress: () => void;
   cameraPreview?: ReactNode;
   permissionGranted?: boolean;
   autoScanPreviewState?: AutoScanPreviewState;
+  detectorReady?: boolean;
+  minifigureObservations?: MinifigureObservation[];
+}
+
+export interface CameraCaptureContext {
+  observations: MinifigureObservation[];
 }
 
 export function CameraScanner({
@@ -33,18 +51,50 @@ export function CameraScanner({
   cameraPreview,
   permissionGranted,
   autoScanPreviewState,
+  detectorReady,
+  minifigureObservations,
 }: Props) {
-  const cameraRef = useRef<CameraView>(null);
+  const cameraRef = useRef<CameraRef>(null);
   const { accent } = useTheme();
   const insets = useSafeAreaInsets();
-  const [permission, requestPermission] = useCameraPermissions();
+  const permission = useCameraPermission();
+  const photoOutput = usePhotoOutput({ quality: 0.72, qualityPrioritization: "speed" });
+  const detectorFeed = useMinifigureDetector();
+  const effectiveDetectorReady = detectorReady ?? detectorFeed.ready;
+  const observations = minifigureObservations ?? detectorFeed.observations;
+  const cameraOutputs = useMemo(
+    () => effectiveDetectorReady ? [photoOutput, detectorFeed.frameOutput] : [photoOutput],
+    [detectorFeed.frameOutput, effectiveDetectorReady, photoOutput]
+  );
   const [torch, setTorch] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [showMoveCloser, setShowMoveCloser] = useState(false);
+  const autoScanSessionRef = useRef(createAutoScanSession());
+  const [autoScanSession, setAutoScanSession] = useState(autoScanSessionRef.current);
   const isSingleScan = scanIntent === "single";
   const isPreview = Boolean(cameraPreview || autoScanPreviewState || permissionGranted !== undefined);
-  const hasCameraPermission = permissionGranted ?? permission?.granted ?? false;
+  const hasCameraPermission = permissionGranted ?? permission.hasPermission;
+
+  useEffect(() => {
+    void photoOutput.prepareSettings([
+      { flashMode: "off", enableShutterSound: false },
+      { flashMode: "off", enableShutterSound: true },
+    ]);
+  }, [photoOutput]);
+
+  useEffect(() => {
+    if (!enabled || !autoCaptureEnabled || !isSingleScan || !effectiveDetectorReady) {
+      autoScanSessionRef.current = createAutoScanSession();
+      setAutoScanSession(autoScanSessionRef.current);
+      return;
+    }
+    autoScanSessionRef.current = observeAutoScanFrame(
+      autoScanSessionRef.current,
+      observations
+    );
+    setAutoScanSession(autoScanSessionRef.current);
+  }, [autoCaptureEnabled, effectiveDetectorReady, enabled, isSingleScan, observations]);
 
   const capturePhoto = useCallback(async (source: "manual" | "auto" = "manual") => {
     if (!enabled || scanning) return;
@@ -53,28 +103,36 @@ export function CameraScanner({
     setScanning(true);
     try {
       if (cameraPreview) {
-        onCapture("storybook://camera-scan.jpg");
+        onCapture("storybook://camera-scan.jpg", { observations });
         return;
       }
-      const camera = cameraRef.current;
-      if (!camera) {
-        setScanning(false);
-        return;
+      const photo = await photoOutput.capturePhotoToFile(
+        { flashMode: "off", enableShutterSound: source === "manual" },
+        {}
+      );
+      if (photo.filePath) {
+        const photoUri = `file://${photo.filePath}`;
+        const observation = source === "auto" ? observations[0] : null;
+        const preparedUri = observation
+          ? await prepareMinifigureCapture(photoUri, observation.boundingBox)
+          : photoUri;
+        onCapture(preparedUri, { observations });
       }
-      const photo = await camera.takePictureAsync({
-        quality: 0.68,
-        skipProcessing: false,
-        shutterSound: source === "manual",
-      });
-      if (photo?.uri) onCapture(photo.uri);
     } catch {
       warn();
       setScanning(false);
     }
-  }, [cameraPreview, cameraReady, enabled, onCapture, scanning]);
+  }, [cameraPreview, cameraReady, enabled, observations, onCapture, photoOutput, scanning]);
 
   const autoStabilityEnabled =
-    enabled && autoCaptureEnabled && isSingleScan && cameraReady && !scanning && !isPreview;
+    enabled &&
+    autoCaptureEnabled &&
+    isSingleScan &&
+    effectiveDetectorReady &&
+    autoScanSession.phase === "detected" &&
+    cameraReady &&
+    !scanning &&
+    !isPreview;
   const { pulse } = useStabilityDetector(autoStabilityEnabled, () => {
     void capturePhoto("auto");
   });
@@ -102,7 +160,11 @@ export function CameraScanner({
     autoScanPreviewState === "holdSteady" ? 0.72 : autoScanPreviewState === "processing" ? 1 : 0;
   const autoPulse = isPreview ? previewPulse : pulse;
   const isProcessing = scanning || autoScanPreviewState === "processing";
-  const statusActive = isProcessing || autoPulse > 0.2 || autoScanPreviewState === "matchFound";
+  const statusActive =
+    isProcessing ||
+    autoPulse > 0.2 ||
+    autoScanPreviewState === "matchFound" ||
+    (!isSingleScan && effectiveDetectorReady && observations.length > 0);
   const pillText = getScannerPillText({
     enabled,
     isSingleScan,
@@ -113,7 +175,21 @@ export function CameraScanner({
     previewState: autoScanPreviewState,
   });
 
-  if (!permission && permissionGranted === undefined) return <View style={styles.black} />;
+  const livePillText = !isPreview && isSingleScan
+    ? autoScanSession.blockReason === "multiple"
+      ? "One minifigure at a time"
+      : autoScanSession.blockReason === "partial"
+        ? "Show the complete minifigure"
+        : !effectiveDetectorReady && autoCaptureEnabled
+          ? "Smart scan unavailable"
+          : autoScanSession.phase === "detected" && autoPulse <= 0.25
+            ? "Minifigure detected"
+            : pillText
+    : !isPreview && !isSingleScan && effectiveDetectorReady && observations.length > 0
+      ? observations.length > 40
+        ? `40 ready · ${observations.length - 40} for next scan`
+        : `${observations.length} minifigure${observations.length === 1 ? "" : "s"} detected`
+      : pillText;
 
   if (!hasCameraPermission) {
     return (
@@ -125,7 +201,7 @@ export function CameraScanner({
             accessibilityRole="button"
             accessibilityLabel="Allow camera access"
           style={[styles.permBtn, { backgroundColor: accent.primary }]}
-            onPress={requestPermission}
+            onPress={() => void permission.requestPermission()}
           >
             <Text style={styles.permBtnText}>Allow camera</Text>
           </Pressable>
@@ -139,14 +215,17 @@ export function CameraScanner({
       {cameraPreview ? (
         <View style={StyleSheet.absoluteFill}>{cameraPreview}</View>
       ) : (
-        <CameraView
+        <Camera
           ref={cameraRef}
           style={StyleSheet.absoluteFill}
-          facing="back"
-          enableTorch={torch}
-          animateShutter={false}
-          onCameraReady={() => setCameraReady(true)}
-          onMountError={() => {
+          device="back"
+          isActive={enabled}
+          outputs={cameraOutputs}
+          torchMode={torch ? "on" : "off"}
+          enableNativeTapToFocusGesture
+          onStarted={() => setCameraReady(true)}
+          onStopped={() => setCameraReady(false)}
+          onError={() => {
             setCameraReady(false);
             warn();
           }}
@@ -155,6 +234,19 @@ export function CameraScanner({
 
       <View pointerEvents="none" style={styles.softVignette} />
 
+      {isSingleScan && observations.length === 1 ? (
+        <DetectionBox observation={observations[0]} ready={autoScanSession.phase === "detected"} />
+      ) : null}
+      {!isSingleScan ? observations.map((observation, index) => (
+        <DetectionBox
+          key={observation.regionId}
+          observation={observation}
+          ready={index < 40}
+          overflow={index >= 40}
+          label={index >= 40 ? "Next scan" : `${index + 1}`}
+        />
+      )) : null}
+
       <View
         style={[
           styles.statusPill,
@@ -162,7 +254,7 @@ export function CameraScanner({
         ]}
       >
         <View style={[styles.statusDot, statusActive && { backgroundColor: accent.primary }]} />
-        <Text style={styles.statusPillText}>{pillText}</Text>
+        <Text style={styles.statusPillText}>{livePillText}</Text>
       </View>
 
       {enabled && !scanning && scanIntent === "bulk" ? (
@@ -250,8 +342,71 @@ export function CameraScanner({
   );
 }
 
+function DetectionBox({
+  observation,
+  ready,
+  overflow = false,
+  label,
+}: {
+  observation: MinifigureObservation;
+  ready: boolean;
+  overflow?: boolean;
+  label?: string;
+}) {
+  const box = observation.boundingBox;
+  return (
+    <View
+      pointerEvents="none"
+      style={[
+        styles.detectBox,
+        ready && styles.detectBoxReady,
+        overflow && styles.detectBoxOverflow,
+        {
+          left: `${box.x * 100}%`,
+          top: `${box.y * 100}%`,
+          width: `${box.width * 100}%`,
+          height: `${box.height * 100}%`,
+        },
+      ]}
+    >
+      <Text style={[styles.detectBoxLabel, overflow && styles.detectBoxLabelOverflow]}>
+        {label ?? (ready ? "Minifigure detected" : "Checking")}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   black: { flex: 1, backgroundColor: "#101012" },
+  detectBox: {
+    position: "absolute",
+    borderWidth: 2,
+    borderColor: "rgba(242,205,55,0.72)",
+    borderRadius: 18,
+  },
+  detectBoxReady: {
+    borderColor: "#F2CD37",
+    borderWidth: 3,
+  },
+  detectBoxOverflow: {
+    borderColor: "#F97316",
+    borderStyle: "dashed",
+  },
+  detectBoxLabel: {
+    position: "absolute",
+    top: -29,
+    left: -2,
+    borderRadius: 10,
+    backgroundColor: "rgba(16,16,18,0.82)",
+    color: INK,
+    fontSize: 11,
+    fontWeight: "900",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  detectBoxLabelOverflow: {
+    color: "#F97316",
+  },
   softVignette: {
     ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.08)",

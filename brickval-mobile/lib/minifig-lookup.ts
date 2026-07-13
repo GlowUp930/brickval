@@ -1,4 +1,4 @@
-export const MINIFIG_BATCH_LIMIT = 20;
+export const MINIFIG_BATCH_LIMIT = 40;
 
 export function sanitizeBulkMinifigNumbers(ids: string[], limit = MINIFIG_BATCH_LIMIT): string[] {
   return Array.from(

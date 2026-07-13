@@ -6,21 +6,32 @@ import { SymbolView } from "expo-symbols";
 import { ScanIntentPicker, type ScanIntent } from "./ScanIntentPicker";
 
 type SingleState = "searching" | "detected" | "steady" | "checking" | "matched";
+type ScanScenario =
+  | "normal"
+  | "empty"
+  | "wrong-object"
+  | "partial"
+  | "multiple"
+  | "bulk-21"
+  | "bulk-40"
+  | "bulk-41"
+  | "scan-remaining";
 
 interface FlowProps {
   mode: ScanIntent;
   singleState: SingleState;
+  scenario: ScanScenario;
 }
 
 const FIGURE_IMAGE = "https://img.bricklink.com/ItemImage/MN/0/sh0115.png";
 
-function HandsFreeScannerFlow({ mode: initialMode, singleState }: FlowProps) {
+function HandsFreeScannerFlow({ mode: initialMode, singleState, scenario }: FlowProps) {
   const [mode, setMode] = useState<ScanIntent>(initialMode);
   const matched = mode === "single" && singleState === "matched";
 
   return (
     <View style={styles.phone}>
-      <CameraScene mode={mode} state={singleState} />
+      <CameraScene mode={mode} state={singleState} scenario={scenario} />
       <View pointerEvents="none" style={styles.vignette} />
 
       <View style={styles.topRail}>
@@ -29,8 +40,8 @@ function HandsFreeScannerFlow({ mode: initialMode, singleState }: FlowProps) {
         <RoundControl label="Toggle flash" icon="flash_off" />
       </View>
 
-      {mode === "bulk" ? <BulkGuidance /> : null}
-      {!matched ? <ScannerStatus mode={mode} state={singleState} /> : null}
+      {mode === "bulk" ? <BulkGuidance scenario={scenario} /> : null}
+      {!matched ? <ScannerStatus mode={mode} state={singleState} scenario={scenario} /> : null}
 
       <View style={styles.galleryButton}>
         <SymbolView
@@ -64,6 +75,7 @@ const meta = {
   args: {
     mode: "single",
     singleState: "searching",
+    scenario: "normal",
   },
   parameters: {
     docs: {
@@ -122,22 +134,81 @@ export const F_BulkGuidance: Story = {
   },
 };
 
-function CameraScene({ mode, state }: { mode: ScanIntent; state: SingleState }) {
-  const showSingleBox = mode === "single" && state !== "searching";
+export const G_EmptyScene: Story = {
+  name: "Safety — empty scene stays scanning",
+  args: { scenario: "empty" },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Scanning...")).toBeVisible();
+  },
+};
+
+export const H_WrongObject: Story = {
+  name: "Safety — wrong object stays scanning",
+  args: { scenario: "wrong-object" },
+};
+
+export const I_PartialFigure: Story = {
+  name: "Safety — partial figure asks for complete figure",
+  args: { scenario: "partial" },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Show the complete minifigure")).toBeVisible();
+  },
+};
+
+export const J_MultipleFigures: Story = {
+  name: "Safety — single mode blocks multiple figures",
+  args: { scenario: "multiple" },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("One minifigure at a time")).toBeVisible();
+  },
+};
+
+export const K_Bulk21: Story = {
+  name: "Bulk — 21 detected",
+  args: { mode: "bulk", scenario: "bulk-21" },
+};
+
+export const L_Bulk40: Story = {
+  name: "Bulk — 40 detected and ready",
+  args: { mode: "bulk", scenario: "bulk-40" },
+};
+
+export const M_Bulk41Overflow: Story = {
+  name: "Bulk — 41+ marks overflow",
+  args: { mode: "bulk", scenario: "bulk-41" },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("40 ready · 1 for next scan")).toBeVisible();
+  },
+};
+
+export const N_ScanRemaining: Story = {
+  name: "Bulk — guided second scan",
+  args: { mode: "bulk", scenario: "scan-remaining" },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Move processed figures aside")).toBeVisible();
+  },
+};
+
+function CameraScene({ mode, state, scenario }: { mode: ScanIntent; state: SingleState; scenario: ScanScenario }) {
+  const showFigure = scenario !== "empty" && scenario !== "wrong-object";
+  const showSingleBox = mode === "single" && state !== "searching" && scenario === "normal";
   return (
     <View style={styles.camera}>
       <View style={styles.wallGlow} />
       <View style={styles.desk} />
-      <View style={styles.figureStage}>
+      {scenario === "wrong-object" ? <View style={styles.wrongObject} /> : null}
+      {showFigure ? <View style={[styles.figureStage, scenario === "partial" && styles.partialFigure]}>
         <View style={styles.figureHalo} />
         <Image source={{ uri: FIGURE_IMAGE }} style={styles.figureImage} resizeMode="contain" />
         {showSingleBox ? <View style={[styles.detectBox, state === "steady" && styles.detectBoxReady]} /> : null}
-      </View>
+      </View> : null}
+      {scenario === "multiple" ? <BulkFigure left={236} top={300} scale={0.48} label="2" /> : null}
       {mode === "bulk" ? (
         <>
           <BulkFigure left={38} top={260} scale={0.72} label="1" />
           <BulkFigure left={244} top={280} scale={0.64} label="3" />
           <View style={[styles.bulkBox, { left: 118, top: 210, width: 150, height: 280 }]}><Text style={styles.bulkBoxLabel}>2</Text></View>
+          {scenario === "bulk-41" ? <View style={styles.overflowRegion}><Text style={styles.overflowLabel}>NEXT SCAN</Text></View> : null}
         </>
       ) : null}
     </View>
@@ -153,9 +224,18 @@ function BulkFigure({ left, top, scale, label }: { left: number; top: number; sc
   );
 }
 
-function ScannerStatus({ mode, state }: { mode: ScanIntent; state: SingleState }) {
+function ScannerStatus({ mode, state, scenario }: { mode: ScanIntent; state: SingleState; scenario: ScanScenario }) {
+  const bulkCount = scenario === "bulk-21" ? 21 : scenario === "bulk-40" || scenario === "bulk-41" ? 40 : 3;
   const content = mode === "bulk"
-    ? { title: "3 minifigures detected", detail: "Keep each figure separate", tone: "ready" as const }
+    ? scenario === "bulk-41"
+      ? { title: "40 ready · 1 for next scan", detail: "The extra figure is marked", tone: "ready" as const }
+      : scenario === "scan-remaining"
+        ? { title: "Move processed figures aside", detail: "Then capture the remaining figures", tone: "ready" as const }
+        : { title: `${bulkCount} minifigures detected`, detail: "Keep each figure separate", tone: "ready" as const }
+    : scenario === "partial"
+      ? { title: "Show the complete minifigure", detail: "Keep head and feet inside the frame", tone: "detected" as const }
+      : scenario === "multiple"
+        ? { title: "One minifigure at a time", detail: "Move the other figure out of view", tone: "detected" as const }
     : state === "detected"
       ? { title: "Minifigure detected", detail: "Bring the full figure into view", tone: "detected" as const }
       : state === "steady"
@@ -182,11 +262,20 @@ function ScannerStatus({ mode, state }: { mode: ScanIntent; state: SingleState }
   );
 }
 
-function BulkGuidance() {
+function BulkGuidance({ scenario }: { scenario: ScanScenario }) {
+  const title = scenario === "scan-remaining"
+    ? "Scan the remaining figures"
+    : scenario === "bulk-41"
+      ? "40 ready · 1 marked"
+      : scenario === "bulk-40"
+        ? "All 40 are clear"
+        : scenario === "bulk-21"
+          ? "All 21 are clear"
+          : "All 3 are clear";
   return (
     <View style={styles.bulkGuidance}>
       <Text style={styles.bulkGuidanceEyebrow}>BULK MINIFIGURES</Text>
-      <Text style={styles.bulkGuidanceTitle}>All 3 are clear</Text>
+      <Text style={styles.bulkGuidanceTitle}>{title}</Text>
       <Text style={styles.bulkGuidanceBody}>Space figures apart · Keep them fully visible</Text>
     </View>
   );
@@ -272,6 +361,8 @@ const styles = StyleSheet.create({
   wallGlow: { position: "absolute", top: -80, left: -70, width: 520, height: 450, borderRadius: 260, backgroundColor: "rgba(247,225,184,0.18)" },
   desk: { position: "absolute", left: -60, right: -60, bottom: 0, height: 500, backgroundColor: "#786958", transform: [{ rotate: "-4deg" }] },
   figureStage: { position: "absolute", top: 185, left: 90, width: 210, height: 350, alignItems: "center", justifyContent: "center" },
+  partialFigure: { top: 500 },
+  wrongObject: { position: "absolute", top: 310, left: 130, width: 130, height: 130, borderRadius: 65, backgroundColor: "#6B7280", borderWidth: 8, borderColor: "#374151" },
   figureHalo: { position: "absolute", width: 210, height: 310, borderRadius: 120, backgroundColor: "rgba(255,240,202,0.16)" },
   figureImage: { width: 184, height: 310 },
   detectBox: { position: "absolute", top: 22, left: 21, right: 21, bottom: 17, borderWidth: 2, borderColor: "rgba(242,205,55,0.72)", borderRadius: 24 },
@@ -329,5 +420,7 @@ const styles = StyleSheet.create({
   bulkFigureImage: { width: 140, height: 250 },
   bulkFigureBox: { ...StyleSheet.absoluteFill, borderWidth: 3, borderColor: "#F2CD37", borderRadius: 18 },
   bulkBox: { position: "absolute", borderWidth: 3, borderColor: "#F2CD37", borderRadius: 18 },
+  overflowRegion: { position: "absolute", right: 14, bottom: 184, width: 86, height: 146, borderWidth: 3, borderStyle: "dashed", borderColor: "#F97316", borderRadius: 18, backgroundColor: "rgba(249,115,22,0.12)" },
+  overflowLabel: { position: "absolute", top: -24, right: 0, color: "#F97316", fontSize: 9, fontWeight: "900", letterSpacing: 0.7 },
   bulkBoxLabel: { position: "absolute", top: -13, left: -8, minWidth: 26, height: 26, borderRadius: 13, textAlign: "center", lineHeight: 26, color: "#101012", backgroundColor: "#F2CD37", fontSize: 12, fontWeight: "900" },
 });

@@ -9,9 +9,16 @@ import {
   analyzeBrickognizeSearchResponse,
   normalizeBrickognizeDetections,
   normalizeBrickognizeSearchResponse,
+  withStableRegionIds,
   type BrickognizeSearchResponse,
 } from "@/lib/identify-nonset";
 import { checkAndIncrementScan } from "@/lib/scan-gate";
+import {
+  assignDetectionsToRegions,
+  MAX_GUIDED_BULK_BYTES,
+  MAX_GUIDED_BULK_IMAGES,
+  parseBulkRegionManifest,
+} from "@/lib/bulk-identify";
 
 const MIN_SCORE = 0.50; // minimum Brickognize confidence we trust when a preferred type exists
 
@@ -44,7 +51,7 @@ type IdentificationResponse = {
   candidates?: Candidate[];
 };
 type NonSetIdentifyResponse = {
-  detections: { id: string; item_type: "minifig" | "part"; score: number; bounding_box?: { left: number; top: number; right: number; bottom: number; imageWidth: number; imageHeight: number } }[];
+  detections: { id: string; item_type: "minifig" | "part"; score: number; regionId?: string; alternatives?: Candidate[]; bounding_box?: { left: number; top: number; right: number; bottom: number; imageWidth: number; imageHeight: number } }[];
   scansUsed?: number;
   isPro?: boolean;
 };
@@ -55,7 +62,7 @@ function isAcceptedMediaType(type: string): type is AcceptedMediaType {
 
 async function identifyNonSet(
   imageFile: File,
-  options: { bulk?: boolean } = {}
+  options: { bulk?: boolean; skipRecovery?: boolean } = {}
 ): Promise<NonSetIdentifyResponse> {
   async function postBrickognize(image: Blob, filename: string): Promise<Response | null> {
     const form = new FormData();
@@ -91,14 +98,19 @@ async function identifyNonSet(
   const analysis = analyzeBrickognizeSearchResponse(searchData);
   const collectedDetections = [...analysis.detections.all];
   const mergeDetections = () =>
-    normalizeBrickognizeDetections(
+    withStableRegionIds(normalizeBrickognizeDetections(
       collectedDetections.map((detection) => ({
         id: detection.id,
         type: detection.item_type,
         score: detection.score,
+        alternatives: detection.alternatives,
         bounding_box: detection.bounding_box,
       }))
-    ).all;
+    ).all);
+
+  if (options.skipRecovery) {
+    return { detections: mergeDetections() };
+  }
 
   if (!options.bulk && collectedDetections.length >= 2) {
     return { detections: mergeDetections() };
@@ -207,36 +219,69 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const imageFile = formData.get("image") as File | null;
+  const imageEntry = formData.get("image");
+  const imageFile = typeof imageEntry === "string" ? null : imageEntry;
+  const guidedBulk = mode === "minifig" && scan === "guided-bulk";
+  const guidedImages = formData
+    .getAll("images")
+    .filter((entry): entry is File => typeof entry !== "string");
+  const guidedManifest = guidedBulk ? parseBulkRegionManifest(formData.get("manifest")) : null;
 
-  if (!imageFile) {
-    return NextResponse.json({ error: "No image provided" }, { status: 400 });
-  }
-
-  if (imageFile.size > MAX_IMAGE_BYTES) {
-    return NextResponse.json(
-      {
-        error: "Image too large",
-        message: "Please upload a smaller image and try again.",
-      },
-      { status: 413 }
-    );
-  }
-
-  const mediaType = imageFile.type;
-  if (!isAcceptedMediaType(mediaType)) {
-    return NextResponse.json(
-      {
-        error: "Unsupported image type",
-        message: "Please upload a JPEG, PNG, or WebP image.",
-      },
-      { status: 415 }
-    );
+  if (guidedBulk) {
+    if (
+      !guidedManifest ||
+      guidedImages.length < 1 ||
+      guidedImages.length > MAX_GUIDED_BULK_IMAGES ||
+      guidedImages.length !== guidedManifest.shards.length
+    ) {
+      return NextResponse.json({ error: "Invalid guided bulk scan" }, { status: 400 });
+    }
+    const totalBytes = guidedImages.reduce((total, image) => total + image.size, 0);
+    if (totalBytes > MAX_GUIDED_BULK_BYTES) {
+      return NextResponse.json({ error: "Bulk scan too large" }, { status: 413 });
+    }
+    if (guidedImages.some((image) => !isAcceptedMediaType(image.type))) {
+      return NextResponse.json({ error: "Unsupported image type" }, { status: 415 });
+    }
+  } else {
+    if (!imageFile) {
+      return NextResponse.json({ error: "No image provided" }, { status: 400 });
+    }
+    if (imageFile.size > MAX_IMAGE_BYTES) {
+      return NextResponse.json(
+        { error: "Image too large", message: "Please upload a smaller image and try again." },
+        { status: 413 }
+      );
+    }
+    if (!isAcceptedMediaType(imageFile.type)) {
+      return NextResponse.json(
+        { error: "Unsupported image type", message: "Please upload a JPEG, PNG, or WebP image." },
+        { status: 415 }
+      );
+    }
   }
 
   // ── Minifig mode: use Brickognize ─────────────────────────────────────────
   if (mode === "minifig") {
-    const identified = await identifyNonSet(imageFile, { bulk: scan === "bulk" });
+    let identified: NonSetIdentifyResponse;
+    if (guidedBulk && guidedManifest) {
+      const detections: NonSetIdentifyResponse["detections"] = [];
+      const shards = [...guidedManifest.shards].sort((a, b) => a.imageIndex - b.imageIndex);
+      for (let index = 0; index < shards.length; index += 2) {
+        const batch = shards.slice(index, index + 2);
+        const batchDetections = await Promise.all(batch.map(async (shard) => {
+          const result = await identifyNonSet(guidedImages[shard.imageIndex], { skipRecovery: true });
+          return assignDetectionsToRegions(result.detections, shard.regions);
+        }));
+        detections.push(...batchDetections.flat());
+      }
+      identified = { detections: detections.slice(0, MINIFIG_DETECTION_LIMIT) };
+    } else {
+      identified = await identifyNonSet(imageFile!, {
+        bulk: scan === "bulk",
+        skipRecovery: scan === "guided-single",
+      });
+    }
 
     if (!identified.detections.length) {
       return NextResponse.json({ detections: [] });
@@ -278,7 +323,8 @@ export async function POST(req: NextRequest) {
   // ── Set mode: use Claude Vision ───────────────────────────────────────────
 
   // Convert to base64 for Claude Vision
-  const arrayBuffer = await imageFile.arrayBuffer();
+  const mediaType = imageFile!.type as AcceptedMediaType;
+  const arrayBuffer = await imageFile!.arrayBuffer();
   const base64 = Buffer.from(arrayBuffer).toString("base64");
 
   let responseText: string;

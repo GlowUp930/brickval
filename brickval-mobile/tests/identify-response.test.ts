@@ -23,7 +23,7 @@ test("normalizeIdentificationDetections turns minifig candidates into detections
   ]);
 });
 
-test("normalizeBrickognizeDetections keeps LEGO minifig and part matches, dedupes by type/id, sorts by score, and caps sections", () => {
+test("normalizeBrickognizeDetections keeps LEGO minifig and part matches, dedupes by type/id, and sorts by score", () => {
   const detections = normalizeBrickognizeDetections([
     { id: "sw0001", type: "MINIFIG", score: 0.94 },
     { id: "3001", type: "part", score: 0.91 },
@@ -56,7 +56,7 @@ test("normalizeBrickognizeDetections keeps LEGO minifig and part matches, dedupe
     { id: "", type: "part", score: 0.9 },
   ]);
 
-  assert.equal(detections.minifigs.length, 20);
+  assert.equal(detections.minifigs.length, 21);
   assert.deepEqual(detections.minifigs.slice(0, 2), [
     { id: "sw0001", item_type: "minifig", score: 0.94 },
     { id: "sw0002", item_type: "minifig", score: 0.82 },

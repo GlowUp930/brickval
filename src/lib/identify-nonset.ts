@@ -3,6 +3,7 @@ export type BrickognizeRawItem = {
   external_id?: string;
   score?: number;
   type?: string;
+  alternatives?: Array<{ id: string; score: number }>;
   bounding_box?: {
     left: number;
     top: number;
@@ -47,7 +48,7 @@ export type BrickognizeCropRect = {
   height: number;
 };
 
-export const MINIFIG_DETECTION_LIMIT = 20;
+export const MINIFIG_DETECTION_LIMIT = 40;
 const PART_DETECTION_LIMIT = 4;
 const BULK_SCAN_CROP_BUDGET = 25;
 
@@ -68,6 +69,8 @@ export type NonSetDetection = {
   id: string;
   item_type: "minifig" | "part";
   score: number;
+  regionId?: string;
+  alternatives?: Array<{ id: string; score: number }>;
   bounding_box?: {
     left: number;
     top: number;
@@ -77,6 +80,27 @@ export type NonSetDetection = {
     imageHeight: number;
   };
 };
+
+export function withStableRegionIds(detections: NonSetDetection[]): NonSetDetection[] {
+  const ordered = [...detections].sort((a, b) => {
+    const aBox = a.bounding_box;
+    const bBox = b.bounding_box;
+    if (!aBox && !bBox) return b.score - a.score;
+    if (!aBox) return 1;
+    if (!bBox) return -1;
+    const rowDelta = aBox.top - bBox.top;
+    return Math.abs(rowDelta) > Math.max(8, aBox.imageHeight * 0.04)
+      ? rowDelta
+      : aBox.left - bBox.left;
+  });
+  const regionIdByDetection = new Map(
+    ordered.map((detection, index) => [detection, `region-${index + 1}`])
+  );
+  return detections.map((detection) => ({
+    ...detection,
+    regionId: regionIdByDetection.get(detection),
+  }));
+}
 
 export type NormalizedDetections = {
   minifigs: NonSetDetection[];
@@ -97,7 +121,7 @@ function normalizeId(value?: string): string | null {
 }
 
 export function normalizeBrickognizeDetections(items: BrickognizeRawItem[]): NormalizedDetections {
-  const deduped = new Map<string, NonSetDetection>();
+  const candidates: NonSetDetection[] = [];
 
   for (const item of items) {
     const itemType = normalizeItemType(item.type);
@@ -107,17 +131,23 @@ export function normalizeBrickognizeDetections(items: BrickognizeRawItem[]): Nor
     if (!itemType || !id || !Number.isFinite(score) || score <= 0) continue;
 
     const detection: NonSetDetection = item.bounding_box
-      ? { id, item_type: itemType, score, bounding_box: item.bounding_box }
-      : { id, item_type: itemType, score };
+      ? { id, item_type: itemType, score, bounding_box: item.bounding_box, alternatives: item.alternatives }
+      : { id, item_type: itemType, score, alternatives: item.alternatives };
 
-    const key = `${itemType}:${id}`;
-    const existing = deduped.get(key);
-    if (!existing || existing.score < score) {
-      deduped.set(key, detection);
-    }
+    candidates.push(detection);
   }
 
-  const sorted = [...deduped.values()].sort((a, b) => b.score - a.score);
+  const sorted: NonSetDetection[] = [];
+  for (const candidate of candidates.sort((a, b) => b.score - a.score)) {
+    const duplicate = sorted.some((existing) => {
+      if (existing.item_type !== candidate.item_type) return false;
+      if (existing.bounding_box && candidate.bounding_box) {
+        return intersectionOverUnion(existing.bounding_box, candidate.bounding_box) >= 0.55;
+      }
+      return !existing.bounding_box && !candidate.bounding_box && existing.id === candidate.id;
+    });
+    if (!duplicate) sorted.push(candidate);
+  }
   const minifigs = sorted.filter((item) => item.item_type === "minifig").slice(0, MINIFIG_DETECTION_LIMIT);
   const parts = sorted.filter((item) => item.item_type === "part").slice(0, PART_DETECTION_LIMIT);
 
@@ -126,6 +156,21 @@ export function normalizeBrickognizeDetections(items: BrickognizeRawItem[]): Nor
     parts,
     all: [...minifigs, ...parts],
   };
+}
+
+function intersectionOverUnion(
+  a: NonNullable<NonSetDetection["bounding_box"]>,
+  b: NonNullable<NonSetDetection["bounding_box"]>
+): number {
+  const aWidth = Math.max(0, a.right - a.left);
+  const aHeight = Math.max(0, a.bottom - a.top);
+  const bWidth = Math.max(0, b.right - b.left);
+  const bHeight = Math.max(0, b.bottom - b.top);
+  const intersectionWidth = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+  const intersectionHeight = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+  const intersection = intersectionWidth * intersectionHeight;
+  const union = aWidth * aHeight + bWidth * bHeight - intersection;
+  return union > 0 ? intersection / union : 0;
 }
 
 export function normalizeBrickognizeSearchResponse(response: BrickognizeSearchResponse): NormalizedDetections {
@@ -161,11 +206,22 @@ export function analyzeBrickognizeSearchResponse(response: BrickognizeSearchResp
       };
     }
 
+    const alternatives = (detectedItem.candidate_items ?? [])
+      .map((candidate) => {
+        const id = normalizeId(candidate.external_items?.[0]?.external_id ?? candidate.id);
+        const score = Number(candidate.score ?? 0);
+        return id && Number.isFinite(score) && score > 0 ? { id, score } : null;
+      })
+      .filter((candidate): candidate is { id: string; score: number } => candidate !== null)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 4);
+
     for (const candidate of detectedItem.candidate_items ?? []) {
       const item: BrickognizeRawItem = {
         id: candidate.external_items?.[0]?.external_id ?? candidate.id,
         type: candidate.type,
         score: candidate.score,
+        alternatives,
       };
       if (normalizedBox && normalizedBox.imageWidth > 0 && normalizedBox.imageHeight > 0) {
         item.bounding_box = {

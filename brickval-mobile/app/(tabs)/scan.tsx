@@ -3,8 +3,8 @@ import { ActivityIndicator, Alert, Animated, Easing, View, StyleSheet, Pressable
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { SymbolView } from "expo-symbols";
-import { router } from "expo-router";
-import { CameraScanner } from "../../components/CameraScanner";
+import { router, useFocusEffect } from "expo-router";
+import { CameraScanner, type CameraCaptureContext } from "../../components/CameraScanner";
 import { ResultCard } from "../../components/ResultCard";
 import { DetectionOverlay } from "../../components/DetectionOverlay";
 import { LegoLoaderNative } from "../../components/LegoLoaderNative";
@@ -14,6 +14,7 @@ import {
   fetchPartColors,
   getAuthToken,
   identifySet,
+  identifyGuidedBulkMinifigs,
   isApiRequestError,
   lookupSet,
   type IdentificationCandidate,
@@ -52,6 +53,9 @@ import { buildMarketSnapshot } from "../../lib/market-snapshot";
 import { sanitizeBulkMinifigNumbers } from "../../lib/minifig-lookup";
 import { runMinifigScanSession, ScanSessionError } from "../../lib/scan-session";
 import { captureScanError, recordScanTimings } from "../../lib/sentry";
+import { getSmartAutoScanPreference } from "../../lib/preferences";
+import { getPhysicalMinifigQuantities } from "../../lib/bulk-result";
+import { prepareBulkCapture, type PreparedBulkCapture } from "../../lib/bulk-capture";
 
 /**
  * Native scan screen — fullscreen camera, manual capture, result sheet over
@@ -191,6 +195,8 @@ export default function ScanHome() {
   const pendingServerScansUsed = useRef<number | null>(null);
   const promptedOnCurrentResult = useRef(false);
   const [singleAutoScanCoolingDown, setSingleAutoScanCoolingDown] = useState(false);
+  const [smartAutoScanEnabled, setSmartAutoScanEnabled] = useState(true);
+  const [bulkOverflowCount, setBulkOverflowCount] = useState(0);
   const { triggerUpgrade, openAccountForUpgrade, openAccountForSignIn, showDisclosure, handleDisclosureContinue, handleDisclosureDismiss } = useUpgrade();
   const { colors: palette, c: activeColors, mode: themeMode } = useTheme();
   const s = useMemo(() => getStyles(palette, activeColors), [palette, activeColors, themeMode]);
@@ -242,6 +248,10 @@ export default function ScanHome() {
   useEffect(() => {
     void syncGuestScansUsed();
   }, []);
+
+  useFocusEffect(useCallback(() => {
+    void getSmartAutoScanPreference().then(setSmartAutoScanEnabled);
+  }, []));
 
   useEffect(() => {
     return () => {
@@ -598,7 +608,7 @@ export default function ScanHome() {
     }
   };
 
-  const handleCapture = async (photoUri: string) => {
+  const handleCapture = async (photoUri: string, captureContext?: CameraCaptureContext) => {
     setErrorMessage(null);
     setCandidateOptions([]);
     setDetections([]);
@@ -612,10 +622,28 @@ export default function ScanHome() {
     setCapturedPhotoUri(photoUri);
     setStatus("loading");
     setLoadingMsg(scanIntent === "bulk" ? "Finding minifigures..." : "Finding minifigure...");
+    let guidedBulkCapture: PreparedBulkCapture | null = null;
+    const guidedSingleCapture =
+      scanIntent === "single" && captureContext?.observations.length === 1;
     try {
+      if (scanIntent === "bulk" && captureContext?.observations.length) {
+        guidedBulkCapture = await prepareBulkCapture(
+          photoUri,
+          captureContext.observations.map((observation) => ({
+            regionId: observation.regionId,
+            confidence: observation.confidence,
+            boundingBox: observation.boundingBox,
+          }))
+        );
+        setBulkOverflowCount(guidedBulkCapture.overflowRegionIds.length);
+      } else {
+        setBulkOverflowCount(0);
+      }
       const outcome = await runMinifigScanSession(photoUri, scanIntent, {
         prepareAccess: prepareLookupAccess,
-        identify: identifySet,
+        identify: guidedBulkCapture
+          ? async () => identifyGuidedBulkMinifigs(guidedBulkCapture!)
+          : (uri, mode, options) => identifySet(uri, mode, { ...options, guided: guidedSingleCapture }),
         bulkLookup: bulkLookupMinifigs,
         lookup: (identifier, mode) => lookupSet(identifier, mode),
         now: () => performance.now(),
@@ -905,8 +933,13 @@ export default function ScanHome() {
   };
 
   const handleAddBulkToCollection = async () => {
+    const physicalQuantities = getPhysicalMinifigQuantities(detections);
     const selectedEntries = bulkResults
-      .map((item) => ({ item, selection: bulkSelections[getResultKey(item)] ?? { selected: true, condition: "new_sealed" as const } }))
+      .map((item) => ({
+        item,
+        quantity: physicalQuantities[item.set_number.toLowerCase()] ?? 1,
+        selection: bulkSelections[getResultKey(item)] ?? { selected: true, condition: "new_sealed" as const },
+      }))
       .filter((entry) => entry.selection.selected);
 
     if (selectedEntries.length === 0 || bulkAdded) return;
@@ -917,7 +950,7 @@ export default function ScanHome() {
     if (
       shouldBlockCollectionAdd({
         currentQuantity: currentCollectionQuantity,
-        addQuantity: selectedEntries.length,
+        addQuantity: selectedEntries.reduce((total, entry) => total + entry.quantity, 0),
         isPro,
         limit: FREE_COLLECTION_LIMIT,
       })
@@ -927,7 +960,7 @@ export default function ScanHome() {
     }
 
     for (const entry of selectedEntries) {
-      await addToCollection(entry.item, { quantity: 1, condition: entry.selection.condition });
+      await addToCollection(entry.item, { quantity: entry.quantity, condition: entry.selection.condition });
     }
     setBulkAdded(true);
     success();
@@ -938,6 +971,7 @@ export default function ScanHome() {
     setBulkResults([]);
     setBulkSelections({});
     setBulkAdded(false);
+    setBulkOverflowCount(0);
     setDetections([]);
     setSelectedBulkMinifigIds([]);
     setBulkMinifigQueue([]);
@@ -971,6 +1005,7 @@ export default function ScanHome() {
           minimumFractionDigits: value < 100 ? 2 : 0,
           maximumFractionDigits: value < 100 ? 2 : 0,
         })}`;
+  const physicalMinifigQuantities = getPhysicalMinifigQuantities(detections);
   const bulkEntries = bulkResults.map((item) => {
     const key = getResultKey(item);
     const selection = bulkSelections[key] ?? { selected: true, condition: "new_sealed" as const };
@@ -978,11 +1013,16 @@ export default function ScanHome() {
       key,
       item,
       selection,
+      quantity: physicalMinifigQuantities[item.set_number.toLowerCase()] ?? 1,
       snapshot: buildMarketSnapshot(item, selection.condition),
     };
   });
   const selectedBulkEntries = bulkEntries.filter((entry) => entry.selection.selected);
-  const bulkTotalValue = selectedBulkEntries.reduce((total, entry) => total + (entry.snapshot.price_usd ?? 0), 0);
+  const selectedPhysicalMinifigCount = selectedBulkEntries.reduce((total, entry) => total + entry.quantity, 0);
+  const bulkTotalValue = selectedBulkEntries.reduce(
+    (total, entry) => total + (entry.snapshot.price_usd ?? 0) * entry.quantity,
+    0
+  );
   const bulkOverlayDetections = detections
     .filter((detection) => detection.item_type === "minifig")
     .map((detection) => ({
@@ -1004,7 +1044,12 @@ export default function ScanHome() {
     <View style={s.root}>
       <CameraScanner
         enabled={status === "idle"}
-        autoCaptureEnabled={status === "idle" && scanIntent === "single" && !singleAutoScanCoolingDown}
+        autoCaptureEnabled={
+          smartAutoScanEnabled &&
+          status === "idle" &&
+          scanIntent === "single" &&
+          !singleAutoScanCoolingDown
+        }
         scanIntent={scanIntent}
         onCapture={handleCapture}
         onPhotoPress={handlePhotoPress}
@@ -1416,7 +1461,7 @@ export default function ScanHome() {
               )}
               <View style={s.bulkValuePill}>
                 <Text style={s.bulkValueText}>{formatMoney(bulkTotalValue)}</Text>
-                <Text style={s.bulkValueMeta}>· {selectedBulkEntries.length} selected</Text>
+                <Text style={s.bulkValueMeta}>· {selectedPhysicalMinifigCount} selected</Text>
               </View>
               {photoLayout.width > 0 && bulkOverlayDetections.length > 0 ? (
                 <DetectionOverlay
@@ -1433,7 +1478,7 @@ export default function ScanHome() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={s.bulkChipTrack}
             >
-              {bulkEntries.map(({ key, item, snapshot, selection }) => (
+              {bulkEntries.map(({ key, item, snapshot, selection, quantity }) => (
                 <Pressable
                   key={key}
                   accessibilityRole="checkbox"
@@ -1453,7 +1498,9 @@ export default function ScanHome() {
                       </View>
                     ) : null}
                   </View>
-                  <Text style={s.bulkChipPrice}>{formatMoney(snapshot.price_usd)}</Text>
+                  <Text style={s.bulkChipPrice}>
+                    {formatMoney(snapshot.price_usd)}{quantity > 1 ? ` ×${quantity}` : ""}
+                  </Text>
                   <View style={s.bulkConditionToggle}>
                     <Pressable
                       accessibilityRole="button"
@@ -1498,7 +1545,7 @@ export default function ScanHome() {
 
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={bulkAdded ? "Bulk minifigures added to collection" : `Add ${selectedBulkEntries.length} minifigures to collection`}
+              accessibilityLabel={bulkAdded ? "Bulk minifigures added to collection" : `Add ${selectedPhysicalMinifigCount} minifigures to collection`}
               accessibilityState={{ disabled: selectedBulkEntries.length === 0 || bulkAdded }}
               style={[
                 s.bulkPrimaryButton,
@@ -1514,10 +1561,22 @@ export default function ScanHome() {
                 {bulkAdded
                   ? "Added"
                   : selectedBulkEntries.length > 0
-                    ? `Add ${selectedBulkEntries.length} to Collection`
+                    ? `Add ${selectedPhysicalMinifigCount} to Collection`
                     : "Select items to add"}
               </Text>
             </Pressable>
+
+            {bulkOverflowCount > 0 ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Scan ${bulkOverflowCount} remaining minifigures`}
+                style={s.bulkSecondaryButton}
+                onPress={dismissBulkResult}
+              >
+                <Text style={s.bulkSecondaryText}>Scan remaining ({bulkOverflowCount})</Text>
+                <Text style={s.bulkRemainingHint}>Move processed figures aside first</Text>
+              </Pressable>
+            ) : null}
 
             <Pressable
               accessibilityRole="button"
@@ -1960,6 +2019,12 @@ function getStyles(c: ThemeColors, m: ModeColors) {
     color: "#F7F4EA",
     fontSize: 17,
     fontWeight: "900",
+  },
+  bulkRemainingHint: {
+    color: m.textSecondary,
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 3,
   },
   collectionLimitModal: {
     flex: 1,

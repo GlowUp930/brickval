@@ -25,7 +25,6 @@ const config: StorybookConfig = {
     const excluded = new Set(optimizeDeps.exclude ?? []);
     for (const pkg of [
       "expo",
-      "expo-camera",
       "expo-haptics",
       "expo-modules-core",
       "expo-constants",
@@ -47,7 +46,6 @@ const config: StorybookConfig = {
         ...(baseConfig.resolve ?? {}),
         alias: {
           ...(baseConfig.resolve?.alias ?? {}),
-          "expo-camera": path.resolve(currentDir, "mocks/expo-camera.tsx"),
           "expo-haptics": path.resolve(currentDir, "mocks/expo-haptics.ts"),
           "expo-sensors": path.resolve(currentDir, "mocks/expo-sensors.ts"),
           "expo-symbols": path.resolve(currentDir, "mocks/expo-symbols.tsx"),
