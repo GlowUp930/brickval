@@ -62,6 +62,7 @@
       "enableNativePaywall": true,
       "sentryDsn": "https://090473fce0a7b2a6947f8af474887152@o4511534041792512.ingest.us.sentry.io/4511545349832704",
       "internalTestingUnlimitedScans": false,
+      "hostedSmartScanEnabled": true,
       "revenueCatAndroidApiKey": "goog_NUvLtaesNxERCcRAffebyZByADU",
       "revenueCatIosApiKey": "appl_LPwGHJLYLXKvQaIIrNuVvQHfSew",
       "superwallAndroidApiKey": "pk_Op2uaWA1p5uPdvwtEWtWr",

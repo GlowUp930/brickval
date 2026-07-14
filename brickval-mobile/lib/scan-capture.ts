@@ -18,11 +18,11 @@ export async function prepareMinifigureCapture(
     context.crop(plan.crop);
     if (plan.resize) context.resize(plan.resize);
     rendered = await context.renderAsync();
-    let saved = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.72 });
-    if (new File(saved.uri).size > TARGET_UPLOAD_BYTES) {
-      saved = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.55 });
+    for (const compress of [0.72, 0.55, 0.38, 0.24]) {
+      const saved = await rendered.saveAsync({ format: SaveFormat.JPEG, compress });
+      if (new File(saved.uri).size <= TARGET_UPLOAD_BYTES) return saved.uri;
     }
-    return saved.uri;
+    throw new Error("Minifigure capture remains above 500KB");
   } finally {
     context.release();
     rendered?.release();

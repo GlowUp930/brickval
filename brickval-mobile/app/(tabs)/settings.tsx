@@ -19,6 +19,8 @@ import { PrePurchaseDisclosure } from "../../components/PrePurchaseDisclosure";
 import { colors } from "../../lib/theme";
 import {
   getSmartAutoScanPreference,
+  getScanImprovementConsent,
+  setScanImprovementConsent,
   setSmartAutoScanPreference,
   type ThemePreference,
 } from "../../lib/preferences";
@@ -26,6 +28,7 @@ import {
 const AVATAR_KEY = "brickval_account_avatar";
 const PRIVACY_URL = "https://brickvalue.live/privacy";
 const TERMS_URL = "https://brickvalue.live/terms";
+const DETECTOR_ATTRIBUTION_URL = "https://universe.roboflow.com/vc-echpj/lego-minifigures-r3zzt";
 
 type AvatarKey = "classic" | "ghost" | "wolf" | "knight";
 type FallbackIcon = typeof Crown;
@@ -56,6 +59,7 @@ export default function SettingsScreen() {
   const [avatar, setAvatar] = useState<AvatarKey>("classic");
   const [proStatus, setProStatus] = useState<boolean | null>(null);
   const [smartAutoScanEnabled, setSmartAutoScanEnabled] = useState(true);
+  const [scanImprovementConsent, setScanImprovementConsentState] = useState(false);
   const { triggerUpgrade, openAccountForSignIn, showDisclosure, handleDisclosureContinue, handleDisclosureDismiss } = useUpgrade();
   const { colors: palette, c, preference, setPreference } = useTheme();
   const insets = useSafeAreaInsets();
@@ -65,16 +69,18 @@ export default function SettingsScreen() {
     useCallback(() => {
       let active = true;
       async function loadCollection() {
-        const [collection, savedAvatar, nextProStatus, smartAutoScan] = await Promise.all([
+        const [collection, savedAvatar, nextProStatus, smartAutoScan, improvementConsent] = await Promise.all([
           getCollection(),
           SecureStore.getItemAsync(AVATAR_KEY),
           getNativeProStatus(),
           getSmartAutoScanPreference(),
+          getScanImprovementConsent(),
         ]);
         if (!active) return;
         setItems(collection);
         setProStatus(nextProStatus);
         setSmartAutoScanEnabled(smartAutoScan);
+        setScanImprovementConsentState(improvementConsent);
         if (isAvatarKey(savedAvatar)) {
           setAvatar(savedAvatar);
         }
@@ -260,6 +266,15 @@ export default function SettingsScreen() {
             value={smartAutoScanEnabled}
             onValueChange={updateSmartAutoScan}
           />
+          <SettingsSwitchRow
+            title="Help improve scanning"
+            meta="Share anonymous cropped scan photos; location data is removed"
+            value={scanImprovementConsent}
+            onValueChange={(enabled) => {
+              setScanImprovementConsentState(enabled);
+              void setScanImprovementConsent(enabled);
+            }}
+          />
           <View style={styles.themePanel}>
             <View style={styles.rowCopy}>
               <Text style={styles.rowTitle}>App theme</Text>
@@ -300,6 +315,14 @@ export default function SettingsScreen() {
             meta="App terms, Apple purchase terms, and LEGO disclaimer"
             accent={palette.lego.yellow}
             onPress={() => void openExternalUrl(TERMS_URL)}
+          />
+          <SettingsRow
+            symbol="camera.metering.matrix"
+            fallbackIcon={ScrollText}
+            title="Scanner model attribution"
+            meta="Lego Minifigures by VC · CC BY 4.0"
+            accent={c.textMuted}
+            onPress={() => void openExternalUrl(DETECTOR_ATTRIBUTION_URL)}
           />
         </View>
 

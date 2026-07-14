@@ -17,6 +17,8 @@ import {
   identifyGuidedBulkMinifigs,
   isApiRequestError,
   lookupSet,
+  scanMinifigure,
+  submitMinifigFeedback,
   type IdentificationCandidate,
   type IdentificationDetection,
   type IdentificationResult,
@@ -53,7 +55,7 @@ import { buildMarketSnapshot } from "../../lib/market-snapshot";
 import { sanitizeBulkMinifigNumbers } from "../../lib/minifig-lookup";
 import { runMinifigScanSession, ScanSessionError } from "../../lib/scan-session";
 import { captureScanError, recordScanTimings } from "../../lib/sentry";
-import { getSmartAutoScanPreference } from "../../lib/preferences";
+import { getScanImprovementConsent, getSmartAutoScanPreference } from "../../lib/preferences";
 import { getPhysicalMinifigQuantities } from "../../lib/bulk-result";
 import { prepareBulkCapture, type PreparedBulkCapture } from "../../lib/bulk-capture";
 
@@ -646,6 +648,7 @@ export default function ScanHome() {
           : (uri, mode, options) => identifySet(uri, mode, { ...options, guided: guidedSingleCapture }),
         bulkLookup: bulkLookupMinifigs,
         lookup: (identifier, mode) => lookupSet(identifier, mode),
+        scanSingle: scanMinifigure,
         now: () => performance.now(),
       });
       recordScanTimings({ intent: scanIntent, outcome: outcome.kind, ...outcome.timings });
@@ -662,6 +665,17 @@ export default function ScanHome() {
       }
 
       if (outcome.kind === "not-found") {
+        const consent = await getScanImprovementConsent();
+        void submitMinifigFeedback({
+          outcome: "brickognize-rejected",
+          consent,
+          photoUri: captureContext?.autoCaptured ? photoUri : undefined,
+          detectorModelVersion: captureContext?.detectorModelVersion,
+          detectorConfidence: captureContext?.observations[0]?.confidence,
+          detectMs: captureContext?.detectMs,
+          identifyMs: outcome.timings.identifyMs,
+          totalMs: outcome.timings.totalMs,
+        }).catch(() => undefined);
         warn();
         pendingServerScansUsed.current = null;
         setErrorMessage("We couldn't identify the minifigure or part. Try a clearer front-facing shot.");
@@ -711,6 +725,22 @@ export default function ScanHome() {
       }
 
       if (outcome.kind === "single-match") {
+        const consent = await getScanImprovementConsent();
+        void submitMinifigFeedback({
+          outcome: outcome.identification.confidence !== null && outcome.identification.confidence < 0.85
+            ? "low-confidence"
+            : "matched",
+          consent,
+          photoUri: captureContext?.autoCaptured ? photoUri : undefined,
+          detectorModelVersion: captureContext?.detectorModelVersion,
+          detectorConfidence: captureContext?.observations[0]?.confidence,
+          brickognizeId: outcome.identification.set_number ?? undefined,
+          brickognizeScore: outcome.identification.confidence ?? undefined,
+          detectMs: captureContext?.detectMs,
+          identifyMs: outcome.timings.identifyMs,
+          pricingMs: outcome.timings.priceMs,
+          totalMs: outcome.timings.totalMs,
+        }).catch(() => undefined);
         pendingGuestScan.current = !outcome.access.hasToken;
         await completeLookup(outcome.result);
         return;

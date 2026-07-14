@@ -22,7 +22,7 @@ export interface MinifigureObservation {
 
 export type AutoScanBlockReason = "multiple" | "partial" | null;
 
-const REQUIRED_CONSISTENT_OBSERVATIONS = 3;
+const REQUIRED_CONSISTENT_OBSERVATIONS = 2;
 const STABILITY_WINDOW_MS = 600;
 
 export interface AutoScanSession {
@@ -53,7 +53,7 @@ export function observeAutoScanTarget(
 ): AutoScanSession {
   if (
     !target ||
-    target.confidence < 0.8 ||
+    target.confidence < 0.75 ||
     target.frameCoverage < 0.15 ||
     target.frameCoverage > 0.75 ||
     !target.fullyVisible
@@ -113,7 +113,7 @@ export function observeAutoScanFrame(
     ? session
     : createAutoScanSession();
   const next = observeAutoScanTarget(priorSession, {
-    trackingId: observation.regionId,
+    trackingId: "single-minifigure",
     confidence: observation.confidence,
     frameCoverage: observation.boundingBox.width * observation.boundingBox.height,
     fullyVisible: observation.fullyVisible,
@@ -125,7 +125,6 @@ function observationsAreConsistent(
   previous: MinifigureObservation,
   current: MinifigureObservation
 ): boolean {
-  if (previous.regionId !== current.regionId) return false;
   const previousCenterX = previous.boundingBox.x + previous.boundingBox.width / 2;
   const previousCenterY = previous.boundingBox.y + previous.boundingBox.height / 2;
   const currentCenterX = current.boundingBox.x + current.boundingBox.width / 2;

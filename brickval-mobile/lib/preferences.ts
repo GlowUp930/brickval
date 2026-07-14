@@ -4,6 +4,7 @@ export type ThemePreference = "system" | "dark" | "light";
 export type AccentPreference = "yellow" | "blue";
 
 const SMART_AUTO_SCAN_KEY = "brickval_smart_auto_scan";
+const SCAN_IMPROVEMENT_CONSENT_KEY = "brickval_scan_improvement_consent";
 const THEME_PREFERENCE_KEY = "brickval_theme_preference";
 const ACCENT_PREFERENCE_KEY = "brickval_accent_preference";
 
@@ -25,6 +26,22 @@ export async function setSmartAutoScanPreference(enabled: boolean): Promise<void
     await SecureStore.setItemAsync(SMART_AUTO_SCAN_KEY, enabled ? "1" : "0");
   } catch {
     // Preference storage is non-critical; keep the in-memory UI responsive.
+  }
+}
+
+export async function getScanImprovementConsent(): Promise<boolean> {
+  try {
+    return await SecureStore.getItemAsync(SCAN_IMPROVEMENT_CONSENT_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export async function setScanImprovementConsent(enabled: boolean): Promise<void> {
+  try {
+    await SecureStore.setItemAsync(SCAN_IMPROVEMENT_CONSENT_KEY, enabled ? "1" : "0");
+  } catch {
+    // Consent defaults off if secure storage is unavailable.
   }
 }
 

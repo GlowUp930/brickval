@@ -75,6 +75,30 @@ test("single Scan Session checks access once and returns a priced match", async 
   if (outcome.kind === "single-match") assert.equal(outcome.result.set_number, "sw0001");
 });
 
+test("single Scan Session uses the combined identify-and-price request when available", async () => {
+  let legacyIdentifyCalled = false;
+  let legacyLookupCalled = false;
+  const outcome = await runMinifigScanSession("file://scan.jpg", "single", dependencies({
+    scanSingle: async () => ({
+      status: "matched",
+      identification: { id: "sw0001", item_type: "minifig", score: 0.95 },
+      result: lookup("sw0001"),
+    }),
+    identify: async () => {
+      legacyIdentifyCalled = true;
+      return identification([]);
+    },
+    lookup: async (id) => {
+      legacyLookupCalled = true;
+      return lookup(id);
+    },
+  }));
+
+  assert.equal(outcome.kind, "single-match");
+  assert.equal(legacyIdentifyCalled, false);
+  assert.equal(legacyLookupCalled, false);
+});
+
 test("bulk Scan Session prices all detections in one batch", async () => {
   let batchIds: string[] = [];
   const outcome = await runMinifigScanSession("file://scan.jpg", "bulk", dependencies({

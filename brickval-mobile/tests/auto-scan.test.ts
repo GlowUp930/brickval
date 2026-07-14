@@ -8,7 +8,7 @@ import {
   observeAutoScanTarget,
 } from "../lib/auto-scan";
 
-test("single auto-scan requires three consistent minifigure observations", () => {
+test("single auto-scan requires two consistent minifigure observations", () => {
   const searching = createAutoScanSession();
   const emptyView = observeAutoScanTarget(searching, null);
 
@@ -17,27 +17,19 @@ test("single auto-scan requires three consistent minifigure observations", () =>
 
   const first = observeAutoScanTarget(emptyView, {
     trackingId: "target-1",
-    confidence: 0.92,
+    confidence: 0.76,
     frameCoverage: 0.34,
     fullyVisible: true,
   });
   const second = observeAutoScanTarget(first, {
     trackingId: "target-1",
-    confidence: 0.91,
+    confidence: 0.75,
     frameCoverage: 0.35,
     fullyVisible: true,
   });
-  const detected = observeAutoScanTarget(second, {
-    trackingId: "target-1",
-    confidence: 0.94,
-    frameCoverage: 0.33,
-    fullyVisible: true,
-  });
-
   assert.equal(first.phase, "searching");
-  assert.equal(second.phase, "searching");
-  assert.equal(detected.phase, "detected");
-  assert.equal(detected.captureRequested, false);
+  assert.equal(second.phase, "detected");
+  assert.equal(second.captureRequested, false);
 });
 
 test("single auto-scan blocks when more than one minifigure is visible", () => {
@@ -58,7 +50,7 @@ test("single auto-scan blocks when more than one minifigure is visible", () => {
   assert.equal(blocked.captureRequested, false);
 });
 
-test("moving target boxes do not satisfy the three-observation gate", () => {
+test("moving target boxes restart the two-observation gate", () => {
   const base = {
     confidence: 0.92,
     boundingBox: { x: 0.2, y: 0.2, width: 0.3, height: 0.5 },
@@ -68,10 +60,23 @@ test("moving target boxes do not satisfy the three-observation gate", () => {
   };
   const first = observeAutoScanFrame(createAutoScanSession(), [base]);
   const moved = observeAutoScanFrame(first, [{ ...base, timestamp: 1_150, boundingBox: { ...base.boundingBox, x: 0.45 } }]);
-  const third = observeAutoScanFrame(moved, [{ ...base, timestamp: 1_300, boundingBox: { ...base.boundingBox, x: 0.46 } }]);
 
-  assert.equal(third.phase, "searching");
-  assert.equal(third.consistentObservationCount, 2);
+  assert.equal(moved.phase, "searching");
+  assert.equal(moved.consistentObservationCount, 1);
+});
+
+test("consistent hosted boxes match even when prediction IDs change", () => {
+  const base = {
+    confidence: 0.82,
+    boundingBox: { x: 0.2, y: 0.2, width: 0.3, height: 0.5 },
+    timestamp: 1_000,
+    fullyVisible: true,
+    regionId: "prediction-1",
+  };
+  const first = observeAutoScanFrame(createAutoScanSession(), [base]);
+  const detected = observeAutoScanFrame(first, [{ ...base, timestamp: 1_800, regionId: "prediction-2" }]);
+
+  assert.equal(detected.phase, "detected");
 });
 
 test("single auto-scan requests capture only after target and phone stay stable", () => {

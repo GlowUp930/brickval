@@ -7,6 +7,7 @@ import {
   usePhotoOutput,
 } from "react-native-vision-camera";
 import { SymbolView } from "expo-symbols";
+import Constants from "expo-constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { tap, warn } from "../lib/haptics";
@@ -21,6 +22,14 @@ import type { ScanIntent } from "./ScanIntentPicker";
 import { useTheme } from "../lib/ThemeProvider";
 import { prepareMinifigureCapture } from "../lib/scan-capture";
 import { useMinifigureDetector } from "../lib/minifigure-detector";
+import { detectHostedMinifigures } from "../lib/api";
+import { prepareHostedDetectionSample } from "../lib/hosted-detection-sample";
+import {
+  completeHostedDetection,
+  createHostedDetectionSchedule,
+  shouldSampleHostedDetection,
+  startHostedDetection,
+} from "../lib/hosted-detection-scheduler";
 
 const INK = "#F7F4EA";
 const MUTED = "rgba(247,244,234,0.66)";
@@ -40,6 +49,9 @@ interface Props {
 
 export interface CameraCaptureContext {
   observations: MinifigureObservation[];
+  autoCaptured?: boolean;
+  detectorModelVersion?: string;
+  detectMs?: number;
 }
 
 export function CameraScanner({
@@ -60,11 +72,24 @@ export function CameraScanner({
   const permission = useCameraPermission();
   const photoOutput = usePhotoOutput({ quality: 0.72, qualityPrioritization: "speed" });
   const detectorFeed = useMinifigureDetector();
-  const effectiveDetectorReady = detectorReady ?? detectorFeed.ready;
-  const observations = minifigureObservations ?? detectorFeed.observations;
+  const hostedFeatureEnabled = Constants.expoConfig?.extra?.hostedSmartScanEnabled !== false;
+  const [hostedAvailable, setHostedAvailable] = useState(hostedFeatureEnabled);
+  const [hostedObservations, setHostedObservations] = useState<MinifigureObservation[]>([]);
+  const [hostedModelVersion, setHostedModelVersion] = useState<string>();
+  const [hostedDetectMs, setHostedDetectMs] = useState<number>();
+  const hostedScheduleRef = useRef(createHostedDetectionSchedule());
+  const hostedFailureCountRef = useRef(0);
+  const captureInProgressRef = useRef(false);
+  const hostedSamplingEnabled =
+    hostedFeatureEnabled &&
+    detectorReady === undefined &&
+    minifigureObservations === undefined &&
+    !detectorFeed.ready;
+  const effectiveDetectorReady = detectorReady ?? (detectorFeed.ready || hostedAvailable);
+  const observations = minifigureObservations ?? (detectorFeed.ready ? detectorFeed.observations : hostedObservations);
   const cameraOutputs = useMemo(
-    () => effectiveDetectorReady ? [photoOutput, detectorFeed.frameOutput] : [photoOutput],
-    [detectorFeed.frameOutput, effectiveDetectorReady, photoOutput]
+    () => detectorFeed.ready ? [photoOutput, detectorFeed.frameOutput] : [photoOutput],
+    [detectorFeed.frameOutput, detectorFeed.ready, photoOutput]
   );
   const [torch, setTorch] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -75,6 +100,64 @@ export function CameraScanner({
   const isSingleScan = scanIntent === "single";
   const isPreview = Boolean(cameraPreview || autoScanPreviewState || permissionGranted !== undefined);
   const hasCameraPermission = permissionGranted ?? permission.hasPermission;
+
+  const { isStable: cameraIsStable } = useStabilityDetector(
+    enabled && cameraReady && hostedSamplingEnabled && !scanning && !isPreview,
+    () => undefined
+  );
+
+  useEffect(() => {
+    if (cameraIsStable) return;
+    hostedScheduleRef.current = createHostedDetectionSchedule();
+    setHostedObservations([]);
+  }, [cameraIsStable]);
+
+  useEffect(() => {
+    if (
+      !hostedSamplingEnabled ||
+      !hostedAvailable ||
+      !enabled ||
+      !cameraReady ||
+      scanning ||
+      !isSingleScan ||
+      isPreview
+    ) return;
+
+    const sample = async () => {
+      const now = Date.now();
+      if (!shouldSampleHostedDetection(hostedScheduleRef.current, { now, cameraStable: cameraIsStable })) return;
+      if (captureInProgressRef.current) return;
+      hostedScheduleRef.current = startHostedDetection(hostedScheduleRef.current, now);
+      try {
+        const photo = await photoOutput.capturePhotoToFile(
+          { flashMode: "off", enableShutterSound: false },
+          {}
+        );
+        if (!photo.filePath) return;
+        const sampleUri = await prepareHostedDetectionSample(`file://${photo.filePath}`);
+        const result = await detectHostedMinifigures(sampleUri);
+        if (result.status === "cap-reached") {
+          setHostedAvailable(false);
+          setHostedObservations([]);
+          return;
+        }
+        setHostedObservations(result.observations);
+        setHostedModelVersion(result.detectorModelVersion);
+        setHostedDetectMs(result.detectMs);
+        hostedFailureCountRef.current = 0;
+      } catch {
+        hostedFailureCountRef.current += 1;
+        if (hostedFailureCountRef.current >= 3) setHostedAvailable(false);
+        setHostedObservations([]);
+      } finally {
+        hostedScheduleRef.current = completeHostedDetection(hostedScheduleRef.current);
+      }
+    };
+
+    const timer = setInterval(() => void sample(), 160);
+    void sample();
+    return () => clearInterval(timer);
+  }, [cameraIsStable, cameraReady, enabled, hostedAvailable, hostedSamplingEnabled, isPreview, isSingleScan, photoOutput, scanning]);
 
   useEffect(() => {
     void photoOutput.prepareSettings([
@@ -97,9 +180,10 @@ export function CameraScanner({
   }, [autoCaptureEnabled, effectiveDetectorReady, enabled, isSingleScan, observations]);
 
   const capturePhoto = useCallback(async (source: "manual" | "auto" = "manual") => {
-    if (!enabled || scanning) return;
+    if (!enabled || scanning || captureInProgressRef.current) return;
     if (!cameraPreview && (!cameraRef.current || !cameraReady)) return;
     if (source === "manual") tap();
+    captureInProgressRef.current = true;
     setScanning(true);
     try {
       if (cameraPreview) {
@@ -112,17 +196,34 @@ export function CameraScanner({
       );
       if (photo.filePath) {
         const photoUri = `file://${photo.filePath}`;
-        const observation = source === "auto" ? observations[0] : null;
+        let captureObservations = observations;
+        if (source === "manual" && scanIntent === "bulk" && hostedSamplingEnabled && hostedAvailable) {
+          try {
+            const sampleUri = await prepareHostedDetectionSample(photoUri);
+            const detected = await detectHostedMinifigures(sampleUri);
+            if (detected.status === "available") captureObservations = detected.observations;
+            else setHostedAvailable(false);
+          } catch {
+            captureObservations = [];
+          }
+        }
+        const observation = source === "auto" ? captureObservations[0] : null;
         const preparedUri = observation
           ? await prepareMinifigureCapture(photoUri, observation.boundingBox)
           : photoUri;
-        onCapture(preparedUri, { observations });
+        onCapture(preparedUri, {
+          observations: captureObservations,
+          autoCaptured: source === "auto",
+          detectorModelVersion: detectorFeed.ready ? "native-litert-v1" : hostedModelVersion,
+          detectMs: hostedDetectMs,
+        });
       }
     } catch {
+      captureInProgressRef.current = false;
       warn();
       setScanning(false);
     }
-  }, [cameraPreview, cameraReady, enabled, observations, onCapture, photoOutput, scanning]);
+  }, [cameraPreview, cameraReady, detectorFeed.ready, enabled, hostedAvailable, hostedDetectMs, hostedModelVersion, hostedSamplingEnabled, observations, onCapture, photoOutput, scanIntent, scanning]);
 
   const autoStabilityEnabled =
     enabled &&
@@ -138,7 +239,10 @@ export function CameraScanner({
   });
 
   useEffect(() => {
-    if (enabled) setScanning(false);
+    if (enabled) {
+      captureInProgressRef.current = false;
+      setScanning(false);
+    }
   }, [enabled]);
 
   useEffect(() => {
@@ -182,6 +286,8 @@ export function CameraScanner({
         ? "Show the complete minifigure"
         : !effectiveDetectorReady && autoCaptureEnabled
           ? "Smart scan unavailable"
+          : observations.length === 1 && autoScanSession.phase === "searching"
+            ? "Minifigure detected"
           : autoScanSession.phase === "detected" && autoPulse <= 0.25
             ? "Minifigure detected"
             : pillText

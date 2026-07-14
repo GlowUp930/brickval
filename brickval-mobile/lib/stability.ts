@@ -19,8 +19,9 @@ const SAMPLE_INTERVAL_MS = 60;
 export function useStabilityDetector(
   enabled: boolean,
   onStable: () => void
-): { reset: () => void; pulse: number } {
+): { reset: () => void; pulse: number; isStable: boolean } {
   const [pulse, setPulse] = useState(0); // 0..1, how close we are to firing
+  const [isStable, setIsStable] = useState(false);
   const stableSinceRef = useRef<number | null>(null);
   const firedRef = useRef(false);
   const onStableRef = useRef(onStable);
@@ -30,6 +31,7 @@ export function useStabilityDetector(
     stableSinceRef.current = null;
     firedRef.current = false;
     setPulse(0);
+    setIsStable(false);
   }, []);
 
   useEffect(() => {
@@ -40,8 +42,6 @@ export function useStabilityDetector(
 
     Accelerometer.setUpdateInterval(SAMPLE_INTERVAL_MS);
     const sub = Accelerometer.addListener(({ x, y, z }) => {
-      if (firedRef.current) return;
-
       const magnitude = Math.sqrt(x * x + y * y + z * z);
       const delta = Math.abs(magnitude - 1);
       const now = Date.now();
@@ -55,12 +55,17 @@ export function useStabilityDetector(
         setPulse(ratio);
 
         if (heldFor >= STABILITY_WINDOW_MS) {
-          firedRef.current = true;
-          onStableRef.current();
+          setIsStable(true);
+          if (!firedRef.current) {
+            firedRef.current = true;
+            onStableRef.current();
+          }
         }
       } else {
         stableSinceRef.current = null;
+        firedRef.current = false;
         setPulse(0);
+        setIsStable(false);
       }
     });
 
@@ -69,5 +74,5 @@ export function useStabilityDetector(
     };
   }, [enabled]);
 
-  return { reset, pulse };
+  return { reset, pulse, isStable };
 }

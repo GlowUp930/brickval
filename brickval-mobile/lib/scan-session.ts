@@ -58,6 +58,11 @@ export interface ScanSessionDependencies {
   ) => Promise<IdentificationResult>;
   bulkLookup: (figNumbers: string[]) => Promise<BulkMinifigLookupRow[]>;
   lookup: (identifier: string, mode: "minifig") => Promise<LookupDetailResult>;
+  scanSingle?: (photoUri: string) => Promise<
+    | { status: "matched"; identification: IdentificationDetection; result: LookupDetailResult; identifyMs?: number; pricingMs?: number; totalMs?: number }
+    | { status: "review"; detections: IdentificationDetection[]; identifyMs?: number; totalMs?: number }
+    | { status: "not-found"; detections: []; identifyMs?: number; totalMs?: number }
+  >;
   now: () => number;
 }
 
@@ -84,6 +89,27 @@ export async function runMinifigScanSession(
   if (!access.allowed) {
     timings.totalMs = elapsed(deps.now(), startedAt);
     return { kind: "access-denied", timings };
+  }
+
+  if (intent === "single" && deps.scanSingle) {
+    const combined = await deps.scanSingle(photoUri);
+    timings.identifyMs = combined.identifyMs ?? 0;
+    timings.priceMs = combined.status === "matched" ? combined.pricingMs ?? 0 : 0;
+    timings.totalMs = combined.totalMs ?? elapsed(deps.now(), startedAt);
+    const detections = combined.status === "matched" ? [combined.identification] : combined.detections;
+    const identification: IdentificationResult = {
+      set_number: detections[0]?.id ?? null,
+      confidence: detections[0]?.score ?? null,
+      candidates: detections[0]?.alternatives ?? [],
+      detections,
+    };
+    if (combined.status === "not-found") {
+      return { kind: "not-found", access, identification, timings };
+    }
+    if (combined.status === "review") {
+      return { kind: "review", access, identification, timings };
+    }
+    return { kind: "single-match", access, identification, result: combined.result, timings };
   }
 
   let identification: IdentificationResult;

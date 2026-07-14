@@ -7,6 +7,7 @@ import { getScanImageResize } from "./scan-image";
 import { normalizeImageUrl } from "./image-url";
 import { normalizeIdentificationDetections } from "./identify-response";
 import type { PreparedBulkCapture } from "./bulk-capture";
+import type { MinifigureObservation } from "./auto-scan";
 import {
   getConditionMarketHistory,
   getConditionMarketValueUsd,
@@ -110,6 +111,124 @@ export interface IdentificationResult {
   detections: IdentificationDetection[];
   scansUsed?: number;
   isPro?: boolean;
+}
+
+export type HostedDetectionResponse =
+  | {
+      status: "available";
+      detectorModelVersion: string;
+      detectMs: number;
+      observations: MinifigureObservation[];
+    }
+  | {
+      status: "cap-reached";
+      detectorModelVersion: string;
+      detectMs: 0;
+      observations: [];
+    };
+
+export async function detectHostedMinifigures(photoUri: string): Promise<HostedDetectionResponse> {
+  const form = new FormData();
+  form.append("image", new File(photoUri));
+  const res = await fetch(`${API_BASE}/api/minifig/detect`, {
+    method: "POST",
+    headers: { ...(await authHeader()) },
+    body: form,
+  });
+  const data = await res.json();
+  if (res.status === 429 && data?.status === "cap-reached") return data;
+  if (!res.ok) throw new ApiRequestError("minifig detect", res.status, data);
+  const timestamp = Date.now();
+  return {
+    status: "available",
+    detectorModelVersion: String(data.detectorModelVersion ?? "unknown"),
+    detectMs: Number(data.detectMs ?? 0),
+    observations: Array.isArray(data.observations)
+      ? data.observations.map((observation: Omit<MinifigureObservation, "timestamp">) => ({
+          ...observation,
+          timestamp,
+        }))
+      : [],
+  };
+}
+
+export type CombinedMinifigScanResponse =
+  | {
+      status: "matched";
+      identification: IdentificationDetection;
+      result: MinifigLookupDetailResult;
+      pricingStatus: "fresh" | "refreshing" | "fetched";
+      pricingUpdatedAt: string;
+      identifyMs: number;
+      pricingMs: number;
+      totalMs: number;
+    }
+  | {
+      status: "review";
+      detections: IdentificationDetection[];
+      identifyMs: number;
+      totalMs: number;
+    }
+  | {
+      status: "not-found";
+      detections: [];
+      identifyMs: number;
+      totalMs: number;
+    };
+
+export async function scanMinifigure(photoUri: string): Promise<CombinedMinifigScanResponse> {
+  const form = new FormData();
+  form.append("image", new File(photoUri));
+  const res = await fetch(`${API_BASE}/api/minifig/scan`, {
+    method: "POST",
+    headers: { ...(await authHeader()) },
+    body: form,
+  });
+  if (!res.ok) await throwApiError(res, "minifig scan");
+  const data = await res.json();
+  if (data.status === "matched") {
+    const result = withScanMeta(normalizeMinifigResult(data.result), data);
+    result.pricingStatus = data.pricingStatus;
+    result.pricingUpdatedAt = data.pricingUpdatedAt;
+    return { ...data, result } as CombinedMinifigScanResponse;
+  }
+  return data as CombinedMinifigScanResponse;
+}
+
+export async function submitMinifigFeedback(input: {
+  outcome: "matched" | "brickognize-rejected" | "gallery-recovery" | "low-confidence";
+  consent: boolean;
+  photoUri?: string;
+  detectorModelVersion?: string;
+  detectorConfidence?: number;
+  brickognizeId?: string;
+  brickognizeScore?: number;
+  detectMs?: number;
+  identifyMs?: number;
+  pricingMs?: number;
+  totalMs?: number;
+}): Promise<void> {
+  const form = new FormData();
+  form.append("outcome", input.outcome);
+  form.append("consent", input.consent ? "true" : "false");
+  const append = (key: string, value: string | number | undefined) => {
+    if (value !== undefined) form.append(key, String(value));
+  };
+  append("detectorModelVersion", input.detectorModelVersion);
+  append("detectorConfidence", input.detectorConfidence);
+  append("brickognizeId", input.brickognizeId);
+  append("brickognizeScore", input.brickognizeScore);
+  append("detectMs", input.detectMs);
+  append("identifyMs", input.identifyMs);
+  append("pricingMs", input.pricingMs);
+  append("totalMs", input.totalMs);
+  if (input.consent && input.photoUri) form.append("image", new File(input.photoUri));
+  const res = await fetch(`${API_BASE}/api/minifig/feedback`, {
+    method: "POST",
+    headers: { ...(await authHeader()) },
+    body: form,
+  });
+  if (!res.ok) await throwApiError(res, "minifig feedback");
 }
 
 export async function identifySet(
@@ -299,6 +418,8 @@ export interface LookupSummaryResult {
   pricing: LookupSummaryPricing;
   scansUsed?: number;
   isPro?: boolean;
+  pricingStatus?: "fresh" | "refreshing" | "fetched";
+  pricingUpdatedAt?: string;
 }
 
 export type MarketHistoryPoint = LookupMarketHistoryPoint;
