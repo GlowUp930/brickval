@@ -1,4 +1,4 @@
-export const ROBOFLOW_MINIFIGURE_MODEL = "lego-minifigures-r3zzt/1";
+export const ROBOFLOW_MINIFIGURE_MODEL = "lego-364li/1";
 
 export interface RoboflowPrediction {
   x?: number;
@@ -65,7 +65,6 @@ export async function runHostedMinifigureDetection(
         const x = (Number(prediction.x ?? 0) / imageWidth) - width / 2;
         const y = (Number(prediction.y ?? 0) / imageHeight) - height / 2;
         if (
-          prediction.class !== "Lego-Minifigures" ||
           confidence < 0.5 ||
           !Number.isFinite(x + y + width + height) ||
           width <= 0 ||

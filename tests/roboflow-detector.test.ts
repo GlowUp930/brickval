@@ -25,7 +25,7 @@ test("hosted detection returns normalized minifigure boxes and timing", async ()
   });
 
   assert.equal(result.status, "available");
-  assert.equal(result.detectorModelVersion, "lego-minifigures-r3zzt/1");
+  assert.equal(result.detectorModelVersion, "lego-364li/1");
   assert.equal(result.detectMs, 180);
   assert.deepEqual(result.observations, [{
     confidence: 0.86,
@@ -48,7 +48,7 @@ test("the monthly cap disables hosted detection without calling Roboflow", async
 
   assert.deepEqual(result, {
     status: "cap-reached",
-    detectorModelVersion: "lego-minifigures-r3zzt/1",
+    detectorModelVersion: "lego-364li/1",
     detectMs: 0,
     observations: [],
   });
