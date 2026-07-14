@@ -9,6 +9,6 @@ The mobile app samples a stable camera scene at 416px, sends JPEGs below 100KB t
 3. Keep `hostedSmartScanEnabled` enabled only for internal/TestFlight rollout until the 100-positive and 100-negative acceptance set passes.
 4. Keep Roboflow paid overage disabled and verify hosted commercial-use permission before public launch.
 
-The pinned detector is `lego-364li/1`: https://universe.roboflow.com/object-detection-3oawx/lego-364li
+The pinned detector is `object-detection-3oawx/lego-364li/1`: https://universe.roboflow.com/object-detection-3oawx/lego-364li
 
 The server enforces a shared 30,000-inference monthly cap. If reached, the app safely disables cloud auto-scan while leaving gallery and bulk manual capture available.

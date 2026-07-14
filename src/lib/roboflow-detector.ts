@@ -1,4 +1,4 @@
-export const ROBOFLOW_MINIFIGURE_MODEL = "lego-364li/1";
+export const ROBOFLOW_MINIFIGURE_MODEL = "object-detection-3oawx/lego-364li/1";
 
 export interface RoboflowPrediction {
   x?: number;
