@@ -79,6 +79,21 @@ test("consistent hosted boxes match even when prediction IDs change", () => {
   assert.equal(detected.phase, "detected");
 });
 
+test("center-cropped detections use sample coverage after mapping to the full frame", () => {
+  const observation = {
+    confidence: 0.95,
+    boundingBox: { x: 0.34, y: 0.36, width: 0.327, height: 0.244 },
+    detectionFrameCoverage: 0.173,
+    timestamp: 1_000,
+    fullyVisible: true,
+    regionId: "prediction-1",
+  };
+  const first = observeAutoScanFrame(createAutoScanSession(), [observation]);
+  const detected = observeAutoScanFrame(first, [{ ...observation, timestamp: 1_800 }]);
+
+  assert.equal(detected.phase, "detected");
+});
+
 test("single auto-scan requests capture only after target and phone stay stable", () => {
   const target = {
     trackingId: "target-1",

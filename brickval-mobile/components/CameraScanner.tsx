@@ -24,6 +24,7 @@ import { prepareMinifigureCapture } from "../lib/scan-capture";
 import { useMinifigureDetector } from "../lib/minifigure-detector";
 import { detectHostedMinifigures } from "../lib/api";
 import { prepareHostedDetectionSample } from "../lib/hosted-detection-sample";
+import { mapDetectionSampleBoundingBox } from "../lib/scan-image";
 import {
   completeHostedDetection,
   createHostedDetectionSchedule,
@@ -134,14 +135,19 @@ export function CameraScanner({
           {}
         );
         if (!photo.filePath) return;
-        const sampleUri = await prepareHostedDetectionSample(`file://${photo.filePath}`);
-        const result = await detectHostedMinifigures(sampleUri);
+        const sample = await prepareHostedDetectionSample(`file://${photo.filePath}`, "single");
+        const result = await detectHostedMinifigures(sample.uri);
         if (result.status === "cap-reached") {
           setHostedAvailable(false);
           setHostedObservations([]);
           return;
         }
-        setHostedObservations(result.observations);
+        setHostedObservations(result.observations.map((observation) => ({
+          ...observation,
+          detectionFrameCoverage:
+            observation.boundingBox.width * observation.boundingBox.height,
+          boundingBox: mapDetectionSampleBoundingBox(observation.boundingBox, sample.plan),
+        })));
         setHostedModelVersion(result.detectorModelVersion);
         setHostedDetectMs(result.detectMs);
         hostedFailureCountRef.current = 0;
@@ -199,8 +205,8 @@ export function CameraScanner({
         let captureObservations = observations;
         if (source === "manual" && scanIntent === "bulk" && hostedSamplingEnabled && hostedAvailable) {
           try {
-            const sampleUri = await prepareHostedDetectionSample(photoUri);
-            const detected = await detectHostedMinifigures(sampleUri);
+            const sample = await prepareHostedDetectionSample(photoUri, "bulk");
+            const detected = await detectHostedMinifigures(sample.uri);
             if (detected.status === "available") captureObservations = detected.observations;
             else setHostedAvailable(false);
           } catch {

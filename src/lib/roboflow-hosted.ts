@@ -33,7 +33,7 @@ async function inferHostedRoboflow(image: Blob): Promise<RoboflowDetectionRespon
   if (!apiKey) throw new Error("Missing env var: ROBOFLOW_API_KEY");
 
   const base64 = Buffer.from(await image.arrayBuffer()).toString("base64");
-  const url = new URL(`https://detect.roboflow.com/${getConfiguredRoboflowModel()}`);
+  const url = new URL(`${getConfiguredRoboflowBaseUrl()}/${getConfiguredRoboflowModel()}`);
   url.searchParams.set("api_key", apiKey);
   url.searchParams.set("confidence", "50");
   url.searchParams.set("overlap", "30");
@@ -50,6 +50,11 @@ async function inferHostedRoboflow(image: Blob): Promise<RoboflowDetectionRespon
 
 function getConfiguredRoboflowModel(): string {
   return process.env.ROBOFLOW_MINIFIGURE_MODEL?.trim() || DEFAULT_ROBOFLOW_MINIFIGURE_MODEL;
+}
+
+function getConfiguredRoboflowBaseUrl(): string {
+  return process.env.ROBOFLOW_INFERENCE_BASE_URL?.trim().replace(/\/$/, "")
+    || "https://detect.roboflow.com";
 }
 
 function getConfiguredRoboflowClasses(): string[] {

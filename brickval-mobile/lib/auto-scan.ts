@@ -15,6 +15,7 @@ export interface NormalizedBoundingBox {
 export interface MinifigureObservation {
   confidence: number;
   boundingBox: NormalizedBoundingBox;
+  detectionFrameCoverage?: number;
   timestamp: number;
   fullyVisible: boolean;
   regionId: string;
@@ -115,7 +116,9 @@ export function observeAutoScanFrame(
   const next = observeAutoScanTarget(priorSession, {
     trackingId: "single-minifigure",
     confidence: observation.confidence,
-    frameCoverage: observation.boundingBox.width * observation.boundingBox.height,
+    frameCoverage:
+      observation.detectionFrameCoverage
+      ?? observation.boundingBox.width * observation.boundingBox.height,
     fullyVisible: observation.fullyVisible,
   });
   return { ...next, lastObservation: observation };
