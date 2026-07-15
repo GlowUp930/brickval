@@ -1,21 +1,28 @@
-# Minifigure detector integration
+# Smart minifigure detector
 
-The scanner consumes a native Nitro Hybrid Object named `MinifigureDetector` through `lib/minifigure-detector.ts`.
+BrickVal uses two separate services because detection and identification solve different problems.
 
-The native implementation must:
+```text
+Camera → POST /api/minifig/detect → minifigure position
+       → stable, framed capture
+       → POST /api/minifig/scan → exact Brickognize identity + valuation
+```
 
-- bundle an int8 LiteRT one-class detector;
-- accept VisionCamera RGB frames and run synchronously on the camera frame thread;
-- return normalized bounding boxes, confidence, full-visibility state, and a stable physical `regionId`;
-- support standard humanoid minifigures, helmets, capes, wings, skirts, and handheld accessories;
-- exclude droids, bigfigs, animals, and microfigures from v1;
-- drop work while inference is busy rather than queue frames.
+## Security and model control
 
-The JavaScript camera pipeline processes at most eight frames per second and remains disabled unless the native object reports `isReady`. This is intentional: a missing or invalid model can never trigger an automatic photo.
+- Roboflow credentials are server-only.
+- The model, allowed classes, inference host, and kill switch are controlled through backend environment variables.
+- The current public fallback is `lego-minifigures-r3zzt/1` (`Lego-Minifigures`).
+- The custom candidate `garys-workspace-pqkfc/lego-364li-lqtm9-1-yolov8s-t1` remains TestFlight-only until real-camera acceptance passes.
+- The old LiteRT/Nitro proposal is superseded. This repository has no validated, licensed bundled model, so an offline Core ML detector is a separate training and licensing project.
 
-No trained model or licensed training dataset exists in this repository. Do not replace the detector with simulated observations or a generic object detector. Add the production model only after its image provenance is documented and the acceptance dataset passes:
+## Client acceptance rules
 
-- zero captures across 100 negative scenes;
-- at least 98% auto-capture precision;
-- at least 90% presence recall;
-- at least 90% physical-region recall for 40-figure bulk layouts.
+- Send a 416-pixel JPEG under 100 KB every 800 ms while stable; slow to 2 seconds after eight attempts.
+- Use a centre-square sample for one minifigure and the full frame for bulk scanning.
+- Require confidence ≥ 0.75, coverage from 15% through 75%, full visibility, two consistent observations, and about 600 ms stability.
+- On quota, kill-switch, rate-limit, network, or detector failure, stop polling and retain manual capture, gallery, and review flows.
+
+## Production gate
+
+Validate 100 positive and 100 negative real-camera scenes before enabling the custom detector publicly. Record the model version, latency, confidence, and consented outcome feedback; never send scan images to Sentry.

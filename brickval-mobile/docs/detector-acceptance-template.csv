@@ -1,0 +1,3 @@
+sample_id,expected_minifigure,scene_category,lighting,background,skin_tone,figure_colors,distance,angle,partial_or_occluded,boxed_or_photo,non_lego_distractor,model_version,detected,confidence,auto_capture_triggered,latency_ms,result,notes
+P001,true,,,,,,,,,,,,,,,,,
+N001,false,,,,,,,,,,,,,,,,,

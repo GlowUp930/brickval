@@ -1,4 +1,6 @@
-# Tab Bar Guardrails
+# Android/Expo Tab Bar Guardrails
+
+These rules apply only to `android-react-native/`. Native iOS uses SwiftUI's system `TabView`.
 
 BrickVal uses Expo Router `Tabs` with a custom React Native tab bar for the main Collection, Scan, and Settings routes.
 
@@ -22,7 +24,7 @@ Two issues came from using `NativeTabs` for a custom design:
 
 ## Required Checks After Tab Changes
 
-Run these from `brickval-mobile`:
+Run these from `brickval-mobile/android-react-native`:
 
 ```bash
 npx tsc --noEmit

@@ -7,7 +7,7 @@ Use Storybook for UI draft work before wiring screens into the app.
 From `brickval-mobile/`:
 
 ```bash
-npm run storybook
+npm run storybook:dev
 ```
 
 Open:

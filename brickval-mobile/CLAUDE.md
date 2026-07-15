@@ -1,29 +1,37 @@
-# BrickVal Mobile (Expo) — AI Agent Brief
+# BrickVal Mobile — AI Agent Brief
 
-This folder (`brickval-mobile/`) is the **native mobile app** (Expo Router).
+This folder contains two mobile implementations during the native iOS migration.
 
-## Read this first
-- **Ignore the repo-root `CLAUDE.md`** (it is for the web/Next.js app).
-- The canonical product brief + rules live in **`/Users/holamchan/brickval/AGENTS.md`**.
-- Work only in this mobile app unless explicitly told otherwise.
+## Read first
 
-## Non-negotiables (mobile)
-- **Branch:** do all work on `Codex/stripe-appurl-fix-ihFVU` only.
-- **Do not edit:** `src/` (hosted Next.js backend/web) unless the task explicitly says to.
-- **No extras:** build only what the user asked for; no abstractions or “future-proofing”.
-- **When editing files:** only touch explicitly named files or files you can justify as required; show a `git diff` summary at the end.
+- Follow the repository-root `AGENTS.md`.
+- `ios-swift/` is the production-target iOS app: Swift 6, SwiftUI, iOS 17+.
+- `android-react-native/` is the Android app and temporary iOS rollback build.
+- `docs/` contains shared and platform-specific guidance.
+- Do not edit the repo-root `src/` backend unless the task explicitly includes backend work.
 
-## What this app is
-- Shared native app for BrickVal iOS and Android: scan LEGO set photo -> show **USD** market value.
-- Key folders:
-  - `app/` routes (Expo Router)
-  - `components/` UI pieces
-  - `lib/` storage + API bridge to `brickvalue.live`
+## Platform rules
 
-## Dev commands (run from `brickval-mobile/`)
-- `npm run start`
-- `npm run android`
-- `npm run build:preview`
-- `npm run build:android`
-- `npm run build:ios`
-- `npm run submit:ios`
+- iOS UI must be SwiftUI. UIKit is limited to required system bridges such as the AVFoundation preview layer.
+- Android/Expo guidance applies only inside `android-react-native/`.
+- Smart minifigure positioning uses the hosted BrickVal detector endpoint. Do not add Roboflow secrets or an unvalidated bundled model to either app.
+- Keep the Expo iOS fallback until native SwiftUI passes migration, TestFlight, purchases, and camera parity checks.
+
+## Commands
+
+Native iOS:
+
+```bash
+cd ios-swift
+xcodegen generate
+xcodebuild -project BrickVal.xcodeproj -scheme BrickVal -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
+```
+
+Android/React Native:
+
+```bash
+cd android-react-native
+npm test
+npx tsc --noEmit
+npx expo-doctor
+```

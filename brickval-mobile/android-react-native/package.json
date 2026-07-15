@@ -6,6 +6,11 @@
     "doctor": {
       "appConfigFieldsNotSyncedCheck": {
         "enabled": false
+      },
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "@solana-mobile/mobile-wallet-adapter-protocol"
+        ]
       }
     }
   },
@@ -20,7 +25,7 @@
     "build:android": "npx eas-cli build --platform android --profile production",
     "build:preview": "npx eas-cli build --platform android --profile preview",
     "submit:ios": "npx eas-cli submit --platform ios --profile production",
-    "storybook": "storybook dev -p 6006",
+    "storybook:dev": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test-storybook:experimental": "vitest --config vitest.storybook.config.ts"
   },
@@ -60,7 +65,6 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.0",
-    "react-native-nitro-image": "0.15.1",
     "react-native-nitro-modules": "0.36.1",
     "react-native-purchases": "^9.0.0",
     "react-native-reanimated": "4.5.0",

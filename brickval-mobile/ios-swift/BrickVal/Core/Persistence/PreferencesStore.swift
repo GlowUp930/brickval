@@ -1,0 +1,66 @@
+import Foundation
+import Observation
+
+@Observable
+@MainActor
+final class PreferencesStore {
+    var hasCompletedOnboarding: Bool { didSet { save(hasCompletedOnboarding, for: Keys.onboarding) } }
+    var primaryGoal: PrimaryGoal? { didSet { save(primaryGoal?.rawValue, for: Keys.goal) } }
+    var smartAutoScanEnabled: Bool { didSet { save(smartAutoScanEnabled, for: Keys.smartScan) } }
+    var scanImprovementConsent: Bool { didSet { save(scanImprovementConsent, for: Keys.consent) } }
+    var theme: ThemePreference { didSet { save(theme.rawValue, for: Keys.theme) } }
+    var accent: AccentPreference { didSet { save(accent.rawValue, for: Keys.accent) } }
+    var avatarName: String? { didSet { save(avatarName, for: Keys.avatar) } }
+    var hasSeenHistoryTip: Bool { didSet { save(hasSeenHistoryTip, for: Keys.historyTip) } }
+    var guestScansUsed: Int { didSet { save(guestScansUsed, for: Keys.guestScans) } }
+    var hasRequestedReview: Bool { didSet { save(hasRequestedReview, for: Keys.reviewRequested) } }
+
+    @ObservationIgnored private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        hasCompletedOnboarding = defaults.bool(forKey: Keys.onboarding)
+        primaryGoal = defaults.string(forKey: Keys.goal).flatMap(PrimaryGoal.init(rawValue:))
+        smartAutoScanEnabled = defaults.object(forKey: Keys.smartScan) as? Bool ?? true
+        scanImprovementConsent = defaults.bool(forKey: Keys.consent)
+        theme = defaults.string(forKey: Keys.theme).flatMap(ThemePreference.init(rawValue:)) ?? .dark
+        accent = defaults.string(forKey: Keys.accent).flatMap(AccentPreference.init(rawValue:)) ?? .yellow
+        avatarName = defaults.string(forKey: Keys.avatar)
+        hasSeenHistoryTip = defaults.bool(forKey: Keys.historyTip)
+        guestScansUsed = defaults.integer(forKey: Keys.guestScans)
+        hasRequestedReview = defaults.bool(forKey: Keys.reviewRequested)
+    }
+
+    func applyLegacy(_ values: LegacyPreferenceValues) {
+        if let value = values.hasCompletedOnboarding { hasCompletedOnboarding = value }
+        if let value = values.primaryGoal { primaryGoal = value }
+        if let value = values.smartAutoScanEnabled { smartAutoScanEnabled = value }
+        if let value = values.scanImprovementConsent { scanImprovementConsent = value }
+        if let value = values.theme { theme = value }
+        if let value = values.accent { accent = value }
+        if let value = values.avatarName { avatarName = value }
+        if let value = values.hasSeenHistoryTip { hasSeenHistoryTip = value }
+        if let value = values.guestScansUsed { guestScansUsed = value }
+    }
+
+    private func save(_ value: Any?, for key: String) {
+        if let value {
+            defaults.set(value, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
+    private enum Keys {
+        static let onboarding = "has_completed_onboarding"
+        static let goal = "primary_goal"
+        static let smartScan = "brickval_smart_auto_scan"
+        static let consent = "brickval_scan_improvement_consent"
+        static let theme = "brickval_theme_preference"
+        static let accent = "brickval_accent_preference"
+        static let avatar = "brickval_account_avatar"
+        static let historyTip = "brickval_home_history_tip_seen"
+        static let guestScans = "guest_scan_lookups_used"
+        static let reviewRequested = "brickval_review_requested"
+    }
+}
