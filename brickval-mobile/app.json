@@ -51,10 +51,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0d0d0f",
-          "image": "./assets/brickval-loader-logo.png",
-          "imageWidth": 160,
-          "resizeMode": "contain"
+          "backgroundColor": "#0d0d0f"
         }
       ]
     ],

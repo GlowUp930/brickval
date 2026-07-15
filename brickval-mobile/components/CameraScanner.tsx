@@ -8,6 +8,7 @@ import {
 } from "react-native-vision-camera";
 import { SymbolView } from "expo-symbols";
 import Constants from "expo-constants";
+import { File } from "expo-file-system";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { tap, warn } from "../lib/haptics";
@@ -39,7 +40,7 @@ interface Props {
   enabled: boolean;
   autoCaptureEnabled?: boolean;
   scanIntent: ScanIntent;
-  onCapture: (photoUri: string, context?: CameraCaptureContext) => void;
+  onCapture: (photoUri: string, context?: CameraCaptureContext) => void | Promise<void>;
   onPhotoPress: () => void;
   cameraPreview?: ReactNode;
   permissionGranted?: boolean;
@@ -129,13 +130,17 @@ export function CameraScanner({
       if (!shouldSampleHostedDetection(hostedScheduleRef.current, { now, cameraStable: cameraIsStable })) return;
       if (captureInProgressRef.current) return;
       hostedScheduleRef.current = startHostedDetection(hostedScheduleRef.current, now);
+      let capturedUri: string | null = null;
+      let sampleUri: string | null = null;
       try {
         const photo = await photoOutput.capturePhotoToFile(
           { flashMode: "off", enableShutterSound: false },
           {}
         );
         if (!photo.filePath) return;
-        const sample = await prepareHostedDetectionSample(`file://${photo.filePath}`, "single");
+        capturedUri = `file://${photo.filePath}`;
+        const sample = await prepareHostedDetectionSample(capturedUri, "single");
+        sampleUri = sample.uri;
         const result = await detectHostedMinifigures(sample.uri);
         if (result.status === "cap-reached") {
           setHostedAvailable(false);
@@ -156,6 +161,8 @@ export function CameraScanner({
         if (hostedFailureCountRef.current >= 3) setHostedAvailable(false);
         setHostedObservations([]);
       } finally {
+        deleteTemporaryFile(sampleUri);
+        if (capturedUri !== sampleUri) deleteTemporaryFile(capturedUri);
         hostedScheduleRef.current = completeHostedDetection(hostedScheduleRef.current);
       }
     };
@@ -193,7 +200,7 @@ export function CameraScanner({
     setScanning(true);
     try {
       if (cameraPreview) {
-        onCapture("storybook://camera-scan.jpg", { observations });
+        await onCapture("storybook://camera-scan.jpg", { observations });
         return;
       }
       const photo = await photoOutput.capturePhotoToFile(
@@ -204,25 +211,30 @@ export function CameraScanner({
         const photoUri = `file://${photo.filePath}`;
         let captureObservations = observations;
         if (source === "manual" && scanIntent === "bulk" && hostedSamplingEnabled && hostedAvailable) {
+          let sampleUri: string | null = null;
           try {
             const sample = await prepareHostedDetectionSample(photoUri, "bulk");
+            sampleUri = sample.uri;
             const detected = await detectHostedMinifigures(sample.uri);
             if (detected.status === "available") captureObservations = detected.observations;
             else setHostedAvailable(false);
           } catch {
             captureObservations = [];
+          } finally {
+            if (sampleUri !== photoUri) deleteTemporaryFile(sampleUri);
           }
         }
         const observation = source === "auto" ? captureObservations[0] : null;
         const preparedUri = observation
           ? await prepareMinifigureCapture(photoUri, observation.boundingBox)
           : photoUri;
-        onCapture(preparedUri, {
+        await onCapture(preparedUri, {
           observations: captureObservations,
           autoCaptured: source === "auto",
           detectorModelVersion: detectorFeed.ready ? "native-litert-v1" : hostedModelVersion,
           detectMs: hostedDetectMs,
         });
+        if (preparedUri !== photoUri) deleteTemporaryFile(photoUri);
       }
     } catch {
       captureInProgressRef.current = false;
@@ -452,6 +464,16 @@ export function CameraScanner({
       </View>
     </View>
   );
+}
+
+function deleteTemporaryFile(uri: string | null): void {
+  if (!uri) return;
+  try {
+    const file = new File(uri);
+    if (file.exists) file.delete();
+  } catch {
+    // Camera cache cleanup is best effort and must never interrupt scanning.
+  }
 }
 
 function DetectionBox({

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, Easing, View, StyleSheet, Pressable, Text, ScrollView, TextInput, Image, Modal } from "react-native";
+import { ActivityIndicator, Alert, Animated, AppState, Easing, View, StyleSheet, Pressable, Text, ScrollView, TextInput, Image, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { SymbolView } from "expo-symbols";
@@ -58,6 +58,7 @@ import { captureScanError, recordScanTimings } from "../../lib/sentry";
 import { getScanImprovementConsent, getSmartAutoScanPreference } from "../../lib/preferences";
 import { getPhysicalMinifigQuantities } from "../../lib/bulk-result";
 import { prepareBulkCapture, type PreparedBulkCapture } from "../../lib/bulk-capture";
+import { shouldRunCamera } from "../../lib/camera-lifecycle";
 
 /**
  * Native scan screen — fullscreen camera, manual capture, result sheet over
@@ -199,6 +200,8 @@ export default function ScanHome() {
   const [singleAutoScanCoolingDown, setSingleAutoScanCoolingDown] = useState(false);
   const [smartAutoScanEnabled, setSmartAutoScanEnabled] = useState(true);
   const [bulkOverflowCount, setBulkOverflowCount] = useState(0);
+  const [screenFocused, setScreenFocused] = useState(false);
+  const [appState, setAppState] = useState(AppState.currentState);
   const { triggerUpgrade, openAccountForUpgrade, openAccountForSignIn, showDisclosure, handleDisclosureContinue, handleDisclosureDismiss } = useUpgrade();
   const { colors: palette, c: activeColors, mode: themeMode } = useTheme();
   const s = useMemo(() => getStyles(palette, activeColors), [palette, activeColors, themeMode]);
@@ -254,6 +257,16 @@ export default function ScanHome() {
   useFocusEffect(useCallback(() => {
     void getSmartAutoScanPreference().then(setSmartAutoScanEnabled);
   }, []));
+
+  useFocusEffect(useCallback(() => {
+    setScreenFocused(true);
+    return () => setScreenFocused(false);
+  }, []));
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", setAppState);
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -1048,6 +1061,11 @@ export default function ScanHome() {
     };
   });
   const selectedBulkEntries = bulkEntries.filter((entry) => entry.selection.selected);
+  const cameraEnabled = shouldRunCamera({
+    enabled: status === "idle",
+    screenFocused,
+    appState,
+  });
   const selectedPhysicalMinifigCount = selectedBulkEntries.reduce((total, entry) => total + entry.quantity, 0);
   const bulkTotalValue = selectedBulkEntries.reduce(
     (total, entry) => total + (entry.snapshot.price_usd ?? 0) * entry.quantity,
@@ -1073,7 +1091,7 @@ export default function ScanHome() {
   return (
     <View style={s.root}>
       <CameraScanner
-        enabled={status === "idle"}
+        enabled={cameraEnabled}
         autoCaptureEnabled={
           smartAutoScanEnabled &&
           status === "idle" &&

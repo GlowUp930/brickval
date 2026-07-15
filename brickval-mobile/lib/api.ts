@@ -6,6 +6,7 @@ import { getClerkAuthToken } from "./clerk";
 import { getScanImageResize } from "./scan-image";
 import { normalizeImageUrl } from "./image-url";
 import { normalizeIdentificationDetections } from "./identify-response";
+import { createMultipartPayload, type MultipartPart } from "./multipart";
 import type { PreparedBulkCapture } from "./bulk-capture";
 import type { MinifigureObservation } from "./auto-scan";
 import {
@@ -71,6 +72,32 @@ async function authHeader(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+async function filePart(name: string, file: File): Promise<MultipartPart> {
+  return {
+    name,
+    filename: file.name || "scan.jpg",
+    contentType: file.type || imageContentType(file.uri),
+    bytes: await file.bytes(),
+  };
+}
+
+function imageContentType(uri: string): string {
+  const normalized = uri.toLowerCase().split("?")[0];
+  if (normalized.endsWith(".png")) return "image/png";
+  if (normalized.endsWith(".webp")) return "image/webp";
+  if (normalized.endsWith(".heic") || normalized.endsWith(".heif")) return "image/heic";
+  return "image/jpeg";
+}
+
+async function multipartHeaders(contentType: string): Promise<Record<string, string>> {
+  return { "Content-Type": contentType, ...(await authHeader()) };
+}
+
+function multipartBody(payload: { body: Uint8Array }): BodyInit {
+  // Expo's native fetch accepts ArrayBuffer views, although the bundled DOM type omits them.
+  return payload.body as unknown as BodyInit;
+}
+
 /**
  * POST a captured photo to /api/identify and get back a set number.
  */
@@ -128,12 +155,11 @@ export type HostedDetectionResponse =
     };
 
 export async function detectHostedMinifigures(photoUri: string): Promise<HostedDetectionResponse> {
-  const form = new FormData();
-  form.append("image", new File(photoUri));
+  const payload = createMultipartPayload([await filePart("image", new File(photoUri))]);
   const res = await fetch(`${API_BASE}/api/minifig/detect`, {
     method: "POST",
-    headers: { ...(await authHeader()) },
-    body: form,
+    headers: await multipartHeaders(payload.contentType),
+    body: multipartBody(payload),
   });
   const data = await res.json();
   if (res.status === 429 && data?.status === "cap-reached") return data;
@@ -177,12 +203,11 @@ export type CombinedMinifigScanResponse =
     };
 
 export async function scanMinifigure(photoUri: string): Promise<CombinedMinifigScanResponse> {
-  const form = new FormData();
-  form.append("image", new File(photoUri));
+  const payload = createMultipartPayload([await filePart("image", new File(photoUri))]);
   const res = await fetch(`${API_BASE}/api/minifig/scan`, {
     method: "POST",
-    headers: { ...(await authHeader()) },
-    body: form,
+    headers: await multipartHeaders(payload.contentType),
+    body: multipartBody(payload),
   });
   if (!res.ok) await throwApiError(res, "minifig scan");
   const data = await res.json();
@@ -208,11 +233,12 @@ export async function submitMinifigFeedback(input: {
   pricingMs?: number;
   totalMs?: number;
 }): Promise<void> {
-  const form = new FormData();
-  form.append("outcome", input.outcome);
-  form.append("consent", input.consent ? "true" : "false");
+  const parts: MultipartPart[] = [
+    { name: "outcome", value: input.outcome },
+    { name: "consent", value: input.consent ? "true" : "false" },
+  ];
   const append = (key: string, value: string | number | undefined) => {
-    if (value !== undefined) form.append(key, String(value));
+    if (value !== undefined) parts.push({ name: key, value: String(value) });
   };
   append("detectorModelVersion", input.detectorModelVersion);
   append("detectorConfidence", input.detectorConfidence);
@@ -222,11 +248,12 @@ export async function submitMinifigFeedback(input: {
   append("identifyMs", input.identifyMs);
   append("pricingMs", input.pricingMs);
   append("totalMs", input.totalMs);
-  if (input.consent && input.photoUri) form.append("image", new File(input.photoUri));
+  if (input.consent && input.photoUri) parts.push(await filePart("image", new File(input.photoUri)));
+  const payload = createMultipartPayload(parts);
   const res = await fetch(`${API_BASE}/api/minifig/feedback`, {
     method: "POST",
-    headers: { ...(await authHeader()) },
-    body: form,
+    headers: await multipartHeaders(payload.contentType),
+    body: multipartBody(payload),
   });
   if (!res.ok) await throwApiError(res, "minifig feedback");
 }
@@ -253,16 +280,15 @@ export async function identifySet(
     }
   }
 
-  const form = new FormData();
-  form.append("image", uploadFile);
+  const payload = createMultipartPayload([await filePart("image", uploadFile)]);
 
   const scanQuery = options.guided ? "&scan=guided-single" : options.bulk ? "&scan=bulk" : "";
   const identifyUrl = `${API_BASE}/api/identify?mode=${mode}${scanQuery}`;
 
   const res = await fetch(identifyUrl, {
     method: "POST",
-    headers: { ...(await authHeader()) },
-    body: form,
+    headers: await multipartHeaders(payload.contentType),
+    body: multipartBody(payload),
   });
 
   if (!res.ok) await throwApiError(res, "identify");
@@ -280,13 +306,17 @@ export async function identifySet(
 export async function identifyGuidedBulkMinifigs(
   capture: PreparedBulkCapture
 ): Promise<IdentificationResult> {
-  const form = new FormData();
-  for (const uri of capture.imageUris) form.append("images", new File(uri));
-  form.append("manifest", JSON.stringify(capture.manifest));
+  const imageParts = await Promise.all(
+    capture.imageUris.map((uri) => filePart("images", new File(uri)))
+  );
+  const payload = createMultipartPayload([
+    ...imageParts,
+    { name: "manifest", value: JSON.stringify(capture.manifest) },
+  ]);
   const res = await fetch(`${API_BASE}/api/identify?mode=minifig&scan=guided-bulk`, {
     method: "POST",
-    headers: { ...(await authHeader()) },
-    body: form,
+    headers: await multipartHeaders(payload.contentType),
+    body: multipartBody(payload),
   });
   if (!res.ok) await throwApiError(res, "guided bulk identify");
   return normalizeIdentificationPayload("minifig", await res.json());
