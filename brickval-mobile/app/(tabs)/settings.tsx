@@ -28,7 +28,7 @@ import {
 const AVATAR_KEY = "brickval_account_avatar";
 const PRIVACY_URL = "https://brickvalue.live/privacy";
 const TERMS_URL = "https://brickvalue.live/terms";
-const DETECTOR_ATTRIBUTION_URL = "https://universe.roboflow.com/object-detection-3oawx/lego-364li";
+const DETECTOR_ATTRIBUTION_URL = "https://universe.roboflow.com/vc-echpj/lego-minifigures-r3zzt";
 
 type AvatarKey = "classic" | "ghost" | "wolf" | "knight";
 type FallbackIcon = typeof Crown;
