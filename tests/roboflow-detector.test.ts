@@ -5,7 +5,9 @@ import { runHostedMinifigureDetection } from "../src/lib/roboflow-detector";
 
 test("hosted detection returns normalized minifigure boxes and timing", async () => {
   const result = await runHostedMinifigureDetection(new Blob(["image"]), {
+    allowedClasses: ["LEGO-toys"],
     consumeQuota: async () => true,
+    detectorModelVersion: "garys-workspace-pqkfc/lego-364li-lqtm9-1-yolov8s-t1",
     infer: async () => ({
       image: { width: 416, height: 416 },
       predictions: [{
@@ -14,7 +16,7 @@ test("hosted detection returns normalized minifigure boxes and timing", async ()
         width: 166.4,
         height: 249.6,
         confidence: 0.86,
-        class: "Lego-Minifigures",
+        class: "LEGO-toys",
         detection_id: "prediction-1",
       }],
     }),
@@ -25,7 +27,7 @@ test("hosted detection returns normalized minifigure boxes and timing", async ()
   });
 
   assert.equal(result.status, "available");
-  assert.equal(result.detectorModelVersion, "lego-minifigures-r3zzt/1");
+  assert.equal(result.detectorModelVersion, "garys-workspace-pqkfc/lego-364li-lqtm9-1-yolov8s-t1");
   assert.equal(result.detectMs, 180);
   assert.deepEqual(result.observations, [{
     confidence: 0.86,
@@ -53,4 +55,25 @@ test("the monthly cap disables hosted detection without calling Roboflow", async
     observations: [],
   });
   assert.equal(inferenceRequested, false);
+});
+
+test("hosted detection ignores non-minifigure classes", async () => {
+  const result = await runHostedMinifigureDetection(new Blob(["image"]), {
+    allowedClasses: ["LEGO-toys"],
+    consumeQuota: async () => true,
+    infer: async () => ({
+      image: { width: 416, height: 416 },
+      predictions: [{
+        x: 208,
+        y: 208,
+        width: 100,
+        height: 100,
+        confidence: 0.99,
+        class: "box",
+      }],
+    }),
+    now: () => 0,
+  });
+
+  assert.deepEqual(result.observations, []);
 });
