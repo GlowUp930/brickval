@@ -1,5 +1,5 @@
 {
-  "originHash" : "228469b13c158e2b2fea725904d6f44e681af21f28353c9b880bb0e8e0e56049",
+  "originHash" : "208170f3d1d4203b75d5e60b54d82f824bae32e7a8e603d23308ecc63f0d2538",
   "pins" : [
     {
       "identity" : "clerk-ios",
@@ -35,15 +35,6 @@
       "state" : {
         "revision" : "8969bf1feaca2cc9efaa7630cd148cec5005f2f8",
         "version" : "5.80.3"
-      }
-    },
-    {
-      "identity" : "rive-ios",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/rive-app/rive-ios",
-      "state" : {
-        "revision" : "c8252fe1f774c4b807d656621d1f93df6c5b92aa",
-        "version" : "6.21.1"
       }
     },
     {
