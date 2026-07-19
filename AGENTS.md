@@ -1,11 +1,18 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
 ## Active Development Branch
-**All development happens on `Codex/stripe-appurl-fix-ihFVU` only.**
-Do NOT push to or edit the `Codex/loveable-design-practices-ihFVU` branch.
+**All development happens on `codex/stripe-appurl-fix-ihFVU` only.**
+Do NOT push to or edit the `codex/loveable-design-practices-ihFVU` branch.
 
 ## Default Focus
 If a task does not explicitly say otherwise, assume we are working on the iOS version of BrickVal inside the shared Expo app.
+
+## Design Source
+For mobile UI work, follow `brickval-mobile/DESIGN.md`.
+
+The Collection tab follows the Robinhood iOS `DESIGN-swiftui.md` reference strictly for layout and visual hierarchy, except where BrickVal product rules, business requirements, available data, or platform constraints require adaptation. Robinhood green (`#00C805`) is the active/value color for the mobile Collection direction.
+
+Keep `brickval-mobile/CONTEXT.md` limited to product language and user-facing terminology.
 
 ## What we're building
 Native mobile app: scan a LEGO set photo → get its current **USD** market value (not AUD).
@@ -52,7 +59,7 @@ The existing Next.js app remains the hosted API/web backend at `brickvalue.live`
 - ⏸️ No native test coverage configured beyond unit tests
 
 ## Tech Stack
-- Expo 55, Expo Router, React Native 0.84, React 19, TypeScript 5.9
+- Expo 57, Expo Router, React Native 0.86, React 19.2, TypeScript 5.9
 - Expo Camera, Expo Haptics, Expo Sensors, Expo Secure Store, Expo Web Browser
 - React Native SVG for the native Home value chart
 - React Native WebView for hosted account, upgrade, and full result screens
@@ -96,7 +103,7 @@ brickval-mobile/
 │   ├── onboarding.ts             # First-launch onboarding state helpers
 │   ├── paywall.ts                # Superwall trigger + identity helpers
 │   └── stability.ts              # Camera stability detector
-├── app.json                      # Expo app config, Android package, future iOS bundle ID
+├── app.json                      # Expo app config and Android/iOS identifiers
 ├── eas.json                      # EAS Android APK preview + production app bundle profiles
 └── package.json                  # Expo/React Native scripts and dependencies
 

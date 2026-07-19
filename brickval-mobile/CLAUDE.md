@@ -1,36 +1,25 @@
-# BrickVal Mobile — AI Agent Brief
+# BrickVal Mobile — Agent Brief
 
-This folder contains two mobile implementations during the native iOS migration.
+This folder contains the single Expo/React Native mobile app for iOS and Android.
 
 ## Read first
 
-- Follow the repository-root `AGENTS.md`.
-- `ios-swift/` is the production-target iOS app: Swift 6, SwiftUI, iOS 17+.
-- `android-react-native/` is the Android app and temporary iOS rollback build.
-- `docs/` contains shared and platform-specific guidance.
-- Do not edit the repo-root `src/` backend unless the task explicitly includes backend work.
+- Follow the repository-root `AGENTS.md` for product and engineering rules.
+- Follow `DESIGN.md` for mobile visual direction.
+- Use `CONTEXT.md` only for product language and terminology.
+- Do not edit the repository-root `src/` backend unless the task explicitly includes backend work.
 
 ## Platform rules
 
-- iOS UI must be SwiftUI. UIKit is limited to required system bridges such as the AVFoundation preview layer.
-- Android/Expo guidance applies only inside `android-react-native/`.
-- Smart minifigure positioning uses the hosted BrickVal detector endpoint. Do not add Roboflow secrets or an unvalidated bundled model to either app.
-- Keep the Expo iOS fallback until native SwiftUI passes migration, TestFlight, purchases, and camera parity checks.
+- Keep shared behaviour in Expo/React Native; use platform-specific files only when the platforms genuinely differ.
+- Treat generated `ios/` and `android/` folders as local build output. Configure native behaviour through Expo config and plugins where practical.
+- Keep Roboflow secrets and model selection on the hosted backend.
 
-## Commands
+## Checks
 
-Native iOS:
-
-```bash
-cd ios-swift
-xcodegen generate
-xcodebuild -project BrickVal.xcodeproj -scheme BrickVal -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
-```
-
-Android/React Native:
+Run from `brickval-mobile/`:
 
 ```bash
-cd android-react-native
 npm test
 npx tsc --noEmit
 npx expo-doctor

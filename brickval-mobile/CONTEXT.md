@@ -2,6 +2,8 @@
 
 BrickVal is a LEGO valuation and collection context. It defines how collectors scan, value, and track collectible LEGO items.
 
+This file is for product language only. Visual layout, color, and component direction live in `DESIGN.md`.
+
 ## Language
 
 **Market Snapshot**:

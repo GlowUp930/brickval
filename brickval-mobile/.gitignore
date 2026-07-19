@@ -1,2 +1,23 @@
-.DS_Store
 node_modules/
+.expo/
+dist/
+*.log
+.env*.local
+
+# Local editor and automation state
+.idea/
+.playwright-mcp/
+
+# Generated native projects and local build output
+android/
+ios/
+build/
+
+# macOS metadata
+.DS_Store
+
+# Design previews (not app resources)
+previews/
+
+*storybook.log
+storybook-static

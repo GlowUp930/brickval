@@ -5,8 +5,8 @@ If your task is the **native Expo app**, stop and read `brickval-mobile/CLAUDE.m
 This repo-root `CLAUDE.md` is for the **web/Next.js app** in `src/`.
 
 ## Active Development Branch
-**All development happens on `claude/stripe-appurl-fix-ihFVU` only.**
-Do NOT push to or edit the `claude/loveable-design-practices-ihFVU` branch.
+**All development happens on `codex/stripe-appurl-fix-ihFVU` only.**
+Do NOT push to or edit the `codex/loveable-design-practices-ihFVU` branch.
 
 ## What we're building
 Mobile-first web app: scan a LEGO set photo → get its current **USD** market value (not AUD).
