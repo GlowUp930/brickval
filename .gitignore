@@ -24,6 +24,17 @@
 .DS_Store
 *.pem
 
+# xcode
+DerivedData/
+*.xcuserdata/
+*.xcuserstate
+apps/ios-swift/build/
+apps/ios-swift/Configuration/Secrets.xcconfig
+
+# old local Expo/generated leftovers after app move
+/brickval-mobile/
+apps/expo-previous/.agents/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

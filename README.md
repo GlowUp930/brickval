@@ -1,27 +1,33 @@
 # BrickVal
 
-BrickVal is a LEGO scan-and-value product with two parts:
+BrickVal is a LEGO scan-and-value product.
 
-- `brickval-mobile/` is the native Expo app used for Android APK builds and current iOS publish-readiness work.
-- `src/` is the hosted Next.js backend/web surface at `brickvalue.live`.
+The active mobile app is the native Swift/iOS app in `apps/ios-swift/`. The previous Expo/React Native app is kept in `apps/expo-previous/` as a reference while we migrate useful product decisions and UI patterns.
 
-## Start here
+## Repo Decision
 
-- Canonical project brief and current status: [AGENTS.md](/Users/holamchan/brickval/AGENTS.md)
-- Web/backend agent brief: [CLAUDE.md](/Users/holamchan/brickval/CLAUDE.md)
+Swift stays in this GitHub repo because it is the same BrickVal product, shares the same backend contracts, and benefits from one PR history for product/API/mobile changes. A separate repo only makes sense later if the iOS app has a separate team, separate release governance, or no longer changes together with the backend.
 
-## Repo layout
+## Repo Layout
 
 ```text
 brickval/
-├── brickval-mobile/        # Expo native app
-├── src/                    # Hosted Next.js backend and web screens
-├── supabase/               # Schema and database helpers
-├── AGENTS.md               # Canonical product brief
-└── README.md               # Repo overview
+├── apps/
+│   ├── ios-swift/       # Canonical iOS app
+│   └── expo-previous/   # Previous Expo app, reference only
+├── src/                 # Hosted Next.js backend and web screens
+├── supabase/            # Schema and database helpers
+├── AGENTS.md            # Canonical working brief
+└── README.md            # Repo overview
 ```
 
-## Common commands
+## Start Here
+
+- iOS app: `apps/ios-swift/README.md`
+- Product and working rules: `AGENTS.md`
+- Web/backend brief: `CLAUDE.md`
+
+## Common Commands
 
 From repo root:
 
@@ -29,18 +35,16 @@ From repo root:
 npm run dev
 ```
 
-From `brickval-mobile/`:
+From `apps/ios-swift/`:
 
 ```bash
-npm run start
-npm run android
-npm run build:preview
-npm run build:android
-npm run build:ios
-npm run submit:ios
+xcodegen generate
+xcodebuild -project BrickVal.xcodeproj -scheme BrickVal -destination 'platform=iOS Simulator,name=iPhone 16' test
 ```
 
-## Documentation approach
+From `apps/expo-previous/`, only when checking the old implementation:
 
-- Keep product scope and live status in the root `AGENTS.md`.
-- Move completed implementation plans into an archive folder instead of leaving them mixed with active docs.
+```bash
+npm test
+npx tsc --noEmit
+```

@@ -1,52 +1,34 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
 ## Active Development Branch
-**All development happens on `codex/stripe-appurl-fix-ihFVU` only.**
+**Current restructuring work happens on `codex/swift-repo-structure`.**
 Do NOT push to or edit the `codex/loveable-design-practices-ihFVU` branch.
 
 ## Default Focus
-If a task does not explicitly say otherwise, assume we are working on the iOS version of BrickVal inside the shared Expo app.
+If a task does not explicitly say otherwise, assume we are working on the native Swift iOS app in `apps/ios-swift/`.
+
+The previous Expo/React Native app now lives in `apps/expo-previous/` as a migration reference only. Do not add new product work there unless the task explicitly asks for Expo.
 
 ## Design Source
-For mobile UI work, follow `brickval-mobile/DESIGN.md`.
+For mobile UI work, follow `apps/ios-swift/design-qa.md` and the SwiftUI implementation already in `apps/ios-swift/BrickVal/`.
 
-The Collection tab follows the Robinhood iOS `DESIGN-swiftui.md` reference strictly for layout and visual hierarchy, except where BrickVal product rules, business requirements, available data, or platform constraints require adaptation. Robinhood green (`#00C805`) is the active/value color for the mobile Collection direction.
+The Collection tab follows the Robinhood-style portfolio direction for layout and visual hierarchy, except where BrickVal product rules, business requirements, available data, or platform constraints require adaptation. Robinhood green (`#00C805`) is the active/value color for the mobile Collection direction.
 
-Keep `brickval-mobile/CONTEXT.md` limited to product language and user-facing terminology.
+Keep product-language notes separate from implementation notes. Do not let archived Expo docs override the active Swift app direction.
 
 ## What we're building
 Native mobile app: scan a LEGO set photo → get its current **USD** market value (not AUD).
-Current default scope is iOS publish-readiness using the shared Expo app and bundle identifier `com.brickval.app`. Android APK support remains part of the same app.
+Current default scope is iOS publish-readiness using the native Swift app and bundle identifier `com.brickval.app`.
 The existing Next.js app remains the hosted API/web backend at `brickvalue.live`. Build only what is in the plan. No extras, no abstractions.
 
 ### What's working
-- ✅ Expo Router native app shell in `brickval-mobile`
-- ✅ Three-tab native structure: Home, Scan, Settings
-- ✅ Native first-launch onboarding flow with local goal pick (now with MotiView entrance animations, larger dark phone frame)
-- ✅ Local on-device collection list with portfolio-style total value dashboard
-- ✅ Curved historical market-value chart with dynamic tooltip and timeline labels from saved item transaction history
-- ✅ Home tab reflects active Pro state with unlimited-scans status banner
-- ✅ Home dashboard: card-grid inventory with filter pills (All/Sets/Minifigs/All), expanded chart horizons (1D/1W/1M/3M/1Y/ALL)
-- ✅ Native scan mode switch: full-width segmented control at top of scan screen (Minifigures / Sets)
-- ✅ Fullscreen native camera scanner with smart auto-scan for minifigs (captures when steady), stability detection/manual shutter, status pill overlay
-- ✅ Smart auto-scan toggle in Settings
-- ✅ Manual set number entry sheet for LEGO sets only
-- ✅ On-photo detection overlay: SVG bounding boxes with item labels/prices over captured photo (from Brickognize bounding boxes)
-- ✅ Bulk minifigure scanning + pricing pipeline (Brickognize multi-detection + bulk-lookup API)
-- ✅ Native result card with price count-up reveal, Used/New condition price cards, split save buttons, market rows table
-- ✅ Add-to-collection action with market_rows stored per saved item
-- ✅ WebView modal for account, upgrade, and full result pages on `brickvalue.live`
-- ✅ API bridge from the native app to hosted `/api/identify` and `/api/lookup`
-- ✅ Native Superwall placement trigger for the upgrade flow (awaited register, proper error handling)
-- ✅ Clerk auth token handoff includes the Clerk user id for native identity sync
-- ✅ Native account login across email, Google, and Apple sign-in
-- ✅ iOS production build patches CocoaPods modular headers for Clerk Google Sign-In (withGoogleStaticSwiftPods.js)
-- ✅ Android APK preview build profile via EAS
-- ✅ iOS bundle identifier present in Expo config
-- ✅ Theme system: persisted preference (system/dark/light), loaded from SecureStore, all screens use theme-aware mode colors
-- ✅ OTA updates via EAS Update (runtimeVersion policy, channel assignment)
-- ✅ EAS Update OTA: config in app.json + expo-updates dependency
-- ✅ All tests pass (36 test suite)
+- ✅ SwiftUI app shell in `apps/ios-swift/BrickVal/App`
+- ✅ Collection, Scan, Onboarding, and Settings feature folders
+- ✅ Local persistence modules for collection and preferences
+- ✅ Camera module and auto-scan session logic
+- ✅ Design system and interactive stock chart
+- ✅ Unit tests for collection storage and auto-scan session behavior
+- ✅ XcodeGen project source in `apps/ios-swift/project.yml`
 - ✅ Hosted backend: Codex Vision set detection, BrickLink, eBay, Brickset, Frankfurter, Supabase cache, Clerk, Stripe webhook
 
 ### What's NOT working / stubbed
@@ -55,16 +37,12 @@ The existing Next.js app remains the hosted API/web backend at `brickvalue.live`
 - ⏸️ Collection storage is local-device only for the MVP; backend sync is future work
 - ⏸️ eBay Marketplace Insights: awaiting Application Growth Check approval, falls back to Browse API (active listings)
 - ⏸️ Brickset free tier: 100 requests/day limit — may throttle under high load
-- ⏸️ Bulk scan post-pricing overlay: detection boxes show before pricing, but no "Add all to collection" overlay with prices after bulk pricing yet
-- ⏸️ No native test coverage configured beyond unit tests
+- ⏸️ Expo app has been moved to `apps/expo-previous/` and should not be treated as current
 
 ## Tech Stack
-- Expo 57, Expo Router, React Native 0.86, React 19.2, TypeScript 5.9
-- Expo Camera, Expo Haptics, Expo Sensors, Expo Secure Store, Expo Web Browser
-- React Native SVG for the native Home value chart
-- React Native WebView for hosted account, upgrade, and full result screens
-- RevenueCat + Superwall native modules for native subscription paywall flow
-- EAS builds: Android APK for preview/internal launch, Android app bundle for production, and iOS production/TestFlight builds
+- SwiftUI native iOS app in `apps/ios-swift`
+- Xcode project generated from `apps/ios-swift/project.yml`
+- Clerk iOS SDK, RevenueCat, Superwall, and Sentry
 - Next.js hosted backend at `brickvalue.live` for server-side API calls and web fallback screens
 - Codex Sonnet Vision API for set identification
 - eBay API, BrickLink API, Brickset API, Frankfurter API, Supabase cache, Clerk, and Stripe remain backend concerns
@@ -72,40 +50,18 @@ The existing Next.js app remains the hosted API/web backend at `brickvalue.live`
 ## Codebase Structure
 
 ```
-brickval-mobile/
-├── app/
-│   ├── _layout.tsx               # Expo Router root + native paywall module setup
-│   ├── (tabs)/
-│   │   ├── _layout.tsx           # Home, Scan, Settings tab shell
-│   │   ├── index.tsx             # Home dashboard: value hero, curved horizon graph, dynamic tooltip, timeline, inventory list
-│   │   ├── scan.tsx              # Native scan screen with visually distinct set/minifig mode switch
-│   │   └── settings.tsx          # Account, upgrade, local collection controls
-│   ├── onboarding.tsx            # Native first-launch onboarding flow
-│   └── webview-modal.tsx         # Hosted web screens inside native modal
-├── components/
-│   ├── CameraScanner.tsx         # Fullscreen camera + auto-capture on stability
-│   ├── DetectionOverlay.tsx      # SVG detection boxes over captured photo
-│   ├── MarketRowsTable.tsx       # Market transaction rows with expand/collapse
-│   ├── ViewfinderOverlay.tsx     # Scan frame, dim overlay, scanline, hint
-│   ├── ResultCard.tsx            # Native result sheet + price reveal animation
-│   ├── ManualEntrySheet.tsx      # Native manual LEGO set number input sheet
-│   ├── TopBar.tsx                # Header/account entry point
-│   └── LegoLoaderNative.tsx      # Native loading state
-├── lib/
-│   ├── api.ts                    # Native API bridge + set/minifig result normalization
-│   ├── collection.ts             # Local collection storage + per-item market history
-│   ├── collection-core.ts        # Collection item types, normalization, upsert, limit checking
-│   ├── detection-choice.ts       # Brickognize detection review/batch logic
-│   ├── market-rows.ts            # Build/normalize market row display data from API results
-│   ├── preferences.ts            # Persistent user preferences (theme, smart auto-scan)
-│   ├── ThemeProvider.tsx          # Theme context with persisted system/dark/light
-│   ├── haptics.ts                # Native haptic helpers
-│   ├── onboarding.ts             # First-launch onboarding state helpers
-│   ├── paywall.ts                # Superwall trigger + identity helpers
-│   └── stability.ts              # Camera stability detector
-├── app.json                      # Expo app config and Android/iOS identifiers
-├── eas.json                      # EAS Android APK preview + production app bundle profiles
-└── package.json                  # Expo/React Native scripts and dependencies
+apps/
+├── ios-swift/
+│   ├── BrickVal.xcodeproj/
+│   ├── BrickVal/
+│   │   ├── App/                  # App shell, tabs, routing
+│   │   ├── Core/                 # Camera, models, persistence, design system
+│   │   ├── Features/             # Collection, scan, onboarding, settings
+│   │   └── Resources/            # Assets, Info.plist, launch screen
+│   ├── BrickValTests/            # Unit tests
+│   ├── project.yml               # XcodeGen source of truth
+│   └── design-qa.md              # Visual QA notes
+├── expo-previous/                # Previous Expo app, reference only
 
 src/                              # Hosted Next.js backend and web fallback screens
 supabase/                         # Table definitions + increment_scan() RPC
@@ -146,7 +102,7 @@ NEXT_PUBLIC_SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY           ← server-only, never expose to client
 
 # Sentry Error Tracking
-SENTRY_DSN              ← set in app.json extra.sentryDsn, used by lib/sentry.ts
+SENTRY_DSN              ← backend/web Sentry DSN; Swift Sentry config belongs in the iOS app configuration
 
 # App
 NEXT_PUBLIC_APP_URL
@@ -172,19 +128,21 @@ Model: Codex-sonnet-4-5, max_tokens: 64, base64 image source.
 - Build ONLY what is in the current task. Nothing extra.
 - No helper functions, utilities, or abstractions for one-time operations.
 - No "future proofing." No unused fields. No optional features.
-- When working on UI components in `brickval-mobile`, use the `brickval-storybook` MCP tools first when Storybook is running. Check existing stories and docs before inventing new props or states.
+- When working on Swift UI, check existing views and `apps/ios-swift/design-qa.md` before inventing new states or visual patterns.
 - All external API calls (Anthropic, eBay, BrickLink, Frankfurter, Brickset) must be
   made server-side via Route Handlers or Server Actions. API keys must NEVER use
   NEXT_PUBLIC_ prefix.
 - Configure serverActions.bodySizeLimit: '10mb' in next.config.ts. ✅ Done.
-- Compress images client-side to <1.15 MP before upload using canvas.toBlob().
+- Web image uploads should compress images client-side to <1.15 MP before upload using canvas.toBlob().
+- Swift image uploads should compress before sending to the hosted API using native image processing.
 - Increment scan counter with an atomic Postgres RPC — never read-then-write:
     supabase.rpc("increment_scan", { p_user_id: userId, p_free_limit: 5 })
 - Stripe webhook MUST update is_pro in Supabase on every subscription lifecycle event:
   customer.subscription.updated, customer.subscription.deleted, invoice.payment_failed.
 - Every external API call must be cached in Supabase before going live.
   Run DELETE FROM api_cache WHERE expires_at < now() before every cache write.
-- Mobile-first. Every screen tested at 390px width.
+- Web screens must be tested at 390px width.
+- Swift screens must be checked on a small iPhone simulator size before release.
 - Every API call must have a clear user-facing error state. No silent failures.
 - Manual typed input is only for LEGO set numbers. Do not show a minifigure ID input path in the native scanner.
 - After each task, explain what you built and what comes next.
@@ -278,14 +236,14 @@ The `increment_scan(p_user_id, p_free_limit)` RPC:
 The price reveal animation is the core emotional beat of the product.
 Animate the USD market value counting up from $0 to the final number over ~900ms.
 Use cubic ease-out and target smooth 60fps native animation.
-Implemented in `brickval-mobile/components/ResultCard.tsx` with React Native Animated.
+Implement this in SwiftUI in `apps/ios-swift/BrickVal/Features/Scan/ScanResultView.swift`.
 This is not optional — it is in the success criteria.
 
 ## Integration Status
-- Native app: Android APK preview build profile exists in `brickval-mobile/eas.json`.
-- Native app: WebView modal opens hosted account, upgrade, and full result screens on `brickvalue.live`.
-- Native paywall: RevenueCat + Superwall modules are configured in `brickval-mobile/app/_layout.tsx`; the `brickval_upgrade` placement is wired from the app, and the dashboard campaign controls the live paywall shown to users. The active paywall template now uses localized StoreKit-backed product variables instead of fixed USD strings. Lifetime purchase still uses the hosted Stripe upgrade page as the fallback path.
-- iOS native build fix: `brickval-mobile/plugins/withGoogleStaticSwiftPods.js` injects modular headers for `GoogleUtilities` and `RecaptchaInterop` during prebuild so Clerk Google Sign-In can coexist with static Swift pods on EAS iOS builds.
+- Native app: Swift iOS project lives in `apps/ios-swift/`.
+- Native paywall: RevenueCat and Superwall are Swift Package dependencies in `apps/ios-swift/project.yml`.
+- Native auth/error tracking: Clerk and Sentry are Swift Package dependencies in `apps/ios-swift/project.yml`.
+- Previous Expo app: kept at `apps/expo-previous/` for reference only.
 - Backend scan gate: `src/lib/scan-gate.ts` is STUBBED — returns `allowed: true` for all users.
   Real backend scan limits + Stripe paywall still need final wiring.
 - eBay API: OAuth active (Browse API working). EPN partner.
@@ -307,25 +265,13 @@ This is not optional — it is in the success criteria.
 - Stripe: webhook handler active, Stripe SDK singleton in place on the hosted backend.
 
 ## Key File Locations
-- `brickval-mobile/app/_layout.tsx` — Expo Router root + native paywall setup
-- `brickval-mobile/app/(tabs)/index.tsx` — home dashboard with value hero, curved horizon graph, dynamic tooltip, timeline, and saved inventory list
-- `brickval-mobile/app/(tabs)/scan.tsx` — native scanner screen with visually distinct set/minifig mode switch
-- `brickval-mobile/app/(tabs)/settings.tsx` — settings tab
-- `brickval-mobile/app/webview-modal.tsx` — hosted web screens inside native modal
-- `brickval-mobile/components/CameraScanner.tsx` — fullscreen camera scanner
-- `brickval-mobile/components/DetectionOverlay.tsx` — SVG detection boxes over captured photo
-- `brickval-mobile/components/ResultCard.tsx` — native result card + price reveal
-- `brickval-mobile/components/ManualEntrySheet.tsx` — manual LEGO set number input
-- `brickval-mobile/lib/api.ts` — native API bridge to `brickvalue.live` plus set/minifig result normalization
-- `brickval-mobile/lib/collection.ts` — local collection storage, item type tagging, and per-item market history
-- `brickval-mobile/lib/collection-core.ts` — collection item types, normalization, upsert, limit checking
-- `brickval-mobile/lib/detection-choice.ts` — Brickognize detection review and batch minifig selection
-- `brickval-mobile/lib/market-rows.ts` — build/normalize market row display data from API results
-- `brickval-mobile/lib/preferences.ts` — persistent user preferences (theme, smart auto-scan)
-- `brickval-mobile/lib/ThemeProvider.tsx` — theme context with persisted system/dark/light
-- `brickval-mobile/lib/stability.ts` — camera stability detector for auto-scan
-- `brickval-mobile/eas.json` — Android APK preview + production build profiles, iOS TestFlight submit config
-- `brickval-mobile/app.json` — Expo app config, Android package, future iOS bundle ID
+- `apps/ios-swift/BrickVal/App` — Swift app shell, tabs, and routing
+- `apps/ios-swift/BrickVal/Core` — camera, models, persistence, and design system
+- `apps/ios-swift/BrickVal/Features` — collection, scan, onboarding, and settings UI
+- `apps/ios-swift/BrickVal/Resources` — iOS assets, Info.plist, and launch screen
+- `apps/ios-swift/BrickValTests` — Swift unit tests
+- `apps/ios-swift/project.yml` — XcodeGen project source
+- `apps/expo-previous` — previous Expo app, reference only
 - `src/lib/ebay.ts` — eBay OAuth 2.0, Browse API + Marketplace Insights, multi-marketplace
 - `src/lib/bricklink.ts` — BrickLink OAuth 1.0, price guide (sold + stock), item info
 - `src/lib/brickset.ts` — Brickset API v3, set metadata + RRP + retirement
@@ -346,10 +292,7 @@ This is not optional — it is in the success criteria.
 - `AGENTS.md` — this file, at `/Users/holamchan/brickval/AGENTS.md`
 
 ## Dev Commands
-- From `brickval-mobile`: `npm run start` — start Expo
-- From `brickval-mobile`: `npm run android` — run Expo Android workflow
-- From `brickval-mobile`: `npm run build:ios` — build iOS production archive via EAS
-- From `brickval-mobile`: `npm run submit:ios` — submit iOS build to TestFlight
-- From `brickval-mobile`: `npm run build:preview` — build Android APK for internal preview
-- From `brickval-mobile`: `npm run build:android` — build Android production app bundle
+- From `apps/ios-swift`: `xcodegen generate` — regenerate the Xcode project after project.yml changes
+- From `apps/ios-swift`: `xcodebuild -project BrickVal.xcodeproj -scheme BrickVal -destination 'platform=iOS Simulator,name=iPhone 16' test` — run Swift unit tests
+- From `apps/expo-previous`: `npm test` — check the previous Expo app only when using it as reference
 - From repo root: `npm run dev` — start hosted Next.js backend/web app when needed

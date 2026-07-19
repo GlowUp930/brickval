@@ -1,11 +1,11 @@
 # BrickVal — LEGO Scan & Value App (Lean MVP)
 
 ## IMPORTANT (mobile app)
-If your task is the **native Expo app**, stop and read `brickval-mobile/CLAUDE.md` and follow that instead of this file.
+If your task is the **native iOS app**, start in `apps/ios-swift/` and read `apps/ios-swift/README.md`.
 This repo-root `CLAUDE.md` is for the **web/Next.js app** in `src/`.
 
 ## Active Development Branch
-**All development happens on `codex/stripe-appurl-fix-ihFVU` only.**
+**Current restructuring work happens on `codex/swift-repo-structure`.**
 Do NOT push to or edit the `codex/loveable-design-practices-ihFVU` branch.
 
 ## What we're building

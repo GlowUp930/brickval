@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "brickval-mobile"]
+  "exclude": ["node_modules", "brickval-mobile", "apps/expo-previous"]
 }
