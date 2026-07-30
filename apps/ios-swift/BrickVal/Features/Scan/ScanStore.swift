@@ -49,7 +49,7 @@ final class ScanStore {
         smartScanAvailable = hostedSmartScanEnabled
         smartScanMessage = hostedSmartScanEnabled
             ? nil
-            : "Automatic scanning is unavailable. Switch to Bulk to capture manually."
+            : "Automatic scan paused. Tap the shutter to scan manually."
     }
 
     var captureSession: AVCaptureSession { camera.sessionBox.session }
@@ -111,7 +111,8 @@ final class ScanStore {
     }
 
     func captureManually() async {
-        guard intent == .bulk, phase != .capturing, phase != .identifying else { return }
+        let canCapture = intent == .bulk || (intent == .single && !smartScanAvailable)
+        guard canCapture, phase != .capturing, phase != .identifying else { return }
         do {
             phase = .capturing
             let data = try await camera.captureFrame()
@@ -317,7 +318,7 @@ final class ScanStore {
 
     private func disableSmartScan(message: String) {
         smartScanAvailable = false
-        smartScanMessage = "\(message) Switch to Bulk to capture manually."
+        smartScanMessage = "\(message) Tap the shutter to scan manually."
         resetDetectionState()
         phase = .searching
     }

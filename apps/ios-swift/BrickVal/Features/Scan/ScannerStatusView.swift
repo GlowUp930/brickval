@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ScannerStatusView: View {
     let phase: ScanPhase
+    let intent: ScanIntent
     let smartScanMessage: String?
 
     var body: some View {
@@ -10,7 +11,7 @@ struct ScannerStatusView: View {
                 ProgressView()
                     .tint(.primary)
             }
-            Label(phase.statusText, systemImage: icon)
+            Label(statusText, systemImage: icon)
                 .font(.subheadline.bold())
                 .multilineTextAlignment(.center)
             if let smartScanMessage {
@@ -35,5 +36,12 @@ struct ScannerStatusView: View {
         case .failed: "exclamationmark.triangle.fill"
         default: "viewfinder"
         }
+    }
+
+    private var statusText: String {
+        if intent == .bulk, phase == .searching {
+            return "Frame all minifigures, then tap the shutter"
+        }
+        return phase.statusText
     }
 }

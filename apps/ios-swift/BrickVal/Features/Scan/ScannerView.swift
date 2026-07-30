@@ -20,28 +20,31 @@ struct ScannerView: View {
             .padding(.horizontal)
             .padding(.bottom, 8)
 
-            ZStack(alignment: .top) {
-                CameraPreview(session: store.captureSession)
-                    .background(.black)
-                    .clipShape(.rect(cornerRadius: 24))
-                if let data = store.frozenImageData, let image = UIImage(data: data) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .clipped()
-                        .clipShape(.rect(cornerRadius: 24))
-                        .transition(.opacity)
-                        .accessibilityLabel("Captured bulk scan")
+            ZStack {
+                ZStack(alignment: .top) {
+                    CameraPreview(session: store.captureSession)
+                        .background(.black)
+                    if let data = store.frozenImageData, let image = UIImage(data: data) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .clipped()
+                            .transition(.opacity)
+                            .accessibilityLabel("Captured scan")
+                    }
+                    ViewfinderOverlayView()
+                    DetectionOverlayView(observations: store.observations)
+                    ScannerStatusView(
+                        phase: store.phase,
+                        intent: store.intent,
+                        smartScanMessage: store.intent == .single ? store.smartScanMessage : nil
+                    )
                 }
-                ViewfinderOverlayView()
-                DetectionOverlayView(observations: store.observations)
-                ScannerStatusView(
-                    phase: store.phase,
-                    smartScanMessage: store.intent == .single ? store.smartScanMessage : nil
-                )
+                .aspectRatio(3.0 / 4.0, contentMode: .fit)
+                .clipShape(.rect(cornerRadius: 24))
             }
-            .frame(maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .padding(.horizontal)
 
             if store.authorizationStatus == .denied {
@@ -54,6 +57,7 @@ struct ScannerView: View {
 
             ScannerControlsView(
                 intent: store.intent,
+                automaticScanAvailable: store.canUseSmartScan,
                 isTorchEnabled: store.isTorchEnabled,
                 isBusy: [.capturing, .identifying].contains(store.phase),
                 toggleTorch: { Task { await store.toggleTorch() } },

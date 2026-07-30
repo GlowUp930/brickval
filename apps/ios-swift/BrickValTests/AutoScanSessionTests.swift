@@ -67,6 +67,18 @@ struct AutoScanSessionTests {
         #expect(!store.canUseSmartScan)
     }
 
+    @Test @MainActor
+    func singleScanFallsBackToManualCaptureWhenAutomaticScanIsUnavailable() async {
+        let store = ScanStore(hostedSmartScanEnabled: false)
+
+        #expect(store.intent == .single)
+        #expect(!store.canUseSmartScan)
+
+        await store.captureManually()
+
+        #expect(store.phase != .idle)
+    }
+
     private func observation(
         x: Double,
         confidence: Double = 0.9,
