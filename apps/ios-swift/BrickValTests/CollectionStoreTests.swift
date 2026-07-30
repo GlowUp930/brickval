@@ -31,6 +31,40 @@ struct CollectionStoreTests {
         #expect(second.totalValue == 30)
     }
 
+    @Test func bulkAddAggregatesDuplicatesAndPersistsOnce() async throws {
+        let url = temporaryURL()
+        let store = CollectionStore(repository: CollectionRepository(fileURL: url))
+
+        try await store.add([
+            fixture(quantity: 1, number: "fig-1", condition: .used),
+            fixture(quantity: 1, number: "fig-1", condition: .used),
+            fixture(quantity: 1, number: "fig-2", condition: .newSealed),
+        ], isPro: true)
+
+        #expect(store.items.count == 2)
+        #expect(store.items.first { $0.setNumber == "fig-1" }?.quantity == 2)
+        #expect(store.totalQuantity == 3)
+
+        let reloaded = CollectionStore(repository: CollectionRepository(fileURL: url))
+        await reloaded.load()
+        #expect(reloaded.totalQuantity == 3)
+    }
+
+    @Test func rejectedBulkAddDoesNotPartiallyChangeCollection() async throws {
+        let store = CollectionStore(repository: CollectionRepository(fileURL: temporaryURL()))
+        try await store.add(fixture(quantity: 8), isPro: false)
+
+        await #expect(throws: CollectionStoreError.self) {
+            try await store.add([
+                fixture(quantity: 1, number: "2"),
+                fixture(quantity: 2, number: "3"),
+            ], isPro: false)
+        }
+
+        #expect(store.items.count == 1)
+        #expect(store.totalQuantity == 8)
+    }
+
     @Test func setQuantityUpdatesCreatesAndRemovesConditionSlots() async throws {
         let repository = CollectionRepository(fileURL: temporaryURL())
         let store = CollectionStore(repository: repository)

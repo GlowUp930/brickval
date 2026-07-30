@@ -61,4 +61,72 @@ struct NetworkPayloadDecodingTests {
         #expect(observation.regionID == "figure-1")
         #expect(observation.timestamp >= before)
     }
+
+    @Test func decodesAndNormalizesBulkIdentificationBoundingBox() throws {
+        let data = Data(#"""
+        {
+          "id":"sh0115",
+          "item_type":"minifig",
+          "score":0.94,
+          "regionId":"region-1",
+          "bounding_box":{
+            "left":100,"top":50,"right":300,"bottom":450,
+            "imageWidth":1000,"imageHeight":500
+          }
+        }
+        """#.utf8)
+
+        let detection = try JSONDecoder().decode(IdentificationDetection.self, from: data)
+        let box = try #require(detection.boundingBox?.normalized)
+        #expect(box.x == 0.1)
+        #expect(box.y == 0.1)
+        #expect(box.width == 0.2)
+        #expect(box.height == 0.8)
+    }
+
+    @Test func bulkResultItemsPreserveDuplicateDetectionsAndDropMissingLookups() throws {
+        let detectionsData = Data(#"""
+        [
+          {"id":"sh0115","item_type":"minifig","score":0.94,"regionId":"region-1"},
+          {"id":"sh0115","item_type":"minifig","score":0.91,"regionId":"region-2"},
+          {"id":"missing","item_type":"minifig","score":0.85,"regionId":"region-3"},
+          {"id":"3001","item_type":"part","score":0.80,"regionId":"region-4"}
+        ]
+        """#.utf8)
+        let detections = try JSONDecoder().decode([IdentificationDetection].self, from: detectionsData)
+        let result = lookupFixture(identifier: "sh0115")
+
+        let items = BulkScanResultItem.make(detections: detections, results: [result])
+
+        #expect(items.map(\.id) == ["region-1", "region-2"])
+        #expect(items.allSatisfy { $0.result.identifier == "sh0115" })
+    }
+
+    private func lookupFixture(identifier: String) -> LookupResult {
+        LookupResult(
+            identifier: identifier,
+            itemType: .minifig,
+            name: "Test Minifigure",
+            theme: "Test",
+            pieces: nil,
+            yearReleased: nil,
+            isObsolete: nil,
+            imageURL: nil,
+            pricing: LookupPricing(
+                heroNewAverageUSD: nil,
+                rrpUSD: nil,
+                gainPercent: nil,
+                dataSource: "sold",
+                newSoldAverageUSD: 12,
+                usedSoldAverageUSD: 8,
+                newStockAverageUSD: nil,
+                usedStockAverageUSD: nil,
+                brickLinkNewAverageUSD: nil,
+                brickLinkUsedAverageUSD: nil
+            ),
+            marketHistory: [],
+            colorID: nil,
+            colorName: nil
+        )
+    }
 }

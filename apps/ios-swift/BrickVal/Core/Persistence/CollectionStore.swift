@@ -29,18 +29,28 @@ final class CollectionStore {
     }
 
     func add(_ item: CollectionItem, isPro: Bool, freeLimit: Int = 10) async throws {
-        guard isPro || totalQuantity + item.quantity <= freeLimit else {
+        try await add([item], isPro: isPro, freeLimit: freeLimit)
+    }
+
+    func add(_ newItems: [CollectionItem], isPro: Bool, freeLimit: Int = 10) async throws {
+        guard !newItems.isEmpty else { return }
+        let incomingQuantity = newItems.reduce(0) { $0 + $1.quantity }
+        guard isPro || totalQuantity + incomingQuantity <= freeLimit else {
             throw CollectionStoreError.freeLimitReached
         }
 
-        if let index = items.firstIndex(where: { $0.id == item.id }) {
-            var updated = item
-            updated.quantity += items[index].quantity
-            items.remove(at: index)
-            items.insert(updated, at: 0)
-        } else {
-            items.insert(item, at: 0)
+        var updatedItems = items
+        for item in newItems {
+            if let index = updatedItems.firstIndex(where: { $0.id == item.id }) {
+                var updated = item
+                updated.quantity += updatedItems[index].quantity
+                updatedItems.remove(at: index)
+                updatedItems.insert(updated, at: 0)
+            } else {
+                updatedItems.insert(item, at: 0)
+            }
         }
+        items = updatedItems
         try await persistOrReload()
     }
 

@@ -21,6 +21,8 @@ final class ScanStore {
     private(set) var smartScanMessage: String?
     private(set) var detectorModelVersion: String?
     private(set) var isTorchEnabled = false
+    private(set) var frozenImageData: Data?
+    private(set) var successMessage: String?
 
     @ObservationIgnored private let camera: CameraService
     @ObservationIgnored private let motion: MotionStabilityService
@@ -113,8 +115,10 @@ final class ScanStore {
         do {
             phase = .capturing
             let data = try await camera.captureFrame()
+            frozenImageData = data
             try await identify(imageData: data)
         } catch {
+            frozenImageData = nil
             phase = .failed(error.localizedDescription)
         }
     }
@@ -167,8 +171,19 @@ final class ScanStore {
 
     func reset() {
         presentedSheet = nil
+        frozenImageData = nil
         phase = .searching
         resetDetectionState()
+    }
+
+    func completeBulkSave(count: Int) {
+        reset()
+        let message = "Added \(count) \(count == 1 ? "item" : "items") to your collection"
+        successMessage = message
+        Task {
+            try? await Task.sleep(for: .seconds(2.4))
+            if successMessage == message { successMessage = nil }
+        }
     }
 
     private func pollSmartScan() async {
@@ -231,6 +246,7 @@ final class ScanStore {
         let startedAt = Date.now
         phase = .identifying
         let image = try await imageProcessor.finalScanImage(from: imageData)
+        if intent == .bulk { frozenImageData = image }
         if mode == .minifig, intent == .single {
             switch try await api.scanMinifigure(image) {
             case .matched(let identification, let lookup):
@@ -274,15 +290,18 @@ final class ScanStore {
 
         if mode == .minifig, intent == .bulk {
             let minifigures = identification.detections.filter { $0.itemType == .minifig }
-            let parts = identification.detections.filter { $0.itemType == .part }
             let rows = minifigures.isEmpty
                 ? []
                 : try await api.bulkLookupMinifigures(minifigures.map(\.id))
             let priced = rows.compactMap(\.result)
-            let missingIDs = Set(rows.filter { !$0.wasFound }.map(\.figNumber))
-            let unresolved = parts + minifigures.filter { missingIDs.contains($0.id) }
+            let items = BulkScanResultItem.make(detections: minifigures, results: priced)
+            guard let frozenImageData, !items.isEmpty else {
+                self.frozenImageData = nil
+                phase = .failed("No priced minifigures were found. Try a clearer photo with the figures separated.")
+                return
+            }
             phase = .review
-            presentedSheet = .bulkResults(results: priced, unresolved: unresolved)
+            presentedSheet = .bulkResults(imageData: frozenImageData, items: items)
             return
         }
 

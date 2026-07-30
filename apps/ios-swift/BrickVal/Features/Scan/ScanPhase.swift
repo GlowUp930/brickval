@@ -18,7 +18,7 @@ enum ScanPhase: Equatable {
         case .searching: "Hold a minifigure inside the frame"
         case .holding: "Hold steady…"
         case .capturing: "Capturing…"
-        case .identifying: "Finding the exact item…"
+        case .identifying: "Analyzing minifigures…"
         case .review: "Review the detected items"
         case .result: "Match found"
         case .failed(let message): message

@@ -24,6 +24,16 @@ struct ScannerView: View {
                 CameraPreview(session: store.captureSession)
                     .background(.black)
                     .clipShape(.rect(cornerRadius: 24))
+                if let data = store.frozenImageData, let image = UIImage(data: data) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipped()
+                        .clipShape(.rect(cornerRadius: 24))
+                        .transition(.opacity)
+                        .accessibilityLabel("Captured bulk scan")
+                }
                 ViewfinderOverlayView()
                 DetectionOverlayView(observations: store.observations)
                 ScannerStatusView(
@@ -66,12 +76,25 @@ struct ScannerView: View {
             switch sheet {
             case .manualLookup: ManualLookupView(store: store)
             case .partColor(let detection): PartColorSelectionView(detection: detection, store: store)
-            case .bulkResults(let results, let unresolved):
-                BulkScanResultsView(results: results, unresolved: unresolved, store: store)
+            case .bulkResults(let imageData, let items):
+                BulkScanResultsView(imageData: imageData, items: items, store: store)
             case .result(let result): ScanResultView(result: result, reset: store.reset)
             case .review(let review): ScanReviewView(review: review, store: store)
             }
         }
+        .overlay(alignment: .top) {
+            if let message = store.successMessage {
+                Label(message, systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(BrickValStyle.ScanResult.accent, in: .capsule)
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: store.successMessage)
     }
 }
 

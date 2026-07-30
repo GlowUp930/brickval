@@ -6,6 +6,10 @@ struct ScannerStatusView: View {
 
     var body: some View {
         VStack(spacing: 6) {
+            if phase == .identifying {
+                ProgressView()
+                    .tint(.primary)
+            }
             Label(phase.statusText, systemImage: icon)
                 .font(.subheadline.bold())
                 .multilineTextAlignment(.center)
