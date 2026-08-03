@@ -43,7 +43,7 @@ struct ItemDetailView: View {
     }
 
     private var marketChange: Double? {
-        let points = conditionHistory(for: selectedCondition, horizon: .half)
+        let points = historyPoints
         guard let first = points.first?.value, let last = points.last?.value, first > 0 else {
             return item.gainPercent.map { $0 / 100 }
         }
@@ -226,6 +226,7 @@ struct ItemDetailView: View {
                 popupBackground: BrickValStyle.ScanResult.textPrimary,
                 popupForeground: BrickValStyle.ScanResult.canvas
             )
+            .id(horizon)
             .frame(height: 330)
 
             ChartHorizonPicker(
@@ -485,10 +486,22 @@ struct ItemDetailView: View {
 
     private func fallbackHistory() -> [MarketHistoryPoint] {
         let value = max(selectedValue, 0.01)
-        let labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"]
         let multipliers = [0.82, 0.86, 0.81, 0.92, 0.96, 0.91, 1.0]
-        return zip(labels, multipliers).map { label, multiplier in
-            MarketHistoryPoint(date: label, priceUSD: value * multiplier, source: item.dataSource)
+        let calendar = Calendar(identifier: .gregorian)
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        let today = calendar.startOfDay(for: .now)
+        let offsets = [-180, -150, -120, -90, -60, -30, 0]
+
+        return zip(offsets, multipliers).compactMap { offset, multiplier in
+            guard let date = calendar.date(byAdding: .day, value: offset, to: today) else { return nil }
+            return MarketHistoryPoint(
+                date: formatter.string(from: date),
+                priceUSD: value * multiplier,
+                source: item.dataSource
+            )
         }
     }
 }

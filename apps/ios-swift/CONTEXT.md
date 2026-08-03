@@ -142,6 +142,7 @@ The last verified test run contained 30 tests in 7 suites and passed.
 - Bulk collection saves are atomic so free-limit, storage, or persistence failures cannot partially add a scan.
 - The bulk result sheet uses a frozen image, standard SwiftUI presentation, and a small-screen layout with visible Add and Retake actions.
 - Successful scan and manual lookup results play the bundled cash-register sound through an ambient audio session; audio failure never blocks a result.
+- Collection history horizons filter stored market points by actual 30-, 90-, and 180-day date windows. Horizon-specific fallback data and chart identity must also change when the selected horizon changes.
 
 When a future change introduces a major architectural alternative or an irreversible migration, add a separate decision record under `apps/ios-swift/docs/decisions/` and link it here. Keep this section as the concise decision index.
 

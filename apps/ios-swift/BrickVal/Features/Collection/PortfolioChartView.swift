@@ -21,6 +21,7 @@ struct PortfolioChartView: View {
                         popupForeground: BrickValStyle.Semantic.canvas,
                         showsFill: false
                     )
+                    .id(horizon)
                 } else {
                     VStack(spacing: BrickValStyle.Primitive.space8) {
                         Rectangle().fill(BrickValStyle.Semantic.divider).frame(height: 1)

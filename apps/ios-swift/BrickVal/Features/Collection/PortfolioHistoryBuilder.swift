@@ -16,7 +16,7 @@ enum PortfolioHistoryBuilder {
 
         let datedSeries = bucketDates.map { bucketDate in
             let value = items.reduce(0) { total, item in
-                total + unitValue(for: item, on: bucketDate, since: start) * Double(item.quantity)
+                total + unitValue(for: item, on: bucketDate, since: start, horizon: horizon) * Double(item.quantity)
             }
             return PortfolioHistoryPoint(date: bucketLabel(for: bucketDate), value: value)
         }
@@ -80,8 +80,8 @@ enum PortfolioHistoryBuilder {
         }
     }
 
-    private static func unitValue(for item: CollectionItem, on bucketDate: Date, since start: Date) -> Double {
-        let sortedHistory = item.marketHistory
+    private static func unitValue(for item: CollectionItem, on bucketDate: Date, since start: Date, horizon: PortfolioHorizon) -> Double {
+        let sortedHistory = windowedHistory(item.marketHistory, horizon: horizon)
             .compactMap { point -> DatedMarketPoint? in
                 guard let date = parseDate(point.date) else { return nil }
                 return DatedMarketPoint(date: date, value: point.priceUSD)
@@ -108,28 +108,30 @@ enum PortfolioHistoryBuilder {
             .sorted { $0.date < $1.date }
 
         guard !datedHistory.isEmpty else {
-            let fallback = history.isEmpty ? fallbackFallbackHistory(value: fallbackValue) : history
-            return Array(fallback.suffix(bucketCount)).map { StockChartPoint(label: $0.date, value: $0.priceUSD) }
+            return fallbackSeries(
+                horizon: horizon,
+                value: history.last?.priceUSD ?? fallbackValue
+            )
         }
 
+        let window = datedHistory.filter { $0.date >= start }
+        let visibleHistory = window.isEmpty ? Array(datedHistory.suffix(1)) : window
         let bucketDates = dateBuckets(for: horizon)
         let datedSeries = bucketDates.map { bucketDate in
-            let value = datedHistory.last(where: { $0.date <= bucketDate })?.value
-                ?? datedHistory.first(where: { $0.date >= start })?.value
-                ?? datedHistory.first?.value
+            let value = visibleHistory.last(where: { $0.date <= bucketDate })?.value
+                ?? visibleHistory.first?.value
                 ?? fallbackValue
             return StockChartPoint(label: bucketLabel(for: bucketDate), value: value)
         }
 
-        guard isFlat(datedSeries.map(\.value)), datedHistoryContainsMovement(datedHistory) else {
+        guard isFlat(datedSeries.map(\.value)), datedHistoryContainsMovement(visibleHistory) else {
             return datedSeries
         }
 
         return bucketDates.enumerated().map { index, bucketDate in
-            let window = windowedHistory(history, horizon: horizon)
-            let sourceIndex = Int((Double(index) / Double(max(bucketCount - 1, 1)) * Double(window.count - 1)).rounded())
-            let boundedIndex = min(max(sourceIndex, 0), window.count - 1)
-            let value = window[boundedIndex].priceUSD
+            let sourceIndex = Int((Double(index) / Double(max(bucketCount - 1, 1)) * Double(visibleHistory.count - 1)).rounded())
+            let boundedIndex = min(max(sourceIndex, 0), visibleHistory.count - 1)
+            let value = visibleHistory[boundedIndex].value
             return StockChartPoint(label: bucketLabel(for: bucketDate), value: value)
         }
     }
@@ -139,26 +141,37 @@ enum PortfolioHistoryBuilder {
             .filter { $0.priceUSD > 0 }
             .sorted { $0.date < $1.date }
 
-        guard sortedHistory.count > 1 else { return sortedHistory }
+        guard !sortedHistory.isEmpty else { return [] }
 
-        let targetCount: Int
-        switch horizon {
-        case .month:
-            targetCount = max(3, Int(ceil(Double(sortedHistory.count) * 0.42)))
-        case .quarter:
-            targetCount = max(4, Int(ceil(Double(sortedHistory.count) * 0.68)))
-        case .half:
-            targetCount = sortedHistory.count
+        let today = calendar.startOfDay(for: .now)
+        let start = calendar.date(byAdding: .day, value: -horizon.days, to: today) ?? today
+        let datedHistory = sortedHistory.compactMap { point -> (point: MarketHistoryPoint, date: Date)? in
+            guard let date = parseDate(point.date) else { return nil }
+            return (point, date)
         }
 
-        return Array(sortedHistory.suffix(min(sortedHistory.count, targetCount)))
+        guard !datedHistory.isEmpty else { return [] }
+
+        let window = datedHistory.filter { $0.date >= start }.map { $0.point }
+        return window.isEmpty ? [datedHistory[datedHistory.count - 1].point] : window
     }
 
-    private static func fallbackFallbackHistory(value: Double) -> [MarketHistoryPoint] {
-        let labels = ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "Now"]
-        let multipliers = [0.92, 0.95, 0.93, 0.98, 1.01, 0.99, 1.02, 1.0]
-        return zip(labels, multipliers).map {
-            MarketHistoryPoint(date: $0.0, priceUSD: max(0.01, value * $0.1), source: nil)
+    private static func fallbackSeries(horizon: PortfolioHorizon, value: Double) -> [StockChartPoint] {
+        let multipliers: [Double]
+        switch horizon {
+        case .month:
+            multipliers = [0.965, 0.978, 0.971, 0.992, 1.006, 0.998, 1.014, 1.0]
+        case .quarter:
+            multipliers = [0.925, 0.948, 0.938, 0.974, 1.012, 0.992, 1.026, 1.0]
+        case .half:
+            multipliers = [0.885, 0.914, 0.902, 0.956, 1.018, 0.984, 1.034, 1.0]
+        }
+
+        return dateBuckets(for: horizon).enumerated().map { index, date in
+            StockChartPoint(
+                label: bucketLabel(for: date),
+                value: max(0.01, value * multipliers[index])
+            )
         }
     }
 

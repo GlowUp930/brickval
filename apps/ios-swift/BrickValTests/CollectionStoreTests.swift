@@ -106,10 +106,10 @@ struct CollectionStoreTests {
             marketValueUSD: 120,
             quantity: 2,
             marketHistory: [
-                MarketHistoryPoint(date: "2026-01-01", priceUSD: 82, source: nil),
-                MarketHistoryPoint(date: "2026-02-01", priceUSD: 96, source: nil),
-                MarketHistoryPoint(date: "2026-03-01", priceUSD: 108, source: nil),
-                MarketHistoryPoint(date: "2026-04-01", priceUSD: 120, source: nil),
+                historyPoint(daysAgo: 28, value: 82),
+                historyPoint(daysAgo: 21, value: 96),
+                historyPoint(daysAgo: 14, value: 108),
+                historyPoint(daysAgo: 0, value: 120),
             ]
         )
 
@@ -170,5 +170,14 @@ struct CollectionStoreTests {
 
     private func temporaryURL() -> URL {
         URL.temporaryDirectory.appending(path: UUID().uuidString).appending(path: "collection.json")
+    }
+
+    private func historyPoint(daysAgo: Int, value: Double) -> MarketHistoryPoint {
+        let date = Calendar(identifier: .gregorian).date(byAdding: .day, value: -daysAgo, to: .now) ?? .now
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return MarketHistoryPoint(date: formatter.string(from: date), priceUSD: value, source: nil)
     }
 }
