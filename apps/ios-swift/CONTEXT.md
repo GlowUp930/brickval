@@ -87,6 +87,7 @@ Bulk result UI requirements:
 - External service credentials stay server-side. The native app uses hosted route handlers and does not contain provider secrets.
 - The primary native endpoints are identification, lookup, bulk lookup, part colors, and minifigure feedback. Confirm exact paths in `BrickValAPIClient.swift` before changing contracts.
 - The backend may return BrickLink image URLs beginning with `//`. Normalize these to `https://` before creating a Swift `URL`.
+- The hosted auto-detection route uses Roboflow when available and falls back to Brickognize box detection when Roboflow returns a billing/credit `402`. Do not remove this fallback unless a replacement detector is verified in production.
 - Prices displayed in the native app are USD unless the current product requirement explicitly changes this.
 - Do not change backend endpoints or paid-service behavior for a native-only UI fix without an explicit request.
 
