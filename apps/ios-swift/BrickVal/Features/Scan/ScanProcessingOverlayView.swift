@@ -32,6 +32,7 @@ struct ScanProcessingOverlayView: View {
             }
         }
         .transition(.opacity)
+        .animation(.easeInOut(duration: 0.2), value: phase)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(title)
         .accessibilityValue(subtitle)

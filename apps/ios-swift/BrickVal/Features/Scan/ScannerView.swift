@@ -1,3 +1,4 @@
+import UIKit
 import SwiftUI
 
 struct ScannerView: View {
@@ -24,14 +25,9 @@ struct ScannerView: View {
                 ZStack(alignment: .top) {
                     CameraPreview(session: store.captureSession)
                         .background(.black)
-                    if let data = store.frozenImageData, let image = UIImage(data: data) {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .clipped()
+                    if let data = store.frozenImageData {
+                        FrozenScanImageView(data: data)
                             .transition(.opacity)
-                            .accessibilityLabel("Captured scan")
                     }
                     if [.capturing, .identifying].contains(store.phase) {
                         ScanProcessingOverlayView(phase: store.phase, intent: store.intent)
@@ -103,7 +99,30 @@ struct ScannerView: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: store.successMessage)
-        .animation(.easeInOut(duration: 0.2), value: store.phase)
+    }
+}
+
+private struct FrozenScanImageView: View {
+    let data: Data
+
+    @State private var image: UIImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+            } else {
+                Color.black
+            }
+        }
+        .task(id: data) {
+            image = UIImage(data: data)
+        }
+        .accessibilityLabel("Captured scan")
     }
 }
 

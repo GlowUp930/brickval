@@ -12,7 +12,7 @@ This is the working context for the canonical BrickVal mobile app. It is intenti
 - Minimum iOS version: 17.0
 - Swift version: 6.0 with strict concurrency enabled
 - Current marketing version: `1.0.1`
-- Current build number: `44`
+- Current build number: `45`
 - XcodeGen source of truth: `project.yml`
 - Committed Xcode project: `BrickVal.xcodeproj`
 
