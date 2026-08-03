@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 
-import { detectWithHostedRoboflow } from "@/lib/roboflow-hosted";
+import {
+  detectWithBrickognizeFallback,
+  detectWithHostedRoboflow,
+  RoboflowInferenceError,
+} from "@/lib/roboflow-hosted";
 import { supabase } from "@/lib/supabase";
 
 const MAX_DETECTION_IMAGE_BYTES = 100 * 1024;
@@ -53,6 +57,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     console.error("[minifig-detect] Failed:", error);
+    if (error instanceof RoboflowInferenceError && error.statusCode === 402) {
+      try {
+        return NextResponse.json(await detectWithBrickognizeFallback(image));
+      } catch (fallbackError) {
+        console.error("[minifig-detect] Brickognize fallback failed:", fallbackError);
+      }
+    }
     return NextResponse.json(
       { error: "detector_unavailable", message: "Smart scan is temporarily unavailable." },
       { status: 503 }

@@ -5,9 +5,18 @@ import {
   type HostedDetectionResult,
   type RoboflowDetectionResponse,
 } from "./roboflow-detector";
+import { identifyNonSet } from "./brickognize";
+import { mapFallbackDetections } from "./smart-scan-fallback";
 import { supabase } from "./supabase";
 
 const MONTHLY_INFERENCE_CAP = 30_000;
+
+export class RoboflowInferenceError extends Error {
+  constructor(readonly statusCode: number) {
+    super(`Roboflow inference failed: ${statusCode}`);
+    this.name = "RoboflowInferenceError";
+  }
+}
 
 export async function detectWithHostedRoboflow(image: Blob): Promise<HostedDetectionResult> {
   const detectorModelVersion = getConfiguredRoboflowModel();
@@ -44,8 +53,21 @@ async function inferHostedRoboflow(image: Blob): Promise<RoboflowDetectionRespon
     body: base64,
     signal: AbortSignal.timeout(5_000),
   });
-  if (!response.ok) throw new Error(`Roboflow inference failed: ${response.status}`);
+  if (!response.ok) throw new RoboflowInferenceError(response.status);
   return response.json() as Promise<RoboflowDetectionResponse>;
+}
+
+export async function detectWithBrickognizeFallback(image: Blob): Promise<HostedDetectionResult> {
+  const startedAt = performance.now();
+  const file = new File([await image.arrayBuffer()], "smart-scan.jpg", { type: "image/jpeg" });
+  const result = await identifyNonSet(file, { skipRecovery: true });
+
+  return {
+    status: "available",
+    detectorModelVersion: "brickognize-fallback",
+    detectMs: Math.max(0, Math.round(performance.now() - startedAt)),
+    observations: mapFallbackDetections(result.detections),
+  };
 }
 
 function getConfiguredRoboflowModel(): string {
