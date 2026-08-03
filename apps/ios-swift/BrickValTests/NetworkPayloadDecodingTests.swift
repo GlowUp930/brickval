@@ -102,6 +102,60 @@ struct NetworkPayloadDecodingTests {
         #expect(items.allSatisfy { $0.result.identifier == "sh0115" })
     }
 
+    @Test func bulkResultItemsCollapseOverlappingDuplicateDetections() throws {
+        let detectionsData = Data(#"""
+        [
+          {
+            "id":"fig-a","item_type":"minifig","score":0.94,"regionId":"figure-a",
+            "bounding_box":{"left":100,"top":80,"right":300,"bottom":480,"imageWidth":1000,"imageHeight":1000}
+          },
+          {
+            "id":"fig-a","item_type":"minifig","score":0.91,"regionId":"figure-a-duplicate",
+            "bounding_box":{"left":100,"top":160,"right":300,"bottom":400,"imageWidth":1000,"imageHeight":1000}
+          },
+          {
+            "id":"fig-b","item_type":"minifig","score":0.92,"regionId":"figure-b",
+            "bounding_box":{"left":430,"top":390,"right":650,"bottom":790,"imageWidth":1000,"imageHeight":1000}
+          },
+          {
+            "id":"fig-b","item_type":"minifig","score":0.89,"regionId":"figure-b-duplicate",
+            "bounding_box":{"left":426,"top":394,"right":646,"bottom":794,"imageWidth":1000,"imageHeight":1000}
+          }
+        ]
+        """#.utf8)
+        let detections = try JSONDecoder().decode([IdentificationDetection].self, from: detectionsData)
+
+        let items = BulkScanResultItem.make(
+            detections: detections,
+            results: [lookupFixture(identifier: "fig-a"), lookupFixture(identifier: "fig-b")]
+        )
+
+        #expect(items.map(\.id) == ["figure-a", "figure-b"])
+    }
+
+    @Test func bulkResultItemsPreserveSpatiallyDistinctCopies() throws {
+        let detectionsData = Data(#"""
+        [
+          {
+            "id":"fig-a","item_type":"minifig","score":0.94,"regionId":"figure-a-left",
+            "bounding_box":{"left":50,"top":100,"right":250,"bottom":500,"imageWidth":1000,"imageHeight":1000}
+          },
+          {
+            "id":"fig-a","item_type":"minifig","score":0.91,"regionId":"figure-a-right",
+            "bounding_box":{"left":600,"top":100,"right":800,"bottom":500,"imageWidth":1000,"imageHeight":1000}
+          }
+        ]
+        """#.utf8)
+        let detections = try JSONDecoder().decode([IdentificationDetection].self, from: detectionsData)
+
+        let items = BulkScanResultItem.make(
+            detections: detections,
+            results: [lookupFixture(identifier: "fig-a")]
+        )
+
+        #expect(items.map(\.id) == ["figure-a-left", "figure-a-right"])
+    }
+
     private func lookupFixture(identifier: String) -> LookupResult {
         LookupResult(
             identifier: identifier,
