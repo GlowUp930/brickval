@@ -28,6 +28,7 @@ final class ScanStore {
     @ObservationIgnored private let motion: MotionStabilityService
     @ObservationIgnored private let imageProcessor: ImageProcessor
     @ObservationIgnored private let api: BrickValAPIClient
+    @ObservationIgnored private let soundEffects: SoundEffectPlayer
     @ObservationIgnored private var autoSession = AutoScanSession()
     @ObservationIgnored private var schedule = HostedDetectionSchedule()
     @ObservationIgnored private let hostedSmartScanEnabled: Bool
@@ -45,6 +46,7 @@ final class ScanStore {
         self.motion = motion
         self.imageProcessor = imageProcessor
         self.api = api
+        self.soundEffects = SoundEffectPlayer()
         self.hostedSmartScanEnabled = hostedSmartScanEnabled
         smartScanAvailable = hostedSmartScanEnabled
         smartScanMessage = hostedSmartScanEnabled
@@ -80,7 +82,11 @@ final class ScanStore {
             phase = .searching
             while !Task.isCancelled {
                 try await Task.sleep(for: .milliseconds(100))
-                guard phase != .result, phase != .review else { continue }
+                guard phase != .result,
+                      phase != .review,
+                      phase != .capturing,
+                      phase != .identifying
+                else { continue }
                 if canUseSmartScan {
                     await pollSmartScan()
                     guard canUseSmartScan else { continue }
@@ -129,6 +135,7 @@ final class ScanStore {
         do {
             try await identify(imageData: data)
         } catch {
+            frozenImageData = nil
             phase = .failed(error.localizedDescription)
         }
     }
@@ -138,6 +145,7 @@ final class ScanStore {
         let result = try await api.lookup(identifier, type, colorID)
         phase = .result
         presentedSheet = .result(result)
+        soundEffects.play(.cashRegister)
     }
 
     func selectDetection(_ detection: IdentificationDetection) async {
@@ -150,6 +158,7 @@ final class ScanStore {
             let result = try await api.lookup(detection.id, detection.itemType, nil)
             phase = .result
             presentedSheet = .result(result)
+            soundEffects.play(.cashRegister)
         } catch {
             phase = .failed(error.localizedDescription)
         }
@@ -165,6 +174,7 @@ final class ScanStore {
             let result = try await api.lookup(detection.id, .part, color.colorID)
             phase = .result
             presentedSheet = .result(result)
+            soundEffects.play(.cashRegister)
         } catch {
             phase = .failed(error.localizedDescription)
         }
@@ -239,6 +249,7 @@ final class ScanStore {
             let data = try await camera.captureFrame()
             try await identify(imageData: data)
         } catch {
+            frozenImageData = nil
             phase = .failed(error.localizedDescription)
         }
     }
@@ -246,13 +257,15 @@ final class ScanStore {
     private func identify(imageData: Data) async throws {
         let startedAt = Date.now
         phase = .identifying
+        frozenImageData = imageData
         let image = try await imageProcessor.finalScanImage(from: imageData)
-        if intent == .bulk { frozenImageData = image }
+        frozenImageData = image
         if mode == .minifig, intent == .single {
             switch try await api.scanMinifigure(image) {
             case .matched(let identification, let lookup):
                 phase = .result
                 presentedSheet = .result(lookup)
+                soundEffects.play(.cashRegister)
                 submitFeedback(
                     outcome: .matched,
                     image: image,
@@ -303,6 +316,7 @@ final class ScanStore {
             }
             phase = .review
             presentedSheet = .bulkResults(imageData: frozenImageData, items: items)
+            soundEffects.play(.cashRegister)
             return
         }
 
@@ -314,6 +328,7 @@ final class ScanStore {
         let result = try await api.lookup(identifier, mode == .set ? .set : .minifig, nil)
         phase = .result
         presentedSheet = .result(result)
+        soundEffects.play(.cashRegister)
     }
 
     private func disableSmartScan(message: String) {

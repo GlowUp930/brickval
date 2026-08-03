@@ -26,6 +26,20 @@ struct ManualLookupView: View {
                             .keyboardType(.numberPad)
                     }
                 }
+                if isLoading {
+                    Section {
+                        HStack(spacing: 12) {
+                            ProgressView()
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Looking up the item")
+                                    .font(.subheadline.weight(.semibold))
+                                Text("Finding the current market value…")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
                 if let errorMessage {
                     Section { Text(errorMessage).foregroundStyle(.red) }
                 }
@@ -50,6 +64,7 @@ struct ManualLookupView: View {
     }
 
     private func lookup() {
+        isIdentifierFocused = false
         Task {
             isLoading = true
             defer { isLoading = false }

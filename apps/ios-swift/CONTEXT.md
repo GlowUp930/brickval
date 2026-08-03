@@ -63,7 +63,7 @@ Important scan files:
 The native bulk scan flow is:
 
 1. The user selects Bulk mode and captures one image.
-2. The captured image is frozen over the live camera while identification runs.
+2. The captured image is frozen over the live camera while identification runs, with a visible progress overlay so the user knows the scan is active.
 3. The app sends the image to the hosted identification endpoint.
 4. Minifigure detections are looked up in `/api/bulk-lookup`.
 5. Missing, unresolved, non-minifigure, and unpriced results are excluded.
@@ -139,6 +139,7 @@ The last verified test run contained 30 tests in 7 suites and passed.
 - Bulk scan results are detection-based, not identifier-only: duplicate physical copies may remain separate, while overlapping same-identifier detections are collapsed.
 - Bulk collection saves are atomic so free-limit, storage, or persistence failures cannot partially add a scan.
 - The bulk result sheet uses a frozen image, standard SwiftUI presentation, and a small-screen layout with visible Add and Retake actions.
+- Successful scan and manual lookup results play the bundled cash-register sound through an ambient audio session; audio failure never blocks a result.
 
 When a future change introduces a major architectural alternative or an irreversible migration, add a separate decision record under `apps/ios-swift/docs/decisions/` and link it here. Keep this section as the concise decision index.
 

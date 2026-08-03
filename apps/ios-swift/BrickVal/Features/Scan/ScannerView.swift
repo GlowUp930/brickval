@@ -33,13 +33,17 @@ struct ScannerView: View {
                             .transition(.opacity)
                             .accessibilityLabel("Captured scan")
                     }
-                    ViewfinderOverlayView()
-                    DetectionOverlayView(observations: store.observations)
-                    ScannerStatusView(
-                        phase: store.phase,
-                        intent: store.intent,
-                        smartScanMessage: store.intent == .single ? store.smartScanMessage : nil
-                    )
+                    if [.capturing, .identifying].contains(store.phase) {
+                        ScanProcessingOverlayView(phase: store.phase, intent: store.intent)
+                    } else {
+                        ViewfinderOverlayView()
+                        DetectionOverlayView(observations: store.observations)
+                        ScannerStatusView(
+                            phase: store.phase,
+                            intent: store.intent,
+                            smartScanMessage: store.intent == .single ? store.smartScanMessage : nil
+                        )
+                    }
                 }
                 .aspectRatio(3.0 / 4.0, contentMode: .fit)
                 .clipShape(.rect(cornerRadius: 24))
@@ -99,6 +103,7 @@ struct ScannerView: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: store.successMessage)
+        .animation(.easeInOut(duration: 0.2), value: store.phase)
     }
 }
 
