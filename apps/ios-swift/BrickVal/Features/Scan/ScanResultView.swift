@@ -89,7 +89,15 @@ struct ScanResultView: View {
                 Image(systemName: "shippingbox")
                     .font(.system(size: 56, weight: .light))
                     .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
-            default: ProgressView().tint(BrickValStyle.ScanResult.accent)
+            case .empty:
+                SkeletonPlaceholder(
+                    cornerRadius: BrickValStyle.ScanResult.buttonRadius,
+                    fill: BrickValStyle.Primitive.gray200,
+                    highlight: BrickValStyle.Primitive.white
+                )
+                .frame(width: 180, height: 180)
+            @unknown default:
+                EmptyView()
             }
         }
         .frame(maxWidth: .infinity)

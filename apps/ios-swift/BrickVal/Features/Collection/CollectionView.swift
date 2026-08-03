@@ -60,52 +60,56 @@ struct CollectionView: View {
                     .padding(.top, BrickValStyle.Primitive.space12)
                 }
 
-                PortfolioSummaryView(value: store.totalValue, items: store.items, horizon: horizon)
-                    .padding(.top, BrickValStyle.CollectionLayout.heroTop)
-                PortfolioChartView(items: store.items, horizon: $horizon)
-                    .padding(.top, BrickValStyle.CollectionLayout.chartTop)
-
-                if visibleItems.isEmpty {
-                    ContentUnavailableView(
-                        searchText.isEmpty ? "Your collection is empty" : "No matching items",
-                        systemImage: searchText.isEmpty ? "shippingbox" : "magnifyingglass",
-                        description: Text(searchText.isEmpty ? "Scan your first LEGO item to begin." : "Try another name or item number.")
-                    )
-                    Button("Open scanner", systemImage: "viewfinder") {
-                        router.selectedTab = .scan
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(BrickValStyle.Semantic.textPrimary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, BrickValStyle.Primitive.space12)
+                if store.isLoading && store.items.isEmpty {
+                    CollectionLoadingView()
                 } else {
-                    HStack {
-                        Text("Inventory")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundStyle(BrickValStyle.Semantic.textPrimary)
-                        Spacer()
-                        Menu {
-                            Picker("Collection filter", selection: $filter) {
-                                ForEach(CollectionFilter.allCases) { Text($0.title).tag($0) }
-                            }
-                        } label: {
-                            HStack(spacing: BrickValStyle.Primitive.space4) {
-                                Text(filter.title)
-                                Image(systemName: "chevron.down")
-                            }
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(BrickValStyle.Semantic.textSecondary)
-                            .frame(minHeight: BrickValStyle.CollectionLayout.minimumTapTarget)
-                        }
-                    }
-                    .padding(.top, BrickValStyle.CollectionLayout.sectionTop)
+                    PortfolioSummaryView(value: store.totalValue, items: store.items, horizon: horizon)
+                        .padding(.top, BrickValStyle.CollectionLayout.heroTop)
+                    PortfolioChartView(items: store.items, horizon: $horizon)
+                        .padding(.top, BrickValStyle.CollectionLayout.chartTop)
 
-                    LazyVGrid(columns: gridColumns, alignment: .leading, spacing: BrickValStyle.Primitive.space16) {
-                        ForEach(visibleItems) { item in
-                            NavigationLink(value: AppRoute.collectionItem(item.navigationItem)) {
-                                CollectionRowView(item: item)
+                    if visibleItems.isEmpty {
+                        ContentUnavailableView(
+                            searchText.isEmpty ? "Your collection is empty" : "No matching items",
+                            systemImage: searchText.isEmpty ? "shippingbox" : "magnifyingglass",
+                            description: Text(searchText.isEmpty ? "Scan your first LEGO item to begin." : "Try another name or item number.")
+                        )
+                        Button("Open scanner", systemImage: "viewfinder") {
+                            router.selectedTab = .scan
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(BrickValStyle.Semantic.textPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, BrickValStyle.Primitive.space12)
+                    } else {
+                        HStack {
+                            Text("Inventory")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundStyle(BrickValStyle.Semantic.textPrimary)
+                            Spacer()
+                            Menu {
+                                Picker("Collection filter", selection: $filter) {
+                                    ForEach(CollectionFilter.allCases) { Text($0.title).tag($0) }
+                                }
+                            } label: {
+                                HStack(spacing: BrickValStyle.Primitive.space4) {
+                                    Text(filter.title)
+                                    Image(systemName: "chevron.down")
+                                }
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                                .frame(minHeight: BrickValStyle.CollectionLayout.minimumTapTarget)
                             }
-                            .buttonStyle(.plain)
+                        }
+                        .padding(.top, BrickValStyle.CollectionLayout.sectionTop)
+
+                        LazyVGrid(columns: gridColumns, alignment: .leading, spacing: BrickValStyle.Primitive.space16) {
+                            ForEach(visibleItems) { item in
+                                NavigationLink(value: AppRoute.collectionItem(item.navigationItem)) {
+                                    CollectionRowView(item: item)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                     }
                 }

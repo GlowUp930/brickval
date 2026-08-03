@@ -45,8 +45,15 @@ struct CollectionRowView: View {
                     Image(systemName: "shippingbox")
                         .font(.system(size: 30, weight: .light))
                         .foregroundStyle(BrickValStyle.Semantic.textSecondary)
-                default:
-                    ProgressView().tint(BrickValStyle.Semantic.valuePositive)
+                case .empty:
+                    SkeletonPlaceholder(
+                        cornerRadius: 8,
+                        fill: BrickValStyle.Primitive.gray200,
+                        highlight: BrickValStyle.Primitive.white
+                    )
+                    .frame(width: 72, height: 72)
+                @unknown default:
+                    EmptyView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

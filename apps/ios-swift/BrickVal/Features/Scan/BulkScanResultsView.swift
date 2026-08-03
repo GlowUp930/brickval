@@ -367,7 +367,15 @@ private struct MinifigureThumbnail: View {
                 switch phase {
                 case .success(let image): thumbnail(image)
                 case .failure: fallbackImage
-                default: ProgressView().tint(accent)
+                case .empty:
+                    SkeletonPlaceholder(
+                        cornerRadius: 8,
+                        fill: BrickValStyle.Primitive.gray200,
+                        highlight: BrickValStyle.Primitive.white
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                @unknown default:
+                    EmptyView()
                 }
             }
         } else {
@@ -383,7 +391,15 @@ private struct MinifigureThumbnail: View {
                 Image(systemName: "person.fill.questionmark")
                     .font(.title)
                     .foregroundStyle(.gray)
-            default: ProgressView().tint(accent)
+            case .empty:
+                SkeletonPlaceholder(
+                    cornerRadius: 8,
+                    fill: BrickValStyle.Primitive.gray200,
+                    highlight: BrickValStyle.Primitive.white
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            @unknown default:
+                EmptyView()
             }
         }
     }

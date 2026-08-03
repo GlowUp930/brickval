@@ -109,9 +109,12 @@ struct ItemDetailView: View {
                     .scaledToFit()
                     .padding(BrickValStyle.Primitive.space16)
             } placeholder: {
-                Image(systemName: "shippingbox")
-                    .font(.system(size: 60, weight: .light))
-                    .foregroundStyle(BrickValStyle.Primitive.gray600)
+                SkeletonPlaceholder(
+                    cornerRadius: BrickValStyle.ScanResult.buttonRadius,
+                    fill: BrickValStyle.Primitive.gray200,
+                    highlight: BrickValStyle.Primitive.white
+                )
+                .frame(width: 180, height: 180)
             }
         }
         .frame(maxWidth: .infinity)
