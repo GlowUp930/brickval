@@ -17,6 +17,21 @@ struct MinifigLookupPayload: Decodable, Sendable {
             case figNumber = "fig_number"
             case yearReleased = "year_released"
         }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            name = try container.decode(String.self, forKey: .name)
+            figNumber = try container.decode(String.self, forKey: .figNumber)
+            yearReleased = try container.decodeIfPresent(Int.self, forKey: .yearReleased)
+
+            let rawImageURL = try container.decodeIfPresent(String.self, forKey: .imageURL)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if let rawImageURL, !rawImageURL.isEmpty {
+                imageURL = URL(string: rawImageURL.hasPrefix("//") ? "https:\(rawImageURL)" : rawImageURL)
+            } else {
+                imageURL = nil
+            }
+        }
     }
 
     enum CodingKeys: String, CodingKey {

@@ -24,17 +24,15 @@ struct BulkScanResultsView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 18) {
-                header
-                photoResults
-                actionButtons
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
-            .padding(.bottom, 24)
+        VStack(spacing: 14) {
+            header
+            photoResults
+                .layoutPriority(1)
+            actionButtons
         }
-        .scrollIndicators(.hidden)
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 10)
         .background(canvas.ignoresSafeArea())
         .preferredColorScheme(.dark)
         .presentationDetents([.large])
@@ -63,6 +61,8 @@ struct BulkScanResultsView: View {
             Text("Bulk scan")
                 .font(.headline)
                 .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             Spacer(minLength: 8)
             Button("Close", systemImage: "xmark", action: close)
                 .labelStyle(.iconOnly)
@@ -79,17 +79,17 @@ struct BulkScanResultsView: View {
     private var photoResults: some View {
         if let capturedImage {
             GeometryReader { proxy in
+                let imageRect = aspectFillRect(imageSize: capturedImage.size, containerSize: proxy.size)
                 ZStack {
                     Image(uiImage: capturedImage)
                         .resizable()
-                        .scaledToFill()
-                        .frame(width: proxy.size.width, height: proxy.size.height)
-                        .clipped()
+                        .frame(width: imageRect.width, height: imageRect.height)
+                        .position(x: imageRect.midX, y: imageRect.midY)
                         .accessibilityLabel("Bulk scan photo with \(items.count) identified minifigures")
 
                     ForEach(items) { item in
                         if let box = item.boundingBox {
-                            detectionBox(for: item, box: box, size: proxy.size)
+                            detectionBox(for: item, box: box, imageRect: imageRect, containerSize: proxy.size)
                         }
                     }
 
@@ -101,8 +101,10 @@ struct BulkScanResultsView: View {
                             .padding(.bottom, 12)
                     }
                 }
+                .frame(width: proxy.size.width, height: proxy.size.height)
+                .clipped()
             }
-            .aspectRatio(capturedImage.size, contentMode: .fit)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(.black)
             .clipShape(.rect(cornerRadius: 18))
             .overlay { RoundedRectangle(cornerRadius: 18).stroke(BrickValStyle.ScanResult.border) }
@@ -154,16 +156,11 @@ struct BulkScanResultsView: View {
                 }
             } label: {
                 ZStack(alignment: .topTrailing) {
-                    AsyncImage(url: item.result.imageURL) { phase in
-                        switch phase {
-                        case .success(let image): image.resizable().scaledToFit()
-                        case .failure:
-                            Image(systemName: "person.fill.questionmark")
-                                .font(.title)
-                                .foregroundStyle(.gray)
-                        default: ProgressView().tint(accent)
-                        }
-                    }
+                    MinifigureThumbnail(
+                        imageURL: item.result.imageURL,
+                        identifier: item.result.identifier,
+                        accent: accent
+                    )
                     .frame(width: 82, height: 76)
                     .background(.white)
                     .clipShape(.rect(cornerRadius: 10))
@@ -231,13 +228,14 @@ struct BulkScanResultsView: View {
     private func detectionBox(
         for item: BulkScanResultItem,
         box: NormalizedBoundingBox,
-        size: CGSize
+        imageRect: CGRect,
+        containerSize: CGSize
     ) -> some View {
         let rect = CGRect(
-            x: box.x * size.width,
-            y: box.y * size.height,
-            width: box.width * size.width,
-            height: box.height * size.height
+            x: imageRect.minX + box.x * imageRect.width,
+            y: imageRect.minY + box.y * imageRect.height,
+            width: box.width * imageRect.width,
+            height: box.height * imageRect.height
         )
         let isSelected = itemStates.first { $0.id == item.id }?.isSelected ?? false
         return ZStack {
@@ -253,13 +251,27 @@ struct BulkScanResultsView: View {
                     .padding(.vertical, 5)
                     .background(isSelected ? accent : .white, in: .capsule)
                     .position(
-                        x: min(max(rect.midX, 38), size.width - 38),
+                        x: min(max(rect.midX, 38), containerSize.width - 38),
                         y: max(rect.minY, 15)
                     )
             }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+
+    private func aspectFillRect(imageSize: CGSize, containerSize: CGSize) -> CGRect {
+        guard imageSize.width > 0, imageSize.height > 0 else {
+            return CGRect(origin: .zero, size: containerSize)
+        }
+        let scale = max(containerSize.width / imageSize.width, containerSize.height / imageSize.height)
+        let renderedSize = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
+        return CGRect(
+            x: (containerSize.width - renderedSize.width) / 2,
+            y: (containerSize.height - renderedSize.height) / 2,
+            width: renderedSize.width,
+            height: renderedSize.height
+        )
     }
 
     private var actionButtons: some View {
@@ -337,5 +349,49 @@ private struct BulkScanItemState: Identifiable {
         condition == .newSealed
             ? item.result.pricing.preferredNewValue
             : item.result.pricing.preferredUsedValue
+    }
+}
+
+private struct MinifigureThumbnail: View {
+    let imageURL: URL?
+    let identifier: String
+    let accent: Color
+
+    private var fallbackURL: URL? {
+        URL(string: "https://img.bricklink.com/ML/\(identifier.lowercased()).jpg")
+    }
+
+    var body: some View {
+        if let imageURL, imageURL != fallbackURL {
+            AsyncImage(url: imageURL) { phase in
+                switch phase {
+                case .success(let image): thumbnail(image)
+                case .failure: fallbackImage
+                default: ProgressView().tint(accent)
+                }
+            }
+        } else {
+            fallbackImage
+        }
+    }
+
+    private var fallbackImage: some View {
+        AsyncImage(url: fallbackURL) { phase in
+            switch phase {
+            case .success(let image): thumbnail(image)
+            case .failure:
+                Image(systemName: "person.fill.questionmark")
+                    .font(.title)
+                    .foregroundStyle(.gray)
+            default: ProgressView().tint(accent)
+            }
+        }
+    }
+
+    private func thumbnail(_ image: Image) -> some View {
+        image
+            .resizable()
+            .scaledToFit()
+            .padding(4)
     }
 }

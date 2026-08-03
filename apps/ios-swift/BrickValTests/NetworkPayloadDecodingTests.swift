@@ -6,14 +6,14 @@ struct NetworkPayloadDecodingTests {
     @Test func decodesMinifigureLookupPayload() throws {
         let data = Data(#"""
         {
-          "figInfo":{"name":"Wolfpack Beastmaster","image_url":"https://example.com/fig.png","fig_number":"coltlbm01","year_released":2025},
+          "figInfo":{"name":"Wolfpack Beastmaster","image_url":"//img.bricklink.com/ML/coltlbm01.jpg","fig_number":"coltlbm01","year_released":2025},
           "pricing":{"new_sold_avg_usd":12.5,"used_sold_avg_usd":9.25,"data_source":"sold"}
         }
         """#.utf8)
 
         let result = try JSONDecoder().decode(MinifigLookupPayload.self, from: data).normalized
         #expect(result.identifier == "coltlbm01")
-        #expect(result.imageURL?.absoluteString == "https://example.com/fig.png")
+        #expect(result.imageURL?.absoluteString == "https://img.bricklink.com/ML/coltlbm01.jpg")
         #expect(result.pricing.preferredUsedValue == 9.25)
     }
 
