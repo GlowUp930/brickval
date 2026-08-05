@@ -12,7 +12,8 @@ This is the working context for the canonical BrickVal mobile app. It is intenti
 - Minimum iOS version: 17.0
 - Swift version: 6.0 with strict concurrency enabled
 - Current marketing version: `1.0.1`
-- Current build number: `46`
+- Source/UI baseline: native SwiftUI build `46` (`1f58cec`).
+- Current TestFlight upload number: `101`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so Apple requires the corrected native upload to use a higher number.
 - XcodeGen source of truth: `project.yml`
 - Committed Xcode project: `BrickVal.xcodeproj`
 
@@ -114,12 +115,13 @@ Native Clerk sign-in requires `Configuration/Secrets.xcconfig`, which is ignored
 
 For visual QA, also use the `BrickVal iPhone 17 Pro` simulator when available. Always check the small iPhone before release, especially for sheets, long names, Dynamic Type, and controls near the bottom edge.
 
-The last verified test run contained 30 tests in 7 suites and passed.
+The last verified test run contained 32 tests and passed on the small iPhone simulator.
 
 ## Release Workflow
 
 - `project.yml` owns version and build settings; do not edit generated project settings as the lasting fix.
 - Increment `CURRENT_PROJECT_VERSION` for a new build. Keep `MARKETING_VERSION` unchanged unless the release version changes.
+- Treat the native SwiftUI source/UI baseline and App Store upload number as separate: the current interface is based on build 46, while build 101 is the required next upload because the mistaken Expo build 100 already exists in App Store Connect.
 - Build and test before committing.
 - Commit focused changes with a message that states the behavioral fix.
 - Push verified native changes to `codex/swift-repo-structure` when useful and relevant.
