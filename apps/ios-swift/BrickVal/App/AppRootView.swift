@@ -24,7 +24,7 @@ struct AppRootView: View {
             }
 
             if isShowingLaunch {
-                BrandLaunchView(isHandingOff: launchIsHandingOff)
+                BrickValLogoLoader(isHandingOff: launchIsHandingOff)
                     .transition(.opacity)
                     .allowsHitTesting(false)
                     .zIndex(1)
@@ -94,8 +94,11 @@ struct AppRootView: View {
     }
 }
 
-private struct BrandLaunchView: View {
+struct BrickValLogoLoader: View {
     let isHandingOff: Bool
+    var showsBackground = true
+    var showsWordmark = true
+    var scale: CGFloat = 1
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hasEntered = false
@@ -105,17 +108,19 @@ private struct BrandLaunchView: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                BrickValStyle.Primitive.brandInk
-                    .ignoresSafeArea()
-                    .opacity(isHandingOff ? 0 : 1)
-                    .animation(
-                        .timingCurve(0.25, 1, 0.5, 1, duration: 0.44).delay(0.08),
-                        value: isHandingOff
-                    )
+                if showsBackground {
+                    BrickValStyle.Primitive.brandInk
+                        .ignoresSafeArea()
+                        .opacity(isHandingOff ? 0 : 1)
+                        .animation(
+                            .timingCurve(0.25, 1, 0.5, 1, duration: 0.44).delay(0.08),
+                            value: isHandingOff
+                        )
+                }
 
                 Circle()
                     .fill(BrickValStyle.Semantic.builderYellow.opacity(0.16))
-                    .frame(width: 184, height: 184)
+                    .frame(width: 184 * scale, height: 184 * scale)
                     .scaleEffect(isHandingOff ? 4.8 : (haloExpanded ? 1.08 : 0.82))
                     .opacity(isHandingOff ? 0 : (haloExpanded ? 0.18 : 0.78))
                     .animation(
@@ -125,7 +130,7 @@ private struct BrandLaunchView: View {
                     .accessibilityHidden(true)
 
                 Image(systemName: "viewfinder")
-                    .font(.system(size: 148, weight: .ultraLight))
+                    .font(.system(size: 148 * scale, weight: .ultraLight))
                     .foregroundStyle(BrickValStyle.Primitive.white.opacity(0.42))
                     .scaleEffect(isHandingOff ? 3.25 : 0.92)
                     .opacity(isHandingOff ? 0 : (hasEntered ? 0.5 : 0))
@@ -138,10 +143,10 @@ private struct BrandLaunchView: View {
                 Image("OnboardingLogo")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 132, height: 132)
-                    .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+                    .frame(width: 132 * scale, height: 132 * scale)
+                    .clipShape(RoundedRectangle(cornerRadius: 30 * scale, style: .continuous))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        RoundedRectangle(cornerRadius: 30 * scale, style: .continuous)
                             .stroke(BrickValStyle.Primitive.white.opacity(0.08), lineWidth: 1)
                     }
                     .shadow(
@@ -159,18 +164,20 @@ private struct BrandLaunchView: View {
                     )
                     .accessibilityLabel("Brickvalue")
 
-                Text("BrickValue")
-                    .font(.system(size: 27, weight: .bold, design: .rounded))
-                    .tracking(-0.6)
-                    .foregroundStyle(BrickValStyle.Primitive.white)
-                    .offset(y: wordmarkVisible ? 100 : 108)
-                    .opacity(isHandingOff ? 0 : (wordmarkVisible ? 1 : 0))
-                    .animation(
-                        .timingCurve(0.22, 1, 0.36, 1, duration: 0.38),
-                        value: wordmarkVisible
-                    )
-                    .animation(.easeOut(duration: 0.16), value: isHandingOff)
-                    .accessibilityHidden(true)
+                if showsWordmark {
+                    Text("BrickValue")
+                        .font(.system(size: 27 * scale, weight: .bold, design: .rounded))
+                        .tracking(-0.6)
+                        .foregroundStyle(BrickValStyle.Primitive.white)
+                        .offset(y: wordmarkVisible ? 100 * scale : 108 * scale)
+                        .opacity(isHandingOff ? 0 : (wordmarkVisible ? 1 : 0))
+                        .animation(
+                            .timingCurve(0.22, 1, 0.36, 1, duration: 0.38),
+                            value: wordmarkVisible
+                        )
+                        .animation(.easeOut(duration: 0.16), value: isHandingOff)
+                        .accessibilityHidden(true)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
