@@ -15,7 +15,10 @@ struct SubscriptionView: View {
         List {
             Section {
                 VStack(alignment: .leading, spacing: 12) {
-                    Label(entitlements.isPro ? "Brickvalue Pro is active" : "Upgrade to Brickvalue Pro", systemImage: "crown.fill")
+                    Label(
+                        entitlements.isPro ? "Brickvalue Pro is active" : "Upgrade to Brickvalue Pro",
+                        systemImage: entitlements.isPro ? "checkmark.seal.fill" : "sparkles"
+                    )
                         .font(.title2.bold())
                     Text(entitlements.isPro ? "Your collection and scanning benefits are unlocked." : "Save an unlimited collection and support continued pricing and scanner improvements.")
                         .foregroundStyle(.secondary)

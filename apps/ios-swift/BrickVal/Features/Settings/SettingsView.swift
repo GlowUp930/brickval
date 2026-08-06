@@ -67,16 +67,11 @@ struct SettingsView: View {
                     Text(accountStatusTitle)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(BrickValStyle.Primitive.black.opacity(0.68))
-                    if entitlements.isPro {
-                        proStatusBadge
-                    }
                 }
                 Spacer()
-                Image(systemName: entitlements.isPro ? "crown.fill" : "crown")
-                    .font(.title2.bold())
-                    .foregroundStyle(BrickValStyle.Primitive.black)
-                    .frame(width: 46, height: 46)
-                    .background(BrickValStyle.Primitive.white.opacity(0.42), in: Circle())
+                if entitlements.isPro {
+                    proLogo
+                }
             }
 
             Image(selectedAvatar.imageName)
@@ -135,16 +130,29 @@ struct SettingsView: View {
         .clipShape(RoundedRectangle(cornerRadius: 30))
     }
 
-    private var proStatusBadge: some View {
-        Label("PRO", systemImage: "crown.fill")
-            .font(.caption.weight(.black))
-            .foregroundStyle(BrickValStyle.Primitive.black)
-            .padding(.horizontal, BrickValStyle.Primitive.space12)
-            .padding(.vertical, BrickValStyle.Primitive.space8)
-            .background(BrickValStyle.Primitive.white.opacity(0.72), in: Capsule())
+    private var proLogo: some View {
+        Text("PRO")
+            .font(.headline.weight(.black))
+            .tracking(1.1)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.87, green: 0.97, blue: 0.94),
+                        Color(red: 0.62, green: 0.80, blue: 0.82),
+                        Color(red: 0.28, green: 0.42, blue: 0.56),
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .padding(.horizontal, BrickValStyle.Primitive.space16)
+            .padding(.vertical, BrickValStyle.Primitive.space12)
+            .background(BrickValStyle.Primitive.black.opacity(0.78), in: Capsule())
             .overlay {
                 Capsule()
-                    .stroke(BrickValStyle.Primitive.black.opacity(0.12), lineWidth: 1)
+                    .stroke(BrickValStyle.Primitive.white.opacity(0.18), lineWidth: 1)
             }
             .accessibilityLabel("BrickValue Pro active")
     }
@@ -183,7 +191,7 @@ struct SettingsView: View {
                 if entitlements.isPro {
                     NavigationLink(value: AppRoute.subscription) {
                         profileRow(
-                            icon: "crown.fill",
+                            icon: "checkmark.seal.fill",
                             title: "Subscription",
                             subtitle: "Brickvalue Pro active",
                             trailing: "Pro"
@@ -192,7 +200,7 @@ struct SettingsView: View {
                 } else {
                     Button(action: triggerPaywall) {
                         profileRow(
-                            icon: "crown.fill",
+                            icon: "sparkles",
                             title: "Subscription",
                             subtitle: "Free plan",
                             trailing: "Upgrade"

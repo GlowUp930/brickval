@@ -38,7 +38,7 @@ struct AppearanceSettingsView: View {
                 List {
                     Section {
                         VStack(alignment: .leading, spacing: 12) {
-                            Label("Theme and accent is a Pro feature", systemImage: "crown.fill")
+                            Label("Theme and accent is a Pro feature", systemImage: "sparkles")
                                 .font(.title2.bold())
                             Text("Upgrade to change between light and dark themes and choose your accent colour.")
                                 .foregroundStyle(.secondary)
