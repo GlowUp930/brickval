@@ -141,6 +141,7 @@
 		E5C46C6A2286814408B0775E /* AutoScanSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7923F89B165DBE64790485D1 /* AutoScanSession.swift */; };
 		E5EB07009D50B925316D5297 /* CameraSessionBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FA99ACAD38CD5000BB6D3AB /* CameraSessionBox.swift */; };
 		E678AFF00961291C9451128D /* PortfolioHistoryBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC6681761589E128E3CE875D /* PortfolioHistoryBuilderTests.swift */; };
+		E6BBBB5F4235F1A8266CC164 /* ScannerProcessingLayoutUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85BBB1EFC72D90AC8F6AF7B8 /* ScannerProcessingLayoutUITests.swift */; };
 		EA02752A094C30B6B5823F84 /* LegacyMigrationResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512F907B0C0113595D83DB61 /* LegacyMigrationResult.swift */; };
 		EAF0FFB72117A14132DF57C0 /* ThemePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB30155E95AA9993EEF762A0 /* ThemePreference.swift */; };
 		EE9784DB917B1C62C1F9840F /* DetectionSamplePlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48061BC9635051EF2FB80112 /* DetectionSamplePlannerTests.swift */; };
@@ -152,6 +153,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		07F10E9644D46AC460AB6FB2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2B5103D78824B7D9B1805196 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2BD2175FF928D9AF3FE45476;
+			remoteInfo = BrickVal;
+		};
 		0E90F21F2C1FBAD036C4AA69 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 2B5103D78824B7D9B1805196 /* Project object */;
@@ -224,6 +232,7 @@
 		70BEA2066B1A6BF1D07EFC0F /* ManualSetEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualSetEntryView.swift; sourceTree = "<group>"; };
 		7355DBB384CE2D0E2589B915 /* PortfolioHistoryPoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioHistoryPoint.swift; sourceTree = "<group>"; };
 		73BC21A199D8811A6A84473D /* FocusedScanCropPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusedScanCropPlanner.swift; sourceTree = "<group>"; };
+		74C7766DD750EC4EEEF007D9 /* BrickValUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = BrickValUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7678708E98DD4F22CD74FAB7 /* PortfolioHorizon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioHorizon.swift; sourceTree = "<group>"; };
 		7923F89B165DBE64790485D1 /* AutoScanSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoScanSession.swift; sourceTree = "<group>"; };
 		7A9C146533B1F9D2F68E0DBD /* BrickVal.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BrickVal.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -236,6 +245,7 @@
 		838989477243CD0FC20DB626 /* ScannerControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerControlsView.swift; sourceTree = "<group>"; };
 		842B4A17C7F3C3CCD3B92C1A /* BrickValStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrickValStyle.swift; sourceTree = "<group>"; };
 		84F68F865B6CD3BE103A436D /* CollectionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionRepository.swift; sourceTree = "<group>"; };
+		85BBB1EFC72D90AC8F6AF7B8 /* ScannerProcessingLayoutUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerProcessingLayoutUITests.swift; sourceTree = "<group>"; };
 		88AFF015450D23262EF56D40 /* DetectionOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionOverlayView.swift; sourceTree = "<group>"; };
 		8C4AD99E109E65E48613E586 /* MultipartFormDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultipartFormDataTests.swift; sourceTree = "<group>"; };
 		8E9D73BC693CED0990F80E70 /* ScanTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanTabView.swift; sourceTree = "<group>"; };
@@ -369,6 +379,7 @@
 			children = (
 				7A9C146533B1F9D2F68E0DBD /* BrickVal.app */,
 				53ABDE971643156880F13CA4 /* BrickValTests.xctest */,
+				74C7766DD750EC4EEEF007D9 /* BrickValUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -380,6 +391,14 @@
 				2AF2A448084915691C5874AC /* Release.xcconfig */,
 			);
 			path = Configuration;
+			sourceTree = "<group>";
+		};
+		195312F9E3ADDEF338D93F6E /* BrickValUITests */ = {
+			isa = PBXGroup;
+			children = (
+				85BBB1EFC72D90AC8F6AF7B8 /* ScannerProcessingLayoutUITests.swift */,
+			);
+			path = BrickValUITests;
 			sourceTree = "<group>";
 		};
 		1A41E8EB391BC8F6299F7469 /* Configuration */ = {
@@ -620,6 +639,7 @@
 			children = (
 				7AA57555A136AF43D598D839 /* BrickVal */,
 				29855A2A6C38E0520133967B /* BrickValTests */,
+				195312F9E3ADDEF338D93F6E /* BrickValUITests */,
 				169691E477DE6428F20AEF6C /* Configuration */,
 				12DF47E7DD39FBE626001537 /* Products */,
 			);
@@ -682,6 +702,24 @@
 			productReference = 53ABDE971643156880F13CA4 /* BrickValTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		9A16352E8260CBE55570009E /* BrickValUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8A2F00F00DB126342F7E7178 /* Build configuration list for PBXNativeTarget "BrickValUITests" */;
+			buildPhases = (
+				4C301A595D3DA174438EC8BE /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DC4F390F07DF666BADBC4998 /* PBXTargetDependency */,
+			);
+			name = BrickValUITests;
+			packageProductDependencies = (
+			);
+			productName = BrickValUITests;
+			productReference = 74C7766DD750EC4EEEF007D9 /* BrickValUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -696,6 +734,10 @@
 					};
 					908168E5D1DC6B19DDE9DB4C = {
 						DevelopmentTeam = 4CQHLZBSU7;
+					};
+					9A16352E8260CBE55570009E = {
+						DevelopmentTeam = 4CQHLZBSU7;
+						TestTargetID = 2BD2175FF928D9AF3FE45476;
 					};
 				};
 			};
@@ -721,6 +763,7 @@
 			targets = (
 				2BD2175FF928D9AF3FE45476 /* BrickVal */,
 				908168E5D1DC6B19DDE9DB4C /* BrickValTests */,
+				9A16352E8260CBE55570009E /* BrickValUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -761,6 +804,14 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		4C301A595D3DA174438EC8BE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E6BBBB5F4235F1A8266CC164 /* ScannerProcessingLayoutUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		87639BAD7CCC93093CFFDD16 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -917,6 +968,11 @@
 			target = 2BD2175FF928D9AF3FE45476 /* BrickVal */;
 			targetProxy = 0E90F21F2C1FBAD036C4AA69 /* PBXContainerItemProxy */;
 		};
+		DC4F390F07DF666BADBC4998 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2BD2175FF928D9AF3FE45476 /* BrickVal */;
+			targetProxy = 07F10E9644D46AC460AB6FB2 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -1011,6 +1067,23 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		62854C59B45B353A973036C6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.brickval.app.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = BrickVal;
 			};
 			name = Debug;
 		};
@@ -1133,6 +1206,23 @@
 			};
 			name = Debug;
 		};
+		E4D74468FD6D47973EBA4DEC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.brickval.app.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = BrickVal;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1150,6 +1240,15 @@
 			buildConfigurations = (
 				913E87942043D81ABD775A7D /* Debug */,
 				008EB7E89E609EEDF6DDC2FF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8A2F00F00DB126342F7E7178 /* Build configuration list for PBXNativeTarget "BrickValUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				62854C59B45B353A973036C6 /* Debug */,
+				E4D74468FD6D47973EBA4DEC /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

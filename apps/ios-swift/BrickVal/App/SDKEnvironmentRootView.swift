@@ -5,7 +5,9 @@ struct SDKEnvironmentRootView: View {
 
     var body: some View {
 #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("-showScanResultDemo") {
+        if ProcessInfo.processInfo.arguments.contains("-showScannerProcessingLayoutDemo") {
+            AppShellView()
+        } else if ProcessInfo.processInfo.arguments.contains("-showScanResultDemo") {
             ScanResultView(result: .designDemo, reset: {})
         } else if ProcessInfo.processInfo.arguments.contains("-showScanReviewDemo") {
             ScanReviewView(

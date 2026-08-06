@@ -129,7 +129,7 @@ Native upgrades also require `REVENUECAT_API_KEY` and `SUPERWALL_API_KEY` in the
 
 For visual QA, also use the `BrickVal iPhone 17 Pro` simulator when available. Always check the small iPhone before release, especially for sheets, long names, Dynamic Type, and controls near the bottom edge.
 
-The last verified test run contained 43 tests and passed on the small iPhone simulator.
+The last verified test run contained 44 tests and passed on the small iPhone simulator, including the captured-image scanner layout regression.
 
 ## Release Workflow
 
@@ -158,6 +158,7 @@ The last verified test run contained 43 tests and passed on the small iPhone sim
 - Bulk scan results are detection-based, not identifier-only: duplicate physical copies may remain separate, while overlapping same-identifier detections are collapsed.
 - Bulk collection saves are atomic so free-limit, storage, or persistence failures cannot partially add a scan.
 - The bulk result sheet uses a frozen image, standard SwiftUI presentation, and a small-screen layout with visible Add and Retake actions.
+- The scanner camera stage is aspect-fitted to a stable 3:4 frame. Frozen images and processing overlays must stay clipped to that frame without moving the mode picker, controls, navigation, or tab bar.
 - Successful scan and manual lookup results play the bundled cash-register sound through an ambient audio session; audio failure never blocks a result.
 - Collection history horizons filter stored market points by actual 30-, 90-, and 180-day date windows. Horizon-specific fallback data and chart identity must also change when the selected horizon changes.
 - Content-backed screens use `SkeletonPlaceholder` for initial loading and remote image placeholders. Keep operation progress indicators for active captures, saves, and lookups where the user is waiting on an explicit action.

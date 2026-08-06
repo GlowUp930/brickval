@@ -38,6 +38,9 @@ final result: passed
 ## Scan Processing Motion QA — 2026-08-06
 
 - Verified the identifying animation on the iPhone 17 Pro and compact iPhone Simulators.
+- Verified the frozen-image scanner stays in a centered 3:4 frame on both simulators.
+- Confirmed the mode picker, camera stage, shutter controls, navigation area, and tab bar do not overlap after manual or automatic capture enters the shared processing state.
+- Added a UI regression that checks the processing frame remains between the mode picker and scanner controls.
 - Confirmed the scan beam moves while identity and pricing work is in progress.
 - Confirmed the loading layout remains readable at Accessibility Large without clipping or text collisions.
 - Confirmed Reduce Motion replaces the moving beam with a static status mark; screenshots taken 1.5 seconds apart were pixel-identical.

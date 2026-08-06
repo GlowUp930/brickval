@@ -73,6 +73,14 @@ final class ScanStore {
         mode == .minifig && intent == .single && smartScanAvailable
     }
 
+#if DEBUG
+    func configureProcessingLayoutDemo(imageData: Data) {
+        authorizationStatus = .authorized
+        frozenImageData = imageData
+        phase = .identifying
+    }
+#endif
+
     func setFeedbackConsent(_ enabled: Bool) {
         feedbackConsent = enabled
     }

@@ -105,13 +105,26 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.brickval.app.tests
         GENERATE_INFOPLIST_FILE: YES
+  BrickValUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - BrickValUITests
+    dependencies:
+      - target: BrickVal
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.brickval.app.uitests
+        GENERATE_INFOPLIST_FILE: YES
 schemes:
   BrickVal:
     build:
       targets:
         BrickVal: all
         BrickValTests: [test]
+        BrickValUITests: [test]
     test:
       targets:
         - BrickValTests
+        - BrickValUITests
       gatherCoverageData: true

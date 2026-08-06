@@ -35,6 +35,20 @@
                ReferencedContainer = "container:BrickVal.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "9A16352E8260CBE55570009E"
+               BuildableName = "BrickValUITests.xctest"
+               BlueprintName = "BrickValUITests"
+               ReferencedContainer = "container:BrickVal.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -62,6 +76,17 @@
                BlueprintIdentifier = "908168E5D1DC6B19DDE9DB4C"
                BuildableName = "BrickValTests.xctest"
                BlueprintName = "BrickValTests"
+               ReferencedContainer = "container:BrickVal.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "9A16352E8260CBE55570009E"
+               BuildableName = "BrickValUITests.xctest"
+               BlueprintName = "BrickValUITests"
                ReferencedContainer = "container:BrickVal.xcodeproj">
             </BuildableReference>
          </TestableReference>
