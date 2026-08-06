@@ -162,10 +162,10 @@ struct BrickValLogoLoader: View {
                         .timingCurve(0.22, 1, 0.36, 1, duration: 0.56),
                         value: isHandingOff
                     )
-                    .accessibilityLabel("BrickVal")
+                    .accessibilityLabel("BrickValue")
 
                 if showsWordmark {
-                    Text("BrickVal")
+                    Text("BrickValue")
                         .font(.system(size: 27 * scale, weight: .bold, design: .rounded))
                         .tracking(-0.6)
                         .foregroundStyle(BrickValStyle.Primitive.white)

@@ -67,6 +67,9 @@ struct SettingsView: View {
                     Text(accountStatusTitle)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(BrickValStyle.Primitive.black.opacity(0.68))
+                    if entitlements.isPro {
+                        proStatusBadge
+                    }
                 }
                 Spacer()
                 Image(systemName: entitlements.isPro ? "crown.fill" : "crown")
@@ -130,6 +133,20 @@ struct SettingsView: View {
                 }
         }
         .clipShape(RoundedRectangle(cornerRadius: 30))
+    }
+
+    private var proStatusBadge: some View {
+        Label("PRO", systemImage: "crown.fill")
+            .font(.caption.weight(.black))
+            .foregroundStyle(BrickValStyle.Primitive.black)
+            .padding(.horizontal, BrickValStyle.Primitive.space12)
+            .padding(.vertical, BrickValStyle.Primitive.space8)
+            .background(BrickValStyle.Primitive.white.opacity(0.72), in: Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(BrickValStyle.Primitive.black.opacity(0.12), lineWidth: 1)
+            }
+            .accessibilityLabel("BrickValue Pro active")
     }
 
     private func heroStat(title: String, value: String) -> some View {
