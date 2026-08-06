@@ -14,10 +14,10 @@ struct ScanProcessingOverlayView: View {
                 BrickValLogoLoader(
                     isHandingOff: false,
                     showsBackground: false,
-                    showsWordmark: false,
+                    showsWordmark: true,
                     scale: 0.78
                 )
-                .frame(width: 176, height: 176)
+                .frame(width: 176, height: 250)
 
                 VStack(spacing: BrickValStyle.Primitive.space8) {
                     Text(title)
@@ -34,7 +34,7 @@ struct ScanProcessingOverlayView: View {
             }
             .padding(.horizontal, BrickValStyle.Primitive.space24)
         }
-        .transition(.opacity)
+        .transition(.opacity.combined(with: .scale(scale: 0.98)))
         .animation(
             reduceMotion ? nil : .timingCurve(0.25, 1, 0.5, 1, duration: 0.26),
             value: phase

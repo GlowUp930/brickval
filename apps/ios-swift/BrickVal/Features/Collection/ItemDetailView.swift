@@ -111,7 +111,7 @@ struct ItemDetailView: View {
             } placeholder: {
                 SkeletonPlaceholder(
                     cornerRadius: BrickValStyle.ScanResult.buttonRadius,
-                    fill: BrickValStyle.Primitive.gray200,
+                    fill: BrickValStyle.Primitive.white,
                     highlight: BrickValStyle.Primitive.white
                 )
                 .frame(width: 180, height: 180)
@@ -270,7 +270,7 @@ struct ItemDetailView: View {
 
     private var productPhotoPlate: some View {
         RoundedRectangle(cornerRadius: 26)
-            .fill(colorScheme == .dark ? BrickValStyle.Primitive.white.opacity(0.92) : BrickValStyle.Primitive.white)
+            .fill(BrickValStyle.Primitive.white)
             .overlay {
                 RoundedRectangle(cornerRadius: 26)
                     .stroke(colorScheme == .dark ? BrickValStyle.Primitive.white.opacity(0.28) : BrickValStyle.Primitive.gray200, lineWidth: 1)

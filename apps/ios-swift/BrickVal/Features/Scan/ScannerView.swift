@@ -43,6 +43,7 @@ struct ScannerView: View {
                 }
                 .aspectRatio(3.0 / 4.0, contentMode: .fit)
                 .clipShape(.rect(cornerRadius: 24))
+                .animation(.easeInOut(duration: 0.28), value: store.phase)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .padding(.horizontal)
