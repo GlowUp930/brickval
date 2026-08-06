@@ -13,7 +13,7 @@ This is the working context for the canonical BrickVal mobile app. It is intenti
 - Swift version: 6.0 with strict concurrency enabled
 - Current marketing version: `1.0.1`
 - Source/UI baseline: native SwiftUI build `46` (`1f58cec`).
-- Current TestFlight build number: `102`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence.
+- Current TestFlight build number: `103`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence. Build `103` was archived without the RevenueCat and Superwall keys; the corrected upload must use build `104` or later.
 - XcodeGen source of truth: `project.yml`
 - Committed Xcode project: `BrickVal.xcodeproj`
 
@@ -125,6 +125,8 @@ xcodebuild test \
 
 Native Clerk sign-in requires `Configuration/Secrets.xcconfig`, which is ignored by git and included automatically by `Configuration/Shared.xcconfig`. Keep the publishable key in that local file; never commit it. Before a Release archive, verify that `xcodebuild -showBuildSettings` reports a non-empty `CLERK_PUBLISHABLE_KEY`. If it is empty, the Account screen intentionally shows the configuration-missing state and sign-in cannot open.
 
+Native upgrades also require `REVENUECAT_API_KEY` and `SUPERWALL_API_KEY` in the ignored `Configuration/Secrets.xcconfig`. The BrickVal target's Release pre-build check must remain enabled so an archive cannot silently ship without either purchase-service key.
+
 For visual QA, also use the `BrickVal iPhone 17 Pro` simulator when available. Always check the small iPhone before release, especially for sheets, long names, Dynamic Type, and controls near the bottom edge.
 
 The last verified test run contained 43 tests and passed on the small iPhone simulator.
@@ -133,7 +135,7 @@ The last verified test run contained 43 tests and passed on the small iPhone sim
 
 - `project.yml` owns version and build settings; do not edit generated project settings as the lasting fix.
 - Increment `CURRENT_PROJECT_VERSION` for a new build. Keep `MARKETING_VERSION` unchanged unless the release version changes.
-- Treat the native SwiftUI source/UI baseline and App Store upload number as separate: the current interface is based on build 46, while build 102 is the current upload because Apple build numbers cannot return to 46 after builds 100 and 101.
+- Treat the native SwiftUI source/UI baseline and App Store upload number as separate: the current interface is based on build 46, while build 103 is the current upload because Apple build numbers cannot return to 46 after builds 100 and 101.
 - Build and test before committing.
 - Commit focused changes with a message that states the behavioral fix.
 - Push verified native changes to `codex/swift-repo-structure` when useful and relevant.
