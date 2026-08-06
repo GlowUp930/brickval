@@ -39,6 +39,7 @@ final result: passed
 
 - Verified the identifying animation on the iPhone 17 Pro and compact iPhone Simulators.
 - Verified the frozen-image scanner stays in a centered 3:4 frame on both simulators.
+- Verified the native Minifigure/Bulk segmented control uses a larger centered rail with a 56-point touch frame on both simulators.
 - Confirmed the mode picker, camera stage, shutter controls, navigation area, and tab bar do not overlap after manual or automatic capture enters the shared processing state.
 - Added a UI regression that checks the processing frame remains between the mode picker and scanner controls.
 - Confirmed the scan beam moves while identity and pricing work is in progress.

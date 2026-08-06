@@ -12,4 +12,11 @@ enum ScanIntent: String, CaseIterable, Identifiable, Sendable {
         case .bulk: "Bulk"
         }
     }
+
+    var iconName: String {
+        switch self {
+        case .single: "person.crop.rectangle"
+        case .bulk: "square.stack.3d.up"
+        }
+    }
 }

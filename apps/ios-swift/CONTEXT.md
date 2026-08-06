@@ -1,6 +1,6 @@
 # BrickVal Native iOS Context
 
-Last verified: 2026-08-06
+Last verified: 2026-08-07
 
 This is the working context for the canonical BrickVal mobile app. It is intentionally specific to the native SwiftUI app. Repository-wide rules remain in [`AGENTS.md`](../../AGENTS.md).
 
@@ -159,6 +159,7 @@ The last verified test run contained 44 tests and passed on the small iPhone sim
 - Bulk collection saves are atomic so free-limit, storage, or persistence failures cannot partially add a scan.
 - The bulk result sheet uses a frozen image, standard SwiftUI presentation, and a small-screen layout with visible Add and Retake actions.
 - The scanner camera stage is aspect-fitted to a stable 3:4 frame. Frozen images and processing overlays must stay clipped to that frame without moving the mode picker, controls, navigation, or tab bar.
+- The scan mode control remains a native segmented Picker with Minifigure and Bulk icons, a 56-point minimum touch frame, and a centered maximum width of 340 points.
 - Successful scan and manual lookup results play the bundled cash-register sound through an ambient audio session; audio failure never blocks a result.
 - Collection history horizons filter stored market points by actual 30-, 90-, and 180-day date windows. Horizon-specific fallback data and chart identity must also change when the selected horizon changes.
 - Content-backed screens use `SkeletonPlaceholder` for initial loading and remote image placeholders. Keep operation progress indicators for active captures, saves, and lookups where the user is waiting on an explicit action.

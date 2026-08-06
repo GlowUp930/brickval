@@ -27,12 +27,16 @@ struct ScannerView: View {
         @Bindable var store = store
         VStack(spacing: 0) {
             Picker("Scan mode", selection: $store.intent) {
-                ForEach(ScanIntent.allCases) { Text($0.title).tag($0) }
+                ForEach(ScanIntent.allCases) {
+                    Label($0.title, systemImage: $0.iconName).tag($0)
+                }
             }
             .pickerStyle(.segmented)
+            .controlSize(.large)
+            .frame(maxWidth: 340, minHeight: 56)
             .accessibilityIdentifier("scanner.modePicker")
-            .padding(.horizontal)
-            .padding(.bottom, 8)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
 
             GeometryReader { proxy in
                 let cameraSize = ScannerCameraLayout.size(fitting: proxy.size)
