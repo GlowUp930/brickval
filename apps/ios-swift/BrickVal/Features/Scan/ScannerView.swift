@@ -29,9 +29,7 @@ struct ScannerView: View {
                         FrozenScanImageView(data: data)
                             .transition(.opacity)
                     }
-                    if [.capturing, .identifying].contains(store.phase) {
-                        ScanProcessingOverlayView(phase: store.phase, intent: store.intent)
-                    } else {
+                    if ![.capturing, .identifying].contains(store.phase) {
                         ViewfinderOverlayView()
                         DetectionOverlayView(observations: store.observations)
                         ScannerStatusView(
@@ -42,6 +40,11 @@ struct ScannerView: View {
                     }
                 }
                 .aspectRatio(3.0 / 4.0, contentMode: .fit)
+                .overlay {
+                    if [.capturing, .identifying].contains(store.phase) {
+                        ScanProcessingOverlayView(phase: store.phase, intent: store.intent)
+                    }
+                }
                 .clipShape(.rect(cornerRadius: 24))
                 .animation(.easeInOut(duration: 0.28), value: store.phase)
             }
@@ -65,8 +68,7 @@ struct ScannerView: View {
                 capture: { Task { await store.captureManually() } }
             )
         }
-        .navigationTitle("Scan")
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
         .task(id: scenePhase) {
             if scenePhase == .active {
                 await store.runCameraLoop()
