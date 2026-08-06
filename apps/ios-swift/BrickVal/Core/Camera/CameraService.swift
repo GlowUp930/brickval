@@ -95,12 +95,23 @@ actor CameraService {
         }
         throw CameraError.frameUnavailable
     }
+
+    func latestFrame() throws -> CameraFrame {
+        guard isConfigured else { throw CameraError.configurationFailed }
+        guard let frame = frameSampler.latestFrame() else { throw CameraError.frameUnavailable }
+        return frame
+    }
+
+    func jpegData(for frame: CameraFrame) throws -> Data {
+        guard let data = frameSampler.jpegData(for: frame) else { throw CameraError.invalidImage }
+        return data
+    }
 }
 
 private final class CameraFrameSampler: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
     private let lock = NSLock()
     private let context = CIContext(options: [.cacheIntermediates: false])
-    private var latestPixelBuffer: CVPixelBuffer?
+    private var frame: CameraFrame?
 
     func captureOutput(
         _ output: AVCaptureOutput,
@@ -108,12 +119,21 @@ private final class CameraFrameSampler: NSObject, AVCaptureVideoDataOutputSample
         from connection: AVCaptureConnection
     ) {
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-        lock.withLock { latestPixelBuffer = pixelBuffer }
+        let frame = CameraFrame(pixelBuffer: pixelBuffer, timestamp: .now)
+        lock.withLock { self.frame = frame }
+    }
+
+    func latestFrame() -> CameraFrame? {
+        lock.withLock { frame }
     }
 
     func jpegData() -> Data? {
-        guard let pixelBuffer = lock.withLock({ latestPixelBuffer }) else { return nil }
-        var image = CIImage(cvPixelBuffer: pixelBuffer)
+        guard let frame = latestFrame() else { return nil }
+        return jpegData(for: frame)
+    }
+
+    func jpegData(for frame: CameraFrame) -> Data? {
+        var image = CIImage(cvPixelBuffer: frame.pixelBuffer)
         if image.extent.width > image.extent.height {
             image = image.oriented(.right)
         }

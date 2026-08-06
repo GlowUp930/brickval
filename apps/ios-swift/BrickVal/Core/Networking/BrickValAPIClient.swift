@@ -1,7 +1,6 @@
 import Foundation
 
 struct BrickValAPIClient: Sendable {
-    var detectMinifigures: @Sendable (Data) async throws -> HostedDetectionResult
     var scanMinifigure: @Sendable (Data) async throws -> MinifigScanResult
     var identify: @Sendable (Data, ScanMode, ScanIntent) async throws -> IdentificationResult
     var lookup: @Sendable (String, ItemType, Int?) async throws -> LookupResult
@@ -18,34 +17,6 @@ extension BrickValAPIClient {
         authToken: @escaping @Sendable () async -> String? = { nil }
     ) -> BrickValAPIClient {
         BrickValAPIClient(
-            detectMinifigures: { imageData in
-                var form = MultipartFormData()
-                form.append(name: "image", filename: "detection.jpg", contentType: "image/jpeg", fileData: imageData)
-                form.finalize()
-                let request = try await request(
-                    baseURL: configuration.baseURL,
-                    path: "/api/minifig/detect",
-                    method: "POST",
-                    body: form.data,
-                    contentType: form.contentType,
-                    token: authToken()
-                )
-                let (data, response) = try await session.data(for: request)
-                let payload: HostedDetectionPayload = try decodeResponse(
-                    data: data,
-                    response: response,
-                    endpoint: "minifig detect",
-                    allowingStatus: [200, 429]
-                )
-                if payload.status == "cap-reached" {
-                    return .capReached(modelVersion: payload.detectorModelVersion)
-                }
-                return .available(
-                    modelVersion: payload.detectorModelVersion,
-                    detectionMilliseconds: payload.detectMs,
-                    observations: payload.observations
-                )
-            },
             scanMinifigure: { imageData in
                 var form = MultipartFormData()
                 form.append(name: "image", filename: "scan.jpg", contentType: "image/jpeg", fileData: imageData)
@@ -69,9 +40,15 @@ extension BrickValAPIClient {
                     guard let identification = payload.identification, let result = payload.result else {
                         throw APIError(endpoint: "minifig scan", statusCode: 502, serverMessage: "The scan response was incomplete.")
                     }
-                    return .matched(identification: identification, result: result.normalized)
-                case "review": return .review(payload.detections ?? [])
-                default: return .notFound
+                    return .matched(
+                        identification: identification,
+                        result: result.normalized,
+                        timings: payload.timings
+                    )
+                case "review":
+                    return .review(payload.detections ?? [], timings: payload.timings)
+                default:
+                    return .notFound(timings: payload.timings)
                 }
             },
             identify: { imageData, mode, intent in

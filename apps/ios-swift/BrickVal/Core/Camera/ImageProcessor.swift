@@ -21,23 +21,34 @@ actor ImageProcessor {
         throw CameraError.sampleTooLarge
     }
 
-    func finalScanImage(from data: Data) throws -> Data {
+    func finalScanImage(
+        from data: Data,
+        focusBox: NormalizedBoundingBox? = nil
+    ) throws -> Data {
         guard let image = UIImage(data: data) else { throw CameraError.invalidImage }
         let normalized = normalize(image)
-        let pixels = normalized.size.width * normalized.scale * normalized.size.height * normalized.scale
-        let shouldResize = pixels > 1_150_000 || data.count > 2_000_000
-        let output: UIImage
-        if shouldResize {
-            let scale = 1024 / max(normalized.size.width, normalized.size.height)
-            output = resize(normalized, to: CGSize(
-                width: normalized.size.width * scale,
-                height: normalized.size.height * scale
-            ))
-        } else {
-            output = normalized
+        var source = normalized
+        var usedFocusCrop = false
+        if let focusBox,
+           let rect = FocusedScanCropPlanner.cropRect(for: focusBox, imageSize: normalized.size) {
+            source = try crop(normalized, to: rect)
+            usedFocusCrop = true
         }
-        guard let jpeg = output.jpegData(compressionQuality: 0.72) else { throw CameraError.invalidImage }
-        return jpeg
+
+        let byteLimit = usedFocusCrop ? 300 * 1024 : 500 * 1024
+        let dimensions: [CGFloat] = usedFocusCrop ? [896, 720, 600] : [1024, 896, 720]
+        for maximumDimension in dimensions {
+            let scale = min(1, maximumDimension / max(source.size.width, source.size.height))
+            let output = scale < 1
+                ? resize(source, to: CGSize(width: source.size.width * scale, height: source.size.height * scale))
+                : source
+            for quality in [0.72, 0.58, 0.44, 0.30] {
+                if let jpeg = output.jpegData(compressionQuality: quality), jpeg.count <= byteLimit {
+                    return jpeg
+                }
+            }
+        }
+        throw CameraError.sampleTooLarge
     }
 
     func previewObservations(

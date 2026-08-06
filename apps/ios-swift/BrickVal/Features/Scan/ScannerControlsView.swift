@@ -10,18 +10,12 @@ struct ScannerControlsView: View {
 
     var body: some View {
         ZStack {
-            if intent == .single, automaticScanAvailable {
-                Label("Scanning automatically", systemImage: "viewfinder")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(minHeight: 64)
-            } else {
-                Button(captureLabel, systemImage: "camera.circle.fill", action: capture)
-                    .labelStyle(.iconOnly)
-                    .font(.system(size: 66))
-                    .foregroundStyle(.white, .tint)
-                    .disabled(isBusy)
-            }
+            Button(captureLabel, systemImage: "camera.circle.fill", action: capture)
+                .labelStyle(.iconOnly)
+                .font(.system(size: 66))
+                .foregroundStyle(.white, .tint)
+                .disabled(isBusy)
+                .accessibilityHint(captureHint)
 
             HStack {
                 Spacer()
@@ -38,5 +32,11 @@ struct ScannerControlsView: View {
 
     private var captureLabel: String {
         intent == .bulk ? "Capture bulk scan" : "Scan minifigure"
+    }
+
+    private var captureHint: String {
+        automaticScanAvailable && intent == .single
+            ? "Capture now instead of waiting for automatic scanning"
+            : "Capture the camera image"
     }
 }

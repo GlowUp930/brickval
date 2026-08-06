@@ -3,12 +3,11 @@ import Foundation
 struct AutoScanSession: Equatable, Sendable {
     var phase: AutoScanPhase = .searching
     var captureRequested = false
-    var stableSince: Date?
     var consistentObservationCount = 0
     var blockReason: AutoScanBlockReason?
     var lastObservation: DetectionObservation?
 
-    mutating func observe(_ observations: [DetectionObservation]) {
+    mutating func observe(_ observations: [DetectionObservation], deviceStable: Bool = true) {
         guard observations.count <= 1 else {
             self = AutoScanSession(blockReason: .multiple)
             return
@@ -21,38 +20,24 @@ struct AutoScanSession: Equatable, Sendable {
             self = AutoScanSession(blockReason: .partial)
             return
         }
-        guard observation.confidence >= 0.75 else {
+        guard observation.confidence >= 0.30 else {
             self = AutoScanSession()
             return
         }
 
         let coverage = observation.detectionFrameCoverage ?? observation.boundingBox.area
-        guard (0.15 ... 0.75).contains(coverage) else {
+        guard (0.10 ... 0.75).contains(coverage) else {
             self = AutoScanSession()
             return
         }
 
         let remainsOnTarget = lastObservation.map { Self.isConsistent($0, observation) } == true
-        consistentObservationCount = remainsOnTarget ? consistentObservationCount + 1 : 1
+        consistentObservationCount = remainsOnTarget && deviceStable
+            ? consistentObservationCount + 1
+            : 1
         lastObservation = observation
-        if !remainsOnTarget {
-            stableSince = nil
-        }
-        captureRequested = false
         blockReason = nil
-        phase = consistentObservationCount >= 2 ? .detected : .searching
-    }
-
-    mutating func observeStability(now: Date, deviceStable: Bool, targetStable: Bool) {
-        guard consistentObservationCount >= 2, deviceStable, targetStable else {
-            phase = lastObservation == nil ? .searching : .detected
-            captureRequested = false
-            stableSince = nil
-            return
-        }
-        let start = stableSince ?? now
-        stableSince = start
-        if now.timeIntervalSince(start) >= 0.6 {
+        if consistentObservationCount >= 3, deviceStable {
             phase = .capturing
             captureRequested = true
         } else {

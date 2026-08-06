@@ -1,6 +1,6 @@
 # BrickVal Native iOS Context
 
-Last verified: 2026-08-03
+Last verified: 2026-08-06
 
 This is the working context for the canonical BrickVal mobile app. It is intentionally specific to the native SwiftUI app. Repository-wide rules remain in [`AGENTS.md`](../../AGENTS.md).
 
@@ -13,7 +13,7 @@ This is the working context for the canonical BrickVal mobile app. It is intenti
 - Swift version: 6.0 with strict concurrency enabled
 - Current marketing version: `1.0.1`
 - Source/UI baseline: native SwiftUI build `46` (`1f58cec`).
-- Current TestFlight upload number: `101`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so Apple requires the corrected native upload to use a higher number.
+- Current TestFlight build number: `102`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence.
 - XcodeGen source of truth: `project.yml`
 - Committed Xcode project: `BrickVal.xcodeproj`
 
@@ -61,6 +61,16 @@ Important scan files:
 
 ## Scan Flow
 
+The native single-minifigure scan flow is:
+
+1. `MinifigureDetector.mlmodel` runs locally against the latest camera pixel buffer at no more than six frames per second.
+2. Automatic capture requires one fully visible detection across three stable observations. The manual shutter remains available.
+3. The exact triggering frame freezes on screen. A focused JPEG with surrounding context is sent once to `/api/minifig/scan`.
+4. Brickognize identifies the figure; Core ML only supplies capture geometry.
+5. High-confidence results open directly. Low-confidence results present up to three unique alternatives and load their product cards in one minifigure bulk lookup.
+
+The bundled model is `coreml-v3-500`, trained with Create ML. Its source-data attribution and checksum are recorded in [`docs/third-party-notices.md`](docs/third-party-notices.md).
+
 The native bulk scan flow is:
 
 1. The user selects Bulk mode and captures one image.
@@ -88,7 +98,7 @@ Bulk result UI requirements:
 - External service credentials stay server-side. The native app uses hosted route handlers and does not contain provider secrets.
 - The primary native endpoints are identification, lookup, bulk lookup, part colors, and minifigure feedback. Confirm exact paths in `BrickValAPIClient.swift` before changing contracts.
 - The backend may return BrickLink image URLs beginning with `//`. Normalize these to `https://` before creating a Swift `URL`.
-- The hosted auto-detection route uses Roboflow when available and falls back to Brickognize box detection when Roboflow returns a billing/credit `402`. Do not remove this fallback unless a replacement detector is verified in production.
+- Build 102 performs single-scan box detection on-device and does not call `/api/minifig/detect`. Keep the hosted route available for older installed builds until they are no longer supported.
 - Prices displayed in the native app are USD unless the current product requirement explicitly changes this.
 - Do not change backend endpoints or paid-service behavior for a native-only UI fix without an explicit request.
 
@@ -115,13 +125,13 @@ Native Clerk sign-in requires `Configuration/Secrets.xcconfig`, which is ignored
 
 For visual QA, also use the `BrickVal iPhone 17 Pro` simulator when available. Always check the small iPhone before release, especially for sheets, long names, Dynamic Type, and controls near the bottom edge.
 
-The last verified test run contained 32 tests and passed on the small iPhone simulator.
+The last verified test run contained 42 tests and passed on the small iPhone simulator.
 
 ## Release Workflow
 
 - `project.yml` owns version and build settings; do not edit generated project settings as the lasting fix.
 - Increment `CURRENT_PROJECT_VERSION` for a new build. Keep `MARKETING_VERSION` unchanged unless the release version changes.
-- Treat the native SwiftUI source/UI baseline and App Store upload number as separate: the current interface is based on build 46, while build 101 is the required next upload because the mistaken Expo build 100 already exists in App Store Connect.
+- Treat the native SwiftUI source/UI baseline and App Store upload number as separate: the current interface is based on build 46, while build 102 is the current upload because Apple build numbers cannot return to 46 after builds 100 and 101.
 - Build and test before committing.
 - Commit focused changes with a message that states the behavioral fix.
 - Push verified native changes to `codex/swift-repo-structure` when useful and relevant.
@@ -138,7 +148,8 @@ The last verified test run contained 32 tests and passed on the small iPhone sim
 
 - The active mobile implementation is native SwiftUI under `apps/ios-swift/`.
 - Expo is archived and retained for migration reference, not new product work.
-- The Next.js app remains the hosted API/backend for native scanning.
+- The Next.js app remains the hosted API/backend for identity and pricing; single-scan capture detection runs locally through Core ML.
+- Local detection uses one in-flight latest-frame policy, a six-frames-per-second ceiling, and three-frame temporal consistency. It must never identify figures or contain provider credentials.
 - `project.yml` is the XcodeGen source of truth; the generated Xcode project is committed for direct opening.
 - Bulk scan results are detection-based, not identifier-only: duplicate physical copies may remain separate, while overlapping same-identifier detections are collapsed.
 - Bulk collection saves are atomic so free-limit, storage, or persistence failures cannot partially add a scan.

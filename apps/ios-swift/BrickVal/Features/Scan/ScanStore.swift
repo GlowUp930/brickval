@@ -1,6 +1,7 @@
 @preconcurrency import AVFoundation
 import Foundation
 import Observation
+import OSLog
 
 @Observable
 @MainActor
@@ -28,28 +29,35 @@ final class ScanStore {
     @ObservationIgnored private let motion: MotionStabilityService
     @ObservationIgnored private let imageProcessor: ImageProcessor
     @ObservationIgnored private let api: BrickValAPIClient
+    @ObservationIgnored private let detector: any MinifigureDetecting
     @ObservationIgnored private let soundEffects: SoundEffectPlayer
     @ObservationIgnored private var autoSession = AutoScanSession()
-    @ObservationIgnored private var schedule = HostedDetectionSchedule()
-    @ObservationIgnored private let hostedSmartScanEnabled: Bool
+    @ObservationIgnored private var schedule = LocalDetectionSchedule()
     @ObservationIgnored private var feedbackConsent = false
     @ObservationIgnored private var detectorDetectionMilliseconds: Int?
+    @ObservationIgnored private var autoScanStartedAt: Date?
+    @ObservationIgnored private var firstDetectionAt: Date?
+    @ObservationIgnored private let performanceLogger = Logger(
+        subsystem: "com.brickval.app",
+        category: "ScanPerformance"
+    )
 
     init(
         camera: CameraService = CameraService(),
         motion: MotionStabilityService = MotionStabilityService(),
         imageProcessor: ImageProcessor = ImageProcessor(),
         api: BrickValAPIClient = .live(),
-        hostedSmartScanEnabled: Bool = APIConfiguration.live.hostedSmartScanEnabled
+        detector: any MinifigureDetecting = CoreMLMinifigureDetector(),
+        onDeviceSmartScanEnabled: Bool = true
     ) {
         self.camera = camera
         self.motion = motion
         self.imageProcessor = imageProcessor
         self.api = api
+        self.detector = detector
         self.soundEffects = SoundEffectPlayer()
-        self.hostedSmartScanEnabled = hostedSmartScanEnabled
-        smartScanAvailable = hostedSmartScanEnabled
-        smartScanMessage = hostedSmartScanEnabled
+        smartScanAvailable = onDeviceSmartScanEnabled
+        smartScanMessage = onDeviceSmartScanEnabled
             ? nil
             : "Automatic scan paused. Tap the shutter to scan manually."
     }
@@ -79,18 +87,17 @@ final class ScanStore {
         do {
             try await camera.start()
             await motion.start()
+            autoScanStartedAt = .now
             phase = .searching
             while !Task.isCancelled {
-                try await Task.sleep(for: .milliseconds(100))
+                try await Task.sleep(for: .milliseconds(50))
                 guard phase != .result,
                       phase != .review,
                       phase != .capturing,
                       phase != .identifying
                 else { continue }
                 if canUseSmartScan {
-                    await pollSmartScan()
-                    guard canUseSmartScan else { continue }
-                    await advanceStability()
+                    await processLatestFrame()
                 }
             }
         } catch is CancellationError {
@@ -117,12 +124,13 @@ final class ScanStore {
     }
 
     func captureManually() async {
-        let canCapture = intent == .bulk || (intent == .single && !smartScanAvailable)
-        guard canCapture, phase != .capturing, phase != .identifying else { return }
+        guard phase != .capturing, phase != .identifying else { return }
         do {
             phase = .capturing
+            let captureStartedAt = Date.now
             let data = try await camera.captureFrame()
             frozenImageData = data
+            logCaptureDuration(since: captureStartedAt, automatic: false)
             try await identify(imageData: data)
         } catch {
             frozenImageData = nil
@@ -164,6 +172,30 @@ final class ScanStore {
         }
     }
 
+    func loadReviewCandidates(
+        _ candidates: [ScanReviewCandidate]
+    ) async throws -> [ScanReviewCandidate] {
+        let rows = try await api.bulkLookupMinifigures(candidates.map(\.identifier))
+        return ScanReviewCandidate.applying(rows, to: candidates)
+    }
+
+    func selectReviewCandidate(_ candidate: ScanReviewCandidate) async {
+        do {
+            phase = .identifying
+            let result: LookupResult
+            if let loadedResult = candidate.result {
+                result = loadedResult
+            } else {
+                result = try await api.lookup(candidate.identifier, .minifig, nil)
+            }
+            phase = .result
+            presentedSheet = .result(result)
+            soundEffects.play(.cashRegister)
+        } catch {
+            phase = .failed(error.localizedDescription)
+        }
+    }
+
     func loadPartColors() async throws -> [PartColorOption] {
         try await api.partColors()
     }
@@ -197,100 +229,116 @@ final class ScanStore {
         }
     }
 
-    private func pollSmartScan() async {
+    private func processLatestFrame() async {
         guard intent == .single else { return }
-        let cameraStable = await motion.isStable()
-        let now = Date.now
-        guard schedule.shouldSample(now: now, cameraStable: cameraStable) else { return }
-        schedule.start(now: now)
-        defer { schedule.complete() }
 
         do {
-            let source = try await camera.captureFrame()
-            let sample = try await imageProcessor.detectionSample(from: source, mode: .single)
-            switch try await api.detectMinifigures(sample) {
-            case .capReached(let modelVersion):
-                detectorModelVersion = modelVersion
-                disableSmartScan(message: "Automatic scanning reached its monthly limit.")
-            case .available(let modelVersion, let detectionMilliseconds, let newObservations):
-                detectorModelVersion = modelVersion
-                detectorDetectionMilliseconds = detectionMilliseconds
-                guard intent == .single else { return }
-                observations = try await imageProcessor.previewObservations(
-                    newObservations,
-                    sourceData: source,
-                    mode: .single
-                )
-                autoSession.observe(newObservations)
-                phase = autoSession.phase == .detected ? .holding : .searching
+            let frame = try await camera.latestFrame()
+            let now = Date.now
+            guard schedule.shouldProcess(frameTimestamp: frame.timestamp, now: now) else { return }
+            schedule.didStart(frameTimestamp: frame.timestamp, now: now)
+            defer { schedule.didFinish() }
+
+            let deviceStable = await motion.isStable()
+            let batch = try await detector.detect(in: frame)
+            guard intent == .single else { return }
+            detectorModelVersion = batch.modelVersion
+            detectorDetectionMilliseconds = batch.inferenceMilliseconds
+            observations = batch.observations
+            logDetection(batch, at: now)
+            autoSession.observe(batch.observations, deviceStable: deviceStable)
+            phase = autoSession.captureRequested ? .capturing : autoSession.phase == .searching ? .searching : .holding
+
+            guard autoSession.captureRequested, let focusBox = autoSession.lastObservation?.boundingBox else {
+                return
             }
+            await captureAutomatically(frame: frame, focusBox: focusBox)
         } catch is CancellationError {
             return
         } catch CameraError.frameUnavailable {
             return
-        } catch let error as APIError where [429, 503].contains(error.statusCode) {
-            disableSmartScan(message: "Automatic scanning is temporarily unavailable.")
         } catch {
-            disableSmartScan(message: "Automatic scanning paused because the detector could not be reached.")
+            disableSmartScan(message: "Automatic scanning paused because the on-device detector could not start.")
         }
     }
 
-    private func advanceStability() async {
-        let stable = await motion.isStable()
-        autoSession.observeStability(
-            now: .now,
-            deviceStable: stable,
-            targetStable: autoSession.lastObservation != nil
-        )
-        if autoSession.phase == .holding { phase = .holding }
-        guard autoSession.captureRequested else { return }
+    private func captureAutomatically(
+        frame: CameraFrame,
+        focusBox: NormalizedBoundingBox
+    ) async {
         do {
-            phase = .capturing
-            let data = try await camera.captureFrame()
-            try await identify(imageData: data)
+            let captureStartedAt = Date.now
+            let data = try await camera.jpegData(for: frame)
+            frozenImageData = data
+            logCaptureDuration(since: captureStartedAt, automatic: true)
+            try await identify(imageData: data, focusBox: focusBox)
+        } catch is CancellationError {
+            return
         } catch {
             frozenImageData = nil
             phase = .failed(error.localizedDescription)
         }
     }
 
-    private func identify(imageData: Data) async throws {
+    private func identify(
+        imageData: Data,
+        focusBox: NormalizedBoundingBox? = nil
+    ) async throws {
         let startedAt = Date.now
         phase = .identifying
         frozenImageData = imageData
-        let image = try await imageProcessor.finalScanImage(from: imageData)
-        frozenImageData = image
+        let image = try await imageProcessor.finalScanImage(from: imageData, focusBox: focusBox)
         if mode == .minifig, intent == .single {
             switch try await api.scanMinifigure(image) {
-            case .matched(let identification, let lookup):
+            case .matched(let identification, let lookup, let timings):
                 phase = .result
                 presentedSheet = .result(lookup)
                 soundEffects.play(.cashRegister)
+                logResultTimings(timings, startedAt: startedAt)
                 submitFeedback(
                     outcome: .matched,
                     image: image,
                     brickognizeID: identification.id,
                     brickognizeScore: identification.score,
-                    startedAt: startedAt
+                    startedAt: startedAt,
+                    timings: timings
                 )
-            case .review(let detections):
+            case .review(let detections, let timings):
+                let candidates = ScanReviewCandidate.make(from: detections)
+                guard !candidates.isEmpty else {
+                    phase = .failed("No minifigure match was found. Try a closer, brighter photo.")
+                    logResultTimings(timings, startedAt: startedAt)
+                    submitFeedback(
+                        outcome: .brickognizeRejected,
+                        image: image,
+                        brickognizeID: detections.first?.id,
+                        brickognizeScore: detections.first?.score,
+                        startedAt: startedAt,
+                        timings: timings
+                    )
+                    return
+                }
                 phase = .review
-                presentedSheet = .review(ScanReview(detections: detections))
+                presentedSheet = .review(ScanReview(candidates: candidates))
+                logResultTimings(timings, startedAt: startedAt)
                 submitFeedback(
                     outcome: .lowConfidence,
                     image: image,
                     brickognizeID: detections.first?.id,
                     brickognizeScore: detections.first?.score,
-                    startedAt: startedAt
+                    startedAt: startedAt,
+                    timings: timings
                 )
-            case .notFound:
+            case .notFound(let timings):
                 phase = .failed("No minifigure match was found. Try a closer, brighter photo.")
+                logResultTimings(timings, startedAt: startedAt)
                 submitFeedback(
                     outcome: .brickognizeRejected,
                     image: image,
                     brickognizeID: nil,
                     brickognizeScore: nil,
-                    startedAt: startedAt
+                    startedAt: startedAt,
+                    timings: timings
                 )
             }
             return
@@ -341,8 +389,10 @@ final class ScanStore {
     private func resetDetectionState() {
         observations = []
         autoSession = AutoScanSession()
-        schedule = HostedDetectionSchedule()
+        schedule = LocalDetectionSchedule()
         detectorDetectionMilliseconds = nil
+        autoScanStartedAt = .now
+        firstDetectionAt = nil
     }
 
     private func submitFeedback(
@@ -350,7 +400,8 @@ final class ScanStore {
         image: Data,
         brickognizeID: String?,
         brickognizeScore: Double?,
-        startedAt: Date
+        startedAt: Date,
+        timings: MinifigScanTimings
     ) {
         guard feedbackConsent else { return }
         let feedback = MinifigFeedback(
@@ -362,10 +413,35 @@ final class ScanStore {
             brickognizeID: brickognizeID,
             brickognizeScore: brickognizeScore,
             detectionMilliseconds: detectorDetectionMilliseconds,
-            identificationMilliseconds: nil,
-            pricingMilliseconds: nil,
+            identificationMilliseconds: timings.identificationMilliseconds,
+            pricingMilliseconds: timings.pricingMilliseconds,
             totalMilliseconds: Int(Date.now.timeIntervalSince(startedAt) * 1_000)
         )
         Task { try? await api.submitFeedback(feedback) }
+    }
+
+    private func logDetection(_ batch: MinifigureDetectionBatch, at now: Date) {
+        performanceLogger.info(
+            "model=\(batch.modelVersion, privacy: .public) inference_ms=\(batch.inferenceMilliseconds, privacy: .public) detections=\(batch.observations.count, privacy: .public)"
+        )
+        guard !batch.observations.isEmpty, firstDetectionAt == nil else { return }
+        firstDetectionAt = now
+        let elapsed = autoScanStartedAt.map { Int(now.timeIntervalSince($0) * 1_000) } ?? 0
+        performanceLogger.info("first_detection_ms=\(elapsed, privacy: .public)")
+    }
+
+    private func logCaptureDuration(since startedAt: Date, automatic: Bool) {
+        let elapsed = Int(Date.now.timeIntervalSince(startedAt) * 1_000)
+        performanceLogger.info(
+            "capture_ms=\(elapsed, privacy: .public) automatic=\(automatic, privacy: .public)"
+        )
+    }
+
+    private func logResultTimings(_ timings: MinifigScanTimings, startedAt: Date) {
+        let clientTotal = Int(Date.now.timeIntervalSince(startedAt) * 1_000)
+        let detectedToResult = firstDetectionAt.map { Int(Date.now.timeIntervalSince($0) * 1_000) } ?? clientTotal
+        performanceLogger.info(
+            "identify_ms=\(timings.identificationMilliseconds ?? -1, privacy: .public) pricing_ms=\(timings.pricingMilliseconds ?? -1, privacy: .public) server_total_ms=\(timings.totalMilliseconds ?? -1, privacy: .public) client_total_ms=\(clientTotal, privacy: .public) detected_to_result_ms=\(detectedToResult, privacy: .public)"
+        )
     }
 }
