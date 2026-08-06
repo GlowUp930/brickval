@@ -3,11 +3,14 @@ import SwiftUI
 struct CollectionView: View {
     @Environment(CollectionStore.self) private var store
     @Environment(AppRouter.self) private var router
+    @Environment(PreferencesStore.self) private var preferences
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var searchText = ""
     @State private var filter: CollectionFilter = .all
     @State private var isSearchVisible = false
     @State private var presentedSheet: CollectionSheet?
     @State private var horizon: PortfolioHorizon = .month
+    @State private var isShowingCollectionTips = false
 
     private let gridColumns = [
         GridItem(.flexible(), spacing: BrickValStyle.CollectionLayout.gridGap),
@@ -121,20 +124,40 @@ struct CollectionView: View {
         .toolbar(.hidden, for: .navigationBar)
         .refreshable { await store.load() }
         .overlay(alignment: .bottomTrailing) {
-            Button {
-                presentedSheet = .manualSet
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(BrickValStyle.Primitive.black)
-                    .frame(width: 60, height: 60)
-                    .background(BrickValStyle.Semantic.valuePositive, in: .circle)
-                    .shadow(color: BrickValStyle.Primitive.black.opacity(0.18), radius: 12, y: 6)
+            ZStack(alignment: .bottomTrailing) {
+                if isShowingCollectionTips {
+                    CollectionTipsCallout(dismiss: dismissCollectionTips)
+                        .padding(.trailing, 4)
+                        .padding(.bottom, 74)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+
+                Button {
+                    dismissCollectionTips()
+                    presentedSheet = .manualSet
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(BrickValStyle.Primitive.black)
+                        .frame(width: 60, height: 60)
+                        .background(BrickValStyle.Semantic.valuePositive, in: .circle)
+                        .shadow(color: BrickValStyle.Primitive.black.opacity(0.18), radius: 12, y: 6)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Add a LEGO set by number")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Add a LEGO set by number")
             .padding(.trailing, BrickValStyle.CollectionLayout.pageInset)
             .padding(.bottom, BrickValStyle.Primitive.space20)
+        }
+        .task {
+            guard !preferences.hasSeenCollectionTips else { return }
+            if !reduceMotion {
+                try? await Task.sleep(for: .milliseconds(420))
+            }
+            guard !Task.isCancelled, !preferences.hasSeenCollectionTips else { return }
+            withAnimation(reduceMotion ? nil : .snappy(duration: 0.28)) {
+                isShowingCollectionTips = true
+            }
         }
         .sheet(item: $presentedSheet) { sheet in
             switch sheet {
@@ -159,6 +182,88 @@ struct CollectionView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
+    }
+
+    private func dismissCollectionTips() {
+        guard isShowingCollectionTips || !preferences.hasSeenCollectionTips else { return }
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
+            isShowingCollectionTips = false
+        }
+        preferences.hasSeenCollectionTips = true
+    }
+}
+
+private struct CollectionTipsCallout: View {
+    let dismiss: () -> Void
+
+    private let surface = Color(.secondarySystemBackground)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space12) {
+            HStack(alignment: .top, spacing: BrickValStyle.Primitive.space8) {
+                Label("Quick start", systemImage: "sparkles")
+                    .font(.headline)
+                    .foregroundStyle(BrickValStyle.Semantic.textPrimary)
+                Spacer(minLength: 0)
+                Button(action: dismiss) {
+                    Image(systemName: "xmark")
+                        .font(.caption.weight(.bold))
+                        .frame(width: 30, height: 30)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                .accessibilityLabel("Dismiss collection tips")
+            }
+
+            Text("A few things to get you started")
+                .font(.subheadline)
+                .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+
+            tipRow("plus.circle.fill", title: "Add a set", detail: "Use the + button below to add a set by number.")
+            tipRow("viewfinder", title: "Scan items", detail: "Use Scan to identify minifigures and groups.")
+            tipRow("chart.line.uptrend.xyaxis", title: "Track value", detail: "Open an item for market history and New or Used prices.")
+
+            Button("Got it", action: dismiss)
+                .buttonStyle(.borderedProminent)
+                .tint(BrickValStyle.Semantic.valuePositive)
+                .foregroundStyle(BrickValStyle.Primitive.black)
+                .frame(maxWidth: .infinity)
+                .accessibilityHint("Dismisses the collection tips")
+        }
+        .padding(BrickValStyle.Primitive.space16)
+        .frame(maxWidth: 320, alignment: .leading)
+        .background(surface, in: .rect(cornerRadius: 18))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(BrickValStyle.Semantic.divider, lineWidth: 1)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            Image(systemName: "arrowtriangle.down.fill")
+                .font(.system(size: 17))
+                .foregroundStyle(surface)
+                .offset(x: -22, y: 11)
+        }
+        .shadow(color: BrickValStyle.Primitive.black.opacity(0.24), radius: 18, y: 8)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Collection quick start tips")
+    }
+
+    private func tipRow(_ icon: String, title: String, detail: String) -> some View {
+        HStack(alignment: .top, spacing: BrickValStyle.Primitive.space8) {
+            Image(systemName: icon)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(BrickValStyle.Semantic.valuePositive)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(BrickValStyle.Semantic.textPrimary)
+                Text(detail)
+                    .font(.footnote)
+                    .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 }
 
@@ -217,4 +322,5 @@ struct CollectionDisplayItem: Identifiable, Hashable {
     NavigationStack { CollectionView() }
         .environment(CollectionStore())
         .environment(AppRouter())
+        .environment(PreferencesStore())
 }

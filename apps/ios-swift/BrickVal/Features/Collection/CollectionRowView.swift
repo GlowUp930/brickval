@@ -80,7 +80,7 @@ struct CollectionRowView: View {
     }
 
     private var productPlateFill: Color {
-        colorScheme == .dark ? BrickValStyle.Primitive.white.opacity(0.96) : BrickValStyle.Primitive.white
+        BrickValStyle.Primitive.white
     }
 
     private var productPlateBorder: Color {

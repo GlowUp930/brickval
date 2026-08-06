@@ -13,6 +13,7 @@ final class PreferencesStore {
     var accent: AccentPreference { didSet { save(accent.rawValue, for: Keys.accent) } }
     var avatarName: String? { didSet { save(avatarName, for: Keys.avatar) } }
     var hasSeenHistoryTip: Bool { didSet { save(hasSeenHistoryTip, for: Keys.historyTip) } }
+    var hasSeenCollectionTips: Bool { didSet { save(hasSeenCollectionTips, for: Keys.collectionTips) } }
     var guestScansUsed: Int { didSet { save(guestScansUsed, for: Keys.guestScans) } }
     var hasRequestedReview: Bool { didSet { save(hasRequestedReview, for: Keys.reviewRequested) } }
 
@@ -28,6 +29,7 @@ final class PreferencesStore {
         accent = defaults.string(forKey: Keys.accent).flatMap(AccentPreference.init(rawValue:)) ?? .green
         avatarName = defaults.string(forKey: Keys.avatar)
         hasSeenHistoryTip = defaults.bool(forKey: Keys.historyTip)
+        hasSeenCollectionTips = defaults.bool(forKey: Keys.collectionTips)
         guestScansUsed = defaults.integer(forKey: Keys.guestScans)
         hasRequestedReview = defaults.bool(forKey: Keys.reviewRequested)
     }
@@ -61,6 +63,7 @@ final class PreferencesStore {
         static let accent = "brickval_accent_preference"
         static let avatar = "brickval_account_avatar"
         static let historyTip = "brickval_home_history_tip_seen"
+        static let collectionTips = "brickval_collection_tips_seen"
         static let guestScans = "guest_scan_lookups_used"
         static let reviewRequested = "brickval_review_requested"
     }
