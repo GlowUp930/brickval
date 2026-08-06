@@ -17,7 +17,12 @@ final class ScanStore {
     private(set) var phase: ScanPhase = .idle
     private(set) var authorizationStatus: CameraAuthorizationStatus = .notDetermined
     private(set) var observations: [DetectionObservation] = []
-    var presentedSheet: ScannerSheet?
+    var presentedSheet: ScannerSheet? {
+        didSet {
+            guard oldValue != nil, presentedSheet == nil else { return }
+            returnToLiveScanner()
+        }
+    }
     private(set) var smartScanAvailable = true
     private(set) var smartScanMessage: String?
     private(set) var detectorModelVersion: String?
@@ -213,7 +218,14 @@ final class ScanStore {
     }
 
     func reset() {
-        presentedSheet = nil
+        guard presentedSheet == nil else {
+            presentedSheet = nil
+            return
+        }
+        returnToLiveScanner()
+    }
+
+    private func returnToLiveScanner() {
         frozenImageData = nil
         phase = .searching
         resetDetectionState()

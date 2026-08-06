@@ -125,7 +125,7 @@ Native Clerk sign-in requires `Configuration/Secrets.xcconfig`, which is ignored
 
 For visual QA, also use the `BrickVal iPhone 17 Pro` simulator when available. Always check the small iPhone before release, especially for sheets, long names, Dynamic Type, and controls near the bottom edge.
 
-The last verified test run contained 42 tests and passed on the small iPhone simulator.
+The last verified test run contained 43 tests and passed on the small iPhone simulator.
 
 ## Release Workflow
 
