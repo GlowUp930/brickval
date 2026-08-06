@@ -12,6 +12,8 @@ struct SDKEnvironmentRootView: View {
                 review: .designDemo,
                 store: ScanStore(onDeviceSmartScanEnabled: false)
             )
+        } else if ProcessInfo.processInfo.arguments.contains("-showScanProcessingDemo") {
+            ScanProcessingDemoView()
         } else {
             appRoot
         }

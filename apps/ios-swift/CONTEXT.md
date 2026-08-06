@@ -27,9 +27,11 @@ Use these files in this order when working on the native app:
 
 1. The current user request and approved implementation plan.
 2. Repository rules in [`AGENTS.md`](../../AGENTS.md).
-3. This file for native app structure, workflows, and decisions.
-4. [`design-qa.md`](design-qa.md) for visual QA references and simulator expectations.
-5. Expo files only when investigating migration behavior or legacy data.
+3. [`docs/design/APPLE_HIG_CODEX.md`](docs/design/APPLE_HIG_CODEX.md) for every iOS design, implementation, and review task.
+4. [`.impeccable.md`](.impeccable.md) for BrickVal's users, brand personality, and aesthetic direction.
+5. This file for native app structure, workflows, and decisions.
+6. [`design-qa.md`](design-qa.md) for visual QA references and simulator expectations.
+7. Expo files only when investigating migration behavior or legacy data.
 
 Keep product-language definitions separate from implementation details. The archived Expo [`CONTEXT.md`](../expo-previous/CONTEXT.md) is not the authority for native UI or architecture.
 

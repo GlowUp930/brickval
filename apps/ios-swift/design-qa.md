@@ -35,6 +35,17 @@
 
 final result: passed
 
+## Scan Processing Motion QA — 2026-08-06
+
+- Verified the identifying animation on the iPhone 17 Pro and compact iPhone Simulators.
+- Confirmed the scan beam moves while identity and pricing work is in progress.
+- Confirmed the loading layout remains readable at Accessibility Large without clipping or text collisions.
+- Confirmed Reduce Motion replaces the moving beam with a static status mark; screenshots taken 1.5 seconds apart were pixel-identical.
+- The animation uses transform and opacity only, keeping Core ML and network processing prioritized.
+- VoiceOver exposes one concise, frequently updating status with the current phase and explanation.
+
+final result: passed
+
 ## Interactive Chart And Flow QA — 2026-07-15
 
 - Collection chart scrubber exposed the selected month and USD value through UI automation.
