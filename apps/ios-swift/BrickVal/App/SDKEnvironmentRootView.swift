@@ -18,6 +18,12 @@ struct SDKEnvironmentRootView: View {
                 SettingsView()
                     .withAppDestinations()
             }
+        } else if ProcessInfo.processInfo.arguments.contains("-showAccountDesignSectionsDemo") {
+            AccountDesignDraftsView(initialDraft: .sections)
+        } else if ProcessInfo.processInfo.arguments.contains("-showAccountDesignProfileCardDemo") {
+            AccountDesignDraftsView(initialDraft: .profileCard)
+        } else if ProcessInfo.processInfo.arguments.contains("-showAccountDesignDraftsDemo") {
+            AccountDesignDraftsView(initialDraft: .focus)
         } else if ProcessInfo.processInfo.arguments.contains("-showScannerProcessingLayoutDemo") {
             AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showScanResultDemo") {
