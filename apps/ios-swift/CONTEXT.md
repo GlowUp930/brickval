@@ -13,7 +13,7 @@ This is the working context for the canonical BrickVal mobile app. It is intenti
 - Swift version: 6.0 with strict concurrency enabled
 - Current marketing version: `1.0.1`
 - Source/UI baseline: native SwiftUI build `46` (`1f58cec`).
-- Current TestFlight build number: `109`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence. Build `103` was archived without the RevenueCat and Superwall keys; build `104` contains the corrected configuration, build `105` contains the profile and loading-brand updates, build `106` contains the text-only gradient Pro status mark, build `107` contains the stable post-capture scanner layout, build `108` contains the enlarged centered native scan-mode picker, and build `109` contains the approved image-lift motion on scan match review.
+- Current TestFlight build number: `110`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence. Build `103` was archived without the RevenueCat and Superwall keys; build `104` contains the corrected configuration, build `105` contains the profile and loading-brand updates, build `106` contains the text-only gradient Pro status mark, build `107` contains the stable post-capture scanner layout, build `108` contains the enlarged centered native scan-mode picker, build `109` contains the approved image-lift motion on scan match review, and build `110` contains the centered-stage profile redesign, expanded avatar library, persistent avatar backgrounds, and dynamic accent color propagation.
 - XcodeGen source of truth: `project.yml`
 - Committed Xcode project: `BrickVal.xcodeproj`
 
@@ -135,7 +135,7 @@ The last verified test run contained 44 tests and passed on the small iPhone sim
 
 - `project.yml` owns version and build settings; do not edit generated project settings as the lasting fix.
 - Increment `CURRENT_PROJECT_VERSION` for a new build. Keep `MARKETING_VERSION` unchanged unless the release version changes.
-- Treat the native SwiftUI source/UI baseline and App Store upload number as separate: the current interface is based on build 46, while build 107 is the current upload because Apple build numbers cannot return to 46 after builds 100 and 101.
+- Treat the native SwiftUI source/UI baseline and App Store upload number as separate: the current interface is based on build 46, while build 110 is the current upload because Apple build numbers cannot return to 46 after builds 100 and 101.
 - Build and test before committing.
 - Commit focused changes with a message that states the behavioral fix.
 - Push verified native changes to `codex/swift-repo-structure` when useful and relevant.

@@ -10,6 +10,11 @@ struct BrickValApp: App {
 
     init() {
         let entitlementStore = EntitlementStore()
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-showProfileTabDemo") {
+            entitlementStore.update(isPro: true)
+        }
+#endif
         _entitlements = State(initialValue: entitlementStore)
         _sdkCoordinator = State(initialValue: AppSDKCoordinator(entitlementStore: entitlementStore))
     }
@@ -24,8 +29,13 @@ struct BrickValApp: App {
                 .environment(\.appSDKCoordinator, sdkCoordinator)
                 .environment(\.brickValAPIClient, sdkCoordinator.apiClient)
                 .preferredColorScheme(entitlements.isPro ? preferences.theme.colorScheme : ThemePreference.dark.colorScheme)
-                .tint(entitlements.isPro ? preferences.accent.color : AccentPreference.green.color)
+                .environment(\.brickValAccent, activeAccent)
+                .tint(activeAccent)
                 .onOpenURL(perform: router.handle)
         }
+    }
+
+    private var activeAccent: Color {
+        entitlements.isPro ? preferences.accent.color : AccentPreference.green.color
     }
 }

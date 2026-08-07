@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingView: View {
     @Environment(PreferencesStore.self) private var preferences
+    @Environment(\.brickValAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var step: OnboardingStep = .value
     @State private var goal: PrimaryGoal?
@@ -39,7 +40,7 @@ struct OnboardingView: View {
         HStack(spacing: BrickValStyle.Primitive.space8) {
             ForEach(OnboardingStep.allCases) { item in
                 Capsule()
-                    .fill(item.index <= step.index ? BrickValStyle.Semantic.valuePositive : BrickValStyle.Semantic.divider)
+                    .fill(item.index <= step.index ? accent : BrickValStyle.Semantic.divider)
                     .frame(height: 4)
             }
         }
@@ -86,6 +87,8 @@ private struct OnboardingHero: View {
 }
 
 private struct OnboardingValueScreen: View {
+    @Environment(\.brickValAccent) private var accent
+
     var body: some View {
         VStack(spacing: BrickValStyle.Primitive.space24) {
             OnboardingHero(title: "Know what your LEGO is worth", subtitle: "Scan sets and minifigures, check value, and track your collection.")
@@ -94,7 +97,7 @@ private struct OnboardingValueScreen: View {
                 Text("SET").font(.caption.bold()).foregroundStyle(.secondary)
                 Text("75308  R2-D2").font(.title2.bold())
                 HStack { Text("Market Value").foregroundStyle(.secondary); Spacer(); Text("$214").font(.title.bold()).monospacedDigit() }
-                HStack { Spacer(); Text("+24%").font(.headline).foregroundStyle(BrickValStyle.Semantic.valuePositive).monospacedDigit() }
+                HStack { Spacer(); Text("+24%").font(.headline).foregroundStyle(accent).monospacedDigit() }
             }
             .padding()
             .background(.white, in: .rect(cornerRadius: 22))
@@ -105,6 +108,7 @@ private struct OnboardingValueScreen: View {
 }
 
 private struct OnboardingDemoScreen: View {
+    @Environment(\.brickValAccent) private var accent
     @State private var scanning = false
     var body: some View {
         VStack(spacing: BrickValStyle.Primitive.space24) {
@@ -112,7 +116,7 @@ private struct OnboardingDemoScreen: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 36).fill(BrickValStyle.Primitive.gray900)
                 Image(systemName: "viewfinder").font(.system(size: 150, weight: .ultraLight)).foregroundStyle(.white.opacity(0.8))
-                Capsule().fill(BrickValStyle.Semantic.valuePositive).frame(height: 3).padding(.horizontal, 28)
+                Capsule().fill(accent).frame(height: 3).padding(.horizontal, 28)
                     .offset(y: scanning ? 120 : -120)
             }
             .frame(maxWidth: 270, maxHeight: 430)
@@ -123,6 +127,7 @@ private struct OnboardingDemoScreen: View {
 }
 
 private struct OnboardingGoalScreen: View {
+    @Environment(\.brickValAccent) private var accent
     @Binding var selection: PrimaryGoal?
     var body: some View {
         VStack(spacing: BrickValStyle.Primitive.space24) {
@@ -137,10 +142,10 @@ private struct OnboardingGoalScreen: View {
                             }
                             Spacer()
                             Image(systemName: selection == goal ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(selection == goal ? BrickValStyle.Semantic.valuePositive : .secondary)
+                                .foregroundStyle(selection == goal ? accent : .secondary)
                         }
                         .padding().background(.white, in: .rect(cornerRadius: 16))
-                        .overlay { RoundedRectangle(cornerRadius: 16).stroke(selection == goal ? BrickValStyle.Semantic.valuePositive : BrickValStyle.Semantic.divider) }
+                        .overlay { RoundedRectangle(cornerRadius: 16).stroke(selection == goal ? accent : BrickValStyle.Semantic.divider) }
                     }
                     .buttonStyle(.plain)
                 }
@@ -151,6 +156,7 @@ private struct OnboardingGoalScreen: View {
 }
 
 private struct OnboardingTrustScreen: View {
+    @Environment(\.brickValAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isAnimating = false
 
@@ -164,7 +170,7 @@ private struct OnboardingTrustScreen: View {
                     .scaleEffect(isAnimating ? 1.04 : 0.96)
                     .opacity(isAnimating ? 0.7 : 1)
                 Circle()
-                    .fill(BrickValStyle.Semantic.valuePositive.opacity(isAnimating ? 0.14 : 0.08))
+                    .fill(accent.opacity(isAnimating ? 0.14 : 0.08))
                     .frame(width: 172, height: 172)
                     .scaleEffect(isAnimating ? 1.06 : 0.94)
                 Image("OnboardingShield").resizable().scaledToFit().frame(width: 110)
@@ -186,6 +192,7 @@ private struct OnboardingTrustScreen: View {
 }
 
 private struct OnboardingReviewScreen: View {
+    @Environment(\.brickValAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isAnimating = false
 
@@ -199,7 +206,7 @@ private struct OnboardingReviewScreen: View {
                     .scaleEffect(isAnimating ? 1.05 : 0.92)
                     .opacity(isAnimating ? 0.55 : 0.95)
                 Circle()
-                    .fill(BrickValStyle.Semantic.valuePositive.opacity(isAnimating ? 0.16 : 0.08))
+                    .fill(accent.opacity(isAnimating ? 0.16 : 0.08))
                     .frame(width: 136, height: 136)
                     .scaleEffect(isAnimating ? 1.08 : 0.96)
                 Image("OnboardingLogo")
@@ -210,7 +217,7 @@ private struct OnboardingReviewScreen: View {
                     .scaleEffect(isAnimating ? 1.02 : 1)
             }
             .frame(width: 172, height: 172)
-            Text("★★★★★").font(.title).foregroundStyle(BrickValStyle.Semantic.valuePositive)
+            Text("★★★★★").font(.title).foregroundStyle(accent)
             Text("Your feedback helps more LEGO collectors find the app and helps us improve it.")
                 .font(.body.weight(.medium)).foregroundStyle(.secondary).multilineTextAlignment(.center)
         }

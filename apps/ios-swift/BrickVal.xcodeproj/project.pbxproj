@@ -12,6 +12,7 @@
 		08C31477AC1CC38678FCF17E /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CA9F24F8BE45889A3C91E371 /* LaunchScreen.storyboard */; };
 		09D7E25492AC60F6562332FF /* LegacyPreferenceValues.swift in Sources */ = {isa = PBXBuildFile; fileRef = 290ABA13B70AFB4557194D83 /* LegacyPreferenceValues.swift */; };
 		0B6F4471F920CB2615445F56 /* SkeletonPlaceholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DD8191F11D45D599A79C607 /* SkeletonPlaceholder.swift */; };
+		0BA0A493FCB6D27B79075140 /* ProfileDesignDraftsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D852B26C280FAE4484AB8D02 /* ProfileDesignDraftsView.swift */; };
 		0D61DA3D984BFE947E25E8C0 /* AppSDKEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E35B79843A4B14E2B919817 /* AppSDKEnvironment.swift */; };
 		1019315FAED803EF8BAA78F4 /* VisionBoundingBoxMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F6023D2DA520817346734C6 /* VisionBoundingBoxMapper.swift */; };
 		10703F717626EE0AACE2517C /* SoundEffectPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6D6C178FB03314034C7A5B1 /* SoundEffectPlayer.swift */; };
@@ -40,6 +41,7 @@
 		3041E816B69933B6164B70CD /* SetLookupPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E2FC26058CB68B671AF2EEB /* SetLookupPayload.swift */; };
 		30994A31292D45F6CD85242A /* PhotoCaptureDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3A7522AD3DE6294F75198F6 /* PhotoCaptureDelegate.swift */; };
 		32160A5D4E2A29D139C276BA /* AutoScanBlockReason.swift in Sources */ = {isa = PBXBuildFile; fileRef = B11B009B7EA15DF13E630D06 /* AutoScanBlockReason.swift */; };
+		326C2EBF45D6E588F8E29651 /* AvatarBackgroundPreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4063237AA8939441ED586CB9 /* AvatarBackgroundPreference.swift */; };
 		32D9EE523E52D277F4CDA579 /* ScanReviewCandidateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BC93CDDC526B5A5108C24B3 /* ScanReviewCandidateTests.swift */; };
 		3866B504C222605347F581B1 /* CollectionTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D467B18F80E11703E6468EF9 /* CollectionTabView.swift */; };
 		39B27C9B12591952190BCB20 /* MinifigScanResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = F32C6AB0B8B3EF8BDC14F935 /* MinifigScanResult.swift */; };
@@ -198,6 +200,7 @@
 		3E90F936A1789385BD03F0D3 /* LocalDetectionSchedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalDetectionSchedule.swift; sourceTree = "<group>"; };
 		3F4AEB722B741DCE2C9C67E5 /* PartColorSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartColorSelectionView.swift; sourceTree = "<group>"; };
 		3F7F2DA54B70047594956E66 /* CollectorAvatarPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectorAvatarPicker.swift; sourceTree = "<group>"; };
+		4063237AA8939441ED586CB9 /* AvatarBackgroundPreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarBackgroundPreference.swift; sourceTree = "<group>"; };
 		41F40DA623249A61B2C00F61 /* ScanReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanReviewView.swift; sourceTree = "<group>"; };
 		42D61E6D6F834D68E54B0A94 /* ScanProcessingOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanProcessingOverlayView.swift; sourceTree = "<group>"; };
 		43552437C82A37C0BBD16CC2 /* APIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIError.swift; sourceTree = "<group>"; };
@@ -291,6 +294,7 @@
 		D6D6C178FB03314034C7A5B1 /* SoundEffectPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundEffectPlayer.swift; sourceTree = "<group>"; };
 		D74C8B2CFA1F934387EAE143 /* PurchasingError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchasingError.swift; sourceTree = "<group>"; };
 		D79EB98B6A6EFEC3218BC682 /* CardModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardModifier.swift; sourceTree = "<group>"; };
+		D852B26C280FAE4484AB8D02 /* ProfileDesignDraftsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileDesignDraftsView.swift; sourceTree = "<group>"; };
 		D9E2003B12A14D11AF013D22 /* ScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerView.swift; sourceTree = "<group>"; };
 		DC6681761589E128E3CE875D /* PortfolioHistoryBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioHistoryBuilderTests.swift; sourceTree = "<group>"; };
 		DC723047742450F9A2748AA2 /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
@@ -494,6 +498,7 @@
 			isa = PBXGroup;
 			children = (
 				5F8395A4685E831B69CB7D85 /* AccentPreference.swift */,
+				4063237AA8939441ED586CB9 /* AvatarBackgroundPreference.swift */,
 				84F68F865B6CD3BE103A436D /* CollectionRepository.swift */,
 				6D94C6E9B8E4D8C3DB776585 /* CollectionStore.swift */,
 				189881D73BA20ADBCA2D20F6 /* CollectionStoreError.swift */,
@@ -543,6 +548,7 @@
 				80571E569B420291019CDB48 /* AppearanceSettingsView.swift */,
 				E0BA1A0E8B533CF77961E977 /* ClerkAccountContentView.swift */,
 				3F7F2DA54B70047594956E66 /* CollectorAvatarPicker.swift */,
+				D852B26C280FAE4484AB8D02 /* ProfileDesignDraftsView.swift */,
 				52E253FA0F92DE11FF8055A3 /* SettingsView.swift */,
 				FFBFE5D27E5CABF2ACFE1E55 /* SubscriptionView.swift */,
 			);
@@ -853,6 +859,7 @@
 				32160A5D4E2A29D139C276BA /* AutoScanBlockReason.swift in Sources */,
 				8C14DE239CE8E0474B822585 /* AutoScanPhase.swift in Sources */,
 				E5C46C6A2286814408B0775E /* AutoScanSession.swift in Sources */,
+				326C2EBF45D6E588F8E29651 /* AvatarBackgroundPreference.swift in Sources */,
 				4CF7F3FC66CD353617B62E43 /* BrickValAPIClient.swift in Sources */,
 				2118C18E62E4D96B11D6E443 /* BrickValAPIEnvironment.swift in Sources */,
 				1D064B073B24B72DD81F9EBE /* BrickValApp.swift in Sources */,
@@ -931,6 +938,7 @@
 				6A4619528E4205EC476712D6 /* PortfolioSummaryView.swift in Sources */,
 				28ED6BC97F60E1B03AB88487 /* PreferencesStore.swift in Sources */,
 				BE162545471F3069EB8BF3FC /* PrimaryGoal.swift in Sources */,
+				0BA0A493FCB6D27B79075140 /* ProfileDesignDraftsView.swift in Sources */,
 				F0DCF56E2DE9BC7F0BBAE5FF /* PurchasingError.swift in Sources */,
 				402F0E0F4542BDE2F1C4F4F0 /* RevenueCatPurchaseController.swift in Sources */,
 				CF99662BD385ECA5ED8D7906 /* SDKEnvironmentRootView.swift in Sources */,
@@ -984,7 +992,7 @@
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution: HO LAM CHAN (4CQHLZBSU7)";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 109;
+				CURRENT_PROJECT_VERSION = 110;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1111,7 +1119,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 109;
+				CURRENT_PROJECT_VERSION = 110;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

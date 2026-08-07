@@ -3,6 +3,7 @@ import SwiftUI
 
 struct ScannerView: View {
     @Environment(PreferencesStore.self) private var preferences
+    @Environment(\.brickValAccent) private var accent
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
     @State private var store: ScanStore
@@ -135,7 +136,7 @@ struct ScannerView: View {
                     .foregroundStyle(.black)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
-                    .background(BrickValStyle.ScanResult.accent, in: .capsule)
+                    .background(accent, in: .capsule)
                     .padding(.top, 8)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }

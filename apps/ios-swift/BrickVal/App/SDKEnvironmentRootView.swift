@@ -5,7 +5,20 @@ struct SDKEnvironmentRootView: View {
 
     var body: some View {
 #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("-showScannerProcessingLayoutDemo") {
+        if ProcessInfo.processInfo.arguments.contains("-showProfileDesign1Demo") {
+            ProfileDesignDraftsView(initialDraft: .compact)
+        } else if ProcessInfo.processInfo.arguments.contains("-showProfileDesign2Demo") {
+            ProfileDesignDraftsView(initialDraft: .collectorCard)
+        } else if ProcessInfo.processInfo.arguments.contains("-showProfileDesign3Demo") {
+            ProfileDesignDraftsView(initialDraft: .nativeList)
+        } else if ProcessInfo.processInfo.arguments.contains("-showProfileDesign4Demo") {
+            ProfileDesignDraftsView(initialDraft: .stage)
+        } else if ProcessInfo.processInfo.arguments.contains("-showProfileTabDemo") {
+            NavigationStack {
+                SettingsView()
+                    .withAppDestinations()
+            }
+        } else if ProcessInfo.processInfo.arguments.contains("-showScannerProcessingLayoutDemo") {
             AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showScanResultDemo") {
             ScanResultView(result: .designDemo, reset: {})

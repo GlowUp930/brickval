@@ -7,6 +7,7 @@ struct ScanResultView: View {
     @Environment(CollectionStore.self) private var collection
     @Environment(EntitlementStore.self) private var entitlements
     @Environment(PreferencesStore.self) private var preferences
+    @Environment(\.brickValAccent) private var accent
 
     let result: LookupResult
     let reset: () -> Void
@@ -73,7 +74,7 @@ struct ScanResultView: View {
                         .foregroundStyle(BrickValStyle.Primitive.black)
                         .padding(.horizontal, BrickValStyle.Primitive.space16)
                         .padding(.vertical, BrickValStyle.Primitive.space12)
-                        .background(BrickValStyle.ScanResult.accent, in: .capsule)
+                        .background(accent, in: .capsule)
                         .padding(.top, BrickValStyle.Primitive.space12)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
@@ -130,7 +131,7 @@ struct ScanResultView: View {
             HStack {
                 Label(sourceLabel, systemImage: result.pricing.dataSource == "sold" ? "checkmark.seal.fill" : "tag.fill")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(BrickValStyle.ScanResult.accent)
+                    .foregroundStyle(accent)
                 Spacer()
                 Text("USD").font(.caption.bold()).foregroundStyle(BrickValStyle.ScanResult.textSecondary)
             }
@@ -166,11 +167,11 @@ struct ScanResultView: View {
                     Text("Price Signal").font(.title3.bold()).foregroundStyle(BrickValStyle.ScanResult.textPrimary)
                 }
                 Spacer()
-                Image(systemName: "chart.line.uptrend.xyaxis").foregroundStyle(BrickValStyle.ScanResult.accent)
+                Image(systemName: "chart.line.uptrend.xyaxis").foregroundStyle(accent)
             }
             InteractiveStockChart(
                 points: historyPoints,
-                lineColor: BrickValStyle.ScanResult.accent,
+                lineColor: accent,
                 popupBackground: BrickValStyle.ScanResult.textPrimary,
                 popupForeground: BrickValStyle.ScanResult.canvas
             )
@@ -178,7 +179,7 @@ struct ScanResultView: View {
             ChartHorizonPicker(
                 selection: $horizon,
                 timelinePoints: historyPoints,
-                tint: BrickValStyle.ScanResult.accent,
+                tint: accent,
                 inactive: BrickValStyle.ScanResult.textSecondary
             )
         }
@@ -190,7 +191,7 @@ struct ScanResultView: View {
             Stepper("Collection Quantity: \(quantity)", value: $quantity, in: 1 ... 99)
                 .font(.headline)
                 .foregroundStyle(BrickValStyle.ScanResult.textPrimary)
-                .tint(BrickValStyle.ScanResult.accent)
+                .tint(accent)
                 .padding(.horizontal, BrickValStyle.Primitive.space16)
                 .frame(minHeight: BrickValStyle.ScanResult.controlHeight)
                 .background(BrickValStyle.ScanResult.surface, in: RoundedRectangle(cornerRadius: BrickValStyle.ScanResult.buttonRadius))
@@ -208,7 +209,7 @@ struct ScanResultView: View {
                 .font(.headline)
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: BrickValStyle.ScanResult.controlHeight)
-                .background((prominent || isSaved) ? BrickValStyle.ScanResult.accent : BrickValStyle.ScanResult.surface,
+                .background((prominent || isSaved) ? accent : BrickValStyle.ScanResult.surface,
                             in: RoundedRectangle(cornerRadius: BrickValStyle.ScanResult.buttonRadius))
                 .overlay {
                     if !prominent && !isSaved {

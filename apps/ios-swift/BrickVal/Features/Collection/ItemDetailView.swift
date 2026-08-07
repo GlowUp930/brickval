@@ -5,6 +5,7 @@ struct ItemDetailView: View {
     @Environment(EntitlementStore.self) private var entitlements
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.brickValAccent) private var accent
     let item: CollectionItem
 
     @State private var selectedCondition: DetailConditionOption
@@ -176,7 +177,7 @@ struct ItemDetailView: View {
                         .font(.title3.bold())
                         .monospacedDigit()
                 }
-                .foregroundStyle(marketChange ?? 0 >= 0 ? BrickValStyle.ScanResult.accent : BrickValStyle.Semantic.valueNegative)
+                .foregroundStyle(marketChange ?? 0 >= 0 ? accent : BrickValStyle.Semantic.valueNegative)
                 if let marketChange {
                     Text(marketChange, format: .percent.precision(.fractionLength(2)))
                         .font(.subheadline)
@@ -225,7 +226,7 @@ struct ItemDetailView: View {
 
             InteractiveStockChart(
                 points: historyPoints,
-                lineColor: BrickValStyle.ScanResult.accent,
+                lineColor: accent,
                 popupBackground: BrickValStyle.ScanResult.textPrimary,
                 popupForeground: BrickValStyle.ScanResult.canvas
             )
@@ -255,7 +256,7 @@ struct ItemDetailView: View {
                             colors: [
                                 Color(red: 0.22, green: 0.48, blue: 1.0),
                                 Color(red: 0.28, green: 0.84, blue: 0.78),
-                                BrickValStyle.ScanResult.accent,
+                                accent,
                                 Color(red: 1.0, green: 0.86, blue: 0.13),
                                 Color(red: 0.22, green: 0.48, blue: 1.0),
                             ],
@@ -264,7 +265,7 @@ struct ItemDetailView: View {
                         lineWidth: 2.5
                     )
             }
-            .shadow(color: BrickValStyle.ScanResult.accent.opacity(0.18), radius: 10, y: 4)
+            .shadow(color: accent.opacity(0.18), radius: 10, y: 4)
             .accessibilityLabel("Graph shows recent sold listings")
     }
 
@@ -396,7 +397,7 @@ struct ItemDetailView: View {
                 Image(systemName: "plus")
                     .font(.headline)
                     .frame(width: 38, height: 38)
-                    .background(BrickValStyle.ScanResult.accent, in: .circle)
+                    .background(accent, in: .circle)
                     .foregroundStyle(BrickValStyle.Primitive.black)
             }
             .buttonStyle(.plain)

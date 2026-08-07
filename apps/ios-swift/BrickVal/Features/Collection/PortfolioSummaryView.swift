@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PortfolioSummaryView: View {
+    @Environment(\.brickValAccent) private var accent
     let value: Double
     let items: [CollectionItem]
     let horizon: PortfolioHorizon
@@ -15,7 +16,7 @@ struct PortfolioSummaryView: View {
     private var changePercent: Double { previousValue > 0 ? change / previousValue : 0 }
     private var changeSign: String { change >= 0 ? "+" : "−" }
     private var changeColor: Color {
-        change >= 0 ? BrickValStyle.Semantic.valuePositive : BrickValStyle.Semantic.valueNegative
+        change >= 0 ? accent : BrickValStyle.Semantic.valueNegative
     }
 
     var body: some View {

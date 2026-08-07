@@ -4,6 +4,7 @@ struct BulkScanResultsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(CollectionStore.self) private var collection
     @Environment(EntitlementStore.self) private var entitlements
+    @Environment(\.brickValAccent) private var accent
 
     let items: [BulkScanResultItem]
     let store: ScanStore
@@ -13,7 +14,6 @@ struct BulkScanResultsView: View {
     @State private var errorMessage: String?
 
     private let capturedImage: UIImage?
-    private let accent = BrickValStyle.ScanResult.accent
     private let canvas = BrickValStyle.ScanResult.canvas
 
     init(imageData: Data, items: [BulkScanResultItem], store: ScanStore) {

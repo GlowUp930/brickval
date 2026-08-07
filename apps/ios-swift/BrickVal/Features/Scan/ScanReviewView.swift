@@ -4,6 +4,7 @@ struct ScanReviewView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.brickValAccent) private var accent
 
     let review: ScanReview
     let store: ScanStore
@@ -77,7 +78,7 @@ struct ScanReviewView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(candidates.count == 1 ? "CONFIRM MATCH" : "CONFIDENCE FIRST")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(BrickValStyle.ScanResult.accent)
+                .foregroundStyle(accent)
                 .textCase(.uppercase)
                 .tracking(0.7)
 
@@ -158,11 +159,11 @@ struct ScanReviewView: View {
                                 .foregroundStyle(.black)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 5)
-                                .background(BrickValStyle.ScanResult.accent, in: Capsule())
+                                .background(accent, in: Capsule())
 
                             Text(candidate.score, format: .percent.precision(.fractionLength(0)))
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(BrickValStyle.ScanResult.accent)
+                                .foregroundStyle(accent)
                         }
 
                         candidateName(candidate, font: .headline, featured: true)
@@ -194,7 +195,7 @@ struct ScanReviewView: View {
             .modifier(ReviewSurfaceModifier(interactive: true))
             .overlay {
                 RoundedRectangle(cornerRadius: 20)
-                    .stroke(isSelected ? BrickValStyle.ScanResult.accent : .clear, lineWidth: 2)
+                    .stroke(isSelected ? accent : .clear, lineWidth: 2)
             }
         }
         .buttonStyle(.plain)
@@ -225,7 +226,7 @@ struct ScanReviewView: View {
                             candidate.score.formatted(.percent.precision(.fractionLength(0))),
                             systemImage: "checkmark.seal.fill"
                         )
-                        .foregroundStyle(isSelected ? BrickValStyle.ScanResult.accent : .secondary)
+                        .foregroundStyle(isSelected ? accent : .secondary)
 
                     candidatePrice(candidate, font: .caption.weight(.semibold), accent: false)
                     }
@@ -235,7 +236,7 @@ struct ScanReviewView: View {
 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(isSelected ? BrickValStyle.ScanResult.accent : .secondary)
+                    .foregroundStyle(isSelected ? accent : .secondary)
                     .scaleEffect(isSelected ? 1 : 0.92)
                     .accessibilityHidden(true)
             }
@@ -244,7 +245,7 @@ struct ScanReviewView: View {
             .modifier(ReviewSurfaceModifier(interactive: true, cornerRadius: 16))
             .overlay {
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(isSelected ? BrickValStyle.ScanResult.accent : .clear, lineWidth: 1.5)
+                    .stroke(isSelected ? accent : .clear, lineWidth: 1.5)
             }
         }
         .buttonStyle(.plain)
@@ -281,7 +282,7 @@ struct ScanReviewView: View {
            let price = result.pricing.preferredUsedValue ?? result.pricing.preferredNewValue {
             Text(price, format: .currency(code: "USD"))
                 .font(font)
-                .foregroundStyle(accent ? BrickValStyle.ScanResult.accent : .primary)
+                .foregroundStyle(accent ? self.accent : .primary)
         } else if isLoading {
             SkeletonPlaceholder(cornerRadius: 4)
                 .frame(width: 72, height: 16)
@@ -350,7 +351,7 @@ struct ScanReviewView: View {
                 buttonLabel
             }
             .buttonStyle(.glassProminent)
-            .tint(BrickValStyle.ScanResult.accent)
+            .tint(accent)
             .disabled(!isEnabled)
         } else {
             Button {
@@ -361,7 +362,7 @@ struct ScanReviewView: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
                     .background(
-                        isEnabled ? BrickValStyle.ScanResult.accent : Color(uiColor: .tertiarySystemFill),
+                        isEnabled ? accent : Color(uiColor: .tertiarySystemFill),
                         in: RoundedRectangle(cornerRadius: 16)
                     )
             }

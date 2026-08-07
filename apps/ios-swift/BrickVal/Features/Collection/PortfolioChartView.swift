@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PortfolioChartView: View {
+    @Environment(\.brickValAccent) private var accent
     let items: [CollectionItem]
     @Binding var horizon: PortfolioHorizon
 
@@ -16,7 +17,7 @@ struct PortfolioChartView: View {
                 if points.count > 1 {
                     InteractiveStockChart(
                         points: points,
-                        lineColor: BrickValStyle.Semantic.valuePositive,
+                        lineColor: accent,
                         popupBackground: BrickValStyle.Semantic.textPrimary,
                         popupForeground: BrickValStyle.Semantic.canvas,
                         showsFill: false
@@ -36,7 +37,7 @@ struct PortfolioChartView: View {
             ChartHorizonPicker(
                 selection: $horizon,
                 timelinePoints: points,
-                tint: BrickValStyle.Semantic.valuePositive,
+                        tint: accent,
                 inactive: BrickValStyle.Semantic.textSecondary
             )
         }

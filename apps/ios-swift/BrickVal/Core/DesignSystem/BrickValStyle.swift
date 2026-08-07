@@ -1,5 +1,16 @@
 import SwiftUI
 
+private struct BrickValAccentKey: EnvironmentKey {
+    static let defaultValue = AccentPreference.green.color
+}
+
+extension EnvironmentValues {
+    var brickValAccent: Color {
+        get { self[BrickValAccentKey.self] }
+        set { self[BrickValAccentKey.self] = newValue }
+    }
+}
+
 enum BrickValStyle {
     // Raw values. Features should consume Semantic or component tokens below.
     enum Primitive {

@@ -4,6 +4,7 @@ struct CollectionView: View {
     @Environment(CollectionStore.self) private var store
     @Environment(AppRouter.self) private var router
     @Environment(PreferencesStore.self) private var preferences
+    @Environment(\.brickValAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var searchText = ""
     @State private var filter: CollectionFilter = .all
@@ -55,7 +56,7 @@ struct CollectionView: View {
                             withAnimation(.snappy(duration: 0.2)) { isSearchVisible = false }
                         }
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(BrickValStyle.Semantic.valuePositive)
+                        .foregroundStyle(accent)
                     }
                     .frame(height: BrickValStyle.CollectionLayout.minimumTapTarget)
                     .padding(.horizontal, BrickValStyle.Primitive.space12)
@@ -140,7 +141,7 @@ struct CollectionView: View {
                         .font(.system(size: 24, weight: .semibold))
                         .foregroundStyle(BrickValStyle.Primitive.black)
                         .frame(width: 60, height: 60)
-                        .background(BrickValStyle.Semantic.valuePositive, in: .circle)
+                        .background(accent, in: .circle)
                         .shadow(color: BrickValStyle.Primitive.black.opacity(0.18), radius: 12, y: 6)
                 }
                 .buttonStyle(.plain)
@@ -194,6 +195,7 @@ struct CollectionView: View {
 }
 
 private struct CollectionTipsCallout: View {
+    @Environment(\.brickValAccent) private var accent
     let dismiss: () -> Void
 
     private let surface = Color(.secondarySystemBackground)
@@ -225,7 +227,7 @@ private struct CollectionTipsCallout: View {
 
             Button("Got it", action: dismiss)
                 .buttonStyle(.borderedProminent)
-                .tint(BrickValStyle.Semantic.valuePositive)
+                .tint(accent)
                 .foregroundStyle(BrickValStyle.Primitive.black)
                 .frame(maxWidth: .infinity)
                 .accessibilityHint("Dismisses the collection tips")
@@ -252,7 +254,7 @@ private struct CollectionTipsCallout: View {
         HStack(alignment: .top, spacing: BrickValStyle.Primitive.space8) {
             Image(systemName: icon)
                 .font(.body.weight(.semibold))
-                .foregroundStyle(BrickValStyle.Semantic.valuePositive)
+                .foregroundStyle(accent)
                 .frame(width: 24)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)

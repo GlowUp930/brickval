@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftUI
 
 @Observable
 @MainActor
@@ -12,6 +13,7 @@ final class PreferencesStore {
     var theme: ThemePreference { didSet { save(theme.rawValue, for: Keys.theme) } }
     var accent: AccentPreference { didSet { save(accent.rawValue, for: Keys.accent) } }
     var avatarName: String? { didSet { save(avatarName, for: Keys.avatar) } }
+    var avatarBackground: AvatarBackgroundPreference { didSet { save(avatarBackground.rawValue, for: Keys.avatarBackground) } }
     var hasSeenHistoryTip: Bool { didSet { save(hasSeenHistoryTip, for: Keys.historyTip) } }
     var hasSeenCollectionTips: Bool { didSet { save(hasSeenCollectionTips, for: Keys.collectionTips) } }
     var guestScansUsed: Int { didSet { save(guestScansUsed, for: Keys.guestScans) } }
@@ -28,6 +30,7 @@ final class PreferencesStore {
         theme = defaults.string(forKey: Keys.theme).flatMap(ThemePreference.init(rawValue:)) ?? .dark
         accent = defaults.string(forKey: Keys.accent).flatMap(AccentPreference.init(rawValue:)) ?? .green
         avatarName = defaults.string(forKey: Keys.avatar)
+        avatarBackground = defaults.string(forKey: Keys.avatarBackground).flatMap(AvatarBackgroundPreference.init(rawValue:)) ?? .accent
         hasSeenHistoryTip = defaults.bool(forKey: Keys.historyTip)
         hasSeenCollectionTips = defaults.bool(forKey: Keys.collectionTips)
         guestScansUsed = defaults.integer(forKey: Keys.guestScans)
@@ -62,9 +65,31 @@ final class PreferencesStore {
         static let theme = "brickval_theme_preference"
         static let accent = "brickval_accent_preference"
         static let avatar = "brickval_account_avatar"
+        static let avatarBackground = "brickval_account_avatar_background"
+        static let avatarCustomColor = "brickval_account_avatar_custom_color"
         static let historyTip = "brickval_home_history_tip_seen"
         static let collectionTips = "brickval_collection_tips_seen"
         static let guestScans = "guest_scan_lookups_used"
         static let reviewRequested = "brickval_review_requested"
+    }
+
+    var avatarBackgroundColor: Color {
+        get {
+            if avatarBackground == .accent {
+                return accent.color
+            }
+            if avatarBackground == .custom,
+               let data = defaults.data(forKey: Keys.avatarCustomColor),
+               let stored = try? JSONDecoder().decode(StoredAvatarColor.self, from: data) {
+                return stored.color
+            }
+            return avatarBackground.color
+        }
+        set {
+            avatarBackground = .custom
+            if let data = try? JSONEncoder().encode(StoredAvatarColor(color: newValue)) {
+                defaults.set(data, forKey: Keys.avatarCustomColor)
+            }
+        }
     }
 }
