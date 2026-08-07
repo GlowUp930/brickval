@@ -13,6 +13,7 @@ struct ScanReviewView: View {
     @State private var isLoading: Bool
     @State private var isConfirming = false
     @State private var loadError: String?
+    @State private var isEntranceVisible = false
 
     init(review: ScanReview, store: ScanStore) {
         self.review = review
@@ -64,6 +65,10 @@ struct ScanReviewView: View {
             }
             .task {
                 await loadCandidatesIfNeeded()
+                guard !Task.isCancelled else { return }
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.34)) {
+                    isEntranceVisible = true
+                }
             }
         }
     }
@@ -101,15 +106,20 @@ struct ScanReviewView: View {
                 featuredCard(topCandidate)
 
                 if !otherCandidates.isEmpty {
-                    Text("Other possibilities")
-                        .font(.headline)
-                        .padding(.top, 4)
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Other possibilities")
+                            .font(.headline)
+                            .padding(.top, 4)
 
-                    candidateSurfaces {
-                        ForEach(otherCandidates) { candidate in
-                            candidateRow(candidate)
+                        candidateSurfaces {
+                            ForEach(otherCandidates) { candidate in
+                                candidateRow(candidate)
+                            }
                         }
                     }
+                    .opacity(isLoading || isEntranceVisible ? 1 : 0)
+                    .offset(y: isLoading || isEntranceVisible ? 0 : 6)
+                    .animation(otherCandidatesLiftAnimation, value: isEntranceVisible)
                 }
             }
         }
@@ -137,6 +147,9 @@ struct ScanReviewView: View {
                     candidateImage(candidate)
                         .frame(width: dynamicTypeSize.isAccessibilitySize ? 92 : 108,
                                height: dynamicTypeSize.isAccessibilitySize ? 92 : 108)
+                        .scaleEffect(isLoading || isEntranceVisible ? 1 : 0.82)
+                        .opacity(isLoading || isEntranceVisible ? 1 : 0)
+                        .animation(imageLiftAnimation, value: isEntranceVisible)
 
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 8) {
@@ -158,6 +171,9 @@ struct ScanReviewView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
+                    .opacity(isLoading || isEntranceVisible ? 1 : 0)
+                    .offset(y: isLoading || isEntranceVisible ? 0 : 5)
+                    .animation(detailsLiftAnimation, value: isEntranceVisible)
                 }
 
                 HStack {
@@ -169,6 +185,9 @@ struct ScanReviewView: View {
 
                     candidatePrice(candidate, font: .title3.weight(.bold))
                 }
+                .opacity(isLoading || isEntranceVisible ? 1 : 0)
+                .offset(y: isLoading || isEntranceVisible ? 0 : 5)
+                .animation(detailsLiftAnimation, value: isEntranceVisible)
             }
             .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -386,6 +405,18 @@ struct ScanReviewView: View {
         withAnimation(animation) {
             selectedID = candidate.id
         }
+    }
+
+    private var imageLiftAnimation: Animation? {
+        reduceMotion ? nil : .easeOut(duration: 0.34)
+    }
+
+    private var detailsLiftAnimation: Animation? {
+        reduceMotion ? nil : .easeOut(duration: 0.30).delay(0.08)
+    }
+
+    private var otherCandidatesLiftAnimation: Animation? {
+        reduceMotion ? nil : .easeOut(duration: 0.30).delay(0.16)
     }
 
     private func confirmSelection() {
