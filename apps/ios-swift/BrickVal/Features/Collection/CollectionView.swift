@@ -73,18 +73,8 @@ struct CollectionView: View {
                         .padding(.top, BrickValStyle.CollectionLayout.chartTop)
 
                     if visibleItems.isEmpty {
-                        ContentUnavailableView(
-                            searchText.isEmpty ? "Your collection is empty" : "No matching items",
-                            systemImage: searchText.isEmpty ? "shippingbox" : "magnifyingglass",
-                            description: Text(searchText.isEmpty ? "Scan your first LEGO item to begin." : "Try another name or item number.")
-                        )
-                        Button("Open scanner", systemImage: "viewfinder") {
-                            router.selectedTab = .scan
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(BrickValStyle.Semantic.textPrimary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, BrickValStyle.Primitive.space12)
+                        emptyCollectionState
+                            .padding(.top, BrickValStyle.CollectionLayout.sectionTop)
                     } else {
                         HStack {
                             Text("Inventory")
@@ -169,6 +159,49 @@ struct CollectionView: View {
                 }
             }
         }
+    }
+
+    private var emptyCollectionState: some View {
+        let isEmpty = searchText.isEmpty
+        let stateColor = isEmpty ? accent : BrickValStyle.Semantic.textSecondary
+
+        return VStack(spacing: BrickValStyle.Primitive.space12) {
+            Image(systemName: isEmpty ? "shippingbox" : "magnifyingglass")
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(stateColor)
+                .frame(width: 64, height: 64)
+                .background(stateColor.opacity(0.12), in: .circle)
+                .accessibilityHidden(true)
+
+            Text(isEmpty ? "Your collection is empty" : "No matching items")
+                .font(.headline)
+                .foregroundStyle(BrickValStyle.Semantic.textPrimary)
+                .multilineTextAlignment(.center)
+
+            Text(isEmpty ? "Scan your first LEGO item to start tracking its value." : "Try another name or item number.")
+                .font(.subheadline)
+                .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if isEmpty {
+                Button {
+                    router.selectedTab = .scan
+                } label: {
+                    Label("Scan your first LEGO", systemImage: "viewfinder")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(accent)
+                .foregroundStyle(BrickValStyle.Primitive.black)
+                .controlSize(.large)
+                .accessibilityHint("Opens the scanner")
+                .padding(.top, BrickValStyle.Primitive.space4)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, BrickValStyle.Primitive.space24)
+        .accessibilityElement(children: .contain)
     }
 
     private func headerButton(_ systemName: String, label: String, action: @escaping () -> Void) -> some View {
