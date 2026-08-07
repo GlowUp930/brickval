@@ -25,7 +25,7 @@ struct ClerkAccountContentView: View {
                 }
             }
         }
-        .navigationTitle("Account")
+        .navigationTitle("Manage Account")
         .task(id: clerk.user?.id) {
             await coordinator?.synchronizeIdentity(userID: clerk.user?.id)
         }

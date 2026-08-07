@@ -13,14 +13,22 @@ struct SettingsView: View {
     @State private var purchaseMessage: String?
 
     private var selectedAvatar: CollectorAvatar {
-        CollectorAvatar.selected(from: preferences.avatarName)
+        guard coordinator?.clerk?.user != nil else { return .classic }
+        return CollectorAvatar.selected(from: preferences.avatarName)
     }
 
     var body: some View {
         @Bindable var preferences = preferences
         ScrollView {
             VStack(spacing: BrickValStyle.Primitive.space20) {
-                profileHero
+                Button {
+                    showAccount = true
+                } label: {
+                    profileHero
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Builder dashboard")
+                .accessibilityHint("Opens Manage Account to sign in or update your collector profile")
                 profileActions
                 scannerSettings(
                     autoScan: $preferences.smartAutoScanEnabled,
@@ -69,9 +77,15 @@ struct SettingsView: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(BrickValStyle.Primitive.black.opacity(0.68))
                 }
-                Spacer()
-                if entitlements.isPro {
-                    proLogo
+                Spacer(minLength: BrickValStyle.Primitive.space8)
+                HStack(spacing: BrickValStyle.Primitive.space8) {
+                    if entitlements.isPro {
+                        proLogo
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(BrickValStyle.Primitive.black.opacity(0.62))
+                        .accessibilityHidden(true)
                 }
             }
 
@@ -365,7 +379,7 @@ struct SettingsView: View {
 
     private var accountStatusTitle: String {
         if coordinator?.clerk == nil { return "Local collector profile" }
-        return coordinator?.clerk?.user == nil ? "Signed out collector" : "Signed in collector"
+        return coordinator?.clerk?.user == nil ? "Sign in to customize" : "Signed in collector"
     }
 
     private var accountActionTitle: String {

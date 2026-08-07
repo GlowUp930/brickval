@@ -15,6 +15,7 @@ This is the working context for the canonical BrickVal mobile app. It is intenti
 - Source/UI baseline: native SwiftUI build `46` (`1f58cec`).
 - Current TestFlight build number: `110`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence. Build `103` was archived without the RevenueCat and Superwall keys; build `104` contains the corrected configuration, build `105` contains the profile and loading-brand updates, build `106` contains the text-only gradient Pro status mark, build `107` contains the stable post-capture scanner layout, build `108` contains the enlarged centered native scan-mode picker, build `109` contains the approved image-lift motion on scan match review, and build `110` contains profile accent/theme propagation, the expanded avatar library, and persistent avatar backgrounds. The centered-stage profile editor is now available from Manage Account rather than the main Profile tab.
 - XcodeGen source of truth: `project.yml`
+- Profile customization is account-gated: signed-out users see only the Classic default icon, while signed-in users can choose an icon and background from Manage Account.
 - Committed Xcode project: `BrickVal.xcodeproj`
 
 The former Expo app is archived at `apps/expo-previous/`. Treat it as migration reference only. Do not add new mobile feature work there unless the task explicitly requests Expo.
