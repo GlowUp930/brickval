@@ -2,10 +2,12 @@ import SwiftUI
 
 struct OnboardingView: View {
     @Environment(PreferencesStore.self) private var preferences
+    @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.brickValAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var step: OnboardingStep = .value
     @State private var goal: PrimaryGoal?
+    @State private var isShowingAuth = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,17 +25,21 @@ struct OnboardingView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            Button(step == .value ? "Get started" : step == .review ? "Start scanning" : "Continue", action: advance)
-                .buttonStyle(.borderedProminent)
-                .tint(BrickValStyle.Semantic.textPrimary)
-                .controlSize(.large)
-                .frame(maxWidth: .infinity)
-                .padding(BrickValStyle.Primitive.space24)
-                .disabled(step == .goal && goal == nil)
+            onboardingActions
         }
         .background(BrickValStyle.Semantic.canvas.ignoresSafeArea())
         .preferredColorScheme(.light)
         .interactiveDismissDisabled()
+        .sheet(isPresented: $isShowingAuth) {
+            if let clerk = coordinator?.clerk {
+                BrickValueAuthView(isDismissible: true)
+                    .environment(clerk)
+            }
+        }
+        .onChange(of: isShowingAuth) { wasPresented, isPresented in
+            guard wasPresented, !isPresented, coordinator?.clerk?.user != nil else { return }
+            finishOnboarding()
+        }
     }
 
     private var progress: some View {
@@ -58,14 +64,50 @@ struct OnboardingView: View {
         }
     }
 
+    @ViewBuilder
+    private var onboardingActions: some View {
+        if step == .review, coordinator?.clerk != nil {
+            VStack(spacing: BrickValStyle.Primitive.space8) {
+                Button("Sign in to save your collection") {
+                    isShowingAuth = true
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(BrickValStyle.Semantic.textPrimary)
+                .controlSize(.large)
+                .frame(maxWidth: .infinity)
+                .accessibilityHint("Opens the BrickValue sign-in options")
+
+                Button("Skip for now", action: finishOnboarding)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                    .frame(minHeight: 44)
+                    .accessibilityHint("Continue to BrickValue without signing in")
+            }
+            .padding(.horizontal, BrickValStyle.Primitive.space24)
+            .padding(.bottom, BrickValStyle.Primitive.space16)
+        } else {
+            Button(step == .value ? "Get started" : step == .review ? "Start scanning" : "Continue", action: advance)
+                .buttonStyle(.borderedProminent)
+                .tint(BrickValStyle.Semantic.textPrimary)
+                .controlSize(.large)
+                .frame(maxWidth: .infinity)
+                .padding(BrickValStyle.Primitive.space24)
+                .disabled(step == .goal && goal == nil)
+        }
+    }
+
     private func advance() {
         if step == .review {
-            preferences.primaryGoal = goal
-            preferences.isReplayingOnboarding = false
-            preferences.hasCompletedOnboarding = true
+            finishOnboarding()
         } else if let next = OnboardingStep(rawValue: step.rawValue + 1) {
             withAnimation(reduceMotion ? nil : .easeOut(duration: 0.28)) { step = next }
         }
+    }
+
+    private func finishOnboarding() {
+        preferences.primaryGoal = goal
+        preferences.isReplayingOnboarding = false
+        preferences.hasCompletedOnboarding = true
     }
 }
 

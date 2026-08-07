@@ -29,6 +29,7 @@
 		204B39504255B458FA3AC870 /* CoreMLMinifigureDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A585AFB1013097D35D10D137 /* CoreMLMinifigureDetectorTests.swift */; };
 		20C45383EC4C3BC86058AC79 /* CameraAuthorizationStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A098D219DADDE29AFD694ADA /* CameraAuthorizationStatus.swift */; };
 		2118C18E62E4D96B11D6E443 /* BrickValAPIEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32E00FF36212FF566E311D3C /* BrickValAPIEnvironment.swift */; };
+		22009F89A7842912D8494A71 /* BrickValueAuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7078C232F61B02B4CBE8C1A8 /* BrickValueAuthView.swift */; };
 		23914B5B5E178F6438F54A6D /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = EFA69D9ECEA37F7AF12FE05A /* Sentry */; };
 		23C430832E2BB043064AD802 /* ScannerStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BED682995C15E75257E316FF /* ScannerStatusView.swift */; };
 		28D2AB981918BE69951B92A0 /* cash-register-kaching.aac in Resources */ = {isa = PBXBuildFile; fileRef = A3C39F6BC7B798264AF2202F /* cash-register-kaching.aac */; };
@@ -233,6 +234,7 @@
 		6CA43A508737EB95B359A1A2 /* LegacyExpoMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyExpoMigrationTests.swift; sourceTree = "<group>"; };
 		6D94C6E9B8E4D8C3DB776585 /* CollectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionStore.swift; sourceTree = "<group>"; };
 		706356F3011820760559C3B3 /* ItemDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemDetailView.swift; sourceTree = "<group>"; };
+		7078C232F61B02B4CBE8C1A8 /* BrickValueAuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrickValueAuthView.swift; sourceTree = "<group>"; };
 		70BEA2066B1A6BF1D07EFC0F /* ManualSetEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualSetEntryView.swift; sourceTree = "<group>"; };
 		7355DBB384CE2D0E2589B915 /* PortfolioHistoryPoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioHistoryPoint.swift; sourceTree = "<group>"; };
 		73BC21A199D8811A6A84473D /* FocusedScanCropPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusedScanCropPlanner.swift; sourceTree = "<group>"; };
@@ -548,6 +550,7 @@
 			children = (
 				28CBB95E72FCC9866478E98A /* AccountView.swift */,
 				80571E569B420291019CDB48 /* AppearanceSettingsView.swift */,
+				7078C232F61B02B4CBE8C1A8 /* BrickValueAuthView.swift */,
 				E0BA1A0E8B533CF77961E977 /* ClerkAccountContentView.swift */,
 				3F7F2DA54B70047594956E66 /* CollectorAvatarPicker.swift */,
 				83DF4CF5EBB489C29E3E2206 /* CollectorProfileEditorView.swift */,
@@ -867,6 +870,7 @@
 				2118C18E62E4D96B11D6E443 /* BrickValAPIEnvironment.swift in Sources */,
 				1D064B073B24B72DD81F9EBE /* BrickValApp.swift in Sources */,
 				D86D0B9AB2207D672A921E86 /* BrickValStyle.swift in Sources */,
+				22009F89A7842912D8494A71 /* BrickValueAuthView.swift in Sources */,
 				57CD2963F83F170849D5F569 /* BulkMinifigLookupPayload.swift in Sources */,
 				AAA777803A3BA83E0F8D462A /* BulkMinifigLookupRow.swift in Sources */,
 				BC50C75331C93F9F1AA5A1E4 /* BulkScanResultsView.swift in Sources */,

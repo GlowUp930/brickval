@@ -1,5 +1,4 @@
 import ClerkKit
-import ClerkKitUI
 import SwiftUI
 
 struct AccountView: View {
@@ -31,7 +30,6 @@ struct AccountView: View {
 
 private struct ConfiguredAccountView: View {
     @Environment(Clerk.self) private var clerk
-    @Environment(\.brickValAccent) private var accent
 
     var body: some View {
         Group {
@@ -45,15 +43,6 @@ private struct ConfiguredAccountView: View {
 
     private var signedOutAccountView: some View {
         ClerkAccountContentView()
-            .clerkAppIconView {
-                Image("OnboardingLogo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 76, height: 76)
-                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                    .accessibilityLabel("BrickValue")
-            }
-            .environment(\.clerkTheme, authTheme)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -71,27 +60,5 @@ private struct ConfiguredAccountView: View {
                     .padding(.top, BrickValStyle.Primitive.space8)
             }
         }
-    }
-
-    private var authTheme: ClerkTheme {
-        ClerkTheme(
-            colors: .init(
-                primary: accent,
-                background: BrickValStyle.Semantic.canvas,
-                input: BrickValStyle.Semantic.surfaceMuted,
-                foreground: BrickValStyle.Semantic.textPrimary,
-                mutedForeground: BrickValStyle.Semantic.textSecondary,
-                primaryForeground: BrickValStyle.Primitive.black,
-                inputForeground: BrickValStyle.Semantic.textPrimary,
-                neutral: BrickValStyle.Semantic.divider,
-                ring: accent,
-                muted: BrickValStyle.Semantic.surfaceMuted,
-                secondaryButtonBackground: BrickValStyle.Semantic.surfaceMuted,
-                secondaryButtonForeground: BrickValStyle.Semantic.textPrimary,
-                shadow: BrickValStyle.Primitive.black,
-                border: BrickValStyle.Semantic.divider
-            ),
-            design: .init(borderRadius: BrickValStyle.Primitive.radius16)
-        )
     }
 }

@@ -162,6 +162,7 @@ The last verified test run contained 44 tests and passed on the small iPhone sim
 - The scanner camera stage is aspect-fitted to a stable 3:4 frame. Frozen images and processing overlays must stay clipped to that frame without moving the mode picker, controls, navigation, or tab bar.
 - The scan mode control remains a native segmented Picker with Minifigure and Bulk icons, a 56-point minimum touch frame, and a centered maximum width of 340 points.
 - Signed-out account access uses Clerk's native AuthView with a local BrickValue logo and an accent-aware ClerkTheme; signed-in users continue into the Manage Account profile editor.
+- Onboarding keeps account creation optional: the final step offers branded sign-in to save a collection, while "Skip for now" completes onboarding and enters the app as a guest.
 - Successful scan and manual lookup results play the bundled cash-register sound through an ambient audio session; audio failure never blocks a result.
 - Collection history horizons filter stored market points by actual 30-, 90-, and 180-day date windows. Horizon-specific fallback data and chart identity must also change when the selected horizon changes.
 - Content-backed screens use `SkeletonPlaceholder` for initial loading and remote image placeholders. Keep operation progress indicators for active captures, saves, and lookups where the user is waiting on an explicit action.

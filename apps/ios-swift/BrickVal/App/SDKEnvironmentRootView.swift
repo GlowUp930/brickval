@@ -23,6 +23,8 @@ struct SDKEnvironmentRootView: View {
                 AccountView()
                     .environment(clerk)
             }
+        } else if ProcessInfo.processInfo.arguments.contains("-showOnboardingDemo") {
+            OnboardingView()
         } else if ProcessInfo.processInfo.arguments.contains("-showScannerProcessingLayoutDemo") {
             AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showScanResultDemo") {

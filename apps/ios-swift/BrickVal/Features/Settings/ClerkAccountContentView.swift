@@ -13,7 +13,7 @@ struct ClerkAccountContentView: View {
     var body: some View {
         Group {
             if clerk.user == nil {
-                AuthView(isDismissible: false)
+                BrickValueAuthView(isDismissible: false)
             } else {
                 VStack(spacing: 0) {
                     UserProfileView(isDismissible: false)
