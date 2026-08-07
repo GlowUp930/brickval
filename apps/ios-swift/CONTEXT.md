@@ -13,7 +13,7 @@ This is the working context for the canonical BrickVal mobile app. It is intenti
 - Swift version: 6.0 with strict concurrency enabled
 - Current marketing version: `1.0.1`
 - Source/UI baseline: native SwiftUI build `46` (`1f58cec`).
-- Current TestFlight build number: `107`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence. Build `103` was archived without the RevenueCat and Superwall keys; build `104` contains the corrected configuration, build `105` contains the profile and loading-brand updates, build `106` contains the text-only gradient Pro status mark, and build `107` contains the stable post-capture scanner layout.
+- Current TestFlight build number: `108`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence. Build `103` was archived without the RevenueCat and Superwall keys; build `104` contains the corrected configuration, build `105` contains the profile and loading-brand updates, build `106` contains the text-only gradient Pro status mark, build `107` contains the stable post-capture scanner layout, and build `108` contains the enlarged centered native scan-mode picker.
 - XcodeGen source of truth: `project.yml`
 - Committed Xcode project: `BrickVal.xcodeproj`
 
