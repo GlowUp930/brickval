@@ -2,46 +2,55 @@ import SwiftUI
 
 struct ScanReviewView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     let review: ScanReview
     let store: ScanStore
 
     @State private var candidates: [ScanReviewCandidate]
+    @State private var selectedID: String?
     @State private var isLoading: Bool
+    @State private var isConfirming = false
     @State private var loadError: String?
 
     init(review: ScanReview, store: ScanStore) {
         self.review = review
         self.store = store
+        let initialCandidate = review.candidates.max { lhs, rhs in lhs.score < rhs.score }
         _candidates = State(initialValue: review.candidates)
+        _selectedID = State(initialValue: initialCandidate?.id)
         _isLoading = State(initialValue: review.candidates.contains { $0.result == nil })
     }
 
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(candidates.count == 1 ? "Confirm match" : "Choose a match")
-                    .font(.title2.bold())
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal)
-                    .padding(.vertical, 12)
+            ZStack {
+                Color(uiColor: .systemBackground)
+                    .ignoresSafeArea()
 
-                List(candidates) { candidate in
-                    Button {
-                        Task {
-                            await store.selectReviewCandidate(candidate)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 22) {
+                        heading
+
+                        if candidates.isEmpty {
+                            ContentUnavailableView(
+                                "No reviewable matches",
+                                systemImage: "questionmark.square.dashed",
+                                description: Text("Try a closer, brighter photo.")
+                            )
+                        } else {
+                            candidateContent
                         }
-                    } label: {
-                        candidateRow(candidate)
                     }
-                    .accessibilityLabel(accessibilityLabel(for: candidate))
-                    .accessibilityHint("Select this minifigure")
+                    .padding(.horizontal, 20)
+                    .padding(.top, 14)
+                    .padding(.bottom, 120)
                 }
-                .overlay {
-                    if candidates.isEmpty {
-                        ContentUnavailableView("No reviewable matches", systemImage: "questionmark.square.dashed")
-                    }
-                }
+                .scrollIndicators(.hidden)
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                bottomAction
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -50,120 +59,218 @@ struct ScanReviewView: View {
                         dismiss()
                     }
                     .labelStyle(.iconOnly)
-                    .font(.body)
-                }
-            }
-            .safeAreaInset(edge: .bottom) {
-                if let loadError {
-                    Text(loadError)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
-                        .frame(maxWidth: .infinity)
-                        .background(.bar)
+                    .accessibilityLabel("Retake scan")
                 }
             }
             .task {
-                guard candidates.contains(where: { $0.result == nil }) else {
-                    isLoading = false
-                    return
+                await loadCandidatesIfNeeded()
+            }
+        }
+    }
+
+    private var heading: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(candidates.count == 1 ? "CONFIRM MATCH" : "CONFIDENCE FIRST")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(BrickValStyle.ScanResult.accent)
+                .textCase(.uppercase)
+                .tracking(0.7)
+
+            Text(candidates.count == 1 ? "Confirm a match" : "Choose a match")
+                .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(
+                candidates.count == 1
+                    ? "Review the result before continuing."
+                    : "We found \(candidates.count) possible minifigures. Select the one that looks right."
+            )
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    @ViewBuilder
+    private var candidateContent: some View {
+        if let topCandidate {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(candidates.count == 1 ? "Likely match" : "Most likely match")
+                    .font(.headline)
+
+                featuredCard(topCandidate)
+
+                if !otherCandidates.isEmpty {
+                    Text("Other possibilities")
+                        .font(.headline)
+                        .padding(.top, 4)
+
+                    candidateSurfaces {
+                        ForEach(otherCandidates) { candidate in
+                            candidateRow(candidate)
+                        }
+                    }
                 }
-                do {
-                    candidates = try await store.loadReviewCandidates(candidates)
-                } catch is CancellationError {
-                    return
-                } catch {
-                    loadError = "Details could not be loaded. You can still choose a match."
-                }
-                isLoading = false
             }
         }
     }
 
     @ViewBuilder
-    private func candidateRow(_ candidate: ScanReviewCandidate) -> some View {
-        if dynamicTypeSize.isAccessibilitySize {
-            accessibilityCandidateRow(candidate)
+    private func candidateSurfaces<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: 12) {
+                content()
+            }
         } else {
-            standardCandidateRow(candidate)
+            content()
         }
     }
 
-    private func standardCandidateRow(_ candidate: ScanReviewCandidate) -> some View {
-        HStack(spacing: 14) {
-            candidateImage(candidate)
-                .frame(width: 72, height: 72)
+    private func featuredCard(_ candidate: ScanReviewCandidate) -> some View {
+        let isSelected = selectedID == candidate.id
 
-            VStack(alignment: .leading, spacing: 5) {
-                if let result = candidate.result {
-                    Text(result.name)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                        .lineLimit(3)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(result.identifier)
+        return Button {
+            select(candidate)
+        } label: {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 16) {
+                    candidateImage(candidate)
+                        .frame(width: dynamicTypeSize.isAccessibilitySize ? 92 : 108,
+                               height: dynamicTypeSize.isAccessibilitySize ? 92 : 108)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            Text(candidates.first?.id == candidate.id ? "BEST MATCH" : "STRONG MATCH")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 5)
+                                .background(BrickValStyle.ScanResult.accent, in: Capsule())
+
+                            Text(candidate.score, format: .percent.precision(.fractionLength(0)))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(BrickValStyle.ScanResult.accent)
+                        }
+
+                        candidateName(candidate, font: .headline, featured: true)
+
+                        Text(candidate.identifier)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                HStack {
+                    Label("Used value", systemImage: "tag.fill")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    if let price = result.pricing.preferredUsedValue ?? result.pricing.preferredNewValue {
-                        Text(price, format: .currency(code: "USD"))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(BrickValStyle.ScanResult.accent)
-                    }
-                } else if isLoading {
-                    SkeletonPlaceholder(cornerRadius: 4).frame(height: 18)
-                    SkeletonPlaceholder(cornerRadius: 4).frame(width: 92, height: 14)
-                } else {
-                    Text(candidate.identifier)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
+
+                    Spacer()
+
+                    candidatePrice(candidate, font: .title3.weight(.bold))
                 }
-                Text(candidate.score, format: .percent.precision(.fractionLength(0)))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
-            Spacer(minLength: 8)
-            Image(systemName: "chevron.right")
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .modifier(ReviewSurfaceModifier(interactive: true))
+            .overlay {
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(isSelected ? BrickValStyle.ScanResult.accent : .clear, lineWidth: 2)
+            }
         }
-        .padding(.vertical, 4)
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel(for: candidate))
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityHint("Select this match")
     }
 
-    private func accessibilityCandidateRow(_ candidate: ScanReviewCandidate) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 12) {
+    private func candidateRow(_ candidate: ScanReviewCandidate) -> some View {
+        let isSelected = selectedID == candidate.id
+
+        return Button {
+            select(candidate)
+        } label: {
+            HStack(spacing: 14) {
                 candidateImage(candidate)
-                    .frame(width: 60, height: 60)
+                    .frame(width: 52, height: 52)
+
                 VStack(alignment: .leading, spacing: 4) {
+                    candidateName(candidate, font: .subheadline.weight(.semibold), featured: false)
+
                     Text(candidate.identifier)
-                        .font(.headline)
-                    Text(candidate.score, format: .percent.precision(.fractionLength(0)))
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    HStack(spacing: 10) {
+                        Label(
+                            candidate.score.formatted(.percent.precision(.fractionLength(0))),
+                            systemImage: "checkmark.seal.fill"
+                        )
+                        .foregroundStyle(isSelected ? BrickValStyle.ScanResult.accent : .secondary)
+
+                    candidatePrice(candidate, font: .caption.weight(.semibold), accent: false)
+                    }
                 }
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .foregroundStyle(.secondary)
+
+                Spacer(minLength: 4)
+
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(isSelected ? BrickValStyle.ScanResult.accent : .secondary)
+                    .scaleEffect(isSelected ? 1 : 0.92)
                     .accessibilityHidden(true)
             }
-
-            if let result = candidate.result {
-                Text(result.name)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let price = result.pricing.preferredUsedValue ?? result.pricing.preferredNewValue {
-                    Text(price, format: .currency(code: "USD"))
-                        .font(.headline)
-                        .foregroundStyle(BrickValStyle.ScanResult.accent)
-                }
-            } else if isLoading {
-                SkeletonPlaceholder(cornerRadius: 4).frame(height: 22)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+            .modifier(ReviewSurfaceModifier(interactive: true, cornerRadius: 16))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? BrickValStyle.ScanResult.accent : .clear, lineWidth: 1.5)
             }
         }
-        .padding(.vertical, 6)
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel(for: candidate))
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityHint("Select this match")
+    }
+
+    @ViewBuilder
+    private func candidateName(_ candidate: ScanReviewCandidate, font: Font, featured: Bool) -> some View {
+        if let result = candidate.result {
+            Text(result.name)
+                .font(font)
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+        } else if isLoading {
+            SkeletonPlaceholder(cornerRadius: 4)
+                .frame(height: featured ? 22 : 18)
+        } else {
+            Text(candidate.identifier)
+                .font(font)
+                .foregroundStyle(.primary)
+        }
+    }
+
+    @ViewBuilder
+    private func candidatePrice(
+        _ candidate: ScanReviewCandidate,
+        font: Font,
+        accent: Bool = true
+    ) -> some View {
+        if let result = candidate.result,
+           let price = result.pricing.preferredUsedValue ?? result.pricing.preferredNewValue {
+            Text(price, format: .currency(code: "USD"))
+                .font(font)
+                .foregroundStyle(accent ? BrickValStyle.ScanResult.accent : .primary)
+        } else if isLoading {
+            SkeletonPlaceholder(cornerRadius: 4)
+                .frame(width: 72, height: 16)
+        } else {
+            Text("Price unavailable")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 
     @ViewBuilder
@@ -172,22 +279,138 @@ struct ScanReviewView: View {
             AsyncImage(url: url) { phase in
                 switch phase {
                 case .success(let image):
-                    image.resizable().scaledToFit()
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .padding(5)
                 case .empty:
                     SkeletonPlaceholder(cornerRadius: 6)
                 default:
-                    Image(systemName: "person.crop.square")
-                        .font(.title)
-                        .foregroundStyle(.secondary)
+                    fallbackImage
                 }
             }
         } else if isLoading {
             SkeletonPlaceholder(cornerRadius: 6)
         } else {
-            Image(systemName: "person.crop.square")
-                .font(.title)
-                .foregroundStyle(.secondary)
+            fallbackImage
         }
+    }
+
+    private var fallbackImage: some View {
+        Image(systemName: "person.crop.square")
+            .font(.title)
+            .foregroundStyle(.secondary)
+    }
+
+    private var bottomAction: some View {
+        VStack(spacing: 8) {
+            if let loadError {
+                Text(loadError)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            confirmationButton
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
+        .background(.background)
+    }
+
+    @ViewBuilder
+    private var confirmationButton: some View {
+        let isEnabled = selectedCandidate != nil && !isConfirming
+
+        if #available(iOS 26.0, *) {
+            Button {
+                confirmSelection()
+            } label: {
+                buttonLabel
+            }
+            .buttonStyle(.glassProminent)
+            .tint(BrickValStyle.ScanResult.accent)
+            .disabled(!isEnabled)
+        } else {
+            Button {
+                confirmSelection()
+            } label: {
+                buttonLabel
+                    .foregroundStyle(isEnabled ? .black : .secondary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(
+                        isEnabled ? BrickValStyle.ScanResult.accent : Color(uiColor: .tertiarySystemFill),
+                        in: RoundedRectangle(cornerRadius: 16)
+                    )
+            }
+            .buttonStyle(.plain)
+            .disabled(!isEnabled)
+        }
+    }
+
+    private var buttonLabel: some View {
+        HStack {
+            if isConfirming {
+                ProgressView()
+                    .tint(.black)
+                Text("Opening match")
+            } else {
+                Text("Use this match")
+                Spacer()
+                Image(systemName: "arrow.right")
+            }
+        }
+        .font(.headline)
+        .padding(.horizontal, 20)
+        .accessibilityLabel(isConfirming ? "Opening selected match" : "Use selected match")
+    }
+
+    private var topCandidate: ScanReviewCandidate? {
+        candidates.max { lhs, rhs in lhs.score < rhs.score }
+    }
+
+    private var otherCandidates: [ScanReviewCandidate] {
+        guard let topCandidate else { return [] }
+        return candidates.filter { $0.id != topCandidate.id }
+    }
+
+    private var selectedCandidate: ScanReviewCandidate? {
+        candidates.first { $0.id == selectedID }
+    }
+
+    private func select(_ candidate: ScanReviewCandidate) {
+        let animation: Animation? = reduceMotion ? nil : .easeOut(duration: 0.24)
+        withAnimation(animation) {
+            selectedID = candidate.id
+        }
+    }
+
+    private func confirmSelection() {
+        guard let selectedCandidate, !isConfirming else { return }
+        isConfirming = true
+        Task {
+            await store.selectReviewCandidate(selectedCandidate)
+            isConfirming = false
+        }
+    }
+
+    private func loadCandidatesIfNeeded() async {
+        guard candidates.contains(where: { $0.result == nil }) else {
+            isLoading = false
+            return
+        }
+
+        do {
+            candidates = try await store.loadReviewCandidates(candidates)
+        } catch is CancellationError {
+            return
+        } catch {
+            loadError = "Some match details could not be loaded. You can still choose a match."
+        }
+        isLoading = false
     }
 
     private func accessibilityLabel(for candidate: ScanReviewCandidate) -> String {
@@ -197,6 +420,26 @@ struct ScanReviewView: View {
         }
         let price = (result.pricing.preferredUsedValue ?? result.pricing.preferredNewValue)?
             .formatted(.currency(code: "USD")) ?? "price unavailable"
-        return "\(result.name), \(result.identifier), \(confidence) match confidence, \(price)"
+        return "\(result.name), \(candidate.identifier), \(confidence) match confidence, \(price)"
+    }
+}
+
+private struct ReviewSurfaceModifier: ViewModifier {
+    let interactive: Bool
+    var cornerRadius: CGFloat = 20
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            if interactive {
+                content.glassEffect(.regular.interactive(), in: .rect(cornerRadius: cornerRadius))
+            } else {
+                content.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+            }
+        } else {
+            content.background(
+                Color(uiColor: .secondarySystemBackground),
+                in: RoundedRectangle(cornerRadius: cornerRadius)
+            )
+        }
     }
 }
