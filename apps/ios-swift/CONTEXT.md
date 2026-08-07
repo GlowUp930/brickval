@@ -15,7 +15,7 @@ This is the working context for the canonical BrickVal mobile app. It is intenti
 - Source/UI baseline: native SwiftUI build `46` (`1f58cec`).
 - Current TestFlight build number: `110`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence. Build `103` was archived without the RevenueCat and Superwall keys; build `104` contains the corrected configuration, build `105` contains the profile and loading-brand updates, build `106` contains the text-only gradient Pro status mark, build `107` contains the stable post-capture scanner layout, build `108` contains the enlarged centered native scan-mode picker, build `109` contains the approved image-lift motion on scan match review, and build `110` contains profile accent/theme propagation, the expanded avatar library, and persistent avatar backgrounds. The centered-stage profile editor is now available from Manage Account rather than the main Profile tab.
 - XcodeGen source of truth: `project.yml`
-- Profile customization is account-gated: signed-out users see only the Classic default icon, while signed-in users can choose an icon and background from Manage Account.
+- Profile customization is account-gated: signed-out users keep the Classic default icon in profile surfaces, while signed-in users can choose an icon and background from Manage Account. The signed-out Manage Account screen is a branded Clerk auth surface using the local BrickValue logo, with no profile/avatar prompt.
 - Committed Xcode project: `BrickVal.xcodeproj`
 
 The former Expo app is archived at `apps/expo-previous/`. Treat it as migration reference only. Do not add new mobile feature work there unless the task explicitly requests Expo.
@@ -161,6 +161,7 @@ The last verified test run contained 44 tests and passed on the small iPhone sim
 - The bulk result sheet uses a frozen image, standard SwiftUI presentation, and a small-screen layout with visible Add and Retake actions.
 - The scanner camera stage is aspect-fitted to a stable 3:4 frame. Frozen images and processing overlays must stay clipped to that frame without moving the mode picker, controls, navigation, or tab bar.
 - The scan mode control remains a native segmented Picker with Minifigure and Bulk icons, a 56-point minimum touch frame, and a centered maximum width of 340 points.
+- Signed-out account access uses Clerk's native AuthView with a local BrickValue logo and an accent-aware ClerkTheme; signed-in users continue into the Manage Account profile editor.
 - Successful scan and manual lookup results play the bundled cash-register sound through an ambient audio session; audio failure never blocks a result.
 - Collection history horizons filter stored market points by actual 30-, 90-, and 180-day date windows. Horizon-specific fallback data and chart identity must also change when the selected horizon changes.
 - Content-backed screens use `SkeletonPlaceholder` for initial loading and remote image placeholders. Keep operation progress indicators for active captures, saves, and lookups where the user is waiting on an explicit action.
