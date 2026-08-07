@@ -16,6 +16,7 @@ final class PreferencesStore {
     var avatarBackground: AvatarBackgroundPreference { didSet { save(avatarBackground.rawValue, for: Keys.avatarBackground) } }
     var hasSeenHistoryTip: Bool { didSet { save(hasSeenHistoryTip, for: Keys.historyTip) } }
     var hasSeenCollectionTips: Bool { didSet { save(hasSeenCollectionTips, for: Keys.collectionTips) } }
+    var hasSeenScanTips: Bool { didSet { save(hasSeenScanTips, for: Keys.scanTips) } }
     var guestScansUsed: Int { didSet { save(guestScansUsed, for: Keys.guestScans) } }
     var hasRequestedReview: Bool { didSet { save(hasRequestedReview, for: Keys.reviewRequested) } }
 
@@ -33,6 +34,7 @@ final class PreferencesStore {
         avatarBackground = defaults.string(forKey: Keys.avatarBackground).flatMap(AvatarBackgroundPreference.init(rawValue:)) ?? .accent
         hasSeenHistoryTip = defaults.bool(forKey: Keys.historyTip)
         hasSeenCollectionTips = defaults.bool(forKey: Keys.collectionTips)
+        hasSeenScanTips = defaults.bool(forKey: Keys.scanTips)
         guestScansUsed = defaults.integer(forKey: Keys.guestScans)
         hasRequestedReview = defaults.bool(forKey: Keys.reviewRequested)
     }
@@ -69,6 +71,7 @@ final class PreferencesStore {
         static let avatarCustomColor = "brickval_account_avatar_custom_color"
         static let historyTip = "brickval_home_history_tip_seen"
         static let collectionTips = "brickval_collection_tips_seen"
+        static let scanTips = "brickval_scan_tips_seen"
         static let guestScans = "guest_scan_lookups_used"
         static let reviewRequested = "brickval_review_requested"
     }

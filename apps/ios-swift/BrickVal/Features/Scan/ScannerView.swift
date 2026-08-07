@@ -5,8 +5,10 @@ struct ScannerView: View {
     @Environment(PreferencesStore.self) private var preferences
     @Environment(\.brickValAccent) private var accent
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
     @State private var store: ScanStore
+    @State private var isShowingScanTips = false
     private let runsCameraLoop: Bool
 
     init(api: BrickValAPIClient = .live()) {
@@ -102,7 +104,10 @@ struct ScannerView: View {
                 isTorchEnabled: store.isTorchEnabled,
                 isBusy: [.capturing, .identifying].contains(store.phase),
                 toggleTorch: { Task { await store.toggleTorch() } },
-                capture: { Task { await store.captureManually() } }
+                capture: {
+                    dismissScanTips()
+                    Task { await store.captureManually() }
+                }
             )
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("scanner.controls")
@@ -119,6 +124,20 @@ struct ScannerView: View {
         .task(id: preferences.scanImprovementConsent) {
             store.setFeedbackConsent(preferences.scanImprovementConsent)
         }
+        .task {
+            guard !preferences.hasSeenScanTips else { return }
+            if !reduceMotion {
+                try? await Task.sleep(for: .milliseconds(420))
+            }
+            guard !Task.isCancelled, !preferences.hasSeenScanTips else { return }
+            withAnimation(reduceMotion ? nil : .snappy(duration: 0.28)) {
+                isShowingScanTips = true
+            }
+        }
+        .onChange(of: store.phase) { _, phase in
+            guard [.capturing, .identifying, .review, .result].contains(phase) else { return }
+            dismissScanTips()
+        }
         .sheet(item: $store.presentedSheet) { sheet in
             switch sheet {
             case .manualLookup: ManualLookupView(store: store)
@@ -127,6 +146,15 @@ struct ScannerView: View {
                 BulkScanResultsView(imageData: imageData, items: items, store: store)
             case .result(let result): ScanResultView(result: result, reset: store.reset)
             case .review(let review): ScanReviewView(review: review, store: store)
+            }
+        }
+        .overlay(alignment: .top) {
+            if isShowingScanTips {
+                ScanTipsCallout(dismiss: dismissScanTips)
+                    .padding(.top, 76)
+                    .padding(.horizontal, 12)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(2)
             }
         }
         .overlay(alignment: .top) {
@@ -142,6 +170,14 @@ struct ScannerView: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: store.successMessage)
+    }
+
+    private func dismissScanTips() {
+        guard isShowingScanTips || !preferences.hasSeenScanTips else { return }
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
+            isShowingScanTips = false
+        }
+        preferences.hasSeenScanTips = true
     }
 }
 
@@ -184,6 +220,90 @@ private struct FrozenScanImageView: View {
             image = UIImage(data: data)
         }
         .accessibilityHidden(true)
+    }
+}
+
+private struct ScanTipsCallout: View {
+    @Environment(\.brickValAccent) private var accent
+    let dismiss: () -> Void
+
+    private let surface = Color(.secondarySystemBackground)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space12) {
+            HStack(alignment: .top, spacing: BrickValStyle.Primitive.space8) {
+                Label("Choose your scan mode", systemImage: "sparkles")
+                    .font(.headline)
+                    .foregroundStyle(BrickValStyle.Semantic.textPrimary)
+                Spacer(minLength: 0)
+                Button(action: dismiss) {
+                    Image(systemName: "xmark")
+                        .font(.caption.weight(.bold))
+                        .frame(width: 30, height: 30)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                .accessibilityLabel("Dismiss scan tips")
+            }
+
+            Text("Two focused ways to find value, depending on what is in front of you.")
+                .font(.subheadline)
+                .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            tipRow(
+                "person.crop.rectangle",
+                title: "Minifigure · one figure",
+                detail: "Auto-detection watches for one figure and captures when the frame is ready for a faster result."
+            )
+            tipRow(
+                "square.stack.3d.up",
+                title: "Bulk · up to 40 figures",
+                detail: "Place multiple figures in one photo, then tap the shutter. We can review up to 40 in one scan."
+            )
+
+            Button("Got it", action: dismiss)
+                .buttonStyle(.borderedProminent)
+                .tint(accent)
+                .foregroundStyle(BrickValStyle.Primitive.black)
+                .frame(maxWidth: .infinity)
+                .accessibilityHint("Dismisses the scan tips")
+        }
+        .padding(BrickValStyle.Primitive.space16)
+        .frame(maxWidth: 340, alignment: .leading)
+        .background(surface, in: .rect(cornerRadius: 18))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(BrickValStyle.Semantic.divider, lineWidth: 1)
+        }
+        .overlay(alignment: .top) {
+            Image(systemName: "arrowtriangle.up.fill")
+                .font(.system(size: 17))
+                .foregroundStyle(surface)
+                .offset(y: -8)
+        }
+        .shadow(color: BrickValStyle.Primitive.black.opacity(0.24), radius: 18, y: 8)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Scan mode tips")
+    }
+
+    private func tipRow(_ icon: String, title: String, detail: String) -> some View {
+        HStack(alignment: .top, spacing: BrickValStyle.Primitive.space8) {
+            Image(systemName: icon)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(accent)
+                .frame(width: 24)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(BrickValStyle.Semantic.textPrimary)
+                Text(detail)
+                    .font(.footnote)
+                    .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 }
 
