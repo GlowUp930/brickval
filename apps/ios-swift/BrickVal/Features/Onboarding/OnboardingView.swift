@@ -1,4 +1,6 @@
 import AVFoundation
+import AuthenticationServices
+import ClerkKit
 import SwiftUI
 import UIKit
 
@@ -8,7 +10,16 @@ struct OnboardingView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var step: OnboardingStep = .brand
     @State private var presentedSheet: OnboardingSheet?
-    @State private var signInUnavailable = false
+    @State private var authenticatingProvider: OnboardingAuthProvider?
+    @State private var alertMessage: String?
+
+    init() {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-showOnboardingAccountDemo") {
+            _step = State(initialValue: .account)
+        }
+#endif
+    }
 
     var body: some View {
         ZStack {
@@ -16,13 +27,26 @@ struct OnboardingView: View {
                 .ignoresSafeArea()
 
             OnboardingDemoScreen(
-                getStarted: finishOnboarding,
+                playsVideo: step != .account,
+                getStarted: showAccountStep,
                 signIn: presentSignIn
             )
             .opacity(step == .demo ? 1 : 0)
             .scaleEffect(reduceMotion || step == .demo ? 1 : 0.985)
             .allowsHitTesting(step == .demo)
             .accessibilityHidden(step != .demo)
+
+            OnboardingAccountScreen(
+                authenticatingProvider: authenticatingProvider,
+                back: showDemoStep,
+                signInWithApple: { authenticate(with: .apple) },
+                signInWithGoogle: { authenticate(with: .google) },
+                skip: finishOnboarding
+            )
+            .opacity(step == .account ? 1 : 0)
+            .scaleEffect(reduceMotion || step == .account ? 1 : 0.985)
+            .allowsHitTesting(step == .account)
+            .accessibilityHidden(step != .account)
 
             OnboardingBrandScreen()
                 .opacity(step == .brand ? 1 : 0)
@@ -55,19 +79,77 @@ struct OnboardingView: View {
             guard previous == .auth, current == nil, coordinator?.clerk?.user != nil else { return }
             finishOnboarding()
         }
-        .alert("Sign-in unavailable", isPresented: $signInUnavailable) {
+        .alert("Couldn’t sign in", isPresented: alertBinding) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("You can continue without an account and sign in later from Profile.")
+            Text(alertMessage ?? "You can continue without an account and sign in later from Profile.")
         }
+    }
+
+    private var alertBinding: Binding<Bool> {
+        Binding(
+            get: { alertMessage != nil },
+            set: { if !$0 { alertMessage = nil } }
+        )
     }
 
     private func presentSignIn() {
         guard coordinator?.clerk != nil else {
-            signInUnavailable = true
+            alertMessage = "Sign-in is unavailable in this build. You can continue and sign in later from Profile."
             return
         }
         presentedSheet = .auth
+    }
+
+    private func showAccountStep() {
+        withAnimation(reduceMotion ? nil : .timingCurve(0.22, 1, 0.36, 1, duration: 0.42)) {
+            step = .account
+        }
+    }
+
+    private func showDemoStep() {
+        withAnimation(reduceMotion ? nil : .timingCurve(0.22, 1, 0.36, 1, duration: 0.38)) {
+            step = .demo
+        }
+    }
+
+    private func authenticate(with provider: OnboardingAuthProvider) {
+        guard let clerk = coordinator?.clerk else {
+            alertMessage = "Sign-in is unavailable in this build. You can continue and sign in later from Profile."
+            return
+        }
+
+        authenticatingProvider = provider
+        Task {
+            do {
+                switch provider {
+                case .apple:
+                    _ = try await clerk.auth.signInWithApple()
+                case .google:
+                    _ = try await clerk.auth.signInWithOAuth(provider: .google)
+                }
+                authenticatingProvider = nil
+                if clerk.user != nil {
+                    finishOnboarding()
+                } else {
+                    presentedSheet = .auth
+                }
+            } catch {
+                authenticatingProvider = nil
+                guard !isAuthenticationCancellation(error) else { return }
+                alertMessage = "Sign-in didn’t complete. Check your connection and try again."
+            }
+        }
+    }
+
+    private func isAuthenticationCancellation(_ error: Error) -> Bool {
+        if let error = error as? ASAuthorizationError {
+            return error.code == .canceled
+        }
+        if let error = error as? ASWebAuthenticationSessionError {
+            return error.code == .canceledLogin
+        }
+        return false
     }
 
     private func finishOnboarding() {
@@ -79,6 +161,12 @@ struct OnboardingView: View {
 private enum OnboardingStep: Hashable {
     case brand
     case demo
+    case account
+}
+
+private enum OnboardingAuthProvider: Hashable {
+    case apple
+    case google
 }
 
 private enum OnboardingSheet: String, Identifiable {
@@ -117,6 +205,7 @@ private struct OnboardingBrandScreen: View {
 }
 
 private struct OnboardingDemoScreen: View {
+    let playsVideo: Bool
     let getStarted: () -> Void
     let signIn: () -> Void
 
@@ -130,10 +219,10 @@ private struct OnboardingDemoScreen: View {
     }
 
     private func content(availableHeight: CGFloat) -> some View {
-        let videoHeight = min(400, max(270, availableHeight * 0.48))
+        let videoHeight = min(450, max(340, availableHeight * 0.55))
 
         return VStack(spacing: BrickValStyle.Primitive.space16) {
-            LoopingOnboardingVideo()
+            LoopingOnboardingVideo(isActive: playsVideo)
                 .frame(width: videoHeight * (480.0 / 810.0), height: videoHeight)
                 .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
                 .overlay {
@@ -158,7 +247,7 @@ private struct OnboardingDemoScreen: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, minHeight: 54)
                     .background(Color.black, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .accessibilityHint("Continue to BrickValue without signing in")
+                    .accessibilityHint("Continue to account options")
                     .accessibilityIdentifier("onboarding.getStarted")
 
                 Button(action: signIn) {
@@ -186,7 +275,151 @@ private struct OnboardingDemoScreen: View {
     }
 }
 
+private struct OnboardingAccountScreen: View {
+    let authenticatingProvider: OnboardingAuthProvider?
+    let back: () -> Void
+    let signInWithApple: () -> Void
+    let signInWithGoogle: () -> Void
+    let skip: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space16) {
+            HStack(spacing: BrickValStyle.Primitive.space16) {
+                Button(action: back) {
+                    Image(systemName: "chevron.left")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.black)
+                        .frame(width: 44, height: 44)
+                        .background(Color(uiColor: .secondarySystemBackground), in: Circle())
+                }
+                .accessibilityLabel("Back to introduction")
+
+                Capsule()
+                    .fill(Color.black)
+                    .frame(height: 4)
+            }
+
+            Text("Save your progress")
+                .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                .foregroundStyle(.black)
+                .accessibilityAddTraits(.isHeader)
+
+            Spacer()
+
+            VStack(spacing: BrickValStyle.Primitive.space12) {
+                providerButton(
+                    title: "Sign in with Apple",
+                    provider: .apple,
+                    foreground: .white,
+                    background: .black,
+                    border: .clear,
+                    action: signInWithApple
+                )
+
+                providerButton(
+                    title: "Sign in with Google",
+                    provider: .google,
+                    foreground: .black,
+                    background: .white,
+                    border: .black,
+                    action: signInWithGoogle
+                )
+
+                Button(action: skip) {
+                    HStack(spacing: 4) {
+                        Text("Want to sign in later?")
+                            .foregroundStyle(.secondary)
+                        Text("Skip for now")
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.black)
+                            .underline()
+                    }
+                }
+                .buttonStyle(.plain)
+                .font(.subheadline)
+                .frame(minHeight: 44)
+                .accessibilityLabel("Skip sign-in for now")
+                .accessibilityHint("Opens BrickValue without an account")
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, BrickValStyle.Primitive.space24)
+        .padding(.top, BrickValStyle.Primitive.space12)
+        .padding(.bottom, BrickValStyle.Primitive.space24)
+        .accessibilityIdentifier("onboarding.account")
+    }
+
+    private func providerButton(
+        title: String,
+        provider: OnboardingAuthProvider,
+        foreground: Color,
+        background: Color,
+        border: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: BrickValStyle.Primitive.space12) {
+                providerIcon(provider)
+                    .frame(width: 26, height: 26)
+
+                Text(title)
+                    .font(.headline.weight(.semibold))
+
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(foreground)
+            .padding(.horizontal, BrickValStyle.Primitive.space24)
+            .frame(maxWidth: .infinity, minHeight: 58)
+            .background(background, in: Capsule())
+            .overlay {
+                Capsule().stroke(border, lineWidth: 1.5)
+            }
+            .overlay {
+                if authenticatingProvider == provider {
+                    ProgressView()
+                        .tint(foreground)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(background.opacity(0.94), in: Capsule())
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(authenticatingProvider != nil)
+        .accessibilityIdentifier("onboarding.\(provider == .apple ? "apple" : "google")")
+    }
+
+    @ViewBuilder
+    private func providerIcon(_ provider: OnboardingAuthProvider) -> some View {
+        switch provider {
+        case .apple:
+            Image(systemName: "apple.logo")
+                .font(.title2)
+                .accessibilityHidden(true)
+        case .google:
+            AsyncImage(url: OAuthProvider.google.iconImageUrl) { phase in
+                if case .success(let image) = phase {
+                    image.resizable().scaledToFit()
+                } else {
+                    Text("G")
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.blue, .red, .yellow, .green],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
+            }
+            .accessibilityHidden(true)
+        }
+    }
+}
+
 private struct LoopingOnboardingVideo: View {
+    let isActive: Bool
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @State private var player = AVQueuePlayer()
@@ -225,7 +458,14 @@ private struct LoopingOnboardingVideo: View {
             configurePlayer()
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active, !reduceMotion || isPlaying {
+            if phase == .active, isActive, (!reduceMotion || isPlaying) {
+                player.play()
+            } else {
+                player.pause()
+            }
+        }
+        .onChange(of: isActive) { _, active in
+            if active, scenePhase == .active, (!reduceMotion || isPlaying) {
                 player.play()
             } else {
                 player.pause()
@@ -245,7 +485,7 @@ private struct LoopingOnboardingVideo: View {
 
         player.isMuted = true
         looper = AVPlayerLooper(player: player, templateItem: AVPlayerItem(url: url))
-        guard !reduceMotion else { return }
+        guard !reduceMotion, isActive else { return }
         isPlaying = true
         player.play()
     }

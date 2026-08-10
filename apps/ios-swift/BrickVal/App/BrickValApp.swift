@@ -45,7 +45,8 @@ struct BrickValApp: App {
     private var activeColorScheme: ColorScheme? {
         if !preferences.hasCompletedOnboarding ||
             preferences.isReplayingOnboarding ||
-            ProcessInfo.processInfo.arguments.contains("-showOnboardingDemo") {
+            ProcessInfo.processInfo.arguments.contains("-showOnboardingDemo") ||
+            ProcessInfo.processInfo.arguments.contains("-showOnboardingAccountDemo") {
             return .light
         }
         return entitlements.isPro ? preferences.theme.colorScheme : ThemePreference.dark.colorScheme
