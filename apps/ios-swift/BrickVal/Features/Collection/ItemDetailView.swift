@@ -73,8 +73,13 @@ struct ItemDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.hidden, for: .navigationBar)
-        .confirmationDialog("Remove this item?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
-            Button("Remove", role: .destructive) { Task { await remove() } }
+        .alert("Remove from collection?", isPresented: $showDeleteConfirmation) {
+            Button("Remove", role: .destructive) {
+                Task { await remove() }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This removes all \(totalOwnedQuantity) \(totalOwnedQuantity == 1 ? "copy" : "copies") of \(item.name) from your collection.")
         }
         .alert("Could not remove item", isPresented: errorBinding) { }
         .alert("BrickValue Pro", isPresented: proMessageBinding) {
@@ -139,7 +144,7 @@ struct ItemDetailView: View {
             if !historyPoints.isEmpty { chartBlock }
             quantityControls
             collectionFacts
-            removeButton
+            removeSection
         }
         .padding(BrickValStyle.Primitive.space20)
         .background(BrickValStyle.Primitive.black.opacity(0.82), in: RoundedRectangle(cornerRadius: BrickValStyle.ScanResult.cardRadius))
@@ -421,22 +426,38 @@ struct ItemDetailView: View {
         }
     }
 
-    private var removeButton: some View {
-        Button(role: .destructive) {
-            showDeleteConfirmation = true
-        } label: {
-            Label("Remove from collection", systemImage: "trash")
-                .font(.headline)
-                .foregroundStyle(BrickValStyle.ScanResult.textPrimary)
-                .frame(maxWidth: .infinity)
-                .frame(height: BrickValStyle.ScanResult.controlHeight)
-                .background(BrickValStyle.ScanResult.surface, in: RoundedRectangle(cornerRadius: BrickValStyle.ScanResult.buttonRadius))
-                .overlay {
-                    RoundedRectangle(cornerRadius: BrickValStyle.ScanResult.buttonRadius)
-                        .stroke(BrickValStyle.ScanResult.border)
-                }
+    private var removeSection: some View {
+        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space8) {
+            Text("Collection management")
+                .font(.caption.weight(.semibold))
+                .textCase(.uppercase)
+                .tracking(0.4)
+                .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+
+            Button(role: .destructive) {
+                showDeleteConfirmation = true
+            } label: {
+                Label("Remove item", systemImage: "trash")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(BrickValStyle.Semantic.valueNegative)
+                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .background(
+                        BrickValStyle.Semantic.valueNegative.opacity(0.10),
+                        in: RoundedRectangle(cornerRadius: BrickValStyle.ScanResult.buttonRadius)
+                    )
+                    .overlay {
+                        RoundedRectangle(cornerRadius: BrickValStyle.ScanResult.buttonRadius)
+                            .stroke(BrickValStyle.Semantic.valueNegative.opacity(0.42), lineWidth: 1)
+                    }
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens a confirmation before removing all copies")
+
+            Text("Removes all copies of this product from your collection.")
+                .font(.footnote)
+                .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .buttonStyle(.plain)
     }
 
     private var errorBinding: Binding<Bool> {
