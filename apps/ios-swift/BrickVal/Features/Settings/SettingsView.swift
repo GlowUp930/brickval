@@ -11,6 +11,8 @@ struct SettingsView: View {
     @State private var isRestoring = false
     @State private var clearError: String?
     @State private var purchaseMessage: String?
+    @State private var secretLogoTapCount = 0
+    @State private var lastSecretLogoTap = Date.distantPast
 
     private var selectedAvatar: CollectorAvatar {
         guard coordinator?.clerk?.user != nil else { return .classic }
@@ -45,6 +47,18 @@ struct SettingsView: View {
         .background(BrickValStyle.Semantic.canvas.ignoresSafeArea())
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Image("OnboardingLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 28, height: 28)
+                    .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 1, perform: handleSecretLogoTap)
+                    .accessibilityHidden(true)
+            }
+        }
         .sheet(isPresented: $showAccount) {
             NavigationStack {
                 AccountView()
@@ -400,6 +414,20 @@ struct SettingsView: View {
 
     private var purchaseMessageBinding: Binding<Bool> {
         Binding(get: { purchaseMessage != nil }, set: { if !$0 { purchaseMessage = nil } })
+    }
+
+    private func handleSecretLogoTap() {
+        let now = Date()
+        if now.timeIntervalSince(lastSecretLogoTap) > 2 {
+            secretLogoTapCount = 0
+        }
+
+        secretLogoTapCount += 1
+        lastSecretLogoTap = now
+
+        guard secretLogoTapCount >= 7 else { return }
+        secretLogoTapCount = 0
+        preferences.isReplayingOnboarding = true
     }
 
     private func triggerPaywall(placement: ProPlacement) {
