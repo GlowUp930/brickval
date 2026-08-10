@@ -6,6 +6,8 @@ struct ScanResultView: View {
     @Environment(\.requestReview) private var requestReview
     @Environment(CollectionStore.self) private var collection
     @Environment(EntitlementStore.self) private var entitlements
+    @Environment(MonetizationStore.self) private var monetization
+    @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(PreferencesStore.self) private var preferences
     @Environment(\.brickValAccent) private var accent
 
@@ -18,6 +20,7 @@ struct ScanResultView: View {
     @State private var didSave = false
     @State private var savedCondition: CollectionCondition?
     @State private var saveMessage: String?
+    @State private var proMessage: String?
     @State private var errorMessage: String?
 
     private var sourceLabel: String {
@@ -66,6 +69,11 @@ struct ScanResultView: View {
                 Button("OK", role: .cancel) { errorMessage = nil }
             } message: {
                 Text(errorMessage ?? "Try again.")
+            }
+            .alert("BrickValue Pro", isPresented: proMessageBinding) {
+                Button("OK", role: .cancel) { proMessage = nil }
+            } message: {
+                Text(proMessage ?? "")
             }
             .overlay(alignment: .top) {
                 if let saveMessage {
@@ -180,7 +188,10 @@ struct ScanResultView: View {
                 selection: $horizon,
                 timelinePoints: historyPoints,
                 tint: accent,
-                inactive: BrickValStyle.ScanResult.textSecondary
+                inactive: BrickValStyle.ScanResult.textSecondary,
+                proHorizons: proHistoryHorizons,
+                isPro: entitlements.isPro,
+                onProSelection: { _ in presentHistoryUpgrade() }
             )
         }
         .resultSurface()
@@ -226,12 +237,34 @@ struct ScanResultView: View {
         Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
     }
 
+    private var proMessageBinding: Binding<Bool> {
+        Binding(get: { proMessage != nil }, set: { if !$0 { proMessage = nil } })
+    }
+
+    private var proHistoryHorizons: Set<PortfolioHorizon> {
+        monetization.policy.gates.marketHistory ? [.quarter, .half] : []
+    }
+
+    private func presentHistoryUpgrade() {
+        let presented = coordinator?.presentUpgrade(
+            placement: .marketHistoryAttempt,
+            params: ["source": "scan_result"]
+        ) ?? false
+        if !presented {
+            proMessage = "Upgrade options are temporarily unavailable. Try again shortly."
+        }
+    }
+
     private func save(condition: CollectionCondition) {
         Task {
             isSaving = true
             defer { isSaving = false }
             do {
-                try await collection.add(result.collectionItem(quantity: quantity, condition: condition), isPro: entitlements.isPro)
+                try await collection.add(
+                    result.collectionItem(quantity: quantity, condition: condition),
+                    isPro: entitlements.isPro || !monetization.policy.gates.collectionCapacity,
+                    freeLimit: monetization.collectionLimit
+                )
                 withAnimation(.spring(response: 0.22, dampingFraction: 0.84)) {
                     savedCondition = condition
                     saveMessage = "Added to collection"
@@ -248,6 +281,19 @@ struct ScanResultView: View {
                             saveMessage = nil
                         }
                     }
+                }
+            } catch is CollectionStoreError {
+                let presented = coordinator?.presentProFeature(
+                    placement: .collectionLimitReached,
+                    params: [
+                        "used": collection.uniqueItemCount,
+                        "limit": monetization.collectionLimit,
+                    ]
+                ) {
+                    save(condition: condition)
+                } ?? false
+                if !presented {
+                    errorMessage = "Upgrade options are temporarily unavailable. Try again shortly."
                 }
             } catch {
                 errorMessage = error.localizedDescription

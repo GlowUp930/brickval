@@ -4,6 +4,9 @@ struct PortfolioChartView: View {
     @Environment(\.brickValAccent) private var accent
     let items: [CollectionItem]
     @Binding var horizon: PortfolioHorizon
+    var proHorizons: Set<PortfolioHorizon> = []
+    var isPro = false
+    var onProSelection: (PortfolioHorizon) -> Void = { _ in }
 
     private var points: [StockChartPoint] {
         PortfolioHistoryBuilder.build(items: items, horizon: horizon).map {
@@ -37,8 +40,11 @@ struct PortfolioChartView: View {
             ChartHorizonPicker(
                 selection: $horizon,
                 timelinePoints: points,
-                        tint: accent,
-                inactive: BrickValStyle.Semantic.textSecondary
+                tint: accent,
+                inactive: BrickValStyle.Semantic.textSecondary,
+                proHorizons: proHorizons,
+                isPro: isPro,
+                onProSelection: onProSelection
             )
         }
     }

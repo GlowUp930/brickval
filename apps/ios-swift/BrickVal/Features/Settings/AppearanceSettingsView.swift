@@ -38,8 +38,12 @@ struct AppearanceSettingsView: View {
                 List {
                     Section {
                         VStack(alignment: .leading, spacing: 12) {
-                            Label("Theme and accent is a Pro feature", systemImage: "sparkles")
-                                .font(.title2.bold())
+                            HStack {
+                                Text("Theme and accent")
+                                    .font(.title2.bold())
+                                Spacer()
+                                ProBadge(state: .requiresPro)
+                            }
                             Text("Upgrade to change between light and dark themes and choose your accent colour.")
                                 .foregroundStyle(.secondary)
                         }
@@ -47,7 +51,7 @@ struct AppearanceSettingsView: View {
                     }
 
                     Section {
-                        Button("Upgrade to Pro", systemImage: "sparkles", action: presentUpgrade)
+                        Button("Upgrade to Pro", systemImage: "arrow.up.right", action: presentUpgrade)
                             .buttonStyle(.borderedProminent)
                     }
 
@@ -62,7 +66,7 @@ struct AppearanceSettingsView: View {
 
     private func presentUpgrade() {
         if coordinator?.superwallConfigured == true {
-            coordinator?.presentUpgrade()
+            coordinator?.presentUpgrade(placement: .appearanceAttempt)
         } else {
             upgradeMessage = "Upgrade options are not configured for this build."
         }

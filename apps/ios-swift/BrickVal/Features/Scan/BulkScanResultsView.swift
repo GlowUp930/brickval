@@ -4,6 +4,8 @@ struct BulkScanResultsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(CollectionStore.self) private var collection
     @Environment(EntitlementStore.self) private var entitlements
+    @Environment(MonetizationStore.self) private var monetization
+    @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.brickValAccent) private var accent
 
     let items: [BulkScanResultItem]
@@ -324,9 +326,26 @@ struct BulkScanResultsView: View {
             isSaving = true
             defer { isSaving = false }
             do {
-                try await collection.add(collectionItems, isPro: entitlements.isPro)
+                try await collection.add(
+                    collectionItems,
+                    isPro: entitlements.isPro || !monetization.policy.gates.collectionCapacity,
+                    freeLimit: monetization.collectionLimit
+                )
                 store.completeBulkSave(count: collectionItems.count)
                 dismiss()
+            } catch is CollectionStoreError {
+                let presented = coordinator?.presentProFeature(
+                    placement: .collectionLimitReached,
+                    params: [
+                        "used": collection.uniqueItemCount,
+                        "limit": monetization.collectionLimit,
+                    ]
+                ) {
+                    saveSelected()
+                } ?? false
+                if !presented {
+                    errorMessage = "Upgrade options are temporarily unavailable. Try again shortly."
+                }
             } catch {
                 errorMessage = error.localizedDescription
             }

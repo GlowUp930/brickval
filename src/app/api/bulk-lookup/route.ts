@@ -5,14 +5,13 @@ import { getEbayMarketData } from "@/lib/ebay";
 import { getBrickLinkMarketData } from "@/lib/bricklink";
 import { getBricksetRrp } from "@/lib/brickset";
 import { getExchangeRates } from "@/lib/frankfurter";
-import { checkAndIncrementScan } from "@/lib/scan-gate";
+import { checkFeatureAccess, consumeFeatureUsage } from "@/lib/scan-gate";
 import { computePricing } from "@/lib/compute-pricing";
 import {
   buildMinifigLookupPayload,
   sanitizeBulkMinifigNumbers,
   type MinifigLookupPayload,
 } from "@/lib/minifig-lookup";
-import { shouldChargeScan } from "@/lib/scan-charge-policy";
 import type { EbaySale, SetInfo, ComputedPricing } from "@/types/market";
 
 const LOOKUP_CACHE_TTL_HOURS = 24;
@@ -89,7 +88,12 @@ export async function POST(req: NextRequest) {
     console.warn("[bulk-lookup] Auth unavailable; continuing as guest.", error);
   }
 
-  let body: { setNumbers?: unknown; figNumbers?: unknown; mode?: unknown };
+  let body: {
+    setNumbers?: unknown;
+    figNumbers?: unknown;
+    mode?: unknown;
+    source?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
@@ -97,6 +101,7 @@ export async function POST(req: NextRequest) {
   }
 
   const mode = body.mode === "minifig" ? "minifig" : "set";
+  const isBulkScan = mode === "minifig" && body.source === "bulk-scan";
   if (mode === "set" && (!Array.isArray(body.setNumbers) || body.setNumbers.length === 0)) {
     return NextResponse.json({ error: "No set numbers provided" }, { status: 400 });
   }
@@ -125,25 +130,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No valid minifigure numbers" }, { status: 400 });
   }
 
-  // Gate signed-in users once per chargeable bulk job. Minifig scans are charged by identify.
-  if (userId && shouldChargeScan("bulk-lookup", mode)) {
-    let gate;
-    try {
-      gate = await checkAndIncrementScan(userId);
-    } catch (err) {
-      console.error("[bulk-lookup] Scan gate error:", err);
-      return NextResponse.json(
-        { error: "internal", message: "Something went wrong. Please try again." },
-        { status: 500 }
-      );
-    }
-
+  if (userId && isBulkScan) {
+    const gate = await checkFeatureAccess(userId, "bulk_scan");
     if (!gate.allowed) {
       return NextResponse.json(
         {
           error: "paywall",
-          message: "You've used all 5 free scans. Upgrade to Brickvalue Pro to continue.",
-          scansUsed: gate.scansUsed,
+          feature: "bulk_scan",
+          message: "Your free bulk scan has been used. Upgrade to BrickValue Pro for unlimited bulk scans.",
+          usage: gate.usage,
         },
         { status: 402 }
       );
@@ -158,6 +153,22 @@ export async function POST(req: NextRequest) {
       const batch = figNumbers.slice(i, i + BATCH_SIZE);
       const batchResults = await Promise.all(batch.map((figNumber) => lookupOneMinifig(figNumber)));
       results.push(...batchResults);
+    }
+
+    if (userId && isBulkScan && results.some((row) => "result" in row)) {
+      const gate = await consumeFeatureUsage(userId, "bulk_scan");
+      if (!gate.allowed) {
+        return NextResponse.json(
+          {
+            error: "paywall",
+            feature: "bulk_scan",
+            message: "Your free bulk scan has been used. Upgrade to BrickValue Pro for unlimited bulk scans.",
+            usage: gate.usage,
+          },
+          { status: 402 }
+        );
+      }
+      return NextResponse.json({ mode: "minifig", results, usage: gate.usage });
     }
 
     return NextResponse.json({ mode: "minifig", results });

@@ -1,6 +1,6 @@
 # BrickVal Native iOS Context
 
-Last verified: 2026-08-07
+Last verified: 2026-08-10
 
 This is the working context for the canonical BrickVal mobile app. It is intentionally specific to the native SwiftUI app. Repository-wide rules remain in [`AGENTS.md`](../../AGENTS.md).
 
@@ -13,7 +13,7 @@ This is the working context for the canonical BrickVal mobile app. It is intenti
 - Swift version: 6.0 with strict concurrency enabled
 - Current marketing version: `1.0.1`
 - Source/UI baseline: native SwiftUI build `46` (`1f58cec`).
-- Current TestFlight build number: `112`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence. Build `103` was archived without the RevenueCat and Superwall keys; build `104` contains the corrected configuration, build `105` contains the profile and loading-brand updates, build `106` contains the text-only gradient Pro status mark, build `107` contains the stable post-capture scanner layout, build `108` contains the enlarged centered native scan-mode picker, build `109` contains the approved image-lift motion on scan match review, build `110` contains profile accent/theme propagation, the expanded avatar library, and persistent avatar backgrounds, build `111` contains the first-use Scan mode walkthrough, and build `112` is the current final UI pass with the collection filter cleanup. The centered-stage profile editor is now available from Manage Account rather than the main Profile tab. App Store Connect version `1.0.1` is linked to build `112` with the four supplied 1290x2796 screenshots in the `APP_IPHONE_67` set.
+- Current release build number: `113`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence. Build `112` is the final pre-monetization UI pass. Build `113` adds shared Pro labeling, one introductory free bulk scan, a 10-unique-item free collection limit, contextual upgrade flows, and server-controlled future scan/history experiments. The centered-stage profile editor remains available from Manage Account rather than the main Profile tab. App Store Connect version `1.0.1` remains the active version.
 - XcodeGen source of truth: `project.yml`
 - Profile customization is account-gated: signed-out users keep the Classic default icon in profile surfaces, while signed-in users can choose an icon and background from Manage Account. The signed-out Manage Account screen is a branded Clerk auth surface using the local BrickValue logo, with no profile/avatar prompt.
 - Committed Xcode project: `BrickVal.xcodeproj`
@@ -61,6 +61,8 @@ Important scan files:
 - `BrickVal/Core/Networking/BrickValAPIClient.swift`: hosted API client.
 - `BrickVal/Core/Persistence/CollectionStore.swift`: local collection persistence and atomic bulk add.
 - `BrickVal/Core/DesignSystem/BrickValStyle.swift`: shared visual tokens.
+- `BrickVal/Core/Monetization/`: cached policy, usage snapshots, feature names, and placement names.
+- `BrickVal/Core/DesignSystem/ProBadge.swift`: shared text-only `PRO` and `PRO ACTIVE` mark.
 
 ## Scan Flow
 
@@ -104,6 +106,9 @@ Bulk result UI requirements:
 - Build 102 performs single-scan box detection on-device and does not call `/api/minifig/detect`. Keep the hosted route available for older installed builds until they are no longer supported.
 - Prices displayed in the native app are USD unless the current product requirement explicitly changes this.
 - Do not change backend endpoints or paid-service behavior for a native-only UI fix without an explicit request.
+- Phase 1 enables repeat-bulk, 10-unique-item collection, and appearance gates. Daily single-scan and 3M/6M history gates are implemented but disabled by server policy.
+- Anonymous scan usage is local to the device. Signed-in usage is enforced by atomic `user_feature_usage` records across devices.
+- Manual number lookups, failed matches, network failures, cancellations, and retries do not consume scan usage.
 
 ## Build And Test
 
@@ -130,13 +135,13 @@ Native upgrades also require `REVENUECAT_API_KEY` and `SUPERWALL_API_KEY` in the
 
 For visual QA, also use the `BrickVal iPhone 17 Pro` simulator when available. Always check the small iPhone before release, especially for sheets, long names, Dynamic Type, and controls near the bottom edge.
 
-The last verified test run contained 44 tests and passed on the small iPhone simulator, including the captured-image scanner layout regression.
+The last verified test run contained 51 tests and passed on the small iPhone simulator, including collection capacity, scan usage, and captured-image layout regressions. Free and Pro gating states were also checked on the small iPhone and iPhone 17 Pro simulators.
 
 ## Release Workflow
 
 - `project.yml` owns version and build settings; do not edit generated project settings as the lasting fix.
 - Increment `CURRENT_PROJECT_VERSION` for a new build. Keep `MARKETING_VERSION` unchanged unless the release version changes.
-- Treat the native SwiftUI source/UI baseline and App Store upload number as separate: the current interface is based on build 46, while build 110 is the current upload because Apple build numbers cannot return to 46 after builds 100 and 101.
+- Treat the native SwiftUI source/UI baseline and App Store upload number as separate: the current interface is based on build 46, while build 113 is the current release because Apple build numbers cannot return to 46 after builds 100 and 101.
 - Build and test before committing.
 - Commit focused changes with a message that states the behavioral fix.
 - Push verified native changes to `codex/swift-repo-structure` when useful and relevant.
@@ -166,6 +171,9 @@ The last verified test run contained 44 tests and passed on the small iPhone sim
 - Successful scan and manual lookup results play the bundled cash-register sound through an ambient audio session; audio failure never blocks a result.
 - Collection history horizons filter stored market points by actual 30-, 90-, and 180-day date windows. Horizon-specific fallback data and chart identity must also change when the selected horizon changes.
 - Content-backed screens use `SkeletonPlaceholder` for initial loading and remote image placeholders. Keep operation progress indicators for active captures, saves, and lookups where the user is waiting on an explicit action.
+- Free collection capacity counts unique products, not total quantity or condition slots. New and Used copies of one product share one free slot. Existing over-limit users may edit or remove saved items but cannot add another unique product.
+- `ProBadge` is the only feature-level Pro mark. Use `PRO` for locked features and `PRO ACTIVE` for subscribers; do not use a crown or sparkle as the Pro logo.
+- Contextual Superwall placements fall back to the configured `brickval_upgrade` campaign. If purchasing is unavailable, present the native Subscription screen rather than silently ignoring the action.
 
 When a future change introduces a major architectural alternative or an irreversible migration, add a separate decision record under `apps/ios-swift/docs/decisions/` and link it here. Keep this section as the concise decision index.
 

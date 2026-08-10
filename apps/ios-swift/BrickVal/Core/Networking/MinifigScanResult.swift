@@ -4,9 +4,10 @@ enum MinifigScanResult: Sendable {
     case matched(
         identification: IdentificationDetection,
         result: LookupResult,
-        timings: MinifigScanTimings
+        timings: MinifigScanTimings,
+        usage: UsageSnapshot?
     )
-    case review([IdentificationDetection], timings: MinifigScanTimings)
+    case review([IdentificationDetection], timings: MinifigScanTimings, usage: UsageSnapshot?)
     case notFound(timings: MinifigScanTimings)
 }
 

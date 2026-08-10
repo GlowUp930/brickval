@@ -206,6 +206,9 @@ struct ChartHorizonPicker: View {
     var timelinePoints: [StockChartPoint] = []
     let tint: Color
     let inactive: Color
+    var proHorizons: Set<PortfolioHorizon> = []
+    var isPro = false
+    var onProSelection: (PortfolioHorizon) -> Void = { _ in }
 
     private var timelineLabels: [String] {
         let uniquePoints = timelinePoints.reduce(into: [StockChartPoint]()) { result, point in
@@ -238,12 +241,24 @@ struct ChartHorizonPicker: View {
             HStack(spacing: 0) {
                 ForEach(PortfolioHorizon.allCases) { option in
                     Button {
+                        guard !proHorizons.contains(option) || isPro else {
+                            onProSelection(option)
+                            return
+                        }
                         withAnimation(reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.82)) {
                             selection = option
                         }
                     } label: {
                         VStack(spacing: BrickValStyle.Primitive.space4) {
-                            Text(option.rawValue).font(.system(size: 13, weight: .semibold)).monospacedDigit()
+                            HStack(spacing: BrickValStyle.Primitive.space4) {
+                                Text(option.rawValue)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .monospacedDigit()
+                                if proHorizons.contains(option) {
+                                    ProBadge(state: isPro ? .active : .requiresPro)
+                                        .scaleEffect(0.78)
+                                }
+                            }
                             Rectangle().fill(selection == option ? tint : .clear).frame(height: 2)
                         }
                         .foregroundStyle(selection == option ? tint : inactive)
@@ -251,7 +266,11 @@ struct ChartHorizonPicker: View {
                         .frame(height: BrickValStyle.CollectionLayout.timelineHeight)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Show \(option.rawValue) price history")
+                    .accessibilityLabel(
+                        proHorizons.contains(option) && !isPro
+                            ? "Show \(option.rawValue) price history, requires BrickValue Pro"
+                            : "Show \(option.rawValue) price history"
+                    )
                     .accessibilityAddTraits(selection == option ? .isSelected : [])
                 }
             }

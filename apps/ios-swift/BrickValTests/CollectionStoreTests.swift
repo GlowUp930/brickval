@@ -4,7 +4,7 @@ import Testing
 
 @MainActor
 struct CollectionStoreTests {
-    @Test func upsertsMatchingSlotsAndRespectsFreeLimit() async throws {
+    @Test func upsertsMatchingSlotsWithoutConsumingAnotherUniqueSlot() async throws {
         let repository = CollectionRepository(fileURL: temporaryURL())
         let store = CollectionStore(repository: repository)
         let item = fixture(quantity: 2)
@@ -13,10 +13,7 @@ struct CollectionStoreTests {
         #expect(store.items.count == 1)
         #expect(store.items.first?.quantity == 4)
         #expect(store.totalValue == 40)
-
-        await #expect(throws: CollectionStoreError.self) {
-            try await store.add(fixture(quantity: 7, number: "2"), isPro: false)
-        }
+        #expect(store.uniqueItemCount == 1)
     }
 
     @Test func persistsAndReloadsCollection() async throws {
@@ -52,17 +49,57 @@ struct CollectionStoreTests {
 
     @Test func rejectedBulkAddDoesNotPartiallyChangeCollection() async throws {
         let store = CollectionStore(repository: CollectionRepository(fileURL: temporaryURL()))
-        try await store.add(fixture(quantity: 8), isPro: false)
+        for index in 0..<10 {
+            try await store.add(fixture(quantity: 1, number: "\(index)"), isPro: false)
+        }
 
         await #expect(throws: CollectionStoreError.self) {
             try await store.add([
-                fixture(quantity: 1, number: "2"),
-                fixture(quantity: 2, number: "3"),
+                fixture(quantity: 2, number: "0"),
+                fixture(quantity: 1, number: "11"),
             ], isPro: false)
         }
 
-        #expect(store.items.count == 1)
-        #expect(store.totalQuantity == 8)
+        #expect(store.uniqueItemCount == 10)
+        #expect(store.items.first { $0.setNumber == "0" }?.quantity == 1)
+        #expect(store.items.contains { $0.setNumber == "11" } == false)
+    }
+
+    @Test func freeCollectionAllowsTenUniqueItemsAndRejectsTheEleventh() async throws {
+        let store = CollectionStore(repository: CollectionRepository(fileURL: temporaryURL()))
+        for index in 0..<10 {
+            try await store.add(fixture(quantity: 1, number: "\(index)"), isPro: false)
+        }
+
+        #expect(store.uniqueItemCount == 10)
+        await #expect(throws: CollectionStoreError.self) {
+            try await store.add(fixture(quantity: 1, number: "10"), isPro: false)
+        }
+    }
+
+    @Test func conditionsForTheSameProductUseOneUniqueSlot() async throws {
+        let store = CollectionStore(repository: CollectionRepository(fileURL: temporaryURL()))
+        try await store.add(fixture(quantity: 1, number: "same", condition: .newSealed), isPro: false)
+        try await store.add(fixture(quantity: 2, number: "same", condition: .used), isPro: false)
+
+        #expect(store.items.count == 2)
+        #expect(store.uniqueItemCount == 1)
+        #expect(store.totalQuantity == 3)
+    }
+
+    @Test func existingOverLimitCollectionCanChangeQuantityButCannotAddUniqueItem() async throws {
+        let store = CollectionStore(repository: CollectionRepository(fileURL: temporaryURL()))
+        for index in 0..<11 {
+            try await store.add(fixture(quantity: 1, number: "\(index)"), isPro: true)
+        }
+        let existing = try #require(store.items.first { $0.setNumber == "0" })
+
+        try await store.setQuantity(4, for: existing, isPro: false)
+        #expect(store.items.first { $0.setNumber == "0" }?.quantity == 4)
+
+        await #expect(throws: CollectionStoreError.self) {
+            try await store.add(fixture(quantity: 1, number: "new"), isPro: false)
+        }
     }
 
     @Test func setQuantityUpdatesCreatesAndRemovesConditionSlots() async throws {

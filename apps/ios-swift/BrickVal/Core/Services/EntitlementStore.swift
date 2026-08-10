@@ -1,3 +1,4 @@
+import Foundation
 import Observation
 
 @Observable
@@ -7,7 +8,27 @@ final class EntitlementStore {
     private(set) var isLoading = false
     var errorMessage: String?
 
+#if DEBUG
+    @ObservationIgnored private let forcesProForDemo =
+        ProcessInfo.processInfo.arguments.contains("-showProfileTabDemo") ||
+        ProcessInfo.processInfo.arguments.contains("-showProGatingDemo")
+#endif
+
+    init() {
+#if DEBUG
+        isPro = forcesProForDemo
+#endif
+    }
+
     func update(isPro: Bool) {
+#if DEBUG
+        if forcesProForDemo {
+            self.isPro = true
+            isLoading = false
+            errorMessage = nil
+            return
+        }
+#endif
         self.isPro = isPro
         isLoading = false
         errorMessage = nil

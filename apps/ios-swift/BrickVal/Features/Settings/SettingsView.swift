@@ -146,30 +146,7 @@ struct SettingsView: View {
     }
 
     private var proLogo: some View {
-        Text("PRO")
-            .font(.headline.weight(.black))
-            .tracking(1.1)
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-            .foregroundStyle(
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.87, green: 0.97, blue: 0.94),
-                        Color(red: 0.62, green: 0.80, blue: 0.82),
-                        Color(red: 0.28, green: 0.42, blue: 0.56),
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .padding(.horizontal, BrickValStyle.Primitive.space16)
-            .padding(.vertical, BrickValStyle.Primitive.space12)
-            .background(BrickValStyle.Primitive.black.opacity(0.78), in: Capsule())
-            .overlay {
-                Capsule()
-                    .stroke(BrickValStyle.Primitive.white.opacity(0.18), lineWidth: 1)
-            }
-            .accessibilityLabel("BrickValue Pro active")
+        ProBadge(state: .active, compact: false)
     }
 
     private func heroStat(title: String, value: String) -> some View {
@@ -205,20 +182,20 @@ struct SettingsView: View {
             Group {
                 if entitlements.isPro {
                     NavigationLink(value: AppRoute.subscription) {
-                        profileRow(
+                        profileProRow(
                             icon: "checkmark.seal.fill",
                             title: "Subscription",
                             subtitle: "Brickvalue Pro active",
-                            trailing: "Pro"
+                            state: .active
                         )
                     }
                 } else {
-                    Button(action: triggerPaywall) {
-                        profileRow(
+                    Button(action: { triggerPaywall(placement: .subscriptionUpgrade) }) {
+                        profileProRow(
                             icon: "sparkles",
                             title: "Subscription",
                             subtitle: "Free plan",
-                            trailing: "Upgrade"
+                            state: .requiresPro
                         )
                     }
                 }
@@ -259,20 +236,20 @@ struct SettingsView: View {
             Group {
                 if entitlements.isPro {
                     NavigationLink(value: AppRoute.appearance) {
-                        profileRow(
+                        profileProRow(
                             icon: "paintpalette",
                             title: "Theme and accent",
                             subtitle: "Dark mode, light mode, and colour",
-                            trailing: "Edit"
+                            state: .active
                         )
                     }
                 } else {
-                    Button(action: triggerPaywall) {
-                        profileRow(
+                    Button(action: { triggerPaywall(placement: .appearanceAttempt) }) {
+                        profileProRow(
                             icon: "paintpalette",
                             title: "Theme and accent",
                             subtitle: "Pro feature",
-                            trailing: "Pro"
+                            state: .requiresPro
                         )
                     }
                 }
@@ -348,6 +325,26 @@ struct SettingsView: View {
         .accessibilityElement(children: .combine)
     }
 
+    private func profileProRow(
+        icon: String,
+        title: String,
+        subtitle: String,
+        state: ProBadgeState
+    ) -> some View {
+        HStack(spacing: BrickValStyle.Primitive.space12) {
+            Image(systemName: icon)
+                .font(.headline)
+                .foregroundStyle(BrickValStyle.Semantic.textPrimary)
+                .frame(width: 38, height: 38)
+                .background(BrickValStyle.Semantic.surfaceMuted, in: RoundedRectangle(cornerRadius: 12))
+            profileRowText(title: title, subtitle: subtitle)
+            Spacer(minLength: BrickValStyle.Primitive.space8)
+            ProBadge(state: state)
+        }
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+
     private func profileRowText(icon: String? = nil, title: String, subtitle: String) -> some View {
         HStack(spacing: BrickValStyle.Primitive.space12) {
             if let icon {
@@ -405,9 +402,9 @@ struct SettingsView: View {
         Binding(get: { purchaseMessage != nil }, set: { if !$0 { purchaseMessage = nil } })
     }
 
-    private func triggerPaywall() {
+    private func triggerPaywall(placement: ProPlacement) {
         if coordinator?.superwallConfigured == true {
-            coordinator?.presentUpgrade()
+            coordinator?.presentUpgrade(placement: placement)
         } else {
             purchaseMessage = "Upgrade options are not configured for this build."
         }

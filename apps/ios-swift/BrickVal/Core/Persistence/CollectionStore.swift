@@ -16,6 +16,7 @@ final class CollectionStore {
 
     var totalValue: Double { items.reduce(0) { $0 + $1.totalValue } }
     var totalQuantity: Int { items.reduce(0) { $0 + $1.quantity } }
+    var uniqueItemCount: Int { Set(items.map(\.collectionIdentity)).count }
 
     func load() async {
         isLoading = true
@@ -34,11 +35,6 @@ final class CollectionStore {
 
     func add(_ newItems: [CollectionItem], isPro: Bool, freeLimit: Int = 10) async throws {
         guard !newItems.isEmpty else { return }
-        let incomingQuantity = newItems.reduce(0) { $0 + $1.quantity }
-        guard isPro || totalQuantity + incomingQuantity <= freeLimit else {
-            throw CollectionStoreError.freeLimitReached
-        }
-
         var updatedItems = items
         for item in newItems {
             if let index = updatedItems.firstIndex(where: { $0.id == item.id }) {
@@ -49,6 +45,10 @@ final class CollectionStore {
             } else {
                 updatedItems.insert(item, at: 0)
             }
+        }
+        let updatedUniqueCount = Set(updatedItems.map(\.collectionIdentity)).count
+        guard isPro || updatedUniqueCount <= freeLimit else {
+            throw CollectionStoreError.freeLimitReached(limit: freeLimit, used: uniqueItemCount)
         }
         items = updatedItems
         try await persistOrReload()
@@ -68,12 +68,6 @@ final class CollectionStore {
                 try await add(newItem, isPro: isPro, freeLimit: freeLimit)
             }
             return
-        }
-
-        let currentQuantity = items[index].quantity
-        let nextTotalQuantity = totalQuantity - currentQuantity + normalizedQuantity
-        guard isPro || nextTotalQuantity <= freeLimit else {
-            throw CollectionStoreError.freeLimitReached
         }
 
         if normalizedQuantity == 0 {
@@ -104,5 +98,11 @@ final class CollectionStore {
             errorMessage = "That change could not be saved."
             throw error
         }
+    }
+}
+
+private extension CollectionItem {
+    var collectionIdentity: String {
+        "\(itemType.rawValue)-\(setNumber.lowercased())-\(colorID.map(String.init) ?? "none")"
     }
 }

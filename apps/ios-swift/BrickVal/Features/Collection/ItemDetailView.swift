@@ -3,6 +3,8 @@ import SwiftUI
 struct ItemDetailView: View {
     @Environment(CollectionStore.self) private var store
     @Environment(EntitlementStore.self) private var entitlements
+    @Environment(MonetizationStore.self) private var monetization
+    @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.brickValAccent) private var accent
@@ -12,6 +14,7 @@ struct ItemDetailView: View {
     @State private var horizon: PortfolioHorizon = .month
     @State private var showDeleteConfirmation = false
     @State private var errorMessage: String?
+    @State private var proMessage: String?
 
     init(item: CollectionItem) {
         self.item = item
@@ -74,6 +77,11 @@ struct ItemDetailView: View {
             Button("Remove", role: .destructive) { Task { await remove() } }
         }
         .alert("Could not remove item", isPresented: errorBinding) { }
+        .alert("BrickValue Pro", isPresented: proMessageBinding) {
+            Button("OK", role: .cancel) { proMessage = nil }
+        } message: {
+            Text(proMessage ?? "")
+        }
     }
 
     private var detailBackground: some View {
@@ -237,7 +245,10 @@ struct ItemDetailView: View {
                 selection: $horizon,
                 timelinePoints: historyPoints,
                 tint: BrickValStyle.ScanResult.textPrimary,
-                inactive: BrickValStyle.ScanResult.textSecondary
+                inactive: BrickValStyle.ScanResult.textSecondary,
+                proHorizons: proHistoryHorizons,
+                isPro: entitlements.isPro,
+                onProSelection: { _ in presentHistoryUpgrade() }
             )
         }
     }
@@ -432,6 +443,24 @@ struct ItemDetailView: View {
         Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
     }
 
+    private var proMessageBinding: Binding<Bool> {
+        Binding(get: { proMessage != nil }, set: { if !$0 { proMessage = nil } })
+    }
+
+    private var proHistoryHorizons: Set<PortfolioHorizon> {
+        monetization.policy.gates.marketHistory ? [.quarter, .half] : []
+    }
+
+    private func presentHistoryUpgrade() {
+        let presented = coordinator?.presentUpgrade(
+            placement: .marketHistoryAttempt,
+            params: ["source": "item_detail"]
+        ) ?? false
+        if !presented {
+            proMessage = "Upgrade options are temporarily unavailable. Try again shortly."
+        }
+    }
+
     private func remove() async {
         do {
             try await store.remove(currentItem)
@@ -466,7 +495,25 @@ struct ItemDetailView: View {
 
         Task {
             do {
-                try await store.setQuantity(nextQuantity, for: target, isPro: entitlements.isPro)
+                try await store.setQuantity(
+                    nextQuantity,
+                    for: target,
+                    isPro: entitlements.isPro || !monetization.policy.gates.collectionCapacity,
+                    freeLimit: monetization.collectionLimit
+                )
+            } catch is CollectionStoreError {
+                let presented = coordinator?.presentProFeature(
+                    placement: .collectionLimitReached,
+                    params: [
+                        "used": store.uniqueItemCount,
+                        "limit": monetization.collectionLimit,
+                    ]
+                ) {
+                    adjustQuantity(for: option, delta: delta)
+                } ?? false
+                if !presented {
+                    errorMessage = "Upgrade options are temporarily unavailable. Try again shortly."
+                }
             } catch {
                 errorMessage = error.localizedDescription
             }

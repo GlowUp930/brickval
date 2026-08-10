@@ -9,7 +9,12 @@ function useCountUp(target: number, durationMs = 900): number {
 
   useEffect(() => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    if (target === 0) { setValue(0); return; }
+    if (target === 0) {
+      rafRef.current = requestAnimationFrame(() => setValue(0));
+      return () => {
+        if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      };
+    }
     const start = performance.now();
     function tick(now: number) {
       const elapsed = now - start;
@@ -26,7 +31,8 @@ function useCountUp(target: number, durationMs = 900): number {
   return value;
 }
 
-export function DemoScreen({ onNext: _ }: { onNext: () => void }) {
+export function DemoScreen({ onNext }: { onNext: () => void }) {
+  void onNext;
   const [showPrice, setShowPrice] = useState(false);
   const [showBadge, setShowBadge] = useState(false);
   const animatedPrice = useCountUp(showPrice ? 289 : 0, 900);

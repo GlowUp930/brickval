@@ -1,3 +1,4 @@
+import Foundation
 import Observation
 import SwiftUI
 
@@ -8,6 +9,14 @@ final class AppRouter {
     var collectionPath: [AppRoute] = []
     var scanPath: [AppRoute] = []
     var settingsPath: [AppRoute] = []
+
+    init() {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-showCollectionGatingDemo") {
+            selectedTab = .collection
+        }
+#endif
+    }
 
     func navigate(to route: AppRoute, in tab: AppTab? = nil) {
         switch tab ?? selectedTab {

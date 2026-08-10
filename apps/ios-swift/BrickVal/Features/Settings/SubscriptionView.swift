@@ -16,7 +16,7 @@ struct SubscriptionView: View {
             Section {
                 VStack(alignment: .leading, spacing: 12) {
                     Label(
-                        entitlements.isPro ? "Brickvalue Pro is active" : "Upgrade to Brickvalue Pro",
+                        entitlements.isPro ? "BrickValue Pro is active" : "Upgrade to BrickValue Pro",
                         systemImage: entitlements.isPro ? "checkmark.seal.fill" : "sparkles"
                     )
                         .font(.title2.bold())
@@ -49,6 +49,12 @@ struct SubscriptionView: View {
                 }
             }
 
+            Section("BrickValue Pro") {
+                proFeature("Unlimited bulk scanning", systemImage: "square.stack.3d.up")
+                proFeature("Unlimited collection items", systemImage: "shippingbox")
+                proFeature("Theme and accent controls", systemImage: "paintpalette")
+            }
+
             if let message {
                 Section { Text(message).foregroundStyle(.secondary) }
             }
@@ -59,5 +65,14 @@ struct SubscriptionView: View {
                 AccountView()
             }
         }
+    }
+
+    private func proFeature(_ title: String, systemImage: String) -> some View {
+        HStack(spacing: 12) {
+            Label(title, systemImage: systemImage)
+            Spacer()
+            ProBadge(state: entitlements.isPro ? .active : .requiresPro)
+        }
+        .accessibilityElement(children: .combine)
     }
 }

@@ -8,6 +8,7 @@ struct MinifigScanPayload: Decodable, Sendable {
     let identifyMs: Int?
     let pricingMs: Int?
     let totalMs: Int?
+    let usage: UsageSnapshot?
 
     var timings: MinifigScanTimings {
         MinifigScanTimings(

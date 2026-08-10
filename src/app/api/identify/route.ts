@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { anthropic } from "@/lib/anthropic";
 import { identifyNonSet, type NonSetIdentifyResponse } from "@/lib/brickognize";
 import { MINIFIG_DETECTION_LIMIT } from "@/lib/identify-nonset";
-import { checkAndIncrementScan } from "@/lib/scan-gate";
 import {
   assignDetectionsToRegions,
   MAX_GUIDED_BULK_BYTES,
   MAX_GUIDED_BULK_IMAGES,
   parseBulkRegionManifest,
 } from "@/lib/bulk-identify";
-
-const MIN_SCORE = 0.50; // minimum Brickognize confidence we trust when a preferred type exists
 
 const VISION_PROMPT = `Look at this LEGO box image. Find the LEGO set number — it is typically a 4–6 digit number printed on the front lower-right corner, back panel, or near the barcode.
 
@@ -47,8 +43,6 @@ function isAcceptedMediaType(type: string): type is AcceptedMediaType {
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const { userId } = await auth();
-
   const mode = req.nextUrl.searchParams.get("mode") ?? "set";
   const scan = req.nextUrl.searchParams.get("scan") ?? "";
   if (mode !== "set" && mode !== "minifig") {
@@ -131,34 +125,6 @@ export async function POST(req: NextRequest) {
 
     if (!identified.detections.length) {
       return NextResponse.json({ detections: [] });
-    }
-
-    if (userId) {
-      try {
-        const gate = await checkAndIncrementScan(userId);
-        if (!gate.allowed) {
-          return NextResponse.json(
-            {
-              error: "paywall",
-              message: "You've used all 5 free scans. Upgrade to Brickvalue Pro to continue.",
-              scansUsed: gate.scansUsed,
-            },
-            { status: 402 }
-          );
-        }
-
-        return NextResponse.json({
-          detections: identified.detections,
-          scansUsed: gate.scansUsed,
-          isPro: gate.isPro,
-        });
-      } catch (err) {
-        console.error("[identify] Scan gate error:", err);
-        return NextResponse.json(
-          { error: "internal", message: "Something went wrong. Please try again." },
-          { status: 500 }
-        );
-      }
     }
 
     return NextResponse.json({

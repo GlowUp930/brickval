@@ -3,12 +3,16 @@ import SwiftUI
 
 struct ScannerView: View {
     @Environment(PreferencesStore.self) private var preferences
+    @Environment(EntitlementStore.self) private var entitlements
+    @Environment(MonetizationStore.self) private var monetization
+    @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.brickValAccent) private var accent
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
     @State private var store: ScanStore
     @State private var isShowingScanTips = false
+    @State private var purchaseMessage: String?
     private let runsCameraLoop: Bool
 
     init(api: BrickValAPIClient = .live()) {
@@ -18,6 +22,9 @@ struct ScannerView: View {
         if isProcessingLayoutDemo,
            let imageData = UIImage(named: "AvatarClassic")?.jpegData(compressionQuality: 0.9) {
             store.configureProcessingLayoutDemo(imageData: imageData)
+        }
+        if ProcessInfo.processInfo.arguments.contains("-showBulkGatingDemo") {
+            store.intent = .bulk
         }
         runsCameraLoop = !isProcessingLayoutDemo
 #else
@@ -29,7 +36,7 @@ struct ScannerView: View {
     var body: some View {
         @Bindable var store = store
         VStack(spacing: 0) {
-            Picker("Scan mode", selection: $store.intent) {
+            Picker("Scan mode", selection: scanIntentBinding) {
                 ForEach(ScanIntent.allCases) {
                     Label($0.title, systemImage: $0.iconName).tag($0)
                 }
@@ -39,7 +46,16 @@ struct ScannerView: View {
             .frame(maxWidth: 340, minHeight: 56)
             .accessibilityIdentifier("scanner.modePicker")
             .padding(.top, 8)
-            .padding(.bottom, 12)
+            .padding(.bottom, 4)
+
+            ScannerAllowanceView(
+                intent: store.intent,
+                policy: monetization.policy,
+                usage: monetization.usage,
+                isPro: entitlements.isPro
+            )
+            .frame(height: 32)
+            .padding(.bottom, 8)
 
             GeometryReader { proxy in
                 let cameraSize = ScannerCameraLayout.size(fitting: proxy.size)
@@ -125,6 +141,10 @@ struct ScannerView: View {
             store.setFeedbackConsent(preferences.scanImprovementConsent)
         }
         .task {
+            store.configureMonetization(monetization)
+            monetization.configure(signedIn: coordinator?.clerk?.user != nil)
+        }
+        .task {
             guard !preferences.hasSeenScanTips else { return }
             if !reduceMotion {
                 try? await Task.sleep(for: .milliseconds(420))
@@ -137,6 +157,11 @@ struct ScannerView: View {
         .onChange(of: store.phase) { _, phase in
             guard [.capturing, .identifying, .review, .result].contains(phase) else { return }
             dismissScanTips()
+        }
+        .onChange(of: store.proLimitFeature) { _, feature in
+            guard let feature else { return }
+            presentLimit(for: feature)
+            store.clearProLimitRequest()
         }
         .sheet(item: $store.presentedSheet) { sheet in
             switch sheet {
@@ -170,6 +195,46 @@ struct ScannerView: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: store.successMessage)
+        .alert("BrickValue Pro", isPresented: purchaseMessageBinding) {
+            Button("OK", role: .cancel) { purchaseMessage = nil }
+        } message: {
+            Text(purchaseMessage ?? "")
+        }
+    }
+
+    private var scanIntentBinding: Binding<ScanIntent> {
+        Binding(
+            get: { store.intent },
+            set: { intent in
+                guard intent == .bulk,
+                      !monetization.canUseBulk(isPro: entitlements.isPro)
+                else {
+                    store.intent = intent
+                    return
+                }
+                presentLimit(for: .bulkScan)
+            }
+        )
+    }
+
+    private var purchaseMessageBinding: Binding<Bool> {
+        Binding(
+            get: { purchaseMessage != nil },
+            set: { if !$0 { purchaseMessage = nil } }
+        )
+    }
+
+    private func presentLimit(for feature: ProFeature) {
+        let placement: ProPlacement = feature == .singleScan ? .scanLimitReached : .bulkScanAttempt
+        let presented = coordinator?.presentProFeature(
+            placement: placement,
+            params: ["remaining": feature == .singleScan ? monetization.usage.singleScan.remaining : monetization.usage.bulkScan.remaining]
+        ) {
+            if feature == .bulkScan { store.intent = .bulk }
+        } ?? false
+        if !presented {
+            purchaseMessage = "Upgrade options are temporarily unavailable. Try again shortly."
+        }
     }
 
     private func dismissScanTips() {
@@ -178,6 +243,49 @@ struct ScannerView: View {
             isShowingScanTips = false
         }
         preferences.hasSeenScanTips = true
+    }
+}
+
+private struct ScannerAllowanceView: View {
+    let intent: ScanIntent
+    let policy: MonetizationPolicy
+    let usage: UsageSnapshot
+    let isPro: Bool
+
+    var body: some View {
+        HStack(spacing: BrickValStyle.Primitive.space8) {
+            if let text {
+                Text(text)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+            if showsProBadge {
+                ProBadge(state: isPro ? .active : .requiresPro)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var text: String? {
+        switch intent {
+        case .single:
+            guard policy.gates.singleDaily else { return nil }
+            if isPro { return "Unlimited scans" }
+            let remaining = usage.singleScan.remaining
+            if remaining == 0 { return "No free scans left today" }
+            return "\(remaining) free \(remaining == 1 ? "scan" : "scans") left today"
+        case .bulk:
+            if isPro { return "Unlimited bulk scans" }
+            let remaining = usage.bulkScan.remaining
+            return remaining > 0 ? "1 free try" : "Bulk scanning requires Pro"
+        }
+    }
+
+    private var showsProBadge: Bool {
+        intent == .bulk || (intent == .single && policy.gates.singleDaily)
     }
 }
 
@@ -312,4 +420,5 @@ private struct ScanTipsCallout: View {
         .environment(PreferencesStore())
         .environment(CollectionStore())
         .environment(EntitlementStore())
+        .environment(MonetizationStore())
 }

@@ -4,7 +4,6 @@ import { getExchangeRates } from "@/lib/frankfurter";
 import { getEbayMarketData } from "@/lib/ebay";
 import { getBrickLinkMarketData } from "@/lib/bricklink";
 import { getBricksetRrp } from "@/lib/brickset";
-import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { computePricing } from "@/lib/compute-pricing";
 import { PriceReveal } from "@/components/result/PriceReveal";
 import Link from "next/link";
@@ -23,20 +22,6 @@ export default async function ResultPage({ params }: Props) {
 
   if (cleanedSetNumber.length < 4) {
     return <ErrorScreen message="Invalid set number. Please try again." />;
-  }
-
-  // Check and increment scan counter atomically
-  let gate;
-  try {
-    gate = await checkAndIncrementScan(userId);
-  } catch {
-    return (
-      <ErrorScreen message="Something went wrong. Please try again in a moment." />
-    );
-  }
-
-  if (!gate.allowed) {
-    redirect("/upgrade");
   }
 
   // Fetch exchange rates first (fast — Supabase-cached)

@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { getCached, setCached } from "@/lib/cache";
 import { getEbayMarketData } from "@/lib/ebay";
 import { getBrickLinkColors, getBrickLinkMarketData, getPartMarketData } from "@/lib/bricklink";
 import { getBricksetRrp } from "@/lib/brickset";
 import { getExchangeRates } from "@/lib/frankfurter";
-import { checkAndIncrementScan } from "@/lib/scan-gate";
 import { computePricing } from "@/lib/compute-pricing";
 import { buildMinifigLookupPayload, sanitizeMinifigNumber, type MinifigLookupPayload } from "@/lib/minifig-lookup";
 import { sortByMostRecentDate } from "@/lib/sort-transactions";
@@ -22,14 +20,6 @@ function lookupCacheKey(mode: string, identifier: string, colorId?: number | str
 }
 
 export async function POST(req: NextRequest) {
-  let userId: string | null = null;
-  try {
-    const session = await auth();
-    userId = session.userId;
-  } catch (error) {
-    console.warn("[lookup] Auth unavailable; continuing as guest.", error);
-  }
-
   let body: { setNumber?: string; mode?: string; colorId?: number | string };
   try {
     body = await req.json();
@@ -179,38 +169,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Check paywall and increment scan counter atomically
-  let gate = { allowed: true, scansUsed: 0, isPro: false };
-  if (userId) {
-    try {
-      gate = await checkAndIncrementScan(userId);
-    } catch (err) {
-      console.error("[lookup] Scan gate error:", err);
-      return NextResponse.json(
-        { error: "internal", message: "Something went wrong. Please try again." },
-        { status: 500 }
-      );
-    }
-
-    if (!gate.allowed) {
-      return NextResponse.json(
-        {
-          error: "paywall",
-          message: "You've used all 5 free scans. Upgrade to Brickvalue Pro to continue.",
-          scansUsed: gate.scansUsed,
-        },
-        { status: 402 }
-      );
-    }
-  }
-
   const cacheKey = lookupCacheKey(mode, setNumber);
   const cached = await getCached<{ setInfo: SetInfo | null; pricing: ComputedPricing }>(cacheKey);
   if (cached) {
-    return NextResponse.json({
-      ...cached,
-      ...(userId ? { scansUsed: gate.scansUsed, isPro: gate.isPro } : {}),
-    });
+    return NextResponse.json(cached);
   }
 
   // Fetch exchange rates first (fast — Supabase-cached)
@@ -291,6 +253,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     ...payload,
-    ...(userId ? { scansUsed: gate.scansUsed, isPro: gate.isPro } : {}),
   });
 }

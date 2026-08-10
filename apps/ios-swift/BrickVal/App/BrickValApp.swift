@@ -6,12 +6,14 @@ struct BrickValApp: App {
     @State private var collectionStore = CollectionStore()
     @State private var preferences = PreferencesStore()
     @State private var entitlements = EntitlementStore()
+    @State private var monetization = MonetizationStore()
     @State private var sdkCoordinator: AppSDKCoordinator
 
     init() {
         let entitlementStore = EntitlementStore()
 #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("-showProfileTabDemo") {
+        if ProcessInfo.processInfo.arguments.contains("-showProfileTabDemo") ||
+            ProcessInfo.processInfo.arguments.contains("-showProGatingDemo") {
             entitlementStore.update(isPro: true)
         }
 #endif
@@ -26,6 +28,7 @@ struct BrickValApp: App {
                 .environment(collectionStore)
                 .environment(preferences)
                 .environment(entitlements)
+                .environment(monetization)
                 .environment(\.appSDKCoordinator, sdkCoordinator)
                 .environment(\.brickValAPIClient, sdkCoordinator.apiClient)
                 .preferredColorScheme(entitlements.isPro ? preferences.theme.colorScheme : ThemePreference.dark.colorScheme)

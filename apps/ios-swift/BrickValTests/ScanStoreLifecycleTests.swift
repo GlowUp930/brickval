@@ -50,7 +50,10 @@ private extension BrickValAPIClient {
                 colorName: nil
             )
         },
-        bulkLookupMinifigures: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+        bulkLookupMinifigures: { _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+        monetizationStatus: {
+            MonetizationStatus(policy: .phaseOne, usage: .empty())
+        },
         partColors: { throw ScanStoreLifecycleTestError.unusedEndpoint },
         submitFeedback: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
         deleteAccount: { throw ScanStoreLifecycleTestError.unusedEndpoint }

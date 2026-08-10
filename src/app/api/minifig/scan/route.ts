@@ -2,9 +2,10 @@ import { auth } from "@clerk/nextjs/server";
 import { after, NextRequest, NextResponse } from "next/server";
 
 import { identifyNonSet } from "@/lib/brickognize";
+import { getMonetizationPolicy } from "@/lib/monetization-policy";
 import { resolveMinifigMarketSnapshot } from "@/lib/minifig-market-snapshots";
 import { runMinifigScan } from "@/lib/minifig-scan-service";
-import { checkAndIncrementScan } from "@/lib/scan-gate";
+import { checkFeatureAccess, consumeFeatureUsage } from "@/lib/scan-gate";
 
 const MAX_CAPTURE_BYTES = 500 * 1024;
 
@@ -28,6 +29,19 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const { userId } = await auth();
+    if (userId && getMonetizationPolicy().gates.singleDaily) {
+      const access = await checkFeatureAccess(userId, "single_scan");
+      if (!access.allowed) {
+        return NextResponse.json({
+          error: "paywall",
+          feature: "single_scan",
+          message: "You have no free scans left today. Upgrade to BrickValue Pro for unlimited scans.",
+          usage: access.usage,
+        }, { status: 402 });
+      }
+    }
+
     const scan = await runMinifigScan(image, {
       identify: async () => identifyNonSet(image, { skipRecovery: true }),
       price: (itemId) => resolveMinifigMarketSnapshot(itemId, (task) => after(task)),
@@ -36,19 +50,19 @@ export async function POST(req: NextRequest) {
 
     if (scan.status === "not-found") return NextResponse.json(scan);
 
-    const { userId } = await auth();
     if (!userId) return NextResponse.json(scan);
 
-    const gate = await checkAndIncrementScan(userId);
+    const gate = await consumeFeatureUsage(userId, "single_scan");
     if (!gate.allowed) {
       return NextResponse.json({
         error: "paywall",
-        message: "You've used all 5 free scans. Upgrade to Brickvalue Pro to continue.",
-        scansUsed: gate.scansUsed,
+        feature: "single_scan",
+        message: "You have no free scans left today. Upgrade to BrickValue Pro for unlimited scans.",
+        usage: gate.usage,
       }, { status: 402 });
     }
 
-    return NextResponse.json({ ...scan, scansUsed: gate.scansUsed, isPro: gate.isPro });
+    return NextResponse.json({ ...scan, usage: gate.usage });
   } catch (error) {
     console.error("[minifig-scan] Failed:", error);
     return NextResponse.json(

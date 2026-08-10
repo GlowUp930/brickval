@@ -29,6 +29,7 @@ final class ScanStore {
     private(set) var isTorchEnabled = false
     private(set) var frozenImageData: Data?
     private(set) var successMessage: String?
+    private(set) var proLimitFeature: ProFeature?
 
     @ObservationIgnored private let camera: CameraService
     @ObservationIgnored private let motion: MotionStabilityService
@@ -36,6 +37,7 @@ final class ScanStore {
     @ObservationIgnored private let api: BrickValAPIClient
     @ObservationIgnored private let detector: any MinifigureDetecting
     @ObservationIgnored private let soundEffects: SoundEffectPlayer
+    @ObservationIgnored private var monetization: MonetizationStore?
     @ObservationIgnored private var autoSession = AutoScanSession()
     @ObservationIgnored private var schedule = LocalDetectionSchedule()
     @ObservationIgnored private var feedbackConsent = false
@@ -83,6 +85,14 @@ final class ScanStore {
 
     func setFeedbackConsent(_ enabled: Bool) {
         feedbackConsent = enabled
+    }
+
+    func configureMonetization(_ monetization: MonetizationStore) {
+        self.monetization = monetization
+    }
+
+    func clearProLimitRequest() {
+        proLimitFeature = nil
     }
 
     func runCameraLoop() async {
@@ -146,8 +156,7 @@ final class ScanStore {
             logCaptureDuration(since: captureStartedAt, automatic: false)
             try await identify(imageData: data)
         } catch {
-            frozenImageData = nil
-            phase = .failed(error.localizedDescription)
+            handleIdentificationError(error)
         }
     }
 
@@ -156,8 +165,7 @@ final class ScanStore {
         do {
             try await identify(imageData: data)
         } catch {
-            frozenImageData = nil
-            phase = .failed(error.localizedDescription)
+            handleIdentificationError(error)
         }
     }
 
@@ -188,8 +196,8 @@ final class ScanStore {
     func loadReviewCandidates(
         _ candidates: [ScanReviewCandidate]
     ) async throws -> [ScanReviewCandidate] {
-        let rows = try await api.bulkLookupMinifigures(candidates.map(\.identifier))
-        return ScanReviewCandidate.applying(rows, to: candidates)
+        let response = try await api.bulkLookupMinifigures(candidates.map(\.identifier), .review)
+        return ScanReviewCandidate.applying(response.rows, to: candidates)
     }
 
     func selectReviewCandidate(_ candidate: ScanReviewCandidate) async {
@@ -295,8 +303,7 @@ final class ScanStore {
         } catch is CancellationError {
             return
         } catch {
-            frozenImageData = nil
-            phase = .failed(error.localizedDescription)
+            handleIdentificationError(error)
         }
     }
 
@@ -310,7 +317,8 @@ final class ScanStore {
         let image = try await imageProcessor.finalScanImage(from: imageData, focusBox: focusBox)
         if mode == .minifig, intent == .single {
             switch try await api.scanMinifigure(image) {
-            case .matched(let identification, let lookup, let timings):
+            case .matched(let identification, let lookup, let timings, let usage):
+                monetization?.recordSuccessfulSingle(serverUsage: usage)
                 phase = .result
                 presentedSheet = .result(lookup)
                 soundEffects.play(.cashRegister)
@@ -323,7 +331,7 @@ final class ScanStore {
                     startedAt: startedAt,
                     timings: timings
                 )
-            case .review(let detections, let timings):
+            case .review(let detections, let timings, let usage):
                 let candidates = ScanReviewCandidate.make(from: detections)
                 guard !candidates.isEmpty else {
                     phase = .failed("No minifigure match was found. Try a closer, brighter photo.")
@@ -338,6 +346,7 @@ final class ScanStore {
                     )
                     return
                 }
+                monetization?.recordSuccessfulSingle(serverUsage: usage)
                 phase = .review
                 presentedSheet = .review(ScanReview(candidates: candidates))
                 logResultTimings(timings, startedAt: startedAt)
@@ -372,16 +381,17 @@ final class ScanStore {
 
         if mode == .minifig, intent == .bulk {
             let minifigures = identification.detections.filter { $0.itemType == .minifig }
-            let rows = minifigures.isEmpty
-                ? []
-                : try await api.bulkLookupMinifigures(minifigures.map(\.id))
-            let priced = rows.compactMap(\.result)
+            let response = minifigures.isEmpty
+                ? BulkMinifigLookupResult(rows: [], usage: nil)
+                : try await api.bulkLookupMinifigures(minifigures.map(\.id), .bulkScan)
+            let priced = response.rows.compactMap(\.result)
             let items = BulkScanResultItem.make(detections: minifigures, results: priced)
             guard let frozenImageData, !items.isEmpty else {
                 self.frozenImageData = nil
                 phase = .failed("No priced minifigures were found. Try a clearer photo with the figures separated.")
                 return
             }
+            monetization?.recordSuccessfulBulk(serverUsage: response.usage)
             phase = .review
             presentedSheet = .bulkResults(imageData: frozenImageData, items: items)
             soundEffects.play(.cashRegister)
@@ -404,6 +414,17 @@ final class ScanStore {
         smartScanMessage = "\(message) Tap the shutter to scan manually."
         resetDetectionState()
         phase = .searching
+    }
+
+    private func handleIdentificationError(_ error: Error) {
+        frozenImageData = nil
+        if let apiError = error as? APIError, apiError.isProLimit {
+            monetization?.applyServerUsage(apiError.usage)
+            proLimitFeature = apiError.feature
+            returnToLiveScanner()
+            return
+        }
+        phase = .failed(error.localizedDescription)
     }
 
     private func resetDetectionState() {

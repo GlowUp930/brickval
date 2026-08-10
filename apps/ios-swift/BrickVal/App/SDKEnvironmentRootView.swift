@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SDKEnvironmentRootView: View {
+    @Environment(MonetizationStore.self) private var monetization
     let coordinator: AppSDKCoordinator
 
     var body: some View {
@@ -27,6 +28,10 @@ struct SDKEnvironmentRootView: View {
             OnboardingView()
         } else if ProcessInfo.processInfo.arguments.contains("-showScannerProcessingLayoutDemo") {
             AppShellView()
+        } else if ProcessInfo.processInfo.arguments.contains("-showScannerDemo") ||
+                    ProcessInfo.processInfo.arguments.contains("-showProGatingDemo") ||
+                    ProcessInfo.processInfo.arguments.contains("-showCollectionGatingDemo") {
+            AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showScanResultDemo") {
             ScanResultView(result: .designDemo, reset: {})
         } else if ProcessInfo.processInfo.arguments.contains("-showScanReviewDemo") {
@@ -51,9 +56,16 @@ struct SDKEnvironmentRootView: View {
                 .environment(clerk)
                 .task(id: clerk.user?.id) {
                     await coordinator.synchronizeIdentity(userID: clerk.user?.id)
+                    await monetization.refresh(
+                        using: coordinator.apiClient,
+                        signedIn: clerk.user != nil
+                    )
                 }
         } else {
             AppRootView()
+                .task {
+                    await monetization.refresh(using: coordinator.apiClient, signedIn: false)
+                }
         }
     }
 }

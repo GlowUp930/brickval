@@ -1,12 +1,12 @@
 import Foundation
 
 enum CollectionStoreError: LocalizedError {
-    case freeLimitReached
+    case freeLimitReached(limit: Int, used: Int)
 
     var errorDescription: String? {
         switch self {
-        case .freeLimitReached:
-            "Free collections can hold up to 10 items. Upgrade to Pro for unlimited items."
+        case .freeLimitReached(let limit, _):
+            "Your free collection can hold \(limit) unique items. Upgrade to BrickValue Pro for unlimited items."
         }
     }
 }

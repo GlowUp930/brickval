@@ -4,6 +4,9 @@ struct CollectionView: View {
     @Environment(CollectionStore.self) private var store
     @Environment(AppRouter.self) private var router
     @Environment(PreferencesStore.self) private var preferences
+    @Environment(EntitlementStore.self) private var entitlements
+    @Environment(MonetizationStore.self) private var monetization
+    @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.brickValAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var searchText = ""
@@ -12,6 +15,7 @@ struct CollectionView: View {
     @State private var presentedSheet: CollectionSheet?
     @State private var horizon: PortfolioHorizon = .month
     @State private var isShowingCollectionTips = false
+    @State private var purchaseMessage: String?
 
     private let gridColumns = [
         GridItem(.flexible(), spacing: BrickValStyle.CollectionLayout.gridGap),
@@ -69,8 +73,17 @@ struct CollectionView: View {
                 } else {
                     PortfolioSummaryView(value: store.totalValue, items: store.items, horizon: horizon)
                         .padding(.top, BrickValStyle.CollectionLayout.heroTop)
-                    PortfolioChartView(items: store.items, horizon: $horizon)
+                    PortfolioChartView(
+                        items: store.items,
+                        horizon: $horizon,
+                        proHorizons: proHistoryHorizons,
+                        isPro: entitlements.isPro,
+                        onProSelection: { _ in presentHistoryUpgrade() }
+                    )
                         .padding(.top, BrickValStyle.CollectionLayout.chartTop)
+                    collectionCapacityStatus
+                        .padding(.top, BrickValStyle.Primitive.space16)
+                        .padding(.trailing, 72)
 
                     if visibleItems.isEmpty {
                         emptyCollectionState
@@ -158,6 +171,79 @@ struct CollectionView: View {
                     AccountView()
                 }
             }
+        }
+        .alert("BrickValue Pro", isPresented: purchaseMessageBinding) {
+            Button("OK", role: .cancel) { purchaseMessage = nil }
+        } message: {
+            Text(purchaseMessage ?? "")
+        }
+    }
+
+    @ViewBuilder
+    private var collectionCapacityStatus: some View {
+        if monetization.policy.gates.collectionCapacity {
+            Button(action: presentCollectionUpgrade) {
+                HStack(spacing: BrickValStyle.Primitive.space8) {
+                    VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space4) {
+                        Text(entitlements.isPro ? "Unlimited items" : "\(store.uniqueItemCount) of \(monetization.collectionLimit) free slots used")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(BrickValStyle.Semantic.textPrimary)
+                        if showsCapacityWarning {
+                            Text("You have \(max(0, monetization.collectionLimit - store.uniqueItemCount)) slots left. Upgrade for an unlimited collection.")
+                                .font(.caption)
+                                .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                                .multilineTextAlignment(.leading)
+                        }
+                    }
+                    Spacer(minLength: BrickValStyle.Primitive.space8)
+                    ProBadge(state: entitlements.isPro ? .active : .requiresPro)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(entitlements.isPro)
+            .accessibilityHint(entitlements.isPro ? "" : "Shows unlimited collection upgrade options")
+        }
+    }
+
+    private var showsCapacityWarning: Bool {
+        !entitlements.isPro &&
+            monetization.policy.gates.collectionCapacity &&
+            store.uniqueItemCount >= 8
+    }
+
+    private var proHistoryHorizons: Set<PortfolioHorizon> {
+        monetization.policy.gates.marketHistory ? [.quarter, .half] : []
+    }
+
+    private var purchaseMessageBinding: Binding<Bool> {
+        Binding(
+            get: { purchaseMessage != nil },
+            set: { if !$0 { purchaseMessage = nil } }
+        )
+    }
+
+    private func presentCollectionUpgrade() {
+        guard !entitlements.isPro else { return }
+        let presented = coordinator?.presentUpgrade(
+            placement: .collectionLimitWarning,
+            params: [
+                "used": store.uniqueItemCount,
+                "limit": monetization.collectionLimit,
+            ]
+        ) ?? false
+        if !presented {
+            purchaseMessage = "Upgrade options are temporarily unavailable. Try again shortly."
+        }
+    }
+
+    private func presentHistoryUpgrade() {
+        let presented = coordinator?.presentUpgrade(
+            placement: .marketHistoryAttempt,
+            params: ["source": "collection"]
+        ) ?? false
+        if !presented {
+            purchaseMessage = "Upgrade options are temporarily unavailable. Try again shortly."
         }
     }
 
@@ -358,4 +444,6 @@ struct CollectionDisplayItem: Identifiable, Hashable {
         .environment(CollectionStore())
         .environment(AppRouter())
         .environment(PreferencesStore())
+        .environment(EntitlementStore())
+        .environment(MonetizationStore())
 }

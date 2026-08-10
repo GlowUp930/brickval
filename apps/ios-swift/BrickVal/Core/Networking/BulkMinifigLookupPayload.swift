@@ -2,6 +2,7 @@ import Foundation
 
 struct BulkMinifigLookupPayload: Decodable, Sendable {
     let results: [Row]
+    let usage: UsageSnapshot?
 
     struct Row: Decodable, Sendable {
         let figNumber: String

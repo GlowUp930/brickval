@@ -4,7 +4,8 @@ struct BrickValAPIClient: Sendable {
     var scanMinifigure: @Sendable (Data) async throws -> MinifigScanResult
     var identify: @Sendable (Data, ScanMode, ScanIntent) async throws -> IdentificationResult
     var lookup: @Sendable (String, ItemType, Int?) async throws -> LookupResult
-    var bulkLookupMinifigures: @Sendable ([String]) async throws -> [BulkMinifigLookupRow]
+    var bulkLookupMinifigures: @Sendable ([String], BulkLookupSource) async throws -> BulkMinifigLookupResult
+    var monetizationStatus: @Sendable () async throws -> MonetizationStatus
     var partColors: @Sendable () async throws -> [PartColorOption]
     var submitFeedback: @Sendable (MinifigFeedback) async throws -> Void
     var deleteAccount: @Sendable () async throws -> Void
@@ -43,10 +44,11 @@ extension BrickValAPIClient {
                     return .matched(
                         identification: identification,
                         result: result.normalized,
-                        timings: payload.timings
+                        timings: payload.timings,
+                        usage: payload.usage
                     )
                 case "review":
-                    return .review(payload.detections ?? [], timings: payload.timings)
+                    return .review(payload.detections ?? [], timings: payload.timings, usage: payload.usage)
                 default:
                     return .notFound(timings: payload.timings)
                 }
@@ -98,10 +100,11 @@ extension BrickValAPIClient {
                     return try decoder.decode(PartLookupPayload.self, from: data).normalized
                 }
             },
-            bulkLookupMinifigures: { identifiers in
+            bulkLookupMinifigures: { identifiers, source in
                 let body = try JSONEncoder().encode(BulkMinifigLookupRequest(
                     mode: "minifig",
-                    figNumbers: Array(identifiers.prefix(40))
+                    figNumbers: Array(identifiers.prefix(40)),
+                    source: source.rawValue
                 ))
                 let request = try await request(
                     baseURL: configuration.baseURL,
@@ -117,7 +120,24 @@ extension BrickValAPIClient {
                     response: response,
                     endpoint: "bulk minifig lookup"
                 )
-                return payload.results.map(\.normalized)
+                return BulkMinifigLookupResult(
+                    rows: payload.results.map(\.normalized),
+                    usage: payload.usage
+                )
+            },
+            monetizationStatus: {
+                let request = try await request(
+                    baseURL: configuration.baseURL,
+                    path: "/api/mobile/monetization",
+                    method: "GET",
+                    token: authToken()
+                )
+                let (data, response) = try await session.data(for: request)
+                return try decodeResponse(
+                    data: data,
+                    response: response,
+                    endpoint: "monetization status"
+                )
             },
             partColors: {
                 let request = try await request(
@@ -215,8 +235,14 @@ private func validate(
         throw APIError(endpoint: endpoint, statusCode: 0, serverMessage: "The server returned an invalid response.")
     }
     guard allowingStatus.contains(http.statusCode) else {
-        let message = (try? JSONDecoder().decode(ServerErrorPayload.self, from: data))?.message
-        throw APIError(endpoint: endpoint, statusCode: http.statusCode, serverMessage: message)
+        let payload = try? JSONDecoder().decode(ServerErrorPayload.self, from: data)
+        throw APIError(
+            endpoint: endpoint,
+            statusCode: http.statusCode,
+            serverMessage: payload?.message,
+            feature: payload?.feature,
+            usage: payload?.usage
+        )
     }
 }
 
@@ -226,9 +252,12 @@ private func append<T>(_ value: T?, name: String, to form: inout MultipartFormDa
 
 private struct ServerErrorPayload: Decodable {
     let message: String?
+    let feature: ProFeature?
+    let usage: UsageSnapshot?
 }
 
 private struct BulkMinifigLookupRequest: Encodable {
     let mode: String
     let figNumbers: [String]
+    let source: String
 }
