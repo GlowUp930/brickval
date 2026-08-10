@@ -9,6 +9,7 @@ struct OnboardingView: View {
     @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var step: OnboardingStep = .brand
+    @State private var goal: PrimaryGoal?
     @State private var presentedSheet: OnboardingSheet?
     @State private var authenticatingProvider: OnboardingAuthProvider?
     @State private var alertMessage: String?
@@ -17,6 +18,8 @@ struct OnboardingView: View {
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-showOnboardingAccountDemo") {
             _step = State(initialValue: .account)
+        } else if ProcessInfo.processInfo.arguments.contains("-showOnboardingDetailsDemo") {
+            _step = State(initialValue: .value)
         }
 #endif
     }
@@ -27,18 +30,28 @@ struct OnboardingView: View {
                 .ignoresSafeArea()
 
             OnboardingDemoScreen(
-                playsVideo: step != .account,
-                getStarted: showAccountStep,
+                playsVideo: step == .brand || step == .video,
+                getStarted: showValueStep,
                 signIn: presentSignIn
             )
-            .opacity(step == .demo ? 1 : 0)
-            .scaleEffect(reduceMotion || step == .demo ? 1 : 0.985)
-            .allowsHitTesting(step == .demo)
-            .accessibilityHidden(step != .demo)
+            .opacity(step == .video ? 1 : 0)
+            .scaleEffect(reduceMotion || step == .video ? 1 : 0.985)
+            .allowsHitTesting(step == .video)
+            .accessibilityHidden(step != .video)
+
+            OnboardingDetailSequence(
+                step: step,
+                goal: $goal,
+                advance: advanceDetailStep
+            )
+            .opacity(step.isDetailStep ? 1 : 0)
+            .scaleEffect(reduceMotion || step.isDetailStep ? 1 : 0.985)
+            .allowsHitTesting(step.isDetailStep)
+            .accessibilityHidden(!step.isDetailStep)
 
             OnboardingAccountScreen(
                 authenticatingProvider: authenticatingProvider,
-                back: showDemoStep,
+                back: showReviewStep,
                 signInWithApple: { authenticate(with: .apple) },
                 signInWithGoogle: { authenticate(with: .google) },
                 skip: finishOnboarding
@@ -63,7 +76,7 @@ struct OnboardingView: View {
             }
             guard !Task.isCancelled else { return }
             withAnimation(reduceMotion ? nil : .timingCurve(0.22, 1, 0.36, 1, duration: 0.48)) {
-                step = .demo
+                step = .video
             }
         }
         .sheet(item: $presentedSheet) { sheet in
@@ -101,15 +114,30 @@ struct OnboardingView: View {
         presentedSheet = .auth
     }
 
-    private func showAccountStep() {
+    private func showValueStep() {
         withAnimation(reduceMotion ? nil : .timingCurve(0.22, 1, 0.36, 1, duration: 0.42)) {
-            step = .account
+            step = .value
         }
     }
 
-    private func showDemoStep() {
+    private func showReviewStep() {
         withAnimation(reduceMotion ? nil : .timingCurve(0.22, 1, 0.36, 1, duration: 0.38)) {
-            step = .demo
+            step = .review
+        }
+    }
+
+    private func advanceDetailStep() {
+        let nextStep: OnboardingStep? = switch step {
+        case .value: .scanReveal
+        case .scanReveal: .goal
+        case .goal: .trust
+        case .trust: .review
+        case .review: .account
+        default: nil
+        }
+        guard let nextStep else { return }
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.28)) {
+            step = nextStep
         }
     }
 
@@ -153,15 +181,41 @@ struct OnboardingView: View {
     }
 
     private func finishOnboarding() {
+        preferences.primaryGoal = goal
         preferences.isReplayingOnboarding = false
         preferences.hasCompletedOnboarding = true
     }
 }
 
-private enum OnboardingStep: Hashable {
+private enum OnboardingStep: Int, CaseIterable, Identifiable {
     case brand
-    case demo
+    case video
+    case value
+    case scanReveal
+    case goal
+    case trust
+    case review
     case account
+
+    var id: Self { self }
+
+    var isDetailStep: Bool {
+        switch self {
+        case .value, .scanReveal, .goal, .trust, .review: true
+        default: false
+        }
+    }
+
+    var detailIndex: Int? {
+        switch self {
+        case .value: 0
+        case .scanReveal: 1
+        case .goal: 2
+        case .trust: 3
+        case .review: 4
+        default: nil
+        }
+    }
 }
 
 private enum OnboardingAuthProvider: Hashable {
@@ -219,7 +273,7 @@ private struct OnboardingDemoScreen: View {
     }
 
     private func content(availableHeight: CGFloat) -> some View {
-        let videoHeight = min(450, max(340, availableHeight * 0.55))
+        let videoHeight = min(500, max(380, availableHeight * 0.61))
 
         return VStack(spacing: BrickValStyle.Primitive.space16) {
             LoopingOnboardingVideo(isActive: playsVideo)
@@ -233,7 +287,7 @@ private struct OnboardingDemoScreen: View {
                 .accessibilityIdentifier("onboarding.video")
 
             Text("LEGO collecting\nmade easy")
-                .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                .font(.system(.title, design: .rounded, weight: .bold))
                 .foregroundStyle(.black)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -272,6 +326,291 @@ private struct OnboardingDemoScreen: View {
         .padding(.top, BrickValStyle.Primitive.space12)
         .padding(.bottom, BrickValStyle.Primitive.space8)
         .frame(maxWidth: .infinity, minHeight: availableHeight)
+    }
+}
+
+private struct OnboardingDetailSequence: View {
+    @Environment(\.brickValAccent) private var accent
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let step: OnboardingStep
+    @Binding var goal: PrimaryGoal?
+    let advance: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            progress
+                .padding(.horizontal, BrickValStyle.Primitive.space24)
+                .padding(.top, BrickValStyle.Primitive.space12)
+
+            ZStack {
+                detailScreen
+                    .id(step)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Button(step == .review ? "Continue" : "Next", action: advance)
+                .buttonStyle(.borderedProminent)
+                .tint(BrickValStyle.Semantic.textPrimary)
+                .controlSize(.large)
+                .frame(maxWidth: .infinity)
+                .padding(BrickValStyle.Primitive.space24)
+                .disabled(step == .goal && goal == nil)
+                .accessibilityIdentifier("onboarding.detailContinue")
+        }
+    }
+
+    private var progress: some View {
+        HStack(spacing: BrickValStyle.Primitive.space8) {
+            ForEach(0..<5, id: \.self) { index in
+                Capsule()
+                    .fill(index <= (step.detailIndex ?? -1) ? accent : BrickValStyle.Semantic.divider)
+                    .frame(height: 4)
+            }
+        }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.28), value: step)
+    }
+
+    @ViewBuilder
+    private var detailScreen: some View {
+        switch step {
+        case .value:
+            OnboardingValueScreen()
+        case .scanReveal:
+            OnboardingScanRevealScreen()
+        case .goal:
+            OnboardingGoalScreen(selection: $goal)
+        case .trust:
+            OnboardingTrustScreen()
+        case .review:
+            OnboardingReviewScreen()
+        default:
+            EmptyView()
+        }
+    }
+}
+
+private struct OnboardingHero: View {
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        VStack(spacing: BrickValStyle.Primitive.space8) {
+            Text(title)
+                .font(.system(size: 29, weight: .bold))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(1)
+            Text(subtitle)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct OnboardingValueScreen: View {
+    @Environment(\.brickValAccent) private var accent
+
+    var body: some View {
+        VStack(spacing: BrickValStyle.Primitive.space24) {
+            OnboardingHero(
+                title: "Know what your LEGO is worth",
+                subtitle: "Scan sets and minifigures, check value, and track your collection."
+            )
+            VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space12) {
+                Image("OnboardingR2D2")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 210)
+                    .frame(maxWidth: .infinity)
+                Text("SET").font(.caption.bold()).foregroundStyle(.secondary)
+                Text("75308  R2-D2").font(.title2.bold())
+                HStack {
+                    Text("Market Value").foregroundStyle(.secondary)
+                    Spacer()
+                    Text("$214").font(.title.bold()).monospacedDigit()
+                }
+                HStack {
+                    Spacer()
+                    Text("+24%").font(.headline).foregroundStyle(accent).monospacedDigit()
+                }
+            }
+            .padding()
+            .background(.white, in: .rect(cornerRadius: 22))
+            .overlay { RoundedRectangle(cornerRadius: 22).stroke(BrickValStyle.Semantic.divider) }
+        }
+        .padding(BrickValStyle.Primitive.space24)
+    }
+}
+
+private struct OnboardingScanRevealScreen: View {
+    @Environment(\.brickValAccent) private var accent
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var scanning = false
+
+    var body: some View {
+        VStack(spacing: BrickValStyle.Primitive.space24) {
+            OnboardingHero(
+                title: "Scan. Confirm. Reveal.",
+                subtitle: "BrickValue gets from camera to market value in seconds."
+            )
+            ZStack {
+                RoundedRectangle(cornerRadius: 36).fill(BrickValStyle.Primitive.gray900)
+                Image(systemName: "viewfinder")
+                    .font(.system(size: 150, weight: .ultraLight))
+                    .foregroundStyle(.white.opacity(0.8))
+                Capsule()
+                    .fill(accent)
+                    .frame(height: 3)
+                    .padding(.horizontal, 28)
+                    .offset(y: scanning ? 120 : -120)
+            }
+            .frame(maxWidth: 270, maxHeight: 430)
+        }
+        .padding(BrickValStyle.Primitive.space24)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
+                scanning = true
+            }
+        }
+    }
+}
+
+private struct OnboardingGoalScreen: View {
+    @Environment(\.brickValAccent) private var accent
+    @Binding var selection: PrimaryGoal?
+
+    var body: some View {
+        VStack(spacing: BrickValStyle.Primitive.space24) {
+            OnboardingHero(
+                title: "What are you mainly here to do?",
+                subtitle: "Pick one. This helps BrickValue guide your first scan."
+            )
+            VStack(spacing: BrickValStyle.Primitive.space12) {
+                ForEach(PrimaryGoal.allCases) { goal in
+                    Button { selection = goal } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(goal.onboardingTitle).font(.headline)
+                                Text(goal.onboardingDetail).font(.subheadline).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: selection == goal ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(selection == goal ? accent : .secondary)
+                        }
+                        .padding()
+                        .background(.white, in: .rect(cornerRadius: 16))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(selection == goal ? accent : BrickValStyle.Semantic.divider)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(BrickValStyle.Primitive.space24)
+    }
+}
+
+private struct OnboardingTrustScreen: View {
+    @Environment(\.brickValAccent) private var accent
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isAnimating = false
+
+    var body: some View {
+        VStack(spacing: BrickValStyle.Primitive.space32) {
+            OnboardingHero(
+                title: "Real Market Data",
+                subtitle: "BrickValue uses data from reliable sources."
+            )
+            ZStack {
+                Circle()
+                    .stroke(BrickValStyle.Semantic.divider, lineWidth: 2)
+                    .frame(width: 250, height: 250)
+                    .scaleEffect(isAnimating ? 1.04 : 0.96)
+                    .opacity(isAnimating ? 0.7 : 1)
+                Circle()
+                    .fill(accent.opacity(isAnimating ? 0.14 : 0.08))
+                    .frame(width: 172, height: 172)
+                    .scaleEffect(isAnimating ? 1.06 : 0.94)
+                Image("OnboardingShield")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 110)
+                    .scaleEffect(isAnimating ? 1.02 : 1)
+                Image("OnboardingBrickLink")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 130)
+                    .offset(x: -85, y: -105)
+                    .scaleEffect(isAnimating ? 1.03 : 1)
+                Image("OnboardingBrickset")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 115)
+                    .offset(x: 95, y: 105)
+                    .scaleEffect(isAnimating ? 1.03 : 1)
+            }
+        }
+        .padding(BrickValStyle.Primitive.space24)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
+                isAnimating = true
+            }
+        }
+    }
+}
+
+private struct OnboardingReviewScreen: View {
+    @Environment(\.brickValAccent) private var accent
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isAnimating = false
+
+    var body: some View {
+        VStack(spacing: BrickValStyle.Primitive.space24) {
+            OnboardingHero(
+                title: "Built by a LEGO fan",
+                subtitle: "BrickValue is an independent app made for collectors."
+            )
+            ZStack {
+                Circle()
+                    .stroke(BrickValStyle.Semantic.divider, lineWidth: 24)
+                    .frame(width: 150, height: 150)
+                    .scaleEffect(isAnimating ? 1.05 : 0.92)
+                    .opacity(isAnimating ? 0.55 : 0.95)
+                Circle()
+                    .fill(accent.opacity(isAnimating ? 0.16 : 0.08))
+                    .frame(width: 136, height: 136)
+                    .scaleEffect(isAnimating ? 1.08 : 0.96)
+                Image("OnboardingLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 92, height: 92)
+                    .clipShape(.circle)
+                    .scaleEffect(isAnimating ? 1.02 : 1)
+            }
+            .frame(width: 172, height: 172)
+            Text("★★★★★").font(.title).foregroundStyle(accent)
+            Text("Your feedback helps more LEGO collectors find the app and helps us improve it.")
+                .font(.body.weight(.medium))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(BrickValStyle.Primitive.space24)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 1.7).repeatForever(autoreverses: true)) {
+                isAnimating = true
+            }
+        }
     }
 }
 
@@ -511,5 +850,23 @@ private final class PlayerLayerView: UIView {
 
     var playerLayer: AVPlayerLayer {
         layer as! AVPlayerLayer
+    }
+}
+
+private extension PrimaryGoal {
+    var onboardingTitle: String {
+        switch self {
+        case .catalog: "Catalog my collection"
+        case .resell: "Buy and sell LEGO"
+        case .dealCheck: "Spot hidden gems"
+        }
+    }
+
+    var onboardingDetail: String {
+        switch self {
+        case .catalog: "Track what I own and what it is worth today."
+        case .resell: "Check value before I list, buy, or negotiate."
+        case .dealCheck: "Scan quickly in stores, markets, or bulk lots."
+        }
     }
 }

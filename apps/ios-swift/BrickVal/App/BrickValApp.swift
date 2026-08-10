@@ -46,7 +46,8 @@ struct BrickValApp: App {
         if !preferences.hasCompletedOnboarding ||
             preferences.isReplayingOnboarding ||
             ProcessInfo.processInfo.arguments.contains("-showOnboardingDemo") ||
-            ProcessInfo.processInfo.arguments.contains("-showOnboardingAccountDemo") {
+            ProcessInfo.processInfo.arguments.contains("-showOnboardingAccountDemo") ||
+            ProcessInfo.processInfo.arguments.contains("-showOnboardingDetailsDemo") {
             return .light
         }
         return entitlements.isPro ? preferences.theme.colorScheme : ThemePreference.dark.colorScheme
