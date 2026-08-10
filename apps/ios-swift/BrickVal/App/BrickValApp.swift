@@ -31,7 +31,7 @@ struct BrickValApp: App {
                 .environment(monetization)
                 .environment(\.appSDKCoordinator, sdkCoordinator)
                 .environment(\.brickValAPIClient, sdkCoordinator.apiClient)
-                .preferredColorScheme(entitlements.isPro ? preferences.theme.colorScheme : ThemePreference.dark.colorScheme)
+                .preferredColorScheme(activeColorScheme)
                 .environment(\.brickValAccent, activeAccent)
                 .tint(activeAccent)
                 .onOpenURL(perform: router.handle)
@@ -40,5 +40,14 @@ struct BrickValApp: App {
 
     private var activeAccent: Color {
         entitlements.isPro ? preferences.accent.color : AccentPreference.green.color
+    }
+
+    private var activeColorScheme: ColorScheme? {
+        if !preferences.hasCompletedOnboarding ||
+            preferences.isReplayingOnboarding ||
+            ProcessInfo.processInfo.arguments.contains("-showOnboardingDemo") {
+            return .light
+        }
+        return entitlements.isPro ? preferences.theme.colorScheme : ThemePreference.dark.colorScheme
     }
 }
