@@ -185,9 +185,13 @@ struct CollectionView: View {
             Button(action: presentCollectionUpgrade) {
                 HStack(spacing: BrickValStyle.Primitive.space8) {
                     VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space4) {
-                        Text(entitlements.isPro ? "Unlimited items" : "\(store.uniqueItemCount) of \(monetization.collectionLimit) free slots used")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(BrickValStyle.Semantic.textPrimary)
+                        if entitlements.isPro {
+                            ProUnlimitedLabel(text: "Unlimited items")
+                        } else {
+                            Text("\(store.uniqueItemCount) of \(monetization.collectionLimit) free slots used")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(BrickValStyle.Semantic.textPrimary)
+                        }
                         if showsCapacityWarning {
                             Text("You have \(max(0, monetization.collectionLimit - store.uniqueItemCount)) slots left. Upgrade for an unlimited collection.")
                                 .font(.caption)

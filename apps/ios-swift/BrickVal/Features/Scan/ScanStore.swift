@@ -38,6 +38,7 @@ final class ScanStore {
     @ObservationIgnored private let detector: any MinifigureDetecting
     @ObservationIgnored private let soundEffects: SoundEffectPlayer
     @ObservationIgnored private var monetization: MonetizationStore?
+    @ObservationIgnored private var isProSubscriber = false
     @ObservationIgnored private var autoSession = AutoScanSession()
     @ObservationIgnored private var schedule = LocalDetectionSchedule()
     @ObservationIgnored private var feedbackConsent = false
@@ -72,7 +73,10 @@ final class ScanStore {
     var captureSession: AVCaptureSession { camera.sessionBox.session }
 
     var canUseSmartScan: Bool {
-        mode == .minifig && intent == .single && smartScanAvailable
+        mode == .minifig &&
+            intent == .single &&
+            smartScanAvailable &&
+            canBeginSingleScan
     }
 
 #if DEBUG
@@ -87,8 +91,13 @@ final class ScanStore {
         feedbackConsent = enabled
     }
 
-    func configureMonetization(_ monetization: MonetizationStore) {
+    func configureMonetization(_ monetization: MonetizationStore, isPro: Bool) {
         self.monetization = monetization
+        isProSubscriber = isPro
+    }
+
+    func updateProStatus(_ isPro: Bool) {
+        isProSubscriber = isPro
     }
 
     func clearProLimitRequest() {
@@ -148,6 +157,10 @@ final class ScanStore {
 
     func captureManually() async {
         guard phase != .capturing, phase != .identifying else { return }
+        guard canBeginSingleScan else {
+            proLimitFeature = .singleScan
+            return
+        }
         do {
             phase = .capturing
             let captureStartedAt = Date.now
@@ -162,6 +175,10 @@ final class ScanStore {
 
     func identifyGalleryImage(_ data: Data) async {
         guard phase != .identifying else { return }
+        guard canBeginSingleScan else {
+            proLimitFeature = .singleScan
+            return
+        }
         do {
             try await identify(imageData: data)
         } catch {
@@ -294,6 +311,12 @@ final class ScanStore {
         frame: CameraFrame,
         focusBox: NormalizedBoundingBox
     ) async {
+        guard canBeginSingleScan else {
+            proLimitFeature = .singleScan
+            resetDetectionState()
+            phase = .searching
+            return
+        }
         do {
             let captureStartedAt = Date.now
             let data = try await camera.jpegData(for: frame)
@@ -425,6 +448,10 @@ final class ScanStore {
             return
         }
         phase = .failed(error.localizedDescription)
+    }
+
+    private var canBeginSingleScan: Bool {
+        intent != .single || monetization?.canUseSingle(isPro: isProSubscriber) != false
     }
 
     private func resetDetectionState() {

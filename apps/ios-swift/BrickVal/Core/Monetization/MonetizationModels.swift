@@ -39,9 +39,9 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
     let limits: Limits
 
     static let phaseOne = MonetizationPolicy(
-        version: 1,
+        version: 2,
         gates: Gates(
-            singleDaily: false,
+            singleDaily: true,
             bulkRepeat: true,
             collectionCapacity: true,
             marketHistory: false,

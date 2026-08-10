@@ -27,10 +27,11 @@ function withCleanEnvironment(action: () => void) {
   }
 }
 
-test("phase one defaults gate repeat bulk and ten unique collection items", () => {
+test("current defaults gate daily scans, repeat bulk, and ten unique collection items", () => {
   withCleanEnvironment(() => {
     const policy = getMonetizationPolicy();
-    assert.equal(policy.gates.singleDaily, false);
+    assert.equal(policy.version, 2);
+    assert.equal(policy.gates.singleDaily, true);
     assert.equal(policy.gates.bulkRepeat, true);
     assert.equal(policy.gates.collectionCapacity, true);
     assert.equal(policy.gates.marketHistory, false);
@@ -41,13 +42,13 @@ test("phase one defaults gate repeat bulk and ten unique collection items", () =
   });
 });
 
-test("valid environment overrides can activate later experiments", () => {
+test("valid environment overrides can disable daily scans and activate later experiments", () => {
   withCleanEnvironment(() => {
-    process.env.BRICKVALUE_SINGLE_SCAN_GATE_ENABLED = "true";
+    process.env.BRICKVALUE_SINGLE_SCAN_GATE_ENABLED = "false";
     process.env.BRICKVALUE_MARKET_HISTORY_GATE_ENABLED = "1";
     process.env.BRICKVALUE_FREE_SINGLE_SCANS_PER_DAY = "5";
     const policy = getMonetizationPolicy();
-    assert.equal(policy.gates.singleDaily, true);
+    assert.equal(policy.gates.singleDaily, false);
     assert.equal(policy.gates.marketHistory, true);
     assert.equal(policy.limits.singleScansPerDay, 5);
   });

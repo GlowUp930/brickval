@@ -13,7 +13,7 @@ This is the working context for the canonical BrickVal mobile app. It is intenti
 - Swift version: 6.0 with strict concurrency enabled
 - Current marketing version: `1.0.1`
 - Source/UI baseline: native SwiftUI build `46` (`1f58cec`).
-- Current release build number: `113`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence. Build `112` is the final pre-monetization UI pass. Build `113` adds shared Pro labeling, one introductory free bulk scan, a 10-unique-item free collection limit, contextual upgrade flows, and server-controlled future scan/history experiments. The centered-stage profile editor remains available from Manage Account rather than the main Profile tab. App Store Connect version `1.0.1` remains the active version.
+- Current release build number: `114`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence. Build `112` is the final pre-monetization UI pass. Build `113` adds shared Pro labeling, one introductory free bulk scan, a 10-unique-item free collection limit, contextual upgrade flows, and server-controlled future scan/history experiments. Build `114` adds the collection-item removal redesign and hidden onboarding replay gesture. The centered-stage profile editor remains available from Manage Account rather than the main Profile tab. App Store Connect version `1.0.1` remains the active version.
 - XcodeGen source of truth: `project.yml`
 - Profile customization is account-gated: signed-out users keep the Classic default icon in profile surfaces, while signed-in users can choose an icon and background from Manage Account. The signed-out Manage Account screen is a branded Clerk auth surface using the local BrickValue logo, with no profile/avatar prompt.
 - Committed Xcode project: `BrickVal.xcodeproj`
@@ -106,7 +106,7 @@ Bulk result UI requirements:
 - Build 102 performs single-scan box detection on-device and does not call `/api/minifig/detect`. Keep the hosted route available for older installed builds until they are no longer supported.
 - Prices displayed in the native app are USD unless the current product requirement explicitly changes this.
 - Do not change backend endpoints or paid-service behavior for a native-only UI fix without an explicit request.
-- Phase 1 enables repeat-bulk, 10-unique-item collection, and appearance gates. Daily single-scan and 3M/6M history gates are implemented but disabled by server policy.
+- The current policy enables three successful single-minifigure scans per UTC day, repeat-bulk, 10-unique-item collection, and appearance gates. The 3M/6M history gate remains implemented but disabled by server policy.
 - Anonymous scan usage is local to the device. Signed-in usage is enforced by atomic `user_feature_usage` records across devices.
 - Manual number lookups, failed matches, network failures, cancellations, and retries do not consume scan usage.
 
@@ -135,13 +135,13 @@ Native upgrades also require `REVENUECAT_API_KEY` and `SUPERWALL_API_KEY` in the
 
 For visual QA, also use the `BrickVal iPhone 17 Pro` simulator when available. Always check the small iPhone before release, especially for sheets, long names, Dynamic Type, and controls near the bottom edge.
 
-The last verified test run contained 51 tests and passed on the small iPhone simulator, including collection capacity, scan usage, and captured-image layout regressions. Free and Pro gating states were also checked on the small iPhone and iPhone 17 Pro simulators.
+The full Swift test suite passed on the small iPhone simulator on 2026-08-10, including collection capacity, scan usage, entitlement transition, stale-policy migration, and captured-image layout regressions. Free and Pro gating states were also checked on the small iPhone and iPhone 17 Pro simulators.
 
 ## Release Workflow
 
 - `project.yml` owns version and build settings; do not edit generated project settings as the lasting fix.
 - Increment `CURRENT_PROJECT_VERSION` for a new build. Keep `MARKETING_VERSION` unchanged unless the release version changes.
-- Treat the native SwiftUI source/UI baseline and App Store upload number as separate: the current interface is based on build 46, while build 113 is the current release because Apple build numbers cannot return to 46 after builds 100 and 101.
+- Treat the native SwiftUI source/UI baseline and App Store upload number as separate: the current interface is based on build 46, while build 114 is the current release because Apple build numbers cannot return to 46 after builds 100 and 101.
 - Build and test before committing.
 - Commit focused changes with a message that states the behavioral fix.
 - Push verified native changes to `codex/swift-repo-structure` when useful and relevant.
@@ -173,6 +173,7 @@ The last verified test run contained 51 tests and passed on the small iPhone sim
 - Content-backed screens use `SkeletonPlaceholder` for initial loading and remote image placeholders. Keep operation progress indicators for active captures, saves, and lookups where the user is waiting on an explicit action.
 - Free collection capacity counts unique products, not total quantity or condition slots. New and Used copies of one product share one free slot. Existing over-limit users may edit or remove saved items but cannot add another unique product.
 - `ProBadge` is the only feature-level Pro mark. Use `PRO` for locked features and `PRO ACTIVE` for subscribers; do not use a crown or sparkle as the Pro logo.
+- Successful free-to-Pro entitlement transitions present one dismissible full-screen welcome that summarizes unlocked features. Repeated entitlement callbacks must not dismiss a pending welcome, and future cancellations followed by reactivation may show it again.
 - Contextual Superwall placements fall back to the configured `brickval_upgrade` campaign. If purchasing is unavailable, present the native Subscription screen rather than silently ignoring the action.
 
 When a future change introduces a major architectural alternative or an irreversible migration, add a separate decision record under `apps/ios-swift/docs/decisions/` and link it here. Keep this section as the concise decision index.

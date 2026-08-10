@@ -18,9 +18,9 @@ final class MonetizationStore {
     ) {
         self.defaults = defaults
         self.now = now
+        let cachedPolicy = Self.decode(MonetizationPolicy.self, from: defaults.data(forKey: Keys.policy))
         policy = initialPolicy
-            ?? Self.decode(MonetizationPolicy.self, from: defaults.data(forKey: Keys.policy))
-            ?? .phaseOne
+            ?? Self.currentPolicy(from: cachedPolicy)
         usage = Self.decode(UsageSnapshot.self, from: defaults.data(forKey: Keys.serverUsage)) ?? .empty()
         applyGuestUsage()
     }
@@ -80,6 +80,10 @@ final class MonetizationStore {
         !policy.gates.bulkRepeat || isPro || usage.bulkScan.remaining > 0
     }
 
+    func canUseSingle(isPro: Bool) -> Bool {
+        !policy.gates.singleDaily || isPro || usage.singleScan.remaining > 0
+    }
+
     func isHistoryLocked(_ horizon: PortfolioHorizon, isPro: Bool) -> Bool {
         policy.gates.marketHistory && horizon != .month && !isPro
     }
@@ -131,6 +135,13 @@ final class MonetizationStore {
     private static func decode<T: Decodable>(_ type: T.Type, from data: Data?) -> T? {
         guard let data else { return nil }
         return try? JSONDecoder().decode(type, from: data)
+    }
+
+    private static func currentPolicy(from cachedPolicy: MonetizationPolicy?) -> MonetizationPolicy {
+        guard let cachedPolicy, cachedPolicy.version >= MonetizationPolicy.phaseOne.version else {
+            return .phaseOne
+        }
+        return cachedPolicy
     }
 
     private static func utcDay(_ date: Date) -> String {

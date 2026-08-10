@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AppShellView: View {
     @Environment(AppRouter.self) private var router
+    @Environment(EntitlementStore.self) private var entitlements
     @Environment(\.appSDKCoordinator) private var coordinator
 
     var body: some View {
@@ -43,12 +44,22 @@ struct AppShellView: View {
                     }
             }
         }
+        .fullScreenCover(isPresented: proWelcomeBinding) {
+            ProWelcomeView()
+        }
     }
 
     private var subscriptionFallbackBinding: Binding<Bool> {
         Binding(
             get: { coordinator?.showsSubscriptionFallback == true },
             set: { if !$0 { coordinator?.dismissSubscriptionFallback() } }
+        )
+    }
+
+    private var proWelcomeBinding: Binding<Bool> {
+        Binding(
+            get: { entitlements.shouldPresentProWelcome },
+            set: { if !$0 { entitlements.dismissProWelcome() } }
         )
     }
 }

@@ -4,14 +4,31 @@ import Testing
 
 @MainActor
 struct MonetizationStoreTests {
-    @Test func phaseOneKeepsDailyScanGateDisabled() {
+    @Test func olderCachedPolicyFallsBackToCurrentBundledPolicy() throws {
+        let context = context()
+        let oldPolicy = policy(singleDaily: false)
+        context.defaults.set(
+            try JSONEncoder().encode(oldPolicy),
+            forKey: "brickvalue_monetization_policy"
+        )
+
+        let store = MonetizationStore(defaults: context.defaults)
+
+        #expect(store.policy.version == 2)
+        #expect(store.policy.gates.singleDaily)
+        #expect(store.scanReminder(isPro: false) == "3 free scans left today")
+    }
+
+    @Test func currentPolicyShowsDailyScanAllowance() {
         let context = context()
         let store = MonetizationStore(defaults: context.defaults)
 
         store.recordSuccessfulSingle(serverUsage: nil)
 
-        #expect(store.scanReminder(isPro: false) == nil)
-        #expect(store.usage.singleScan.remaining == 3)
+        #expect(store.scanReminder(isPro: false) == "2 free scans left today")
+        #expect(store.usage.singleScan.remaining == 2)
+        #expect(store.canUseSingle(isPro: false))
+        #expect(store.canUseSingle(isPro: true))
     }
 
     @Test func dailyReminderUpdatesOnlyAfterSuccessfulScans() {
@@ -29,6 +46,8 @@ struct MonetizationStoreTests {
         #expect(store.scanReminder(isPro: false) == "1 free scan left today")
         store.recordSuccessfulSingle(serverUsage: nil)
         #expect(store.scanReminder(isPro: false) == "No free scans left today")
+        #expect(store.canUseSingle(isPro: false) == false)
+        #expect(store.canUseSingle(isPro: true))
         #expect(store.scanReminder(isPro: true) == "Unlimited scans")
     }
 

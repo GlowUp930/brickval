@@ -30,7 +30,8 @@ struct SDKEnvironmentRootView: View {
             AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showScannerDemo") ||
                     ProcessInfo.processInfo.arguments.contains("-showProGatingDemo") ||
-                    ProcessInfo.processInfo.arguments.contains("-showCollectionGatingDemo") {
+                    ProcessInfo.processInfo.arguments.contains("-showCollectionGatingDemo") ||
+                    ProcessInfo.processInfo.arguments.contains("-showProWelcomeDemo") {
             AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showScanResultDemo") {
             ScanResultView(result: .designDemo, reset: {})

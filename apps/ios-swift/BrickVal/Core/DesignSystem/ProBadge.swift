@@ -39,3 +39,34 @@ struct ProBadge: View {
             )
     }
 }
+
+struct ProUnlimitedLabel: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(BrickValStyle.Primitive.black.opacity(0.82))
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color(white: 0.98),
+                        Color(white: 0.74),
+                        Color(white: 0.94),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                in: Capsule()
+            )
+            .overlay {
+                Capsule()
+                    .stroke(BrickValStyle.Primitive.white.opacity(0.72), lineWidth: 0.8)
+            }
+            .accessibilityLabel(text)
+    }
+}

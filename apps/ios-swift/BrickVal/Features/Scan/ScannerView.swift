@@ -141,8 +141,11 @@ struct ScannerView: View {
             store.setFeedbackConsent(preferences.scanImprovementConsent)
         }
         .task {
-            store.configureMonetization(monetization)
+            store.configureMonetization(monetization, isPro: entitlements.isPro)
             monetization.configure(signedIn: coordinator?.clerk?.user != nil)
+        }
+        .onChange(of: entitlements.isPro) { _, isPro in
+            store.updateProStatus(isPro)
         }
         .task {
             guard !preferences.hasSeenScanTips else { return }
@@ -255,16 +258,27 @@ private struct ScannerAllowanceView: View {
     var body: some View {
         HStack(spacing: BrickValStyle.Primitive.space8) {
             if let text {
-                Text(text)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(BrickValStyle.Semantic.textSecondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
+                if isPro {
+                    ProUnlimitedLabel(text: text)
+                } else {
+                    Image(systemName: usage.singleScan.remaining == 0 && intent == .single ? "exclamationmark.circle.fill" : "camera.aperture")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(usage.singleScan.remaining == 0 && intent == .single ? BrickValStyle.Semantic.valueNegative : BrickValStyle.Semantic.textSecondary)
+                        .accessibilityHidden(true)
+                    Text(text)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                }
             }
             if showsProBadge {
                 ProBadge(state: isPro ? .active : .requiresPro)
             }
         }
+        .padding(.horizontal, BrickValStyle.Primitive.space8)
+        .frame(maxWidth: 340, minHeight: 30)
+        .background(BrickValStyle.Semantic.surfaceMuted.opacity(0.72), in: Capsule())
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
     }

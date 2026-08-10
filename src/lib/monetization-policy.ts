@@ -28,9 +28,9 @@ function positiveInteger(name: string, fallback: number): number {
 
 export function getMonetizationPolicy(): MonetizationPolicy {
   return {
-    version: 1,
+    version: 2,
     gates: {
-      singleDaily: booleanValue("BRICKVALUE_SINGLE_SCAN_GATE_ENABLED", false),
+      singleDaily: booleanValue("BRICKVALUE_SINGLE_SCAN_GATE_ENABLED", true),
       bulkRepeat: booleanValue("BRICKVALUE_BULK_GATE_ENABLED", true),
       collectionCapacity: booleanValue("BRICKVALUE_COLLECTION_GATE_ENABLED", true),
       marketHistory: booleanValue("BRICKVALUE_MARKET_HISTORY_GATE_ENABLED", false),
