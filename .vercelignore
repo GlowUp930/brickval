@@ -1,6 +1,8 @@
 brickval-mobile/
 node_modules/
 .next/
+build/
+apps/ios-swift/
 .agents/
 .claude/
 Image 1 1.png
