@@ -11,7 +11,9 @@ export function PricingSection() {
           <div className="flex flex-col gap-1">
             <p className="font-bold text-lg">Free</p>
             <p className="text-3xl font-black">$0</p>
-            <p className="text-gray-400 text-sm">5 scans to try it out</p>
+            <p className="text-gray-400 text-sm">
+              3 single scans daily · 1 bulk scan · 10 saved items
+            </p>
           </div>
 
           <hr className="border-gray-100" />
@@ -25,20 +27,22 @@ export function PricingSection() {
               </span>
             </div>
             <p className="text-3xl font-black">
-              $12.99{" "}
+              A$9.99{" "}
               <span className="text-base font-normal text-gray-400">
-                AUD/month
+                / month
               </span>
             </p>
-            <p className="text-gray-400 text-sm">Unlimited scans · Cancel anytime</p>
+            <p className="text-gray-400 text-sm">
+              Or A$79.99/year with a 7-day free trial
+            </p>
           </div>
 
           <ul className="text-sm text-gray-600 text-left flex flex-col gap-2">
             {[
-              "Unlimited LEGO set scans",
-              "Real-time secondary market prices",
-              "Retirement status badge",
-              "RRP vs market value (% gain)",
+              "Unlimited single and bulk scans",
+              "Unlimited collection space",
+              "Full market history and insights",
+              "Theme and accent customization",
             ].map((f) => (
               <li key={f} className="flex items-center gap-2">
                 <span className="text-yellow-500 font-bold">✓</span>

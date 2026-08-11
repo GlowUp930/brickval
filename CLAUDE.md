@@ -39,7 +39,7 @@ This is a Lean MVP. Build only what is in the plan. No extras, no abstractions.
 - BrickLink API for secondary market pricing (ACTIVE — OAuth 1.0, primary price source)
 - Brickset API v3 for set metadata, RRP, retirement status
 - Frankfurter API for EUR→USD rates (24hr Supabase cache)
-- Clerk for auth, Stripe for payments ($12.99 USD/month)
+- Clerk for auth, Stripe for the legacy web checkout, and StoreKit/RevenueCat/Superwall for native iOS subscriptions (AUD 9.99 monthly or AUD 79.99 annual)
 - Supabase: 2 tables only — users and api_cache
 - Vercel Analytics (enabled in root layout)
 - framer-motion (installed, available for animation)
@@ -244,7 +244,7 @@ The `increment_scan(p_user_id, p_free_limit)` RPC:
 - Exchange rate fetch fails → Show EUR price with note
   "Currency conversion unavailable — showing EUR price."
 - Retirement status unknown → Show "Status unknown" badge, not "Active."
-- Paywall hit → 402 response: "You've used all 5 free scans. Upgrade to BrickVal Pro."
+- Paywall hit → 402 response: "You've used all of today's free scans. Upgrade to BrickVal Pro."
 
 ## The wow moment
 The price reveal animation is the core emotional beat of the product.

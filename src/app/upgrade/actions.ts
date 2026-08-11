@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { getAppUrl } from "@/lib/app-url";
 import { stripe } from "@/lib/stripe";
 
-// Set to the Price ID from your $29.99 one-time product in Stripe Dashboard
+// Legacy web checkout configuration. The current BrickValue Pro offer is
+// managed by Apple subscriptions in the native iOS app.
 const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID ?? "";
 
 export async function createCheckoutSession() {
@@ -14,7 +15,7 @@ export async function createCheckoutSession() {
 
   if (!STRIPE_PRICE_ID) {
     throw new Error(
-      "Missing STRIPE_PRICE_ID env var. Add your $29.99 lifetime price ID from Stripe."
+      "The current BrickValue Pro offer is managed in the iOS app."
     );
   }
 

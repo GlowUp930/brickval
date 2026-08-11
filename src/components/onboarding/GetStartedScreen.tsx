@@ -53,7 +53,7 @@ export function GetStartedScreen({ onNext }: { onNext: () => void }) {
           You&apos;re all set!
         </h2>
         <p className="text-base leading-relaxed" style={{ color: "var(--muted)" }}>
-          Your first 5 scans are free.
+          Start with 3 single scans each day, 1 bulk scan, and 10 saved items.
           <br />
           See what your LEGO collection is really worth.
         </p>
@@ -78,7 +78,7 @@ export function GetStartedScreen({ onNext }: { onNext: () => void }) {
           Scan My First Set
         </button>
         <p className="text-xs" style={{ color: "var(--muted)" }}>
-          Pro: Unlimited scans for less than $0.43/day
+          Pro: Unlimited scans from A$9.99/month
         </p>
       </motion.div>
     </div>

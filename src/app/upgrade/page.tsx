@@ -1,16 +1,15 @@
 "use client";
 
-import { createCheckoutSession } from "./actions";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/Logo";
 
 const features = [
-  "Unlimited LEGO set scans",
-  "Unlimited minifigure scans",
-  "Real-time BrickLink + eBay prices",
-  "Deal score & retirement status",
-  "All future features included",
+  "Unlimited single and bulk scans",
+  "Unlimited collection space",
+  "Full market history and insights",
+  "Theme and accent customization",
+  "All future Pro features included",
 ];
 
 export default function UpgradePage() {
@@ -46,23 +45,26 @@ export default function UpgradePage() {
         {/* Headline */}
         <div>
           <h1 className="text-2xl font-black mb-2" style={{ color: "var(--foreground)" }}>
-            Brickvalue Lifetime
+            BrickValue Pro
           </h1>
           <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
-            Pay once, scan forever. No subscription. No renewal.
+            Keep scanning, collecting, and tracking the value of your LEGO collection.
           </p>
         </div>
 
         {/* Price */}
         <div className="rounded-2xl p-5" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
           <p className="text-4xl font-black" style={{ color: "var(--foreground)" }}>
-            $29.99
+            A$9.99
+            <span className="text-base font-normal" style={{ color: "var(--muted)" }}>
+              {" "}/ month
+            </span>
           </p>
           <p className="text-sm mt-1 font-medium" style={{ color: "var(--accent)" }}>
-            One-time payment &middot; Lifetime access
+            Or A$79.99/year with a 7-day free trial
           </p>
           <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
-            Less than $0.08/day over a year
+            Subscription managed securely by Apple on iOS
           </p>
         </div>
 
@@ -82,22 +84,20 @@ export default function UpgradePage() {
         </ul>
 
         {/* CTA */}
-        <form action={createCheckoutSession}>
-          <button
-            type="submit"
-            className="w-full font-black py-4 px-6 rounded-full text-lg transition-all active:scale-[0.98]"
-            style={{
-              background: "var(--accent)",
-              color: "var(--accent-fg)",
-              boxShadow: "0 4px 24px rgba(245,197,24,0.3)",
-            }}
-          >
-            Get lifetime access
-          </button>
-        </form>
+        <a
+          href="https://apps.apple.com/au/app/brickvalue/id6771715475"
+          className="w-full font-black py-4 px-6 rounded-full text-lg transition-all active:scale-[0.98]"
+          style={{
+            background: "var(--accent)",
+            color: "var(--accent-fg)",
+            boxShadow: "0 4px 24px rgba(245,197,24,0.3)",
+          }}
+        >
+          Open BrickValue on iPhone
+        </a>
 
         <p className="text-xs" style={{ color: "var(--muted)" }}>
-          Secure checkout via Stripe
+          Choose a plan in the app. Cancel anytime in Apple Settings.
         </p>
 
         <Link

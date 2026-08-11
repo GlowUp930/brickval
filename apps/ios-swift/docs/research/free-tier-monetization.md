@@ -6,7 +6,7 @@ Last researched: 2026-08-11
 
 The metered free tier remains the control experience. The approved next experiment is a 50/50 new-user-only test against a hard Pro gate immediately before the first real scan. Existing users are grandfathered into the control experience.
 
-The treatment should prefer an AUD 79.99 annual plan with a seven-day introductory trial and retain an AUD 12.99 monthly alternative without a trial. This experiment supersedes the earlier recommendation in this document to avoid a first-scan gate. The detailed decision and rollout guardrails are recorded in [`0001-new-user-access-experiment.md`](../decisions/0001-new-user-access-experiment.md).
+The treatment should prefer an AUD 79.99 annual plan with a seven-day introductory trial and retain an AUD 9.99 monthly alternative without a trial. This experiment supersedes the earlier recommendation in this document to avoid a first-scan gate. The detailed decision and rollout guardrails are recorded in [`0001-new-user-access-experiment.md`](../decisions/0001-new-user-access-experiment.md).
 
 Recommended starting model:
 
@@ -58,7 +58,7 @@ Why it is strong:
 - It maps directly to recurring identification and pricing costs.
 - Occasional collectors retain a useful free app.
 - Power users encounter the upgrade prompt at a moment of demonstrated intent.
-- A renewable allowance avoids turning the free app into a permanent dead end after five lifetime scans.
+- A renewable allowance avoids turning the free app into a permanent dead end after a small lifetime allowance.
 
 ### 2. Make bulk scanning the clearest Pro convenience
 

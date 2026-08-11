@@ -10,7 +10,7 @@ Run a 50/50 access experiment for new users only:
 - Treatment: require Pro immediately before the first real scan.
 - Existing users remain on the soft-paywall experience.
 - The annual plan is the preferred offer at AUD 79.99 per year with a seven-day introductory trial.
-- The monthly alternative is AUD 12.99 with no introductory trial.
+- The monthly alternative is AUD 9.99 with no introductory trial.
 
 The server policy is the kill switch. A hard-cohort user must regain scanner access immediately when the experiment is disabled or when RevenueCat reports an active Pro entitlement.
 
@@ -42,11 +42,11 @@ A controlled new-user experiment protects the established user experience and pr
 
 Verified on 2026-08-11:
 
-- App Store Connect scheduled the annual price at AUD 79.99 and the monthly price at AUD 12.99 across all 175 territories, effective 2026-08-12. Existing subscribers retain their current prices.
+- App Store Connect scheduled the annual price at AUD 79.99 and a monthly price adjustment to AUD 9.99 in 158 affected territories, effective 2026-08-12. Apple will lower renewals for existing subscribers paying the higher monthly price in those territories.
 - The annual product has a one-week free introductory trial in all 175 territories. The monthly product has no introductory offer.
 - RevenueCat's current `default` offering contains `$rc_annual` (`com.brickval.app.pro.yearly`) and `$rc_monthly` (`com.brickval.app.pro.monthly`).
 - Superwall campaign `101303` maps enabled placement `onboarding_hard_access` to active paywall `254889` for users without an active entitlement. This is a separate copy with BrickValue branding and the same dynamic annual and monthly product bindings. The existing `brickval_upgrade` campaign and paywall `223721` remain unchanged.
-- A clean Debug simulator install verified that the treatment blocks the scanner and automatically presents the mapped BrickValue paywall. The paywall still showed the previous App Store prices because the new prices do not take effect until 2026-08-12.
+- A clean Debug simulator install verified that the treatment blocks the scanner and automatically presents the mapped BrickValue paywall. The new App Store prices do not take effect until 2026-08-12, so the on-device paywall check must be repeated after that date.
 - `BRICKVALUE_HARD_PAYWALL_EXPERIMENT_ENABLED` remains `false`. After the App Store price change takes effect, verify the annual price, seven-day trial, and monthly price on device before enabling the intended 50 percent allocation.
 
 ## Sources
