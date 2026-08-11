@@ -13,8 +13,10 @@ struct OnboardingView: View {
     @State private var presentedSheet: OnboardingSheet?
     @State private var authenticatingProvider: OnboardingAuthProvider?
     @State private var alertMessage: String?
+    private let onFinish: () -> Void
 
-    init() {
+    init(onFinish: @escaping () -> Void = {}) {
+        self.onFinish = onFinish
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-showOnboardingAccountDemo") {
             _step = State(initialValue: .account)
@@ -184,6 +186,7 @@ struct OnboardingView: View {
         preferences.primaryGoal = goal
         preferences.isReplayingOnboarding = false
         preferences.hasCompletedOnboarding = true
+        onFinish()
     }
 }
 
@@ -206,13 +209,14 @@ private enum OnboardingStep: Int, CaseIterable, Identifiable {
         }
     }
 
-    var detailIndex: Int? {
+    var progressIndex: Int? {
         switch self {
         case .value: 0
         case .scanReveal: 1
         case .goal: 2
         case .trust: 3
         case .review: 4
+        case .account: 5
         default: nil
         }
     }
@@ -274,8 +278,14 @@ private struct OnboardingDemoScreen: View {
 
     private func content(availableHeight: CGFloat) -> some View {
         let videoHeight = min(500, max(380, availableHeight * 0.61))
+        let topSpacing = availableHeight >= 760
+            ? min(44, availableHeight * 0.05)
+            : 0
 
         return VStack(spacing: BrickValStyle.Primitive.space16) {
+            Spacer(minLength: topSpacing)
+                .frame(height: topSpacing)
+
             LoopingOnboardingVideo(isActive: playsVideo)
                 .frame(width: videoHeight * (480.0 / 810.0), height: videoHeight)
                 .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
@@ -330,15 +340,13 @@ private struct OnboardingDemoScreen: View {
 }
 
 private struct OnboardingDetailSequence: View {
-    @Environment(\.brickValAccent) private var accent
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let step: OnboardingStep
     @Binding var goal: PrimaryGoal?
     let advance: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
-            progress
+            OnboardingProgressBar(currentIndex: step.progressIndex ?? 0)
                 .padding(.horizontal, BrickValStyle.Primitive.space24)
                 .padding(.top, BrickValStyle.Primitive.space12)
 
@@ -363,17 +371,6 @@ private struct OnboardingDetailSequence: View {
         }
     }
 
-    private var progress: some View {
-        HStack(spacing: BrickValStyle.Primitive.space8) {
-            ForEach(0..<5, id: \.self) { index in
-                Capsule()
-                    .fill(index <= (step.detailIndex ?? -1) ? accent : BrickValStyle.Semantic.divider)
-                    .frame(height: 4)
-            }
-        }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.28), value: step)
-    }
-
     @ViewBuilder
     private var detailScreen: some View {
         switch step {
@@ -390,6 +387,27 @@ private struct OnboardingDetailSequence: View {
         default:
             EmptyView()
         }
+    }
+}
+
+private struct OnboardingProgressBar: View {
+    @Environment(\.brickValAccent) private var accent
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let currentIndex: Int
+    private let stepCount = 6
+
+    var body: some View {
+        HStack(spacing: BrickValStyle.Primitive.space8) {
+            ForEach(0..<stepCount, id: \.self) { index in
+                Capsule()
+                    .fill(index <= currentIndex ? accent : BrickValStyle.Semantic.divider)
+                    .frame(height: 4)
+            }
+        }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.28), value: currentIndex)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Onboarding progress")
+        .accessibilityValue("Step \(currentIndex + 1) of \(stepCount)")
     }
 }
 
@@ -633,9 +651,7 @@ private struct OnboardingAccountScreen: View {
                 }
                 .accessibilityLabel("Back to introduction")
 
-                Capsule()
-                    .fill(Color.black)
-                    .frame(height: 4)
+                OnboardingProgressBar(currentIndex: OnboardingStep.account.progressIndex ?? 5)
             }
 
             Text("Save your progress")

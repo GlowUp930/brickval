@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SDKEnvironmentRootView: View {
     @Environment(MonetizationStore.self) private var monetization
+    @State private var hasDismissedOnboardingDemo = false
     let coordinator: AppSDKCoordinator
 
     var body: some View {
@@ -24,10 +25,16 @@ struct SDKEnvironmentRootView: View {
                 AccountView()
                     .environment(clerk)
             }
-        } else if ProcessInfo.processInfo.arguments.contains("-showOnboardingDemo") ||
-                    ProcessInfo.processInfo.arguments.contains("-showOnboardingAccountDemo") ||
-                    ProcessInfo.processInfo.arguments.contains("-showOnboardingDetailsDemo") {
-            OnboardingView()
+        } else if (
+            ProcessInfo.processInfo.arguments.contains("-showOnboardingDemo") ||
+                ProcessInfo.processInfo.arguments.contains("-showOnboardingAccountDemo") ||
+                ProcessInfo.processInfo.arguments.contains("-showOnboardingDetailsDemo")
+        ) && !hasDismissedOnboardingDemo {
+            OnboardingView {
+                withAnimation(.easeOut(duration: 0.24)) {
+                    hasDismissedOnboardingDemo = true
+                }
+            }
         } else if ProcessInfo.processInfo.arguments.contains("-showScannerProcessingLayoutDemo") {
             AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showScannerDemo") ||
