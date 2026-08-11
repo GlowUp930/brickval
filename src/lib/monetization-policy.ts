@@ -1,5 +1,10 @@
 export interface MonetizationPolicy {
   version: number;
+  accessExperiment: {
+    enabled: boolean;
+    hardPaywallPercent: number;
+    trialDays: number;
+  };
   gates: {
     singleDaily: boolean;
     bulkRepeat: boolean;
@@ -26,9 +31,19 @@ function positiveInteger(name: string, fallback: number): number {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
+function percentage(name: string, fallback: number): number {
+  const value = Number.parseInt(process.env[name] ?? "", 10);
+  return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : fallback;
+}
+
 export function getMonetizationPolicy(): MonetizationPolicy {
   return {
-    version: 2,
+    version: 3,
+    accessExperiment: {
+      enabled: booleanValue("BRICKVALUE_HARD_PAYWALL_EXPERIMENT_ENABLED", false),
+      hardPaywallPercent: percentage("BRICKVALUE_HARD_PAYWALL_PERCENT", 50),
+      trialDays: positiveInteger("BRICKVALUE_PRO_TRIAL_DAYS", 7),
+    },
     gates: {
       singleDaily: booleanValue("BRICKVALUE_SINGLE_SCAN_GATE_ENABLED", true),
       bulkRepeat: booleanValue("BRICKVALUE_BULK_GATE_ENABLED", true),

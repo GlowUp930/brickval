@@ -39,6 +39,7 @@ struct SDKEnvironmentRootView: View {
             AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showScannerDemo") ||
                     ProcessInfo.processInfo.arguments.contains("-showProGatingDemo") ||
+                    ProcessInfo.processInfo.arguments.contains("-showHardAccessDemo") ||
                     ProcessInfo.processInfo.arguments.contains("-showCollectionGatingDemo") ||
                     ProcessInfo.processInfo.arguments.contains("-showProWelcomeDemo") {
             AppShellView()
@@ -70,11 +71,13 @@ struct SDKEnvironmentRootView: View {
                         using: coordinator.apiClient,
                         signedIn: clerk.user != nil
                     )
+                    coordinator.setMonetizationCohort(monetization.accessCohort)
                 }
         } else {
             AppRootView()
                 .task {
                     await monetization.refresh(using: coordinator.apiClient, signedIn: false)
+                    coordinator.setMonetizationCohort(monetization.accessCohort)
                 }
         }
     }

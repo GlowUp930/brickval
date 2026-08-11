@@ -10,6 +10,7 @@ enum ProFeature: String, Codable, Sendable {
 
 enum ProPlacement: String, Sendable {
     case subscriptionUpgrade = "brickval_upgrade"
+    case onboardingHardAccess = "onboarding_hard_access"
     case scanLimitWarning = "scan_limit_warning"
     case scanLimitReached = "scan_limit_reached"
     case bulkScanAttempt = "bulk_scan_attempt"
@@ -20,6 +21,12 @@ enum ProPlacement: String, Sendable {
 }
 
 struct MonetizationPolicy: Codable, Equatable, Sendable {
+    struct AccessExperiment: Codable, Equatable, Sendable {
+        let enabled: Bool
+        let hardPaywallPercent: Int
+        let trialDays: Int
+    }
+
     struct Gates: Codable, Equatable, Sendable {
         let singleDaily: Bool
         let bulkRepeat: Bool
@@ -35,11 +42,17 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
     }
 
     let version: Int
+    let accessExperiment: AccessExperiment?
     let gates: Gates
     let limits: Limits
 
     static let phaseOne = MonetizationPolicy(
-        version: 2,
+        version: 3,
+        accessExperiment: AccessExperiment(
+            enabled: false,
+            hardPaywallPercent: 50,
+            trialDays: 7
+        ),
         gates: Gates(
             singleDaily: true,
             bulkRepeat: true,
@@ -53,6 +66,20 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
             collectionUniqueItems: 10
         )
     )
+
+    var effectiveAccessExperiment: AccessExperiment {
+        accessExperiment ?? AccessExperiment(
+            enabled: false,
+            hardPaywallPercent: 0,
+            trialDays: 7
+        )
+    }
+}
+
+enum MonetizationAccessCohort: String, Codable, Equatable, Sendable {
+    case legacySoft = "legacy_soft"
+    case experimentSoft = "experiment_soft"
+    case hardTrial = "hard_trial"
 }
 
 struct UsageCounter: Codable, Equatable, Sendable {

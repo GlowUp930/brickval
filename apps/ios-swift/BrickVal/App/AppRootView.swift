@@ -4,6 +4,8 @@ struct AppRootView: View {
     @Environment(AppRouter.self) private var router
     @Environment(CollectionStore.self) private var collectionStore
     @Environment(PreferencesStore.self) private var preferences
+    @Environment(MonetizationStore.self) private var monetization
+    @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var migration = LegacyExpoMigration()
     @State private var isReady = false
@@ -86,6 +88,10 @@ struct AppRootView: View {
     private func migrate() async {
         do {
             _ = try await migration.run(collectionStore: collectionStore, preferences: preferences)
+            monetization.protectExistingUserIfNeeded(
+                hasCompletedOnboarding: preferences.hasCompletedOnboarding
+            )
+            coordinator?.setMonetizationCohort(monetization.accessCohort)
             await collectionStore.load()
             migrationError = nil
         } catch {

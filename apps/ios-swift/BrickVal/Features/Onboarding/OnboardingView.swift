@@ -6,6 +6,7 @@ import UIKit
 
 struct OnboardingView: View {
     @Environment(PreferencesStore.self) private var preferences
+    @Environment(MonetizationStore.self) private var monetization
     @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var step: OnboardingStep = .brand
@@ -183,9 +184,14 @@ struct OnboardingView: View {
     }
 
     private func finishOnboarding() {
+        let isReplay = preferences.isReplayingOnboarding
         preferences.primaryGoal = goal
         preferences.isReplayingOnboarding = false
         preferences.hasCompletedOnboarding = true
+        if !isReplay {
+            monetization.enrollNewUserIfNeeded()
+        }
+        coordinator?.setMonetizationCohort(monetization.accessCohort)
         onFinish()
     }
 }

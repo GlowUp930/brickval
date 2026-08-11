@@ -7,32 +7,81 @@ final class MonetizationStore {
     private(set) var policy: MonetizationPolicy
     private(set) var usage: UsageSnapshot
     private(set) var isSignedIn = false
+    private(set) var accessCohort: MonetizationAccessCohort?
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let now: @Sendable () -> Date
+    @ObservationIgnored private let experimentRoll: @Sendable () -> Int
 
     init(
         defaults: UserDefaults = .standard,
         now: @escaping @Sendable () -> Date = Date.init,
+        experimentRoll: @escaping @Sendable () -> Int = { Int.random(in: 0..<100) },
         initialPolicy: MonetizationPolicy? = nil
     ) {
         self.defaults = defaults
         self.now = now
+        self.experimentRoll = experimentRoll
         let cachedPolicy = Self.decode(MonetizationPolicy.self, from: defaults.data(forKey: Keys.policy))
         policy = initialPolicy
             ?? Self.currentPolicy(from: cachedPolicy)
         usage = Self.decode(UsageSnapshot.self, from: defaults.data(forKey: Keys.serverUsage)) ?? .empty()
+        accessCohort = defaults.string(forKey: Keys.accessCohort)
+            .flatMap(MonetizationAccessCohort.init(rawValue:))
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-showHardAccessDemo") {
+            accessCohort = .hardTrial
+        }
+#endif
+        protectExistingUserIfNeeded(
+            hasCompletedOnboarding: defaults.bool(forKey: Keys.onboardingCompleted)
+        )
         applyGuestUsage()
     }
 
     var collectionLimit: Int { policy.limits.collectionUniqueItems }
 
+    var trialDays: Int { policy.effectiveAccessExperiment.trialDays }
+
+    func protectExistingUserIfNeeded(hasCompletedOnboarding: Bool) {
+        guard accessCohort == nil, hasCompletedOnboarding else { return }
+        setAccessCohort(.legacySoft)
+    }
+
+    func enrollNewUserIfNeeded() {
+        guard accessCohort == nil else { return }
+        let experiment = policy.effectiveAccessExperiment
+        let roll = min(max(experimentRoll(), 0), 99)
+        let cohort: MonetizationAccessCohort = experiment.enabled && roll < experiment.hardPaywallPercent
+            ? .hardTrial
+            : .experimentSoft
+        setAccessCohort(cohort)
+    }
+
+    func requiresProForScanning(isPro: Bool) -> Bool {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-showHardAccessDemo") {
+            return !isPro
+        }
+#endif
+        return policy.effectiveAccessExperiment.enabled && accessCohort == .hardTrial && !isPro
+    }
+
+    var shouldPresentHardAccessIntro: Bool {
+        accessCohort == .hardTrial && !defaults.bool(forKey: Keys.hardAccessIntroPresented)
+    }
+
+    func markHardAccessIntroPresented() {
+        defaults.set(true, forKey: Keys.hardAccessIntroPresented)
+    }
+
     func refresh(using api: BrickValAPIClient, signedIn: Bool) async {
         isSignedIn = signedIn
         do {
             let status = try await api.monetizationStatus()
-            policy = status.policy
-            save(status.policy, forKey: Keys.policy)
+            let currentPolicy = Self.currentPolicy(from: status.policy)
+            policy = currentPolicy
+            save(currentPolicy, forKey: Keys.policy)
             if signedIn {
                 usage = status.usage
                 save(status.usage, forKey: Keys.serverUsage)
@@ -132,6 +181,11 @@ final class MonetizationStore {
         if let data = try? JSONEncoder().encode(value) { defaults.set(data, forKey: key) }
     }
 
+    private func setAccessCohort(_ cohort: MonetizationAccessCohort) {
+        accessCohort = cohort
+        defaults.set(cohort.rawValue, forKey: Keys.accessCohort)
+    }
+
     private static func decode<T: Decodable>(_ type: T.Type, from data: Data?) -> T? {
         guard let data else { return nil }
         return try? JSONDecoder().decode(type, from: data)
@@ -159,5 +213,8 @@ final class MonetizationStore {
         static let guestSingleDay = "brickvalue_guest_single_scan_day"
         static let guestSingleUsed = "brickvalue_guest_single_scans_used"
         static let guestBulkUsed = "brickvalue_guest_bulk_scans_used"
+        static let onboardingCompleted = "has_completed_onboarding"
+        static let accessCohort = "brickvalue_monetization_access_cohort"
+        static let hardAccessIntroPresented = "brickvalue_hard_access_intro_presented"
     }
 }

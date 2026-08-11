@@ -52,6 +52,7 @@
 		39B27C9B12591952190BCB20 /* MinifigScanResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = F32C6AB0B8B3EF8BDC14F935 /* MinifigScanResult.swift */; };
 		39F2DA4691710D9A6A43D3DF /* ItemDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 706356F3011820760559C3B3 /* ItemDetailView.swift */; };
 		3A436287F71C839D44040D72 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28CBB95E72FCC9866478E98A /* AccountView.swift */; };
+		3E46E947E6934E2108B3F061 /* HardScanAccessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35805650FAB79618409E2604 /* HardScanAccessView.swift */; };
 		3E5FFF459158F63F7840B8DC /* CollectorAvatarPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F7F2DA54B70047594956E66 /* CollectorAvatarPicker.swift */; };
 		3EF5ED52DDE4A2E6AE123005 /* LegacyKeychainReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2441B872E77FF1CA73446492 /* LegacyKeychainReader.swift */; };
 		402F0E0F4542BDE2F1C4F4F0 /* RevenueCatPurchaseController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B97BB2DF610A85B024F16A6 /* RevenueCatPurchaseController.swift */; };
@@ -202,6 +203,7 @@
 		2B97BB2DF610A85B024F16A6 /* RevenueCatPurchaseController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevenueCatPurchaseController.swift; sourceTree = "<group>"; };
 		32E00FF36212FF566E311D3C /* BrickValAPIEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrickValAPIEnvironment.swift; sourceTree = "<group>"; };
 		33393ED0233F29E4CCA2BD7F /* PartLookupPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartLookupPayload.swift; sourceTree = "<group>"; };
+		35805650FAB79618409E2604 /* HardScanAccessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardScanAccessView.swift; sourceTree = "<group>"; };
 		3591356803BD2A4BD06722E4 /* DetectionSamplePlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionSamplePlanner.swift; sourceTree = "<group>"; };
 		36AC261DF2ECD56A13E0D952 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
 		37C7BE28BC150776BA6284AD /* LegacyExpoMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyExpoMigration.swift; sourceTree = "<group>"; };
@@ -652,6 +654,7 @@
 				10FF7680D1CD08807EB3F84D /* DetectionSampleMode.swift */,
 				5C23138D0889D0013BA8299F /* DetectionSamplePlan.swift */,
 				3591356803BD2A4BD06722E4 /* DetectionSamplePlanner.swift */,
+				35805650FAB79618409E2604 /* HardScanAccessView.swift */,
 				3E90F936A1789385BD03F0D3 /* LocalDetectionSchedule.swift */,
 				4BE2A5D5E9763EEBE9C4EDE7 /* ManualLookupView.swift */,
 				3F4AEB722B741DCE2C9C67E5 /* PartColorSelectionView.swift */,
@@ -943,6 +946,7 @@
 				117163991846475DFD0C7E26 /* DetectionSamplePlanner.swift in Sources */,
 				52AA054984EC35FD4FF34761 /* EntitlementStore.swift in Sources */,
 				7CD8E4C4F8A75976B4BDA0EF /* FocusedScanCropPlanner.swift in Sources */,
+				3E46E947E6934E2108B3F061 /* HardScanAccessView.swift in Sources */,
 				BD5C55DC1EA6C50A5B4272ED /* IdentificationCandidate.swift in Sources */,
 				A1BB76AC0EC0CCCDAEF92500 /* IdentificationDetection.swift in Sources */,
 				16BB048BBF2F7CA295D78703 /* IdentificationResult.swift in Sources */,

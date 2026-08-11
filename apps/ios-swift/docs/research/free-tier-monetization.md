@@ -1,10 +1,12 @@
 # BrickValue Free Tier Monetization Research
 
-Last researched: 2026-08-10
+Last researched: 2026-08-11
 
 ## Recommendation
 
-Do not add several unrelated restrictions at once. BrickValue should let a new collector prove that scanning and pricing work, then charge for repeated use, bulk convenience, and deeper market intelligence.
+The metered free tier remains the control experience. The approved next experiment is a 50/50 new-user-only test against a hard Pro gate immediately before the first real scan. Existing users are grandfathered into the control experience.
+
+The treatment should prefer an AUD 79.99 annual plan with a seven-day introductory trial and retain an AUD 12.99 monthly alternative without a trial. This experiment supersedes the earlier recommendation in this document to avoid a first-scan gate. The detailed decision and rollout guardrails are recorded in [`0001-new-user-access-experiment.md`](../decisions/0001-new-user-access-experiment.md).
 
 Recommended starting model:
 
@@ -12,23 +14,20 @@ Recommended starting model:
 | --- | --- | --- |
 | Single scanning | Three successful scans per day, with a test against five per day | Unlimited |
 | Bulk scanning | One complete introductory bulk scan | Unlimited |
-| Collection | One collection with 20 unique entries; test 20 against 30 | Unlimited entries; multiple collections when available |
+| Collection | One collection with 10 unique entries | Unlimited entries; multiple collections when available |
 | Market data | Current New/Used value and a short trend | Full history, sold-comparison detail, source comparison, and advanced analytics |
 | Data tools | Basic item management | Export, alerts, automated refresh, and cloud sync when those features exist |
-| Appearance | Default BrickValue theme | Existing theme, accent, and profile customization |
+| Appearance | Default theme; signed-in avatar customization | Theme and accent customization |
 
 The current 10-item rule should count unique collection entries, not total quantity. Owning three copies of one minifigure should not consume three free slots.
 
 ## Current BrickValue State
 
-- `CollectionStore` caps free users at a total quantity of 10. Duplicate quantities count toward the limit.
-- The backend also contains a five-scan lifetime limit for signed-in free users in `src/lib/scan-gate.ts`.
-- Scan routes only apply that meter when Clerk returns a user ID. Signed-out users therefore bypass it, and the gate also fails open when Supabase is unavailable.
-- The iOS client decodes scan-limit server errors as ordinary API failures. It does not route a limit hit into a contextual Superwall upgrade placement.
-- Collection-limit errors similarly show an error message without immediately offering a relevant upgrade action.
-- The app currently exposes one generic Superwall placement, `brickval_upgrade`, so it cannot yet compare conversion by trigger or tailor the paywall to the user's attempted action.
-
-This means BrickValue does not currently have a clean monetization baseline. Before adding another limit, make the existing entitlement and limit behavior consistent for guest and signed-in users and measure each conversion moment.
+- `CollectionStore` caps free users at 10 unique products. Duplicate quantities and conditions share one slot.
+- Successful single and bulk scans use separate counters; failures, retries, cancellations, and manual lookups do not consume usage.
+- The iOS app exposes contextual Superwall placements for scan, bulk, collection, history, appearance, and the new-user access experiment, with `brickval_upgrade` as the fallback.
+- Anonymous usage is local to the device. Signed-in usage is enforced by atomic backend records.
+- The new-user hard-access experiment remains disabled until its App Store introductory offer and Superwall placement are verified.
 
 ## Evidence
 
@@ -36,9 +35,9 @@ This means BrickValue does not currently have a clean monetization baseline. Bef
 
 Apple explicitly supports freemium and metered paywalls. Its guidance recommends contextually relevant subscription prompts when a user approaches a free limit, while keeping the purchase flow short and clearly describing what the subscriber receives. Apple also requires the full renewal amount to be the most prominent price and clear trial terms.
 
-RevenueCat's 2026 subscription dataset reports that hard-paywall apps have much higher median Day-35 conversion than freemium apps, but RevenueCat also notes that freemium remains appropriate when free use supports word of mouth, brand scale, or a longer conversion journey. BrickValue needs users to trust scan accuracy before asking them to pay, so a contextual metered model is a better first experiment than a launch-time hard paywall.
+RevenueCat's 2026 subscription dataset reports that hard-paywall Utilities apps have much higher median Day-35 conversion than freemium apps. It also reports higher median Day-60 revenue per install for hard paywalls. These benchmarks justify a controlled BrickValue test, while the existing metered experience remains the control because category medians do not prove BrickValue's outcome.
 
-RevenueCat reports that 5-9 day trials are a practical middle range and have materially better median trial-to-paid conversion than trials of four days or less. It also warns that most short-trial cancellations happen immediately. If BrickValue tests an introductory trial, test seven days after the user has completed successful scans, not a three-day trial at first launch.
+RevenueCat reports that 5-9 day trials are a practical middle range and have materially better median trial-to-paid conversion than trials of four days or less. It also warns that most short-trial cancellations happen immediately. BrickValue will therefore test a seven-day annual trial and measure first renewal, refunds, and Day-60 proceeds rather than optimizing for trial starts.
 
 Superwall recommends instrumenting separate placements at potential monetization moments. Its feature-gating controls can make the same placement gated or non-gated remotely, allowing BrickValue to test a soft prompt against a hard gate without shipping another app build.
 
@@ -67,9 +66,9 @@ Give every user one full bulk-scan result so they can understand its value. Gate
 
 Bulk mode is faster, handles multiple items, and has an easy-to-explain value proposition: Pro saves time. This is preferable to obscuring results after the user has already waited.
 
-### 3. Replace the 10-quantity cap with a unique-entry cap
+### 3. Use a 10-item unique-entry cap
 
-Test 20 versus 30 unique set/minifigure entries in one free collection. Quantities of an existing entry should not consume extra slots. Show progress at 80 percent, for example `16 of 20 free collection slots used`.
+Allow 10 unique set/minifigure entries in one free collection. Quantities of an existing entry should not consume extra slots. Show progress at 80 percent, for example `8 of 10 free collection slots used`.
 
 Existing saved items must remain readable after a subscription expires. Pro should unlock new additions and premium tools, not hold the user's existing collection hostage.
 
@@ -103,8 +102,8 @@ Add distinct Superwall placements so each can be measured and remotely tested:
 
 Suggested behavior:
 
-1. Do not hard-paywall before the first successful result.
-2. After the first or second successful scan, a soft Pro explanation may be shown but should not block progress.
+1. Keep contextual limit placements for the soft-paywall control cohort.
+2. For the hard-paywall treatment cohort only, gate immediately before the first real scan and do not start the camera first.
 3. Warn near a limit and state the exact remaining allowance.
 4. Hard-gate only when the user explicitly attempts the limited action.
 5. Tailor the paywall headline to that action, such as `Scan your whole tray in one photo` or `Keep your full collection in BrickValue`.
@@ -117,9 +116,9 @@ Run one meaningful change at a time:
 1. **Baseline:** unify guest and signed-in metering, add placement-specific events, and make current limit hits open an upgrade flow.
 2. **Bulk experiment:** one free bulk scan versus a renewable weekly bulk scan.
 3. **Single-scan experiment:** three versus five successful scans per day.
-4. **Collection experiment:** 20 versus 30 unique entries.
+4. **Collection experiment:** keep 10 unique entries as the baseline; test a larger allowance only after the access experiment is resolved.
 5. **Analytics experiment:** short history free versus full history free, with advanced source detail gated.
-6. **Offer experiment:** no trial versus a clearly disclosed seven-day annual-plan trial shown after activation.
+6. **Access experiment:** existing metered access versus a new-user hard gate with a clearly disclosed seven-day annual-plan trial.
 
 Primary metric:
 
@@ -138,7 +137,7 @@ Do not select a winner from trial starts alone. RevenueCat specifically recommen
 
 ## What Not to Do
 
-- Do not gate the first scan result or basic current value.
+- Do not change access for existing users; only the randomized new-user treatment may gate before scanning.
 - Do not count failed scans against an allowance.
 - Do not keep the current five-scan lifetime meter alongside a new daily meter.
 - Do not make manual correction paths Pro-only.

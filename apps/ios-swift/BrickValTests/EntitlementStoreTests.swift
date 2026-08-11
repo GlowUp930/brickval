@@ -34,6 +34,17 @@ struct EntitlementStoreTests {
         #expect(store.shouldPresentProWelcome)
     }
 
+    @Test func cachedProAccessIsAvailableWhileFreshStatusLoads() {
+        let context = context()
+        context.defaults.set(true, forKey: "brickvalue_last_known_pro_status")
+
+        let store = EntitlementStore(defaults: context.defaults)
+        store.beginLoading()
+
+        #expect(store.isPro)
+        #expect(store.isLoading)
+    }
+
     private func context() -> (defaults: UserDefaults, suite: String) {
         let suite = "EntitlementStoreTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!

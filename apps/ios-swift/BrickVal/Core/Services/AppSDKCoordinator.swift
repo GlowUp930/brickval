@@ -49,6 +49,7 @@ final class AppSDKCoordinator {
             }
             Purchases.configure(withAPIKey: revenueCatKey)
             purchasesConfigured = true
+            entitlementStore.beginLoading()
             controller.startSyncing()
         }
     }
@@ -86,6 +87,20 @@ final class AppSDKCoordinator {
 
     func dismissSubscriptionFallback() {
         showsSubscriptionFallback = false
+    }
+
+    func setMonetizationCohort(_ cohort: MonetizationAccessCohort?) {
+        guard let cohort else { return }
+        let attributes = [
+            "access_cohort": cohort.rawValue,
+            "access_experiment": "new_user_scan_gate_v1",
+        ]
+        if superwallConfigured {
+            Superwall.shared.setUserAttributes(attributes)
+        }
+        if purchasesConfigured {
+            Purchases.shared.attribution.setAttributes(attributes)
+        }
     }
 
     func restorePurchases() async throws {

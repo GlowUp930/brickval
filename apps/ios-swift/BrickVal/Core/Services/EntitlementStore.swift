@@ -23,9 +23,10 @@ final class EntitlementStore {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        isPro = defaults.object(forKey: Keys.lastKnownPro) as? Bool ?? false
 #if DEBUG
-        isPro = forcesProForDemo
-        shouldPresentProWelcome = forcesWelcomeForDemo
+        if forcesProForDemo { isPro = true }
+        if forcesWelcomeForDemo { shouldPresentProWelcome = true }
 #endif
     }
 

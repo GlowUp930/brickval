@@ -1,6 +1,6 @@
 # BrickVal Native iOS Context
 
-Last verified: 2026-08-10
+Last verified: 2026-08-11
 
 This is the working context for the canonical BrickVal mobile app. It is intentionally specific to the native SwiftUI app. Repository-wide rules remain in [`AGENTS.md`](../../AGENTS.md).
 
@@ -135,7 +135,7 @@ Native upgrades also require `REVENUECAT_API_KEY` and `SUPERWALL_API_KEY` in the
 
 For visual QA, also use the `BrickVal iPhone 17 Pro` simulator when available. Always check the small iPhone before release, especially for sheets, long names, Dynamic Type, and controls near the bottom edge.
 
-The full Swift test suite passed on the small iPhone simulator on 2026-08-10, including collection capacity, scan usage, entitlement transition, stale-policy migration, and captured-image layout regressions. Free and Pro gating states were also checked on the small iPhone and iPhone 17 Pro simulators.
+The full 60-test Swift suite passed on the small iPhone simulator on 2026-08-11, including collection capacity, scan usage, access-cohort assignment, cached entitlement handling, stale-policy migration, and captured-image layout regressions. Free and Pro gating states were also checked on the small iPhone and iPhone 17 Pro simulators.
 
 ## Release Workflow
 
@@ -175,6 +175,7 @@ The full Swift test suite passed on the small iPhone simulator on 2026-08-10, in
 - `ProBadge` is the only feature-level Pro mark. Use `PRO` for locked features and `PRO ACTIVE` for subscribers; do not use a crown or sparkle as the Pro logo.
 - Successful free-to-Pro entitlement transitions present one dismissible full-screen welcome that summarizes unlocked features. Repeated entitlement callbacks must not dismiss a pending welcome, and future cancellations followed by reactivation may show it again.
 - Contextual Superwall placements fall back to the configured `brickval_upgrade` campaign. If purchasing is unavailable, present the native Subscription screen rather than silently ignoring the action.
+- New users can be assigned once to a persisted 50/50 access experiment. The control keeps metered soft access; the treatment requires Pro immediately before the first real scan. Existing users and onboarding replays remain soft-access users. RevenueCat entitlement resolution must finish before the treatment gate can appear, and the server policy remains the kill switch. The bundled and server defaults keep this experiment disabled until the annual introductory offer and dedicated Superwall placement are verified. See [`docs/decisions/0001-new-user-access-experiment.md`](docs/decisions/0001-new-user-access-experiment.md).
 
 When a future change introduces a major architectural alternative or an irreversible migration, add a separate decision record under `apps/ios-swift/docs/decisions/` and link it here. Keep this section as the concise decision index.
 

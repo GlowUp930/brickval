@@ -25,8 +25,12 @@ final class RevenueCatPurchaseController: PurchaseController {
             }
         })
         syncTasks.append(Task { [weak self] in
-            guard let info = try? await Purchases.shared.customerInfo() else { return }
-            await self?.apply(info)
+            do {
+                let info = try await Purchases.shared.customerInfo()
+                await self?.apply(info)
+            } catch {
+                self?.entitlementStore.fail(message: "We couldn't confirm your Pro status. Please try again.")
+            }
         })
     }
 

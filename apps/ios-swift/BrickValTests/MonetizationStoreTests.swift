@@ -14,7 +14,7 @@ struct MonetizationStoreTests {
 
         let store = MonetizationStore(defaults: context.defaults)
 
-        #expect(store.policy.version == 2)
+        #expect(store.policy.version == 3)
         #expect(store.policy.gates.singleDaily)
         #expect(store.scanReminder(isPro: false) == "3 free scans left today")
     }
@@ -82,6 +82,81 @@ struct MonetizationStoreTests {
         #expect(store.canUseBulk(isPro: true))
     }
 
+    @Test func completedExistingUserIsGrandfatheredIntoSoftAccess() {
+        let context = context()
+        context.defaults.set(true, forKey: "has_completed_onboarding")
+
+        let store = MonetizationStore(
+            defaults: context.defaults,
+            experimentRoll: { 0 }
+        )
+
+        #expect(store.accessCohort == .legacySoft)
+        #expect(store.requiresProForScanning(isPro: false) == false)
+    }
+
+    @Test func newUserIsAssignedToHardTrialCohortWithinRollout() {
+        let context = context()
+        let store = MonetizationStore(
+            defaults: context.defaults,
+            experimentRoll: { 49 },
+            initialPolicy: policy(singleDaily: true, hardPaywallEnabled: true)
+        )
+
+        store.enrollNewUserIfNeeded()
+
+        #expect(store.accessCohort == .hardTrial)
+        #expect(store.requiresProForScanning(isPro: false))
+        #expect(store.requiresProForScanning(isPro: true) == false)
+        #expect(store.trialDays == 7)
+    }
+
+    @Test func newUserIsAssignedToSoftControlOutsideRollout() {
+        let context = context()
+        let store = MonetizationStore(
+            defaults: context.defaults,
+            experimentRoll: { 50 },
+            initialPolicy: policy(singleDaily: true, hardPaywallEnabled: true)
+        )
+
+        store.enrollNewUserIfNeeded()
+
+        #expect(store.accessCohort == .experimentSoft)
+        #expect(store.requiresProForScanning(isPro: false) == false)
+    }
+
+    @Test func hardAccessIntroPresentsOnlyOnce() {
+        let context = context()
+        let store = MonetizationStore(
+            defaults: context.defaults,
+            experimentRoll: { 0 },
+            initialPolicy: policy(singleDaily: true, hardPaywallEnabled: true)
+        )
+        store.enrollNewUserIfNeeded()
+
+        #expect(store.shouldPresentHardAccessIntro)
+        store.markHardAccessIntroPresented()
+        #expect(store.shouldPresentHardAccessIntro == false)
+    }
+
+    @Test func remoteKillSwitchUnlocksHardCohort() {
+        let context = context()
+        let enabledStore = MonetizationStore(
+            defaults: context.defaults,
+            experimentRoll: { 0 },
+            initialPolicy: policy(singleDaily: true, hardPaywallEnabled: true)
+        )
+        enabledStore.enrollNewUserIfNeeded()
+        #expect(enabledStore.requiresProForScanning(isPro: false))
+
+        let disabledStore = MonetizationStore(
+            defaults: context.defaults,
+            initialPolicy: policy(singleDaily: true, hardPaywallEnabled: false)
+        )
+        #expect(disabledStore.accessCohort == .hardTrial)
+        #expect(disabledStore.requiresProForScanning(isPro: false) == false)
+    }
+
     private func context() -> (defaults: UserDefaults, suite: String) {
         let suite = "MonetizationStoreTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
@@ -89,9 +164,17 @@ struct MonetizationStoreTests {
         return (defaults, suite)
     }
 
-    private func policy(singleDaily: Bool) -> MonetizationPolicy {
+    private func policy(
+        singleDaily: Bool,
+        hardPaywallEnabled: Bool = false
+    ) -> MonetizationPolicy {
         MonetizationPolicy(
-            version: 1,
+            version: hardPaywallEnabled ? 3 : 1,
+            accessExperiment: .init(
+                enabled: hardPaywallEnabled,
+                hardPaywallPercent: 50,
+                trialDays: 7
+            ),
             gates: .init(
                 singleDaily: singleDaily,
                 bulkRepeat: true,
