@@ -38,6 +38,16 @@ A controlled new-user experiment protects the established user experience and pr
 4. Release with the experiment disabled if any dependency is incomplete.
 5. Activate 50 percent through server policy, monitor daily, and retain the kill switch.
 
+## Current Configuration
+
+Verified on 2026-08-11:
+
+- App Store Connect scheduled the annual price at AUD 79.99 and the monthly price at AUD 12.99 across all 175 territories, effective 2026-08-12. Existing subscribers retain their current prices.
+- The annual product has a one-week free introductory trial in all 175 territories. The monthly product has no introductory offer.
+- RevenueCat's current `default` offering contains `$rc_annual` (`com.brickval.app.pro.yearly`) and `$rc_monthly` (`com.brickval.app.pro.monthly`).
+- The Superwall account-management connection is installed and authenticated, but `onboarding_hard_access` still needs to be mapped to the approved paywall and verified on device.
+- `BRICKVALUE_HARD_PAYWALL_EXPERIMENT_ENABLED` must remain `false` until that Superwall mapping is verified. The intended launch allocation remains 50 percent.
+
 ## Sources
 
 - [RevenueCat: State of Subscription Apps 2026 - Utilities](https://www.revenuecat.com/state-of-subscription-apps-2026-utilities)
