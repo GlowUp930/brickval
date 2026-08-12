@@ -1,6 +1,6 @@
 # BrickVal Native iOS Context
 
-Last verified: 2026-08-12
+Last verified: 2026-08-13
 
 This is the working context for the canonical BrickVal mobile app. It is intentionally specific to the native SwiftUI app. Repository-wide rules remain in [`AGENTS.md`](../../AGENTS.md).
 
@@ -13,7 +13,7 @@ This is the working context for the canonical BrickVal mobile app. It is intenti
 - Swift version: 6.0 with strict concurrency enabled
 - Current marketing version: `1.0.2`
 - Source/UI baseline: native SwiftUI build `46` (`1f58cec`).
-- Current release build number: `121`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence. Build `112` is the final pre-monetization UI pass. Build `113` adds shared Pro labeling, one introductory free bulk scan, a 10-unique-item free collection limit, contextual upgrade flows, and server-controlled future scan/history experiments. Build `114` adds the collection-item removal redesign and hidden onboarding replay gesture. Build `115` adds guided on-device bulk detection. Build `116` adds recall-first bulk recovery, ambiguous-match review, and tap-to-recover for missed figures. Build `118` isolates tap-to-recover uploads around the selected figure to prevent nearby figures from being identified instead. Build `119` makes missed-figure recovery direct and unobstructed by removing broad tap guides from the photo. Build `120` fixes recovery candidate layout collapse, centers recovery crops on direct taps, and replaces the recovery circle with animated corner focus brackets. Build `121` returns manual recovery matches to the bulk review with a visible confirmation and the recovered card in view. The centered-stage profile editor remains available from Manage Account rather than the main Profile tab. App Store Connect version `1.0.2` is the active TestFlight train.
+- Current release build number: `122`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence. Build `112` is the final pre-monetization UI pass. Build `113` adds shared Pro labeling, one introductory free bulk scan, a 10-unique-item free collection limit, contextual upgrade flows, and server-controlled future scan/history experiments. Build `114` adds the collection-item removal redesign and hidden onboarding replay gesture. Build `115` adds guided on-device bulk detection. Build `116` adds recall-first bulk recovery, ambiguous-match review, and tap-to-recover for missed figures. Build `118` isolates tap-to-recover uploads around the selected figure to prevent nearby figures from being identified instead. Build `119` makes missed-figure recovery direct and unobstructed by removing broad tap guides from the photo. Build `120` fixes recovery candidate layout collapse, centers recovery crops on direct taps, and replaces the recovery circle with animated corner focus brackets. Build `121` returns manual recovery matches to the bulk review with a visible confirmation and the recovered card in view. Build `122` is the current App Store Connect upload for the validated pricing and paywall configuration. The centered-stage profile editor remains available from Manage Account rather than the main Profile tab. App Store Connect version `1.0.2` is the active TestFlight train.
 - The build `115` bulk backend was deployed to production on 2026-08-12 and verified against photographed 0-, 1-, 2-, and 3-figure cases. Failed scans pause live detection so their error message remains visible until the user retries.
 - XcodeGen source of truth: `project.yml`
 - Profile customization is account-gated: signed-out users keep the Classic default icon in profile surfaces, while signed-in users can choose an icon and background from Manage Account. The signed-out Manage Account screen is a branded Clerk auth surface using the local BrickValue logo, with no profile/avatar prompt.
@@ -155,7 +155,7 @@ The full 70-test Swift suite passed on the small iPhone and iPhone 17 Pro simula
 
 - `project.yml` owns version and build settings; do not edit generated project settings as the lasting fix.
 - Increment `CURRENT_PROJECT_VERSION` for a new build. Keep `MARKETING_VERSION` unchanged unless the release version changes.
-- Treat the native SwiftUI source/UI baseline and App Store upload number as separate: the current interface is based on build 46, while build 116 is the current release because Apple build numbers cannot return to 46 after builds 100 and 101.
+- Treat the native SwiftUI source/UI baseline and App Store upload number as separate: the current interface is based on build 46, while build 122 is the current release because Apple build numbers cannot return to 46 after builds 100 and 101.
 - Build and test before committing.
 - Commit focused changes with a message that states the behavioral fix.
 - Push verified native changes to `codex/swift-repo-structure` when useful and relevant.
