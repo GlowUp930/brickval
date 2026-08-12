@@ -1,5 +1,24 @@
 import SwiftUI
 
+enum BulkRecoveryLayout {
+    static let candidateRowHeight: Double = 132
+    static let candidateCardWidth: Double = 124
+    static let candidateCardHeight: Double = 124
+}
+
+enum BulkRecoveryTapPlanner {
+    static func focusBox(for normalizedPoint: CGPoint) -> NormalizedBoundingBox {
+        let x = min(max(normalizedPoint.x, 0), 1)
+        let y = min(max(normalizedPoint.y, 0), 1)
+        return NormalizedBoundingBox(
+            x: min(max(x - 0.13, 0), 0.74),
+            y: min(max(y - 0.15, 0), 0.70),
+            width: 0.26,
+            height: 0.30
+        )
+    }
+}
+
 enum BulkRecoveryState: Sendable {
     case idle
     case selecting
@@ -17,6 +36,15 @@ enum BulkRecoveryState: Sendable {
         case .idle, .selecting: nil
         case .identifying(let box), .choosing(let box, _), .failed(let box, _): box
         }
+    }
+
+    var candidateCount: Int {
+        guard case .choosing(_, let candidates) = self else { return 0 }
+        return candidates.count
+    }
+
+    var candidateChooserHeight: Double {
+        candidateCount > 0 ? BulkRecoveryLayout.candidateRowHeight : 0
     }
 }
 
@@ -74,7 +102,7 @@ struct BulkScanResultsView: View {
             }
             photoResults
                 .layoutPriority(1)
-            if case .choosing(_, let candidates) = recoveryState {
+            if case .choosing(_, let candidates) = recoveryState, !candidates.isEmpty {
                 recoveryCandidateChooser(candidates)
                     .transition(recoveryTransition)
             }
@@ -237,6 +265,7 @@ struct BulkScanResultsView: View {
             Text(recoverySubtitle)
                 .font(.subheadline)
                 .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .foregroundStyle(.white)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -288,8 +317,8 @@ struct BulkScanResultsView: View {
             unresolvedRegions.isEmpty
                 ? "Tap the minifigure itself, not the surrounding area."
                 : "Tap the minifigure itself. We’ll check the spot you choose."
-        case .identifying: "Checking identity and current value."
-        case .choosing: "Select the card that matches the highlighted figure."
+        case .identifying: "Checking the area you tapped."
+        case .choosing: "Choose the card that matches the selected area."
         case .failed(_, let message): message
         }
     }
@@ -334,16 +363,12 @@ struct BulkScanResultsView: View {
             y: min(max(targetRect.midY, 80), containerSize.height - 80)
         )
 
-        return Circle()
-            .fill(.black.opacity(0.18))
-            .frame(width: 58, height: 58)
-            .overlay {
-                Circle()
-                    .stroke(.orange, lineWidth: 3)
-            }
-        .position(center)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
+        return RecoveryFocusOverlay(
+            targetRect: targetRect,
+            center: center,
+            containerSize: containerSize
+        )
+        .id("focus-\(box.x)-\(box.y)-\(box.width)-\(box.height)")
     }
 
     private func recoveryCandidateChooser(_ candidates: [BulkScanReviewCandidate]) -> some View {
@@ -357,6 +382,7 @@ struct BulkScanResultsView: View {
         }
         .scrollIndicators(.hidden)
         .frame(maxWidth: .infinity)
+        .frame(height: CGFloat(recoveryState.candidateChooserHeight), alignment: .top)
         .accessibilityLabel("Possible matches")
     }
 
@@ -396,6 +422,10 @@ struct BulkScanResultsView: View {
             acceptRecovery(candidate)
         } label: {
             candidateCard(candidate, badge: nil)
+                .frame(
+                    width: CGFloat(BulkRecoveryLayout.candidateCardWidth),
+                    height: CGFloat(BulkRecoveryLayout.candidateCardHeight)
+                )
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Recovered candidate \(candidate.result.name)")
@@ -759,14 +789,9 @@ struct BulkScanResultsView: View {
         guard isRecoverySelecting, recoveryToken != nil else { return }
         let x = min(max((location.x - imageRect.minX) / imageRect.width, 0), 1)
         let y = min(max((location.y - imageRect.minY) / imageRect.height, 0), 1)
-        let tapBox = unresolvedRegions.first(where: { box in
-            x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height
-        }) ?? NormalizedBoundingBox(
-            x: min(max(x - 0.13, 0), 0.74),
-            y: min(max(y - 0.15, 0), 0.70),
-            width: 0.26,
-            height: 0.30
-        )
+        // Use the exact tap center for the crop. Reusing a broad server region
+        // can include a neighboring figure and return the wrong match.
+        let tapBox = BulkRecoveryTapPlanner.focusBox(for: CGPoint(x: x, y: y))
         beginRecovery(box: tapBox)
     }
 
@@ -849,10 +874,88 @@ struct BulkScanResultsView: View {
             result: candidate.result,
             boundingBox: box
         )))
-        unresolvedRegions.removeAll { $0 == box }
+        unresolvedRegions.removeAll { region in
+            let center = box.center
+            return center.x >= region.x && center.x <= region.x + region.width
+                && center.y >= region.y && center.y <= region.y + region.height
+        }
         withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86)) {
             recoveryState = unresolvedRegions.isEmpty ? .idle : .selecting
         }
+    }
+}
+
+private struct RecoveryFocusOverlay: View {
+    let targetRect: CGRect
+    let center: CGPoint
+    let containerSize: CGSize
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isEmphasized = false
+
+    private var focusSize: CGSize {
+        CGSize(
+            width: min(max(targetRect.width * 0.82, 112), min(containerSize.width - 28, 210)),
+            height: min(max(targetRect.height * 0.42, 112), min(containerSize.height - 28, 190))
+        )
+    }
+
+    private var clampedCenter: CGPoint {
+        let size = focusSize
+        return CGPoint(
+            x: min(max(center.x, size.width / 2 + 14), containerSize.width - size.width / 2 - 14),
+            y: min(max(center.y, size.height / 2 + 14), containerSize.height - size.height / 2 - 14)
+        )
+    }
+
+    var body: some View {
+        RecoveryFocusCorners()
+            .stroke(
+                .orange.opacity(isEmphasized || reduceMotion ? 1 : 0.68),
+                style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
+            )
+            .background {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(.orange.opacity(0.045))
+            }
+            .frame(width: focusSize.width, height: focusSize.height)
+            .shadow(color: .orange.opacity(isEmphasized ? 0.34 : 0.12), radius: 10)
+            .scaleEffect(reduceMotion || isEmphasized ? 1 : 0.96)
+            .opacity(reduceMotion || isEmphasized ? 1 : 0.72)
+            .position(clampedCenter)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
+                    isEmphasized = true
+                }
+            }
+    }
+}
+
+private struct RecoveryFocusCorners: Shape {
+    func path(in rect: CGRect) -> Path {
+        let length = min(28, min(rect.width, rect.height) * 0.24)
+        var path = Path()
+
+        path.move(to: CGPoint(x: rect.minX + length, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + length))
+
+        path.move(to: CGPoint(x: rect.maxX - length, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + length))
+
+        path.move(to: CGPoint(x: rect.minX, y: rect.maxY - length))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX + length, y: rect.maxY))
+
+        path.move(to: CGPoint(x: rect.maxX, y: rect.maxY - length))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX - length, y: rect.maxY))
+
+        return path
     }
 }
 
