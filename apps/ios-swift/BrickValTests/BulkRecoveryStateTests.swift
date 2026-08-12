@@ -67,4 +67,13 @@ struct BulkRecoveryStateTests {
         #expect(box.width == 0.26)
         #expect(box.height == 0.30)
     }
+
+    @Test
+    func choosingStateKeepsTheReviewFlowActiveUntilCandidateIsAccepted() {
+        let state = BulkRecoveryState.choosing(box: box, candidates: [])
+
+        #expect(state.isActive)
+        #expect(state.selectedBox == box)
+        #expect(state.candidateCount == 0)
+    }
 }

@@ -66,6 +66,8 @@ struct BulkScanResultsView: View {
     @State private var recoveryState: BulkRecoveryState = .idle
     @State private var recoveryRequestID = 0
     @State private var recoveryHapticTrigger = 0
+    @State private var recoveryConfirmation: String?
+    @State private var focusedResultID: String?
     @State private var isSaving = false
     @State private var errorMessage: String?
 
@@ -98,6 +100,10 @@ struct BulkScanResultsView: View {
             header
             if recoveryState.isActive {
                 recoveryStatusPanel
+                    .transition(recoveryTransition)
+            }
+            if let recoveryConfirmation, !recoveryState.isActive {
+                recoveryConfirmationBanner(recoveryConfirmation)
                     .transition(recoveryTransition)
             }
             photoResults
@@ -280,6 +286,31 @@ struct BulkScanResultsView: View {
         .accessibilityLabel("\(recoveryTitle). \(recoverySubtitle)")
     }
 
+    private func recoveryConfirmationBanner(_ message: String) -> some View {
+        Label {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(message)
+                    .font(.subheadline.weight(.semibold))
+                Text("Review the updated card below before saving.")
+                    .font(.caption)
+                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+            }
+        } icon: {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(accent)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(BrickValStyle.ScanResult.surface, in: .rect(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(BrickValStyle.ScanResult.border)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(message). Review the updated card below before saving.")
+    }
+
     private var isRecoverySelecting: Bool {
         if case .selecting = recoveryState { return true }
         return false
@@ -387,20 +418,32 @@ struct BulkScanResultsView: View {
     }
 
     private var resultCarousel: some View {
-        ScrollView(.horizontal) {
-            LazyHStack(spacing: 10) {
-                ForEach($itemStates) { $state in
-                    resultCard($state)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 10) {
+                    ForEach($itemStates) { $state in
+                        resultCard($state)
+                            .id(state.id)
+                    }
+                    ForEach(reviewItems) { review in
+                        ForEach(review.candidates) { candidate in
+                            reviewCandidateCard(candidate, review: review)
+                        }
+                    }
                 }
-                ForEach(reviewItems) { review in
-                    ForEach(review.candidates) { candidate in
-                        reviewCandidateCard(candidate, review: review)
+                .padding(.horizontal, 12)
+            }
+            .scrollIndicators(.hidden)
+            .onChange(of: focusedResultID) { _, id in
+                guard let id else { return }
+                Task { @MainActor in
+                    await Task.yield()
+                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.24)) {
+                        proxy.scrollTo(id, anchor: .leading)
                     }
                 }
             }
-            .padding(.horizontal, 12)
         }
-        .scrollIndicators(.hidden)
     }
 
     private func reviewCandidateCard(
@@ -796,6 +839,7 @@ struct BulkScanResultsView: View {
     }
 
     private func enterRecovery() {
+        recoveryConfirmation = nil
         withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86)) {
             recoveryState = .selecting
         }
@@ -859,28 +903,34 @@ struct BulkScanResultsView: View {
     }
 
     private func choose(_ candidate: BulkScanReviewCandidate, for review: BulkScanReviewItem) {
-        itemStates.append(BulkScanItemState(item: BulkScanResultItem(
+        let item = BulkScanResultItem(
             id: review.id,
             result: candidate.result,
             boundingBox: review.boundingBox
-        )))
+        )
+        itemStates.insert(BulkScanItemState(item: item), at: 0)
         reviewItems.removeAll { $0.id == review.id }
+        focusedResultID = item.id
+        recoveryConfirmation = "Added \(candidate.result.name) to review"
     }
 
     private func acceptRecovery(_ candidate: BulkScanReviewCandidate) {
         guard case .choosing(let box, _) = recoveryState else { return }
-        itemStates.append(BulkScanItemState(item: BulkScanResultItem(
+        let item = BulkScanResultItem(
             id: "recovered-\(UUID().uuidString)",
             result: candidate.result,
             boundingBox: box
-        )))
+        )
+        itemStates.insert(BulkScanItemState(item: item), at: 0)
         unresolvedRegions.removeAll { region in
             let center = box.center
             return center.x >= region.x && center.x <= region.x + region.width
                 && center.y >= region.y && center.y <= region.y + region.height
         }
+        focusedResultID = item.id
+        recoveryConfirmation = "Added \(candidate.result.name) to review"
         withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86)) {
-            recoveryState = unresolvedRegions.isEmpty ? .idle : .selecting
+            recoveryState = .idle
         }
     }
 }
