@@ -3,6 +3,13 @@ import Testing
 @testable import BrickVal
 
 struct ScanStoreLifecycleTests {
+    @Test
+    func failedScanPausesLiveDetectionUntilRetry() {
+        #expect(ScanPhase.failed("Bulk scan unavailable").allowsLiveDetection == false)
+        #expect(ScanPhase.searching.allowsLiveDetection)
+        #expect(ScanPhase.holding.allowsLiveDetection)
+    }
+
     @Test @MainActor
     func dismissingSuccessfulResultRestartsScanner() async throws {
         let store = ScanStore(api: .successfulLookupStub)

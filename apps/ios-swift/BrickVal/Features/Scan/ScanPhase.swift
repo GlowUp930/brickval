@@ -11,6 +11,15 @@ enum ScanPhase: Equatable {
     case result
     case failed(String)
 
+    var allowsLiveDetection: Bool {
+        switch self {
+        case .searching, .holding:
+            true
+        default:
+            false
+        }
+    }
+
     var statusText: String {
         switch self {
         case .idle: "Ready"

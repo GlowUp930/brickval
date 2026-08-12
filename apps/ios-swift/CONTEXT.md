@@ -1,6 +1,6 @@
 # BrickVal Native iOS Context
 
-Last verified: 2026-08-11
+Last verified: 2026-08-12
 
 This is the working context for the canonical BrickVal mobile app. It is intentionally specific to the native SwiftUI app. Repository-wide rules remain in [`AGENTS.md`](../../AGENTS.md).
 
@@ -14,6 +14,7 @@ This is the working context for the canonical BrickVal mobile app. It is intenti
 - Current marketing version: `1.0.2`
 - Source/UI baseline: native SwiftUI build `46` (`1f58cec`).
 - Current release build number: `115`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence. Build `112` is the final pre-monetization UI pass. Build `113` adds shared Pro labeling, one introductory free bulk scan, a 10-unique-item free collection limit, contextual upgrade flows, and server-controlled future scan/history experiments. Build `114` adds the collection-item removal redesign and hidden onboarding replay gesture. Build `115` adds guided on-device bulk detection and bounded recognition recovery. The centered-stage profile editor remains available from Manage Account rather than the main Profile tab. App Store Connect version `1.0.2` is the active TestFlight train.
+- The build `115` bulk backend was deployed to production on 2026-08-12 and verified against photographed 0-, 1-, 2-, and 3-figure cases. Failed scans pause live detection so their error message remains visible until the user retries.
 - XcodeGen source of truth: `project.yml`
 - Profile customization is account-gated: signed-out users keep the Classic default icon in profile surfaces, while signed-in users can choose an icon and background from Manage Account. The signed-out Manage Account screen is a branded Clerk auth surface using the local BrickValue logo, with no profile/avatar prompt.
 - Committed Xcode project: `BrickVal.xcodeproj`

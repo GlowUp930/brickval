@@ -123,11 +123,7 @@ final class ScanStore {
             phase = .searching
             while !Task.isCancelled {
                 try await Task.sleep(for: .milliseconds(50))
-                guard phase != .result,
-                      phase != .review,
-                      phase != .capturing,
-                      phase != .identifying
-                else { continue }
+                guard phase.allowsLiveDetection else { continue }
                 if canUseSmartScan || (intent == .bulk && smartScanAvailable) {
                     await processLatestFrame()
                 }
