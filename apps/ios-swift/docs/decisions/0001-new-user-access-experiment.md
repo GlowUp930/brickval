@@ -1,10 +1,10 @@
 # New-User Pro Access Experiment
 
-Date: 2026-08-11
+Date: 2026-08-12
 
 ## Decision
 
-Run a 50/50 access experiment for new users only:
+Run a guarded access experiment for new users only, starting at 10% treatment and ramping toward 50/50 after validation:
 
 - Control: the existing metered soft-paywall experience.
 - Treatment: require Pro immediately before the first real scan.
@@ -36,18 +36,20 @@ A controlled new-user experiment protects the established user experience and pr
 2. Confirm RevenueCat's current offering includes the approved annual and monthly products.
 3. Assign the `onboarding_hard_access` Superwall placement to the approved paywall.
 4. Release with the experiment disabled if any dependency is incomplete.
-5. Activate 50 percent through server policy, monitor daily, and retain the kill switch.
+5. Activate a small treatment cohort through server policy, monitor daily, and retain the kill switch.
+6. Increase toward 50 percent only after the first 72 hours show no purchase, configuration, or support issues.
 
 ## Current Configuration
 
-Verified on 2026-08-11:
+Verified on 2026-08-12:
 
 - App Store Connect scheduled the annual price at AUD 79.99 and a monthly price adjustment to AUD 9.99 in 158 affected territories, effective 2026-08-12. Apple will lower renewals for existing subscribers paying the higher monthly price in those territories.
 - The annual product has a one-week free introductory trial in all 175 territories. The monthly product has no introductory offer.
 - RevenueCat's current `default` offering contains `$rc_annual` (`com.brickval.app.pro.yearly`) and `$rc_monthly` (`com.brickval.app.pro.monthly`).
 - Superwall campaign `101303` maps enabled placement `onboarding_hard_access` to active paywall `254889` for users without an active entitlement. This is a separate copy with BrickValue branding and the same dynamic annual and monthly product bindings. The existing `brickval_upgrade` campaign and paywall `223721` remain unchanged.
-- A clean Debug simulator install verified that the treatment blocks the scanner and automatically presents the mapped BrickValue paywall. The new App Store prices do not take effect until 2026-08-12, so the on-device paywall check must be repeated after that date.
-- `BRICKVALUE_HARD_PAYWALL_EXPERIMENT_ENABLED` remains `false`. After the App Store price change takes effect, verify the annual price, seven-day trial, and monthly price on device before enabling the intended 50 percent allocation.
+- A clean Debug simulator install with the hard-access demo verified that the treatment blocks the scanner and automatically presents the mapped BrickValue paywall. StoreKit loaded the monthly and annual products and cached introductory eligibility without errors.
+- Production is enabled at a guarded 10 percent hard-access allocation and 90 percent metered control: `BRICKVALUE_HARD_PAYWALL_EXPERIMENT_ENABLED=true`, `BRICKVALUE_HARD_PAYWALL_PERCENT=10`, and `BRICKVALUE_PRO_TRIAL_DAYS=7`. The live `https://brickvalue.live/api/mobile/monetization` response confirms the allocation, trial length, and baseline limits of three single scans per day, one introductory bulk scan, and 10 unique collection items.
+- The production deployment was verified on `brickvalue.live` on 2026-08-12. Keep the 10 percent ramp for the initial 72-hour smoke period before considering a larger allocation.
 
 ## Sources
 
