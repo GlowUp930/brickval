@@ -30,6 +30,7 @@ private extension BrickValAPIClient {
     static let successfulLookupStub = BrickValAPIClient(
         scanMinifigure: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
         scanBulkMinifigures: { _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+        recoverBulkMinifigure: { _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
         identify: { _, _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
         lookup: { identifier, type, _ in
             LookupResult(

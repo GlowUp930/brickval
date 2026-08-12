@@ -4,6 +4,7 @@ import { BrickognizeUnavailableError, identifyNonSet } from "./brickognize";
 import {
   assignDetectionsToRegions,
   mergeBulkDetections,
+  planAccuracyBulkRecoveryCrops,
   planGuidedBulkCrops,
   unresolvedBulkRegions,
   type BulkManifestRegion,
@@ -27,6 +28,15 @@ export type BulkMinifigScanResult = {
     detection: NonSetDetection;
     result: MinifigLookupPayload;
   }>;
+  reviewItems: Array<{
+    detection: NonSetDetection;
+    candidates: Array<{
+      id: string;
+      score: number;
+      result: MinifigLookupPayload;
+    }>;
+  }>;
+  unresolvedRegions: BulkManifestRegion[];
   unresolvedCount: number;
   partial: boolean;
   timings: BulkScanTimings;
@@ -43,17 +53,29 @@ export async function runBulkMinifigScan(
   const imageWidth = source.bitmap.width;
   const imageHeight = source.bitmap.height;
   const guided = options.guided !== false;
-  const crops = guided ? planGuidedBulkCrops(regions) : [];
+  const crops = guided && regions.length ? planGuidedBulkCrops(regions) : [];
+  const accuracyRecoveryCrops = planAccuracyBulkRecoveryCrops();
+  const coverageCrops = regions.length < 4
+    ? accuracyRecoveryCrops.map((boundingBox) => ({ boundingBox, regions: [] }))
+    : [];
   const preprocessingFinishedAt = performance.now();
 
   const jobs: Array<Promise<NonSetDetection[]>> = [
     identifyNonSet(imageFile, {
-      bulk: !guided,
-      skipRecovery: guided,
+      bulk: true,
+      skipRecovery: true,
       throwOnFailure: true,
-      timeoutMilliseconds: 7_000,
+      timeoutMilliseconds: 9_000,
     }).then((response) => response.detections),
     ...crops.map((crop, index) => identifyCrop(source, crop, index, imageWidth, imageHeight)),
+    ...coverageCrops.map((crop, index) => identifyCrop(
+      source,
+      crop,
+      crops.length + index,
+      imageWidth,
+      imageHeight,
+      5_000
+    )),
   ];
   const firstWave = await Promise.allSettled(jobs);
   const fulfilled = firstWave.filter(
@@ -64,45 +86,126 @@ export async function runBulkMinifigScan(
   const collected = fulfilled.flatMap((result) => result.value);
   let providerRequests = jobs.length;
   let partial = firstWave.some((result) => result.status === "rejected");
-  const unresolved = guided ? unresolvedBulkRegions(regions, collected).slice(0, 2) : [];
-  if (unresolved.length && performance.now() - startedAt < 5_500) {
-    const retries = await Promise.allSettled(unresolved.map((region, index) => identifyCrop(
+  const unresolved = guided ? unresolvedBulkRegions(regions, collected) : [];
+  const detectedCount = mergeBulkDetections(collected).length;
+  const shouldRunCoverageRecovery = regions.length < 4 || detectedCount < Math.min(4, regions.length);
+  const recoveryBudgetMilliseconds = 10_000;
+  if (shouldRunCoverageRecovery && coverageCrops.length === 0 && performance.now() - startedAt < recoveryBudgetMilliseconds) {
+    const recoveryCrops = accuracyRecoveryCrops.map((boundingBox) => ({
+      boundingBox,
+      regions: [],
+    }));
+    const retries = await Promise.allSettled(recoveryCrops.map((crop, index) => identifyCrop(
       source,
-      { boundingBox: paddedRegionBox(region.boundingBox, 0.3), regions: [region] },
+      crop,
       crops.length + index,
       imageWidth,
       imageHeight,
-      2_500
+      5_000
     )));
     providerRequests += retries.length;
     partial ||= retries.some((result) => result.status === "rejected");
     collected.push(...retries.flatMap((result) => result.status === "fulfilled" ? result.value : []));
   }
 
-  const detections = mergeBulkDetections(collected);
+  if (unresolved.length && performance.now() - startedAt < recoveryBudgetMilliseconds) {
+    const retries = await Promise.allSettled(unresolved.map((region, index) => identifyCrop(
+      source,
+      { boundingBox: paddedRegionBox(region.boundingBox, 0.4), regions: [region] },
+      crops.length + accuracyRecoveryCrops.length + index,
+      imageWidth,
+      imageHeight,
+      4_000
+    )));
+    providerRequests += retries.length;
+    partial ||= retries.some((result) => result.status === "rejected");
+    collected.push(...retries.flatMap((result) => result.status === "fulfilled" ? result.value : []));
+  }
+
+  const explicitlyAssignedRegionIDs = new Set(
+    collected.map((detection) => detection.regionId).filter((value): value is string => Boolean(value))
+  );
+  const unassignedRegions = regions.filter((region) => !explicitlyAssignedRegionIDs.has(region.regionId));
+  const assignedRecoveryDetections = assignDetectionsToRegions(
+    collected.filter((detection) => !detection.regionId),
+    unassignedRegions
+  );
+  const assignedRecoveryKeys = new Set(assignedRecoveryDetections.map(detectionKey));
+  const detections = mergeBulkDetections([
+    ...collected.filter((detection) => Boolean(detection.regionId)),
+    ...assignedRecoveryDetections,
+    ...collected.filter((detection) => !detection.regionId && !assignedRecoveryKeys.has(detectionKey(detection))),
+  ]);
   const identificationFinishedAt = performance.now();
-  const lookupRows = await lookupBulkMinifigures(detections.map((detection) => detection.id));
+  const candidateIDs = detections.flatMap((detection) => [
+    detection.id,
+    ...(detection.alternatives ?? []).map((candidate) => candidate.id),
+  ]);
+  const lookupRows = await lookupBulkMinifigures(candidateIDs);
   const pricedByIdentifier = new Map(
     lookupRows.filter(hasUsableMinifigPrice).map((row) => [row.figNumber.toLowerCase(), row.result])
   );
-  const items = detections.flatMap((detection) => {
-    const result = pricedByIdentifier.get(detection.id.toLowerCase());
-    return result ? [{ detection, result }] : [];
-  });
+  const clearItems: BulkMinifigScanResult["items"] = [];
+  const reviewItems: BulkMinifigScanResult["reviewItems"] = [];
+  for (const detection of detections) {
+    const candidates = [
+      { id: detection.id, score: detection.score },
+      ...(detection.alternatives ?? []),
+    ]
+      .filter((candidate, index, all) => all.findIndex((item) => item.id.toLowerCase() === candidate.id.toLowerCase()) === index)
+      .map((candidate) => ({
+        ...candidate,
+        result: pricedByIdentifier.get(candidate.id.toLowerCase()),
+      }))
+      .filter((candidate): candidate is { id: string; score: number; result: MinifigLookupPayload } => Boolean(candidate.result))
+      .slice(0, 3);
+    const runnerUpScore = detection.alternatives?.find(
+      (candidate) => candidate.id.toLowerCase() !== detection.id.toLowerCase()
+    )?.score ?? null;
+    const primaryCandidate = candidates.find(
+      (candidate) => candidate.id.toLowerCase() === detection.id.toLowerCase()
+    );
+    const isAmbiguous = detection.score < 0.8 || !primaryCandidate || Boolean(
+      runnerUpScore !== null && detection.score - runnerUpScore < 0.08
+    );
+    if (isAmbiguous) {
+      if (candidates.length) reviewItems.push({ detection, candidates });
+    } else if (primaryCandidate) {
+      clearItems.push({ detection, result: primaryCandidate.result });
+    }
+  }
+  const resolvedDetections = [...clearItems, ...reviewItems].map((item) => item.detection);
+  const unresolvedRegions = unresolvedBulkRegions(regions, resolvedDetections);
   const finishedAt = performance.now();
 
   return {
-    items,
-    unresolvedCount: unresolvedBulkRegions(regions, items.map((item) => item.detection)).length,
+    items: clearItems,
+    reviewItems,
+    unresolvedRegions,
+    unresolvedCount: unresolvedRegions.length,
     partial,
     timings: {
       preprocessing_ms: Math.round(preprocessingFinishedAt - startedAt),
       identification_ms: Math.round(identificationFinishedAt - preprocessingFinishedAt),
       pricing_ms: Math.round(finishedAt - identificationFinishedAt),
       total_ms: Math.round(finishedAt - startedAt),
-      provider_requests: guided ? providerRequests : -1,
+      provider_requests: providerRequests,
     },
   };
+}
+
+function detectionKey(detection: NonSetDetection): string {
+  const box = detection.bounding_box;
+  if (!box) return `${detection.id}:no-box:${detection.score}`;
+  return [
+    detection.id.toLowerCase(),
+    box.left,
+    box.top,
+    box.right,
+    box.bottom,
+    box.imageWidth,
+    box.imageHeight,
+  ].join(":");
 }
 
 async function identifyCrop(

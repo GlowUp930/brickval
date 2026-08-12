@@ -18,6 +18,31 @@ export type GuidedBulkCrop = {
   regions: BulkManifestRegion[];
 };
 
+/**
+ * Accuracy-first coverage for figures the on-device detector did not box.
+ * The tiles overlap enough to preserve context while giving Brickognize a
+ * close enough view of small or partially obscured figures.
+ */
+export function planAccuracyBulkRecoveryCrops(): NormalizedRegionBox[] {
+  const columns = 3;
+  const rows = 2;
+  const tileWidth = 0.62;
+  const tileHeight = 0.58;
+  const horizontalStep = (1 - tileWidth) / (columns - 1);
+  const verticalStep = (1 - tileHeight) / (rows - 1);
+
+  return Array.from({ length: rows * columns }, (_, index) => {
+    const row = Math.floor(index / columns);
+    const column = index % columns;
+    return {
+      x: column * horizontalStep,
+      y: row * verticalStep,
+      width: tileWidth,
+      height: tileHeight,
+    };
+  });
+}
+
 export function parseBulkRegionManifest(value: unknown): BulkRegionManifest | null {
   if (typeof value !== "string") return null;
   let raw: unknown;

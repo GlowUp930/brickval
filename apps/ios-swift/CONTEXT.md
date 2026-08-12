@@ -13,7 +13,7 @@ This is the working context for the canonical BrickVal mobile app. It is intenti
 - Swift version: 6.0 with strict concurrency enabled
 - Current marketing version: `1.0.2`
 - Source/UI baseline: native SwiftUI build `46` (`1f58cec`).
-- Current release build number: `115`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence. Build `112` is the final pre-monetization UI pass. Build `113` adds shared Pro labeling, one introductory free bulk scan, a 10-unique-item free collection limit, contextual upgrade flows, and server-controlled future scan/history experiments. Build `114` adds the collection-item removal redesign and hidden onboarding replay gesture. Build `115` adds guided on-device bulk detection and bounded recognition recovery. The centered-stage profile editor remains available from Manage Account rather than the main Profile tab. App Store Connect version `1.0.2` is the active TestFlight train.
+- Current release build number: `119`. Build `100` was uploaded from the wrong Expo project and cannot be deleted through the available App Store Connect API, so later native builds must continue from that App Store sequence. Build `112` is the final pre-monetization UI pass. Build `113` adds shared Pro labeling, one introductory free bulk scan, a 10-unique-item free collection limit, contextual upgrade flows, and server-controlled future scan/history experiments. Build `114` adds the collection-item removal redesign and hidden onboarding replay gesture. Build `115` adds guided on-device bulk detection. Build `116` adds recall-first bulk recovery, ambiguous-match review, and tap-to-recover for missed figures. Build `118` isolates tap-to-recover uploads around the selected figure to prevent nearby figures from being identified instead. Build `119` makes missed-figure recovery direct and unobstructed by removing broad tap guides from the photo. The centered-stage profile editor remains available from Manage Account rather than the main Profile tab. App Store Connect version `1.0.2` is the active TestFlight train.
 - The build `115` bulk backend was deployed to production on 2026-08-12 and verified against photographed 0-, 1-, 2-, and 3-figure cases. Failed scans pause live detection so their error message remains visible until the user retries.
 - XcodeGen source of truth: `project.yml`
 - Profile customization is account-gated: signed-out users keep the Classic default icon in profile surfaces, while signed-in users can choose an icon and background from Manage Account. The signed-out Manage Account screen is a branded Clerk auth surface using the local BrickValue logo, with no profile/avatar prompt.
@@ -79,16 +79,17 @@ The bundled model is `coreml-v3-500`, trained with Create ML. Its source-data at
 
 The native bulk scan flow is:
 
-1. The bundled Core ML model provides live framing boxes at up to three frames per second. Bulk capture remains manual and supports up to 10 front-facing, separated figures.
+1. The bundled Core ML model provides live framing boxes at up to three frames per second. A short-lived local tracker retains boxes through detector flicker, so the capture manifest does not lose a visible figure because of one empty frame. Bulk capture remains manual and supports up to 10 front-facing, separated figures.
 2. The user captures one exact camera frame. Fresh local boxes are sent as normalized regions with a resized JPEG.
-3. `/api/minifig/bulk-scan` runs one full-image recognition request plus up to four isolated or grouped crops concurrently. The backend associates results to physical regions, collapses overlapping provider duplicates, and prices unique identifiers.
-4. The server returns only associated results with usable pricing and consumes the introductory bulk allowance only when at least one result remains.
+3. `/api/minifig/bulk-scan` runs one full-image recognition request plus guided crops and overlapping coverage crops. The backend favors recall over latency, associates results to physical regions, collapses overlapping provider duplicates, and prices unique identifiers.
+4. The server returns confirmed results, ambiguous candidates for user review, unresolved regions for tap-to-recover, and a short-lived recovery token. It consumes the introductory bulk allowance only when at least one priced result or review candidate remains.
 5. The captured image is frozen over the live camera while identification runs, with a visible progress overlay so the user knows the scan is active.
 6. Missing, unresolved, non-minifigure, and unpriced results are excluded.
 7. The result sheet opens with every priced item selected as Used by default.
 8. Selection and New/Used changes update the total immediately.
 9. Add saves all selected items through one atomic collection operation. A failed save must not leave a partial collection.
 10. Successful Add closes the sheet, resets the scanner, and shows confirmation. Retake or Close returns to the live scanner.
+11. Tapping an unresolved area in the frozen photo runs a focused recovery scan. Recovery is token-bound and rate-limited, does not consume another bulk allowance, and adds the recovered candidate to the same result sheet.
 
 Older installed builds retain the legacy flow:
 
@@ -154,7 +155,7 @@ The full 60-test Swift suite passed on the small iPhone simulator on 2026-08-11,
 
 - `project.yml` owns version and build settings; do not edit generated project settings as the lasting fix.
 - Increment `CURRENT_PROJECT_VERSION` for a new build. Keep `MARKETING_VERSION` unchanged unless the release version changes.
-- Treat the native SwiftUI source/UI baseline and App Store upload number as separate: the current interface is based on build 46, while build 114 is the current release because Apple build numbers cannot return to 46 after builds 100 and 101.
+- Treat the native SwiftUI source/UI baseline and App Store upload number as separate: the current interface is based on build 46, while build 116 is the current release because Apple build numbers cannot return to 46 after builds 100 and 101.
 - Build and test before committing.
 - Commit focused changes with a message that states the behavioral fix.
 - Push verified native changes to `codex/swift-repo-structure` when useful and relevant.

@@ -40,6 +40,7 @@ final class ScanStore {
     @ObservationIgnored private var monetization: MonetizationStore?
     @ObservationIgnored private var isProSubscriber = false
     @ObservationIgnored private var autoSession = AutoScanSession()
+    @ObservationIgnored private var bulkDetectionTracker = BulkDetectionTracker()
     @ObservationIgnored private var schedule = LocalDetectionSchedule()
     @ObservationIgnored private var feedbackConsent = false
     @ObservationIgnored private var detectorDetectionMilliseconds: Int?
@@ -238,6 +239,16 @@ final class ScanStore {
         }
     }
 
+    func recoverBulkMinifigure(
+        imageData: Data,
+        focusBox: NormalizedBoundingBox,
+        recoveryToken: String
+    ) async throws -> [BulkScanReviewCandidate] {
+        let image = try await imageProcessor.bulkRecoveryImage(from: imageData, focusBox: focusBox)
+        let response = try await api.recoverBulkMinifigure(image, recoveryToken)
+        return response.candidates.map(\.normalized)
+    }
+
     func loadPartColors() async throws -> [PartColorOption] {
         try await api.partColors()
     }
@@ -291,11 +302,8 @@ final class ScanStore {
             detectorModelVersion = batch.modelVersion
             detectorDetectionMilliseconds = batch.inferenceMilliseconds
             if intent == .bulk {
-                observations = Array(
-                    batch.observations
-                        .filter { $0.fullyVisible && $0.boundingBox.area >= 0.005 }
-                        .prefix(10)
-                )
+                bulkDetectionTracker.ingest(batch.observations, at: frame.timestamp)
+                observations = Array(bulkDetectionTracker.observations(for: frame.timestamp).prefix(10))
                 phase = .searching
                 return
             }
@@ -353,14 +361,22 @@ final class ScanStore {
             let image = try await imageProcessor.bulkScanImage(from: imageData)
             let response = try await api.scanBulkMinifigures(image, bulkRegions)
             let items = response.items.map(\.normalized)
-            guard let frozenImageData, !items.isEmpty else {
+            guard let frozenImageData,
+                  !items.isEmpty || !response.reviewItems.isEmpty || !response.unresolvedRegions.isEmpty
+            else {
                 self.frozenImageData = nil
                 phase = .failed("No priced minifigures were found. Try a brighter photo with up to 10 figures separated and facing forward.")
                 return
             }
             monetization?.recordSuccessfulBulk(serverUsage: response.usage)
             phase = .review
-            presentedSheet = .bulkResults(imageData: frozenImageData, items: items)
+            presentedSheet = .bulkResults(
+                imageData: frozenImageData,
+                items: items,
+                reviewItems: response.reviewItems.map(\.normalized),
+                unresolvedRegions: response.unresolvedRegions.map(\.boundingBox),
+                recoveryToken: response.recoveryToken
+            )
             soundEffects.play(.cashRegister)
             logBulkResult(response, startedAt: startedAt)
             return
@@ -467,6 +483,7 @@ final class ScanStore {
     private func resetDetectionState() {
         observations = []
         autoSession = AutoScanSession()
+        bulkDetectionTracker.reset()
         schedule = LocalDetectionSchedule(framesPerSecond: intent == .bulk ? 3 : 6)
         detectorDetectionMilliseconds = nil
         autoScanStartedAt = .now
@@ -524,10 +541,7 @@ final class ScanStore {
     }
 
     private func freshBulkRegions(for frameTimestamp: Date) -> [BulkScanRegion] {
-        observations
-            .filter { abs(frameTimestamp.timeIntervalSince($0.timestamp)) <= 0.45 }
-            .prefix(10)
-            .map { BulkScanRegion(regionId: $0.regionID, boundingBox: $0.boundingBox.clamped) }
+        bulkDetectionTracker.regions(for: frameTimestamp)
     }
 
     private func logBulkResult(_ response: BulkMinifigScanPayload, startedAt: Date) {

@@ -51,6 +51,38 @@ actor ImageProcessor {
         throw CameraError.sampleTooLarge
     }
 
+    func bulkRecoveryImage(
+        from data: Data,
+        focusBox: NormalizedBoundingBox
+    ) throws -> Data {
+        guard let image = UIImage(data: data) else { throw CameraError.invalidImage }
+        let normalized = normalize(image)
+        let center = CGPoint(
+            x: focusBox.x + focusBox.width / 2,
+            y: focusBox.y + focusBox.height / 2
+        )
+        guard let rect = BulkRecoveryCropPlanner.cropRect(
+            around: center,
+            imageSize: normalized.size
+        ) else {
+            throw CameraError.invalidImage
+        }
+        let source = try crop(normalized, to: rect)
+
+        for maximumDimension: CGFloat in [896, 720, 600] {
+            let scale = min(1, maximumDimension / max(source.size.width, source.size.height))
+            let output = scale < 1
+                ? resize(source, to: CGSize(width: source.size.width * scale, height: source.size.height * scale))
+                : source
+            for quality in [0.72, 0.58, 0.44, 0.30] {
+                if let jpeg = output.jpegData(compressionQuality: quality), jpeg.count <= 300 * 1024 {
+                    return jpeg
+                }
+            }
+        }
+        throw CameraError.sampleTooLarge
+    }
+
     func bulkScanImage(from data: Data) throws -> Data {
         guard let image = UIImage(data: data) else { throw CameraError.invalidImage }
         let normalized = normalize(image)

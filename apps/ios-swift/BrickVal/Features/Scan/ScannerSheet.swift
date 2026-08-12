@@ -3,7 +3,13 @@ import Foundation
 enum ScannerSheet: Identifiable {
     case manualLookup
     case partColor(IdentificationDetection)
-    case bulkResults(imageData: Data, items: [BulkScanResultItem])
+    case bulkResults(
+        imageData: Data,
+        items: [BulkScanResultItem],
+        reviewItems: [BulkScanReviewItem],
+        unresolvedRegions: [NormalizedBoundingBox],
+        recoveryToken: String?
+    )
     case result(LookupResult)
     case review(ScanReview)
 
@@ -11,12 +17,26 @@ enum ScannerSheet: Identifiable {
         switch self {
         case .manualLookup: "manual-lookup"
         case .partColor(let detection): "part-color-\(detection.id)"
-        case .bulkResults(_, let items):
-            "bulk-\(items.map(\.id).joined(separator: ","))"
+        case .bulkResults(_, let items, let reviewItems, _, _):
+            "bulk-\((items.map(\.id) + reviewItems.map(\.id)).joined(separator: ","))"
         case .result(let result): "result-\(result.id)"
         case .review(let review): "review-\(review.id.uuidString)"
         }
     }
+}
+
+struct BulkScanReviewItem: Identifiable, Sendable {
+    let id: String
+    let boundingBox: NormalizedBoundingBox?
+    let candidates: [BulkScanReviewCandidate]
+}
+
+struct BulkScanReviewCandidate: Identifiable, Sendable {
+    let identifier: String
+    let score: Double
+    let result: LookupResult
+
+    var id: String { identifier.lowercased() }
 }
 
 struct BulkScanResultItem: Identifiable, Sendable {

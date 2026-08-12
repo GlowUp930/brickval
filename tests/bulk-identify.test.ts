@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   assignDetectionsToRegions,
   mergeBulkDetections,
+  planAccuracyBulkRecoveryCrops,
   parseBulkRegionManifest,
   planGuidedBulkCrops,
   unresolvedBulkRegions,
@@ -135,4 +136,12 @@ test("targeted recovery includes only unresolved local regions", () => {
   ]);
 
   assert.deepEqual(unresolved.map((region) => region.regionId), ["right"]);
+});
+
+test("accuracy recovery adds broad coverage when local detection misses figures", () => {
+  const crops = planAccuracyBulkRecoveryCrops();
+
+  assert.equal(crops.length, 6);
+  assert.ok(crops.every((crop) => crop.width > 0 && crop.height > 0));
+  assert.ok(crops.some((crop) => crop.y > 0));
 });

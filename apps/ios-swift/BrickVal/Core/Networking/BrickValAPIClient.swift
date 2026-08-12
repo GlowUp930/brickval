@@ -3,6 +3,7 @@ import Foundation
 struct BrickValAPIClient: Sendable {
     var scanMinifigure: @Sendable (Data) async throws -> MinifigScanResult
     var scanBulkMinifigures: @Sendable (Data, [BulkScanRegion]) async throws -> BulkMinifigScanPayload
+    var recoverBulkMinifigure: @Sendable (Data, String) async throws -> BulkRecoveryPayload
     var identify: @Sendable (Data, ScanMode, ScanIntent) async throws -> IdentificationResult
     var lookup: @Sendable (String, ItemType, Int?) async throws -> LookupResult
     var bulkLookupMinifigures: @Sendable ([String], BulkLookupSource) async throws -> BulkMinifigLookupResult
@@ -78,6 +79,22 @@ extension BrickValAPIClient {
                     response: response,
                     endpoint: "bulk minifig scan"
                 )
+            },
+            recoverBulkMinifigure: { imageData, recoveryToken in
+                var form = MultipartFormData()
+                form.append(name: "image", filename: "bulk-recovery.jpg", contentType: "image/jpeg", fileData: imageData)
+                form.append(name: "recoveryToken", value: recoveryToken)
+                form.finalize()
+                let request = try await request(
+                    baseURL: configuration.baseURL,
+                    path: "/api/minifig/bulk-scan/recover",
+                    method: "POST",
+                    body: form.data,
+                    contentType: form.contentType,
+                    token: authToken()
+                )
+                let (data, response) = try await session.data(for: request)
+                return try decodeResponse(data: data, response: response, endpoint: "bulk minifigure recovery")
             },
             identify: { imageData, mode, intent in
                 var form = MultipartFormData()

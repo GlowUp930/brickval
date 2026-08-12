@@ -3,6 +3,26 @@ import Testing
 @testable import BrickVal
 
 struct FocusedScanCropPlannerTests {
+    @Test func bulkRecoveryTapCropExcludesNearbyFigure() throws {
+        let imageSize = CGSize(width: 1000, height: 2165)
+        let tappedFigure = CGPoint(x: 0.35, y: 0.35)
+        let nearbyFigure = CGPoint(x: 0.36, y: 0.61)
+
+        let rect = try #require(BulkRecoveryCropPlanner.cropRect(
+            around: tappedFigure,
+            imageSize: imageSize
+        ))
+
+        #expect(rect.contains(CGPoint(
+            x: tappedFigure.x * imageSize.width,
+            y: tappedFigure.y * imageSize.height
+        )))
+        #expect(!rect.contains(CGPoint(
+            x: nearbyFigure.x * imageSize.width,
+            y: nearbyFigure.y * imageSize.height
+        )))
+    }
+
     @Test func addsThirtyPercentContextAroundDetection() throws {
         let rect = try #require(FocusedScanCropPlanner.cropRect(
             for: NormalizedBoundingBox(x: 0.4, y: 0.3, width: 0.2, height: 0.4),

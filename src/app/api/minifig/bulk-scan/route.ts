@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { parseBulkRegions } from "@/lib/bulk-identify";
 import { runBulkMinifigScan } from "@/lib/bulk-minifig-scan-service";
 import { BrickognizeUnavailableError } from "@/lib/brickognize";
+import { issueBulkRecoveryToken } from "@/lib/bulk-recovery-token";
 import { checkFeatureAccess, consumeFeatureUsage } from "@/lib/scan-gate";
 
 const MAX_CAPTURE_BYTES = 700 * 1024;
@@ -57,7 +58,8 @@ export async function POST(req: NextRequest) {
       unresolved: scan.unresolvedCount,
       partial: scan.partial,
     });
-    if (!userId || !scan.items.length) return NextResponse.json(scan);
+    const hasPricedResult = scan.items.length > 0 || scan.reviewItems.length > 0;
+    if (!userId || !hasPricedResult) return NextResponse.json({ ...scan, recoveryToken: issueBulkRecoveryToken(userId) });
 
     const gate = await consumeFeatureUsage(userId, "bulk_scan");
     if (!gate.allowed) {
@@ -68,7 +70,7 @@ export async function POST(req: NextRequest) {
         usage: gate.usage,
       }, { status: 402 });
     }
-    return NextResponse.json({ ...scan, usage: gate.usage });
+    return NextResponse.json({ ...scan, recoveryToken: issueBulkRecoveryToken(userId), usage: gate.usage });
   } catch (error) {
     if (error instanceof BrickognizeUnavailableError) {
       return NextResponse.json(

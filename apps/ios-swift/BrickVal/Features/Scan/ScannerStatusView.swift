@@ -3,7 +3,6 @@ import SwiftUI
 struct ScannerStatusView: View {
     let phase: ScanPhase
     let intent: ScanIntent
-    let detectionCount: Int
     let smartScanMessage: String?
 
     var body: some View {
@@ -41,9 +40,6 @@ struct ScannerStatusView: View {
 
     private var statusText: String {
         if intent == .bulk, phase == .searching {
-            if detectionCount > 0 {
-                return "\(detectionCount) \(detectionCount == 1 ? "figure" : "figures") detected · Tap to scan"
-            }
             return "Frame up to 10 figures, then tap the shutter"
         }
         return phase.statusText
