@@ -74,6 +74,7 @@ struct ScannerView: View {
                             ScannerStatusView(
                                 phase: store.phase,
                                 intent: store.intent,
+                                detectionCount: store.observations.count,
                                 smartScanMessage: store.intent == .single ? store.smartScanMessage : nil
                             )
                         }
@@ -380,8 +381,8 @@ private struct ScanTipsCallout: View {
             )
             tipRow(
                 "square.stack.3d.up",
-                title: "Bulk · up to 40 figures",
-                detail: "Place multiple figures in one photo, then tap the shutter. We can review up to 40 in one scan."
+                title: "Bulk · up to 10 figures",
+                detail: "Place front-facing figures apart from each other, then tap the shutter. Boxes help confirm they are visible."
             )
 
             Button("Got it", action: dismiss)

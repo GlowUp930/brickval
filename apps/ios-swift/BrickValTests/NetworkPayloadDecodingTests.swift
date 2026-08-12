@@ -156,6 +156,34 @@ struct NetworkPayloadDecodingTests {
         #expect(items.map(\.id) == ["figure-a-left", "figure-a-right"])
     }
 
+    @Test func decodesCombinedBulkScanResponse() throws {
+        let data = Data(#"""
+        {
+          "items":[{
+            "detection":{
+              "id":"sc123","item_type":"minifig","score":0.96,"regionId":"local-1",
+              "bounding_box":{"left":100,"top":80,"right":300,"bottom":480,"imageWidth":1000,"imageHeight":1000}
+            },
+            "result":{
+              "figInfo":{"name":"Driver","image_url":"//img.bricklink.com/a.jpg","fig_number":"sc123","year_released":2020},
+              "pricing":{"used_sold_avg_usd":8.25}
+            }
+          }],
+          "unresolvedCount":0,
+          "partial":false,
+          "timings":{"preprocessing_ms":80,"identification_ms":1200,"pricing_ms":200,"total_ms":1480,"provider_requests":2},
+          "usage":null
+        }
+        """#.utf8)
+
+        let payload = try JSONDecoder().decode(BulkMinifigScanPayload.self, from: data)
+
+        #expect(payload.items.map(\.normalized.id) == ["local-1"])
+        #expect(payload.items.first?.normalized.result.imageURL?.absoluteString == "https://img.bricklink.com/a.jpg")
+        #expect(payload.timings.providerRequests == 2)
+        #expect(payload.unresolvedCount == 0)
+    }
+
     private func lookupFixture(identifier: String) -> LookupResult {
         LookupResult(
             identifier: identifier,

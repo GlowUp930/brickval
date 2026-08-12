@@ -128,7 +128,7 @@ final class ScanStore {
                       phase != .capturing,
                       phase != .identifying
                 else { continue }
-                if canUseSmartScan {
+                if canUseSmartScan || (intent == .bulk && smartScanAvailable) {
                     await processLatestFrame()
                 }
             }
@@ -164,10 +164,18 @@ final class ScanStore {
         do {
             phase = .capturing
             let captureStartedAt = Date.now
-            let data = try await camera.captureFrame()
+            let capture: (data: Data, regions: [BulkScanRegion])
+            if intent == .bulk {
+                let frame = try await camera.latestFrame()
+                let regions = freshBulkRegions(for: frame.timestamp)
+                capture = (try await camera.jpegData(for: frame), regions)
+            } else {
+                capture = (try await camera.captureFrame(), [])
+            }
+            let data = capture.data
             frozenImageData = data
             logCaptureDuration(since: captureStartedAt, automatic: false)
-            try await identify(imageData: data)
+            try await identify(imageData: data, bulkRegions: capture.regions)
         } catch {
             handleIdentificationError(error)
         }
@@ -275,8 +283,6 @@ final class ScanStore {
     }
 
     private func processLatestFrame() async {
-        guard intent == .single else { return }
-
         do {
             let frame = try await camera.latestFrame()
             let now = Date.now
@@ -286,9 +292,18 @@ final class ScanStore {
 
             let deviceStable = await motion.isStable()
             let batch = try await detector.detect(in: frame)
-            guard intent == .single else { return }
             detectorModelVersion = batch.modelVersion
             detectorDetectionMilliseconds = batch.inferenceMilliseconds
+            if intent == .bulk {
+                observations = Array(
+                    batch.observations
+                        .filter { $0.fullyVisible && $0.boundingBox.area >= 0.005 }
+                        .prefix(10)
+                )
+                phase = .searching
+                return
+            }
+            guard intent == .single else { return }
             observations = batch.observations
             logDetection(batch, at: now)
             autoSession.observe(batch.observations, deviceStable: deviceStable)
@@ -332,11 +347,29 @@ final class ScanStore {
 
     private func identify(
         imageData: Data,
-        focusBox: NormalizedBoundingBox? = nil
+        focusBox: NormalizedBoundingBox? = nil,
+        bulkRegions: [BulkScanRegion] = []
     ) async throws {
         let startedAt = Date.now
         phase = .identifying
         frozenImageData = imageData
+        if mode == .minifig, intent == .bulk {
+            let image = try await imageProcessor.bulkScanImage(from: imageData)
+            let response = try await api.scanBulkMinifigures(image, bulkRegions)
+            let items = response.items.map(\.normalized)
+            guard let frozenImageData, !items.isEmpty else {
+                self.frozenImageData = nil
+                phase = .failed("No priced minifigures were found. Try a brighter photo with up to 10 figures separated and facing forward.")
+                return
+            }
+            monetization?.recordSuccessfulBulk(serverUsage: response.usage)
+            phase = .review
+            presentedSheet = .bulkResults(imageData: frozenImageData, items: items)
+            soundEffects.play(.cashRegister)
+            logBulkResult(response, startedAt: startedAt)
+            return
+        }
+
         let image = try await imageProcessor.finalScanImage(from: imageData, focusBox: focusBox)
         if mode == .minifig, intent == .single {
             switch try await api.scanMinifigure(image) {
@@ -402,25 +435,6 @@ final class ScanStore {
             return
         }
 
-        if mode == .minifig, intent == .bulk {
-            let minifigures = identification.detections.filter { $0.itemType == .minifig }
-            let response = minifigures.isEmpty
-                ? BulkMinifigLookupResult(rows: [], usage: nil)
-                : try await api.bulkLookupMinifigures(minifigures.map(\.id), .bulkScan)
-            let priced = response.rows.compactMap(\.result)
-            let items = BulkScanResultItem.make(detections: minifigures, results: priced)
-            guard let frozenImageData, !items.isEmpty else {
-                self.frozenImageData = nil
-                phase = .failed("No priced minifigures were found. Try a clearer photo with the figures separated.")
-                return
-            }
-            monetization?.recordSuccessfulBulk(serverUsage: response.usage)
-            phase = .review
-            presentedSheet = .bulkResults(imageData: frozenImageData, items: items)
-            soundEffects.play(.cashRegister)
-            return
-        }
-
         let identifier = identification.setNumber ?? identification.detections.first?.id
         guard let identifier else {
             phase = .failed("The item could not be identified.")
@@ -457,7 +471,7 @@ final class ScanStore {
     private func resetDetectionState() {
         observations = []
         autoSession = AutoScanSession()
-        schedule = LocalDetectionSchedule()
+        schedule = LocalDetectionSchedule(framesPerSecond: intent == .bulk ? 3 : 6)
         detectorDetectionMilliseconds = nil
         autoScanStartedAt = .now
         firstDetectionAt = nil
@@ -510,6 +524,20 @@ final class ScanStore {
         let detectedToResult = firstDetectionAt.map { Int(Date.now.timeIntervalSince($0) * 1_000) } ?? clientTotal
         performanceLogger.info(
             "identify_ms=\(timings.identificationMilliseconds ?? -1, privacy: .public) pricing_ms=\(timings.pricingMilliseconds ?? -1, privacy: .public) server_total_ms=\(timings.totalMilliseconds ?? -1, privacy: .public) client_total_ms=\(clientTotal, privacy: .public) detected_to_result_ms=\(detectedToResult, privacy: .public)"
+        )
+    }
+
+    private func freshBulkRegions(for frameTimestamp: Date) -> [BulkScanRegion] {
+        observations
+            .filter { abs(frameTimestamp.timeIntervalSince($0.timestamp)) <= 0.45 }
+            .prefix(10)
+            .map { BulkScanRegion(regionId: $0.regionID, boundingBox: $0.boundingBox.clamped) }
+    }
+
+    private func logBulkResult(_ response: BulkMinifigScanPayload, startedAt: Date) {
+        let clientTotal = Int(Date.now.timeIntervalSince(startedAt) * 1_000)
+        performanceLogger.info(
+            "bulk_preprocess_ms=\(response.timings.preprocessingMilliseconds ?? -1, privacy: .public) identify_ms=\(response.timings.identificationMilliseconds ?? -1, privacy: .public) pricing_ms=\(response.timings.pricingMilliseconds ?? -1, privacy: .public) server_total_ms=\(response.timings.totalMilliseconds ?? -1, privacy: .public) client_total_ms=\(clientTotal, privacy: .public) provider_requests=\(response.timings.providerRequests ?? -1, privacy: .public) results=\(response.items.count, privacy: .public) unresolved=\(response.unresolvedCount, privacy: .public) partial=\(response.partial, privacy: .public)"
         )
     }
 }

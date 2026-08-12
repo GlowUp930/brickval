@@ -19,9 +19,16 @@ export interface NonSetIdentifyResponse {
   isPro?: boolean;
 }
 
+export class BrickognizeUnavailableError extends Error {
+  constructor(message = "Brickognize is temporarily unavailable") {
+    super(message);
+    this.name = "BrickognizeUnavailableError";
+  }
+}
+
 export async function identifyNonSet(
   imageFile: File,
-  options: { bulk?: boolean; skipRecovery?: boolean } = {}
+  options: { bulk?: boolean; skipRecovery?: boolean; throwOnFailure?: boolean; timeoutMilliseconds?: number } = {}
 ): Promise<NonSetIdentifyResponse> {
   async function postBrickognize(image: Blob, filename: string): Promise<Response | null> {
     const form = new FormData();
@@ -32,9 +39,11 @@ export async function identifyNonSet(
         method: "POST",
         headers: { accept: "application/json" },
         body: form,
+        signal: AbortSignal.timeout(options.timeoutMilliseconds ?? 8_000),
       });
     } catch (err) {
       console.error("[identify] Brickognize network error:", err);
+      if (options.throwOnFailure) throw new BrickognizeUnavailableError();
       return null;
     }
   }
@@ -42,6 +51,7 @@ export async function identifyNonSet(
   const searchRes = await postBrickognize(imageFile, imageFile.name || "image.jpg");
   if (!searchRes?.ok) {
     if (searchRes) console.warn("[identify] Brickognize search returned", searchRes.status);
+    if (options.throwOnFailure) throw new BrickognizeUnavailableError();
     return { detections: [] };
   }
 
@@ -49,6 +59,7 @@ export async function identifyNonSet(
   try {
     searchData = (await searchRes.json()) as BrickognizeSearchResponse;
   } catch {
+    if (options.throwOnFailure) throw new BrickognizeUnavailableError("Brickognize returned an invalid response");
     return { detections: [] };
   }
 

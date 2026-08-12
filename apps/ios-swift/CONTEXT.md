@@ -78,6 +78,19 @@ The bundled model is `coreml-v3-500`, trained with Create ML. Its source-data at
 
 The native bulk scan flow is:
 
+1. The bundled Core ML model provides live framing boxes at up to three frames per second. Bulk capture remains manual and supports up to 10 front-facing, separated figures.
+2. The user captures one exact camera frame. Fresh local boxes are sent as normalized regions with a resized JPEG.
+3. `/api/minifig/bulk-scan` runs one full-image recognition request plus up to four isolated or grouped crops concurrently. The backend associates results to physical regions, collapses overlapping provider duplicates, and prices unique identifiers.
+4. The server returns only associated results with usable pricing and consumes the introductory bulk allowance only when at least one result remains.
+5. The captured image is frozen over the live camera while identification runs, with a visible progress overlay so the user knows the scan is active.
+6. Missing, unresolved, non-minifigure, and unpriced results are excluded.
+7. The result sheet opens with every priced item selected as Used by default.
+8. Selection and New/Used changes update the total immediately.
+9. Add saves all selected items through one atomic collection operation. A failed save must not leave a partial collection.
+10. Successful Add closes the sheet, resets the scanner, and shows confirmation. Retake or Close returns to the live scanner.
+
+Older installed builds retain the legacy flow:
+
 1. The user selects Bulk mode and captures one image.
 2. The captured image is frozen over the live camera while identification runs, with a visible progress overlay so the user knows the scan is active.
 3. The app sends the image to the hosted identification endpoint.
@@ -88,7 +101,6 @@ The native bulk scan flow is:
 8. The result sheet opens with every priced item selected as Used by default.
 9. Selection and New/Used changes update the total immediately.
 10. Add saves all selected items through one atomic collection operation. A failed save must not leave a partial collection.
-11. Successful Add closes the sheet, resets the scanner, and shows confirmation. Retake or Close returns to the live scanner.
 
 Bulk result UI requirements:
 

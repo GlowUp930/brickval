@@ -28,6 +28,7 @@
 		1B136F1F4434437A235835BB /* CollectionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CAB427CBB7DB51C81765919 /* CollectionStoreTests.swift */; };
 		1D064B073B24B72DD81F9EBE /* BrickValApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8A7FE765F40D21C2FC105A8 /* BrickValApp.swift */; };
 		1D6F2FB1E43C2578F9D633C9 /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8338E0D34B417B81D140EE34 /* AppRootView.swift */; };
+		1EB721E15C336E9FE07190E4 /* BulkMinifigScanPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E535BDEA80BE24EE73AE67 /* BulkMinifigScanPayload.swift */; };
 		20440890F69807F8318B32FB /* MinifigLookupPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E89950A8EB117E686AC7E6 /* MinifigLookupPayload.swift */; };
 		204B39504255B458FA3AC870 /* CoreMLMinifigureDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A585AFB1013097D35D10D137 /* CoreMLMinifigureDetectorTests.swift */; };
 		20C45383EC4C3BC86058AC79 /* CameraAuthorizationStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A098D219DADDE29AFD694ADA /* CameraAuthorizationStatus.swift */; };
@@ -291,6 +292,7 @@
 		AED931FC399B0F4FDAF3724D /* VisionBoundingBoxMapperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionBoundingBoxMapperTests.swift; sourceTree = "<group>"; };
 		AF513E65F25EFDFFCFCF0B6B /* CollectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionView.swift; sourceTree = "<group>"; };
 		B11B009B7EA15DF13E630D06 /* AutoScanBlockReason.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoScanBlockReason.swift; sourceTree = "<group>"; };
+		B1E535BDEA80BE24EE73AE67 /* BulkMinifigScanPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkMinifigScanPayload.swift; sourceTree = "<group>"; };
 		B50BCC8C03FE362629D0F4BB /* PortfolioChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioChartView.swift; sourceTree = "<group>"; };
 		BA91C00010B7FE9351243FE7 /* MinifigureDetector.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = MinifigureDetector.mlmodel; sourceTree = "<group>"; };
 		BCEBEFD62589431068064A5A /* CollectionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionRowView.swift; sourceTree = "<group>"; };
@@ -483,6 +485,7 @@
 				32E00FF36212FF566E311D3C /* BrickValAPIEnvironment.swift */,
 				69914567845B2894E73A62B1 /* BulkMinifigLookupPayload.swift */,
 				F1F0C28D2DC84A9C93C1BC20 /* BulkMinifigLookupRow.swift */,
+				B1E535BDEA80BE24EE73AE67 /* BulkMinifigScanPayload.swift */,
 				4F5F4907120BC1A16ACF2F22 /* IdentificationCandidate.swift */,
 				3DA331DC281100089FF5A7D1 /* IdentificationDetection.swift */,
 				A6F83CBA5E0EF10E44EA0080 /* IdentificationResult.swift */,
@@ -916,6 +919,7 @@
 				22009F89A7842912D8494A71 /* BrickValueAuthView.swift in Sources */,
 				57CD2963F83F170849D5F569 /* BulkMinifigLookupPayload.swift in Sources */,
 				AAA777803A3BA83E0F8D462A /* BulkMinifigLookupRow.swift in Sources */,
+				1EB721E15C336E9FE07190E4 /* BulkMinifigScanPayload.swift in Sources */,
 				BC50C75331C93F9F1AA5A1E4 /* BulkScanResultsView.swift in Sources */,
 				20C45383EC4C3BC86058AC79 /* CameraAuthorizationStatus.swift in Sources */,
 				4C1786FA4D97FA8C629884F5 /* CameraError.swift in Sources */,

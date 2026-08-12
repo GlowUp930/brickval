@@ -51,6 +51,23 @@ actor ImageProcessor {
         throw CameraError.sampleTooLarge
     }
 
+    func bulkScanImage(from data: Data) throws -> Data {
+        guard let image = UIImage(data: data) else { throw CameraError.invalidImage }
+        let normalized = normalize(image)
+        for maximumDimension: CGFloat in [1600, 1400, 1200, 1024] {
+            let scale = min(1, maximumDimension / max(normalized.size.width, normalized.size.height))
+            let output = scale < 1
+                ? resize(normalized, to: CGSize(width: normalized.size.width * scale, height: normalized.size.height * scale))
+                : normalized
+            for quality in [0.76, 0.64, 0.52, 0.40] {
+                if let jpeg = output.jpegData(compressionQuality: quality), jpeg.count <= 700 * 1024 {
+                    return jpeg
+                }
+            }
+        }
+        throw CameraError.sampleTooLarge
+    }
+
     func previewObservations(
         _ observations: [DetectionObservation],
         sourceData: Data,

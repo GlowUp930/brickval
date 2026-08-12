@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   analyzeBrickognizeSearchResponse,
+  buildBrickognizeBulkScanCrops,
   normalizeBrickognizeDetections,
   withStableRegionIds,
 } from "../src/lib/identify-nonset";
@@ -62,4 +63,12 @@ test("physical detections receive stable spatial region IDs", () => {
   const regions = withStableRegionIds(normalized.all);
 
   assert.deepEqual(regions.map((item) => item.regionId), ["region-2", "region-1"]);
+});
+
+test("legacy bulk recovery is capped to a small adaptive crop budget", () => {
+  const crops = buildBrickognizeBulkScanCrops({ detected_items: [] }, 1000, 1600);
+
+  assert.ok(crops.length <= 6);
+  assert.deepEqual(crops[0], { left: 0, top: 0, width: 1000, height: 928 });
+  assert.deepEqual(crops[1], { left: 0, top: 672, width: 1000, height: 928 });
 });

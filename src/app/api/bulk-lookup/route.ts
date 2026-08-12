@@ -8,10 +8,9 @@ import { getExchangeRates } from "@/lib/frankfurter";
 import { checkFeatureAccess, consumeFeatureUsage } from "@/lib/scan-gate";
 import { computePricing } from "@/lib/compute-pricing";
 import {
-  buildMinifigLookupPayload,
   sanitizeBulkMinifigNumbers,
-  type MinifigLookupPayload,
 } from "@/lib/minifig-lookup";
+import { lookupBulkMinifigures } from "@/lib/bulk-minifig-lookup";
 import type { EbaySale, SetInfo, ComputedPricing } from "@/types/market";
 
 const LOOKUP_CACHE_TTL_HOURS = 24;
@@ -19,10 +18,6 @@ const LOOKUP_CACHE_TTL_HOURS = 24;
 type BulkLookupRow =
   | { setNumber: string; setInfo: SetInfo | null; pricing: ComputedPricing; error?: never }
   | { setNumber: string; error: "not_found"; setInfo?: never; pricing?: never };
-
-type BulkMinifigLookupRow =
-  | { figNumber: string; result: MinifigLookupPayload; error?: never }
-  | { figNumber: string; error: "not_found"; result?: never };
 
 async function lookupOne(
   setNumber: string,
@@ -65,18 +60,6 @@ async function lookupOne(
   );
 
   return { setNumber, setInfo, pricing };
-}
-
-async function lookupOneMinifig(figNumber: string): Promise<BulkMinifigLookupRow> {
-  const cacheKey = `lookup:minifig:${figNumber}`;
-  const cached = await getCached<MinifigLookupPayload>(cacheKey);
-  if (cached) return { figNumber, result: cached };
-
-  const payload = await buildMinifigLookupPayload(figNumber);
-  if (!payload) return { figNumber, error: "not_found" };
-
-  await setCached(cacheKey, payload, LOOKUP_CACHE_TTL_HOURS);
-  return { figNumber, result: payload };
 }
 
 export async function POST(req: NextRequest) {
@@ -146,14 +129,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (mode === "minifig") {
-    const BATCH_SIZE = 3;
-    const results: BulkMinifigLookupRow[] = [];
-
-    for (let i = 0; i < figNumbers.length; i += BATCH_SIZE) {
-      const batch = figNumbers.slice(i, i + BATCH_SIZE);
-      const batchResults = await Promise.all(batch.map((figNumber) => lookupOneMinifig(figNumber)));
-      results.push(...batchResults);
-    }
+    const results = await lookupBulkMinifigures(figNumbers, 5);
 
     if (userId && isBulkScan && results.some((row) => "result" in row)) {
       const gate = await consumeFeatureUsage(userId, "bulk_scan");

@@ -5,8 +5,12 @@ struct LocalDetectionSchedule: Equatable, Sendable {
     private(set) var lastStartedAt: Date?
     private(set) var lastFrameTimestamp: Date?
 
-    private let minimumInterval = 1.0 / 6.0
+    private let minimumInterval: TimeInterval
     private let maximumFrameAge = 0.35
+
+    init(framesPerSecond: Double = 6) {
+        minimumInterval = 1.0 / max(1, framesPerSecond)
+    }
 
     func shouldProcess(frameTimestamp: Date, now: Date) -> Bool {
         guard !isInFlight,

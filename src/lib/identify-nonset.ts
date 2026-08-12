@@ -50,7 +50,7 @@ export type BrickognizeCropRect = {
 
 export const MINIFIG_DETECTION_LIMIT = 40;
 const PART_DETECTION_LIMIT = 4;
-const BULK_SCAN_CROP_BUDGET = 25;
+const BULK_SCAN_CROP_BUDGET = 6;
 
 export type BrickognizeSearchAnalysis = {
   detections: NormalizedDetections;
@@ -480,8 +480,8 @@ export function buildBrickognizeBulkScanCrops(
   const normalizedWidth = Math.max(1, Math.round(imageWidth));
   const normalizedHeight = Math.max(1, Math.round(imageHeight));
   const recoveryCrops = buildBrickognizeRecoveryCrops(response, normalizedWidth, normalizedHeight);
-  const focusedCrops = buildFocusedGridCrops(normalizedWidth, normalizedHeight);
   const tiledCrops = buildOverlappingTileCrops(normalizedWidth, normalizedHeight);
+  const focusedCrops = buildFocusedGridCrops(normalizedWidth, normalizedHeight);
 
-  return dedupeCrops([...focusedCrops, ...recoveryCrops, ...tiledCrops]).slice(0, BULK_SCAN_CROP_BUDGET);
+  return dedupeCrops([...recoveryCrops, ...tiledCrops, ...focusedCrops]).slice(0, BULK_SCAN_CROP_BUDGET);
 }

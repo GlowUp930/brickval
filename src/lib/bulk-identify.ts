@@ -13,6 +13,10 @@ export type BulkManifestShard = {
   regions: BulkManifestRegion[];
 };
 export type BulkRegionManifest = { shards: BulkManifestShard[] };
+export type GuidedBulkCrop = {
+  boundingBox: NormalizedRegionBox;
+  regions: BulkManifestRegion[];
+};
 
 export function parseBulkRegionManifest(value: unknown): BulkRegionManifest | null {
   if (typeof value !== "string") return null;
@@ -51,6 +55,28 @@ export function parseBulkRegionManifest(value: unknown): BulkRegionManifest | nu
   return { shards };
 }
 
+export function parseBulkRegions(value: unknown): BulkManifestRegion[] | null {
+  if (typeof value !== "string") return null;
+  let raw: unknown;
+  try {
+    raw = JSON.parse(value);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(raw) || raw.length > 10) return null;
+  const seen = new Set<string>();
+  const regions: BulkManifestRegion[] = [];
+  for (const candidate of raw) {
+    if (!isRecord(candidate) || typeof candidate.regionId !== "string") return null;
+    const regionId = candidate.regionId.trim();
+    const boundingBox = parseBox(candidate.boundingBox);
+    if (!regionId || seen.has(regionId) || !boundingBox) return null;
+    seen.add(regionId);
+    regions.push({ regionId, boundingBox });
+  }
+  return regions;
+}
+
 export function assignDetectionsToRegions(
   detections: NonSetDetection[],
   regions: BulkManifestRegion[]
@@ -60,20 +86,118 @@ export function assignDetectionsToRegions(
   for (const detection of detections) {
     if (available.size === 0) break;
     let bestIndex: number | null = null;
-    let bestOverlap = -1;
+    let bestOverlap = 0;
     const box = normalizeDetectionBox(detection);
+    if (!box) continue;
     for (const index of available) {
-      const overlap = box ? intersectionOverUnion(box, regions[index].boundingBox) : 0;
+      const overlap = intersectionOverUnion(box, regions[index].boundingBox);
       if (overlap > bestOverlap) {
         bestOverlap = overlap;
         bestIndex = index;
       }
     }
-    if (bestIndex === null) continue;
+    if (bestIndex === null || bestOverlap < 0.05) continue;
     available.delete(bestIndex);
     assigned.push({ ...detection, regionId: regions[bestIndex].regionId });
   }
   return assigned;
+}
+
+export function planGuidedBulkCrops(regions: BulkManifestRegion[]): GuidedBulkCrop[] {
+  const validRegions = regions
+    .filter((region) => parseBox(region.boundingBox) !== null)
+    .slice(0, 10)
+    .sort((a, b) => {
+      const rowDelta = a.boundingBox.y - b.boundingBox.y;
+      return Math.abs(rowDelta) > 0.12 ? rowDelta : a.boundingBox.x - b.boundingBox.x;
+    });
+  if (!validRegions.length) return fallbackQuadrants();
+
+  const groupCount = Math.min(MAX_GUIDED_BULK_IMAGES, validRegions.length);
+  const groupSize = Math.ceil(validRegions.length / groupCount);
+  const groups = Array.from(
+    { length: groupCount },
+    (_, index) => validRegions.slice(index * groupSize, (index + 1) * groupSize)
+  );
+  return groups.filter((group) => group.length > 0).map((group) => ({
+    boundingBox: paddedUnion(group.map((region) => region.boundingBox), 0.3),
+    regions: group,
+  }));
+}
+
+export function mergeBulkDetections(detections: NonSetDetection[]): NonSetDetection[] {
+  const kept: NonSetDetection[] = [];
+  for (const candidate of [...detections].sort((a, b) => {
+    const guidedDelta = Number(Boolean(b.regionId)) - Number(Boolean(a.regionId));
+    return guidedDelta !== 0 ? guidedDelta : b.score - a.score;
+  })) {
+    if (candidate.item_type !== "minifig") continue;
+    const candidateBox = normalizeDetectionBox(candidate);
+    const duplicate = kept.some((existing) => {
+      if (candidate.regionId && existing.regionId && candidate.regionId === existing.regionId) return true;
+      const existingBox = normalizeDetectionBox(existing);
+      if (!candidateBox || !existingBox) return candidate.id === existing.id;
+      return overlapOfSmaller(candidateBox, existingBox) >= 0.72;
+    });
+    if (!duplicate) kept.push(candidate);
+  }
+  return withStableFallbackRegionIds(kept).slice(0, 10);
+}
+
+export function unresolvedBulkRegions(
+  regions: BulkManifestRegion[],
+  detections: NonSetDetection[]
+): BulkManifestRegion[] {
+  const resolved = new Set(detections.map((detection) => detection.regionId).filter(Boolean));
+  return regions.filter((region) => !resolved.has(region.regionId));
+}
+
+function withStableFallbackRegionIds(detections: NonSetDetection[]): NonSetDetection[] {
+  const used = new Set(detections.map((detection) => detection.regionId).filter(Boolean));
+  let next = 1;
+  return detections.map((detection) => {
+    if (detection.regionId) return detection;
+    while (used.has(`region-${next}`)) next += 1;
+    const regionId = `region-${next}`;
+    used.add(regionId);
+    next += 1;
+    return { ...detection, regionId };
+  });
+}
+
+function fallbackQuadrants(): GuidedBulkCrop[] {
+  const boxes: NormalizedRegionBox[] = [
+    { x: 0, y: 0, width: 0.58, height: 0.58 },
+    { x: 0.42, y: 0, width: 0.58, height: 0.58 },
+    { x: 0, y: 0.42, width: 0.58, height: 0.58 },
+    { x: 0.42, y: 0.42, width: 0.58, height: 0.58 },
+  ];
+  return boxes.map((boundingBox) => ({ boundingBox, regions: [] }));
+}
+
+function paddedUnion(boxes: NormalizedRegionBox[], contextRatio: number): NormalizedRegionBox {
+  const left = Math.min(...boxes.map((box) => box.x));
+  const top = Math.min(...boxes.map((box) => box.y));
+  const right = Math.max(...boxes.map((box) => box.x + box.width));
+  const bottom = Math.max(...boxes.map((box) => box.y + box.height));
+  const paddingX = (right - left) * contextRatio;
+  const paddingY = (bottom - top) * contextRatio;
+  const x = Math.max(0, left - paddingX);
+  const y = Math.max(0, top - paddingY);
+  return {
+    x,
+    y,
+    width: Math.min(1, right + paddingX) - x,
+    height: Math.min(1, bottom + paddingY) - y,
+  };
+}
+
+function overlapOfSmaller(a: NormalizedRegionBox, b: NormalizedRegionBox): number {
+  const right = Math.min(a.x + a.width, b.x + b.width);
+  const bottom = Math.min(a.y + a.height, b.y + b.height);
+  const intersection = Math.max(0, right - Math.max(a.x, b.x)) * Math.max(0, bottom - Math.max(a.y, b.y));
+  const smaller = Math.min(a.width * a.height, b.width * b.height);
+  return smaller > 0 ? intersection / smaller : 0;
 }
 
 function normalizeDetectionBox(detection: NonSetDetection): NormalizedRegionBox | null {

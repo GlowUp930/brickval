@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "test:bulk": "tsx --test tests/bulk-identify.test.ts tests/identify-nonset.test.ts",
+    "benchmark:bulk": "tsx scripts/benchmark-bulk-scan.mts",
     "prebuild": "node scripts/assert-homepage-contract.mjs",
     "build": "next build",
     "start": "next start",
@@ -33,6 +35,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }

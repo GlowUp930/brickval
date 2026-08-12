@@ -2,6 +2,7 @@ import Foundation
 
 struct BrickValAPIClient: Sendable {
     var scanMinifigure: @Sendable (Data) async throws -> MinifigScanResult
+    var scanBulkMinifigures: @Sendable (Data, [BulkScanRegion]) async throws -> BulkMinifigScanPayload
     var identify: @Sendable (Data, ScanMode, ScanIntent) async throws -> IdentificationResult
     var lookup: @Sendable (String, ItemType, Int?) async throws -> LookupResult
     var bulkLookupMinifigures: @Sendable ([String], BulkLookupSource) async throws -> BulkMinifigLookupResult
@@ -52,6 +53,31 @@ extension BrickValAPIClient {
                 default:
                     return .notFound(timings: payload.timings)
                 }
+            },
+            scanBulkMinifigures: { imageData, regions in
+                var form = MultipartFormData()
+                form.append(name: "image", filename: "bulk-scan.jpg", contentType: "image/jpeg", fileData: imageData)
+                let encoder = JSONEncoder()
+                let regionData = try encoder.encode(Array(regions.prefix(10)))
+                guard let regionJSON = String(data: regionData, encoding: .utf8) else {
+                    throw APIError(endpoint: "bulk minifig scan", statusCode: 0, serverMessage: "The scan regions could not be prepared.")
+                }
+                form.append(name: "regions", value: regionJSON)
+                form.finalize()
+                let request = try await request(
+                    baseURL: configuration.baseURL,
+                    path: "/api/minifig/bulk-scan",
+                    method: "POST",
+                    body: form.data,
+                    contentType: form.contentType,
+                    token: authToken()
+                )
+                let (data, response) = try await session.data(for: request)
+                return try decodeResponse(
+                    data: data,
+                    response: response,
+                    endpoint: "bulk minifig scan"
+                )
             },
             identify: { imageData, mode, intent in
                 var form = MultipartFormData()

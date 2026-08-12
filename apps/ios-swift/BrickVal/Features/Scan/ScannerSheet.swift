@@ -24,6 +24,12 @@ struct BulkScanResultItem: Identifiable, Sendable {
     let result: LookupResult
     let boundingBox: NormalizedBoundingBox?
 
+    init(id: String, result: LookupResult, boundingBox: NormalizedBoundingBox?) {
+        self.id = id
+        self.result = result
+        self.boundingBox = boundingBox
+    }
+
     private struct Candidate {
         let index: Int
         let detection: IdentificationDetection

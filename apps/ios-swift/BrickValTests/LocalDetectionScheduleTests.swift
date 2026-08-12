@@ -57,3 +57,22 @@ struct LocalDetectionScheduleTests {
         ))
     }
 }
+
+extension LocalDetectionScheduleTests {
+    @Test
+    func bulkScheduleRunsAtThreeFramesPerSecond() {
+        var schedule = LocalDetectionSchedule(framesPerSecond: 3)
+        let started = Date(timeIntervalSince1970: 100)
+        schedule.didStart(frameTimestamp: started, now: started)
+        schedule.didFinish()
+
+        #expect(!schedule.shouldProcess(
+            frameTimestamp: started.addingTimeInterval(0.2),
+            now: started.addingTimeInterval(0.2)
+        ))
+        #expect(schedule.shouldProcess(
+            frameTimestamp: started.addingTimeInterval(0.34),
+            now: started.addingTimeInterval(0.34)
+        ))
+    }
+}
