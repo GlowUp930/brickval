@@ -34,7 +34,7 @@
 		20C45383EC4C3BC86058AC79 /* CameraAuthorizationStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A098D219DADDE29AFD694ADA /* CameraAuthorizationStatus.swift */; };
 		2118C18E62E4D96B11D6E443 /* BrickValAPIEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32E00FF36212FF566E311D3C /* BrickValAPIEnvironment.swift */; };
 		22009F89A7842912D8494A71 /* BrickValueAuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7078C232F61B02B4CBE8C1A8 /* BrickValueAuthView.swift */; };
-		23914B5B5E178F6438F54A6D /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = EFA69D9ECEA37F7AF12FE05A /* Sentry */; };
+		23914B5B5E178F6438F54A6D /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = C024F53FD29067686F76D22A /* Sentry-Dynamic */; };
 		23C430832E2BB043064AD802 /* ScannerStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BED682995C15E75257E316FF /* ScannerStatusView.swift */; };
 		2500C998A95D1093F4439001 /* BulkRecoveryStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0374015F9BD2157183F144A5 /* BulkRecoveryStateTests.swift */; };
 		28D2AB981918BE69951B92A0 /* cash-register-kaching.aac in Resources */ = {isa = PBXBuildFile; fileRef = A3C39F6BC7B798264AF2202F /* cash-register-kaching.aac */; };
@@ -358,7 +358,7 @@
 				42C800994CF13DA9C2CFF6B7 /* ClerkKitUI in Frameworks */,
 				A99FF2AE20396FCBAFE9E6C5 /* RevenueCat in Frameworks */,
 				89D54DA764CD620669039346 /* SuperwallKit in Frameworks */,
-				23914B5B5E178F6438F54A6D /* Sentry in Frameworks */,
+				23914B5B5E178F6438F54A6D /* Sentry-Dynamic in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -745,7 +745,7 @@
 				D0A352062F861E6EC1FD8DB8 /* ClerkKitUI */,
 				79EC0D60549A8FF6DC49C4E5 /* RevenueCat */,
 				02162F59ABE116396E26B8FB /* SuperwallKit */,
-				EFA69D9ECEA37F7AF12FE05A /* Sentry */,
+				C024F53FD29067686F76D22A /* Sentry-Dynamic */,
 			);
 			productName = BrickVal;
 			productReference = 7A9C146533B1F9D2F68E0DBD /* BrickVal.app */;
@@ -1068,13 +1068,13 @@
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution: HO LAM CHAN (4CQHLZBSU7)";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 122;
+				CURRENT_PROJECT_VERSION = 124;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.brickval.app;
 				PRODUCT_NAME = BrickVal;
 				PROVISIONING_PROFILE_SPECIFIER = "BrickVal App Store Build 44";
@@ -1195,13 +1195,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 122;
+				CURRENT_PROJECT_VERSION = 124;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.brickval.app;
 				PRODUCT_NAME = BrickVal;
 				SDKROOT = iphoneos;
@@ -1399,15 +1399,15 @@
 			package = 96C6F241B06E78C9D1E1FBDD /* XCRemoteSwiftPackageReference "purchases-ios" */;
 			productName = RevenueCat;
 		};
+		C024F53FD29067686F76D22A /* Sentry-Dynamic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D47C716520BDE2C294F7D376 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = "Sentry-Dynamic";
+		};
 		D0A352062F861E6EC1FD8DB8 /* ClerkKitUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = A764B9E3B446F71B1B64C5BA /* XCRemoteSwiftPackageReference "clerk-ios" */;
 			productName = ClerkKitUI;
-		};
-		EFA69D9ECEA37F7AF12FE05A /* Sentry */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D47C716520BDE2C294F7D376 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
-			productName = Sentry;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
