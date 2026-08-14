@@ -58,13 +58,17 @@ final class MonetizationStore {
         setAccessCohort(cohort)
     }
 
-    func requiresProForScanning(isPro: Bool) -> Bool {
+    func requiresProForApp(isPro: Bool) -> Bool {
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-showHardAccessDemo") {
             return !isPro
         }
 #endif
         return policy.effectiveAccessExperiment.enabled && accessCohort == .hardTrial && !isPro
+    }
+
+    func requiresProForScanning(isPro: Bool) -> Bool {
+        requiresProForApp(isPro: isPro)
     }
 
     var shouldPresentHardAccessIntro: Bool {

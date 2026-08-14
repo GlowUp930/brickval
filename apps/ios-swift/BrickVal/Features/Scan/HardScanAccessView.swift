@@ -1,5 +1,25 @@
 import SwiftUI
 
+struct HardAccessStatusView: View {
+    var body: some View {
+        ZStack {
+            BrickValStyle.Primitive.black.ignoresSafeArea()
+
+            VStack(spacing: BrickValStyle.Primitive.space16) {
+                ProgressView()
+                    .tint(.white)
+                    .controlSize(.large)
+                Text("Checking your access...")
+                    .font(.headline)
+                    .foregroundStyle(.white.opacity(0.72))
+            }
+        }
+        .preferredColorScheme(.dark)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Checking your BrickValue Pro access")
+    }
+}
+
 struct HardScanAccessView: View {
     @Environment(MonetizationStore.self) private var monetization
     @Environment(\.appSDKCoordinator) private var coordinator
@@ -32,6 +52,16 @@ struct HardScanAccessView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .preferredColorScheme(.dark)
+        .sheet(isPresented: subscriptionFallbackBinding) {
+            NavigationStack {
+                SubscriptionView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") { coordinator?.dismissSubscriptionFallback() }
+                        }
+                    }
+            }
+        }
         .task {
             reveal()
             guard monetization.shouldPresentHardAccessIntro else { return }
@@ -135,6 +165,13 @@ struct HardScanAccessView: View {
                 "source": source,
                 "trial_days": monetization.trialDays,
             ]
+        )
+    }
+
+    private var subscriptionFallbackBinding: Binding<Bool> {
+        Binding(
+            get: { coordinator?.showsSubscriptionFallback == true },
+            set: { if !$0 { coordinator?.dismissSubscriptionFallback() } }
         )
     }
 

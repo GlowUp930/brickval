@@ -92,7 +92,7 @@ struct MonetizationStoreTests {
         )
 
         #expect(store.accessCohort == .legacySoft)
-        #expect(store.requiresProForScanning(isPro: false) == false)
+        #expect(store.requiresProForApp(isPro: false) == false)
     }
 
     @Test func newUserIsAssignedToHardTrialCohortWithinRollout() {
@@ -106,8 +106,8 @@ struct MonetizationStoreTests {
         store.enrollNewUserIfNeeded()
 
         #expect(store.accessCohort == .hardTrial)
-        #expect(store.requiresProForScanning(isPro: false))
-        #expect(store.requiresProForScanning(isPro: true) == false)
+        #expect(store.requiresProForApp(isPro: false))
+        #expect(store.requiresProForApp(isPro: true) == false)
         #expect(store.trialDays == 7)
     }
 
@@ -122,7 +122,37 @@ struct MonetizationStoreTests {
         store.enrollNewUserIfNeeded()
 
         #expect(store.accessCohort == .experimentSoft)
-        #expect(store.requiresProForScanning(isPro: false) == false)
+        #expect(store.requiresProForApp(isPro: false) == false)
+    }
+
+    @Test(arguments: [0, 49])
+    func hardAccessUsesTheFirstHalfOfTheRollout(roll: Int) {
+        let context = context()
+        let store = MonetizationStore(
+            defaults: context.defaults,
+            experimentRoll: { roll },
+            initialPolicy: policy(singleDaily: true, hardPaywallEnabled: true)
+        )
+
+        store.enrollNewUserIfNeeded()
+
+        #expect(store.accessCohort == .hardTrial)
+        #expect(store.requiresProForApp(isPro: false))
+    }
+
+    @Test(arguments: [50, 99])
+    func softAccessUsesTheSecondHalfOfTheRollout(roll: Int) {
+        let context = context()
+        let store = MonetizationStore(
+            defaults: context.defaults,
+            experimentRoll: { roll },
+            initialPolicy: policy(singleDaily: true, hardPaywallEnabled: true)
+        )
+
+        store.enrollNewUserIfNeeded()
+
+        #expect(store.accessCohort == .experimentSoft)
+        #expect(store.requiresProForApp(isPro: false) == false)
     }
 
     @Test func hardAccessIntroPresentsOnlyOnce() {
@@ -147,14 +177,14 @@ struct MonetizationStoreTests {
             initialPolicy: policy(singleDaily: true, hardPaywallEnabled: true)
         )
         enabledStore.enrollNewUserIfNeeded()
-        #expect(enabledStore.requiresProForScanning(isPro: false))
+        #expect(enabledStore.requiresProForApp(isPro: false))
 
         let disabledStore = MonetizationStore(
             defaults: context.defaults,
             initialPolicy: policy(singleDaily: true, hardPaywallEnabled: false)
         )
         #expect(disabledStore.accessCohort == .hardTrial)
-        #expect(disabledStore.requiresProForScanning(isPro: false) == false)
+        #expect(disabledStore.requiresProForApp(isPro: false) == false)
     }
 
     private func context() -> (defaults: UserDefaults, suite: String) {

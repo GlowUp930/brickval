@@ -4,6 +4,7 @@ struct AppRootView: View {
     @Environment(AppRouter.self) private var router
     @Environment(CollectionStore.self) private var collectionStore
     @Environment(PreferencesStore.self) private var preferences
+    @Environment(EntitlementStore.self) private var entitlements
     @Environment(MonetizationStore.self) private var monetization
     @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -18,7 +19,13 @@ struct AppRootView: View {
             if isReady {
                 Group {
                     if preferences.hasCompletedOnboarding && !preferences.isReplayingOnboarding {
-                        AppShellView()
+                        if monetization.accessCohort == .hardTrial && entitlements.isLoading && !entitlements.isPro {
+                            HardAccessStatusView()
+                        } else if monetization.requiresProForApp(isPro: entitlements.isPro) {
+                            HardScanAccessView()
+                        } else {
+                            AppShellView()
+                        }
                     } else {
                         OnboardingView()
                     }
