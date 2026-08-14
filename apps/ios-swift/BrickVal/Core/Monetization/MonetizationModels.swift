@@ -41,10 +41,18 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
         let collectionUniqueItems: Int
     }
 
+    struct Notifications: Codable, Equatable, Sendable {
+        let enabled: Bool
+        let scanReset: Bool
+        let trialEnding: Bool
+        let accountAction: Bool
+    }
+
     let version: Int
     let accessExperiment: AccessExperiment?
     let gates: Gates
     let limits: Limits
+    let notifications: Notifications
 
     static let phaseOne = MonetizationPolicy(
         version: 3,
@@ -64,6 +72,12 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
             singleScansPerDay: 3,
             introductoryBulkScans: 1,
             collectionUniqueItems: 10
+        ),
+        notifications: Notifications(
+            enabled: true,
+            scanReset: true,
+            trialEnding: true,
+            accountAction: true
         )
     )
 

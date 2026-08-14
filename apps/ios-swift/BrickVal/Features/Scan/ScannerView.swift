@@ -5,6 +5,7 @@ struct ScannerView: View {
     @Environment(PreferencesStore.self) private var preferences
     @Environment(EntitlementStore.self) private var entitlements
     @Environment(MonetizationStore.self) private var monetization
+    @Environment(NotificationCoordinator.self) private var notifications
     @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.brickValAccent) private var accent
     @Environment(\.scenePhase) private var scenePhase
@@ -52,9 +53,13 @@ struct ScannerView: View {
                 intent: store.intent,
                 policy: monetization.policy,
                 usage: monetization.usage,
-                isPro: entitlements.isPro
+                isPro: entitlements.isPro,
+                notifyWhenReset: {
+                    guard let resetDate = monetization.usage.singleScan.resetsAt.flatMap(ISO8601DateFormatter().date(from:)) else { return }
+                    Task { await notifications.requestScanResetReminder(resetDate: resetDate) }
+                },
+                isResetReminderEnabled: notifications.scanResetReminderEnabled
             )
-            .frame(height: 32)
             .padding(.bottom, 8)
 
             GeometryReader { proxy in
@@ -263,29 +268,48 @@ private struct ScannerAllowanceView: View {
     let policy: MonetizationPolicy
     let usage: UsageSnapshot
     let isPro: Bool
+    let notifyWhenReset: () -> Void
+    let isResetReminderEnabled: Bool
 
     var body: some View {
-        HStack(spacing: BrickValStyle.Primitive.space8) {
-            if let text {
-                if isPro {
-                    ProUnlimitedLabel(text: text)
-                } else {
-                    Image(systemName: usage.singleScan.remaining == 0 && intent == .single ? "exclamationmark.circle.fill" : "camera.aperture")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(usage.singleScan.remaining == 0 && intent == .single ? BrickValStyle.Semantic.valueNegative : BrickValStyle.Semantic.textSecondary)
-                        .accessibilityHidden(true)
-                    Text(text)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(BrickValStyle.Semantic.textSecondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
+        VStack(spacing: BrickValStyle.Primitive.space4) {
+            HStack(spacing: BrickValStyle.Primitive.space8) {
+                if let text {
+                    if isPro {
+                        ProUnlimitedLabel(text: text)
+                    } else {
+                        Image(systemName: usage.singleScan.remaining == 0 && intent == .single ? "exclamationmark.circle.fill" : "camera.aperture")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(usage.singleScan.remaining == 0 && intent == .single ? BrickValStyle.Semantic.valueNegative : BrickValStyle.Semantic.textSecondary)
+                            .accessibilityHidden(true)
+                        Text(text)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
+                    }
+                }
+                if showsProBadge {
+                    ProBadge(state: isPro ? .active : .requiresPro)
                 }
             }
-            if showsProBadge {
-                ProBadge(state: isPro ? .active : .requiresPro)
+
+            if intent == .single && !isPro && policy.gates.singleDaily && usage.singleScan.remaining == 0 {
+                Button(action: notifyWhenReset) {
+                    Label(
+                        isResetReminderEnabled ? "Reset reminder set" : "Notify me when scans reset",
+                        systemImage: isResetReminderEnabled ? "checkmark" : "bell"
+                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .disabled(isResetReminderEnabled)
+                .accessibilityHint(isResetReminderEnabled ? "A reminder is already scheduled" : "Requests permission for one reset reminder")
             }
         }
         .padding(.horizontal, BrickValStyle.Primitive.space8)
+        .padding(.vertical, BrickValStyle.Primitive.space4)
         .frame(maxWidth: 340, minHeight: 30)
         .background(BrickValStyle.Semantic.surfaceMuted.opacity(0.72), in: Capsule())
         .frame(maxWidth: .infinity)

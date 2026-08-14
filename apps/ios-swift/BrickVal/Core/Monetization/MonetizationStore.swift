@@ -160,8 +160,16 @@ final class MonetizationStore {
         let bulkUsed = defaults.integer(forKey: Keys.guestBulkUsed)
         usage = UsageSnapshot(
             isPro: false,
-            singleScan: counter(used: singleUsed, limit: policy.limits.singleScansPerDay),
-            bulkScan: counter(used: bulkUsed, limit: policy.limits.introductoryBulkScans)
+            singleScan: counter(
+                used: singleUsed,
+                limit: policy.limits.singleScansPerDay,
+                resetsAt: iso8601String(nextUTCDate(after: now()))
+            ),
+            bulkScan: counter(
+                used: bulkUsed,
+                limit: policy.limits.introductoryBulkScans,
+                resetsAt: nil
+            )
         )
     }
 
@@ -172,13 +180,24 @@ final class MonetizationStore {
         defaults.set(0, forKey: Keys.guestSingleUsed)
     }
 
-    private func counter(used: Int, limit: Int) -> UsageCounter {
+    private func counter(used: Int, limit: Int, resetsAt: String?) -> UsageCounter {
         UsageCounter(
             used: used,
             limit: limit,
             remaining: max(0, limit - used),
-            resetsAt: nil
+            resetsAt: resetsAt
         )
+    }
+
+    private func nextUTCDate(after date: Date) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let startOfDay = calendar.startOfDay(for: date)
+        return calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? date.addingTimeInterval(24 * 60 * 60)
+    }
+
+    private func iso8601String(_ date: Date) -> String {
+        ISO8601DateFormatter().string(from: date)
     }
 
     private func save<T: Encodable>(_ value: T, forKey key: String) {

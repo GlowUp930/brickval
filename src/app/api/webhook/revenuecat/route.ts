@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { sendAPNsAlert } from "@/lib/apns";
 
 /**
  * RevenueCat Webhook endpoint.
@@ -76,6 +77,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   }
 
+  if (eventType === "BILLING_ISSUE") {
+    await sendBillingAlerts(userId);
+  }
+
   // CANCELLATION means user cancelled but still has access until period ends.
   // We keep is_pro = true. EXPIRATION is when access actually ends.
   if (PRO_EVENTS.has(eventType)) {
@@ -97,4 +102,41 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ received: true });
+}
+
+async function sendBillingAlerts(appUserID: string) {
+  if (process.env.BRICKVALUE_NOTIFICATIONS_ENABLED === "false" ||
+      process.env.BRICKVALUE_ACCOUNT_ALERTS_ENABLED === "false") return;
+
+  const { data: devices, error } = await supabase
+    .from("notification_devices")
+    .select("device_id, apns_token, environment")
+    .eq("app_user_id", appUserID)
+    .eq("enabled", true)
+    .eq("account_alerts_enabled", true);
+  if (error) {
+    console.error("[revenuecat] Failed to load notification devices:", error);
+    return;
+  }
+
+  await Promise.all((devices ?? []).map(async (device) => {
+    try {
+      const result = await sendAPNsAlert({
+        token: device.apns_token,
+        environment: device.environment,
+        title: "Action needed for BrickValue Pro",
+        body: "Update your payment details to keep Pro access.",
+        deepLink: "brickval://settings",
+        category: "accountAction",
+      });
+      if (result.statusCode === 410 || result.statusCode === 400) {
+        await supabase
+          .from("notification_devices")
+          .update({ enabled: false })
+          .eq("device_id", device.device_id);
+      }
+    } catch (sendError) {
+      console.error("[revenuecat] Billing alert delivery failed:", sendError);
+    }
+  }));
 }

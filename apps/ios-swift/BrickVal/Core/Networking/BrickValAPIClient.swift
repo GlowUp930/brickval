@@ -11,6 +11,8 @@ struct BrickValAPIClient: Sendable {
     var partColors: @Sendable () async throws -> [PartColorOption]
     var submitFeedback: @Sendable (MinifigFeedback) async throws -> Void
     var deleteAccount: @Sendable () async throws -> Void
+    var registerNotificationDevice: @Sendable (BrickValNotificationDeviceRegistration) async throws -> Void
+    var unregisterNotificationDevice: @Sendable (String) async throws -> Void
 }
 
 extension BrickValAPIClient {
@@ -229,6 +231,32 @@ extension BrickValAPIClient {
                 )
                 let (data, response) = try await session.data(for: request)
                 try validate(response: response, data: data, endpoint: "delete account")
+            },
+            registerNotificationDevice: { registration in
+                let body = try JSONEncoder().encode(registration)
+                let request = try await request(
+                    baseURL: configuration.baseURL,
+                    path: "/api/mobile/notifications/devices",
+                    method: "POST",
+                    body: body,
+                    contentType: "application/json",
+                    token: authToken()
+                )
+                let (data, response) = try await session.data(for: request)
+                try validate(response: response, data: data, endpoint: "notification device registration")
+            },
+            unregisterNotificationDevice: { deviceID in
+                let body = try JSONEncoder().encode(["deviceID": deviceID])
+                let request = try await request(
+                    baseURL: configuration.baseURL,
+                    path: "/api/mobile/notifications/devices",
+                    method: "DELETE",
+                    body: body,
+                    contentType: "application/json",
+                    token: authToken()
+                )
+                let (data, response) = try await session.data(for: request)
+                try validate(response: response, data: data, endpoint: "notification device removal")
             }
         )
     }

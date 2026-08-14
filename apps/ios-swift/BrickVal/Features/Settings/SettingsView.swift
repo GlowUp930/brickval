@@ -248,6 +248,17 @@ struct SettingsView: View {
         VStack(spacing: BrickValStyle.Primitive.space12) {
             sectionHeader("App")
             Group {
+                NavigationLink {
+                    NotificationSettingsView()
+                } label: {
+                    profileRow(
+                        icon: "bell",
+                        title: "Notifications",
+                        subtitle: "Choose useful scan and account reminders",
+                        trailing: "Open"
+                    )
+                }
+
                 if entitlements.isPro {
                     NavigationLink(value: AppRoute.appearance) {
                         profileProRow(

@@ -15,9 +15,14 @@ final class AppSDKCoordinator {
 
     @ObservationIgnored private var purchaseController: RevenueCatPurchaseController?
     @ObservationIgnored private let entitlementStore: EntitlementStore
+    @ObservationIgnored private let notificationCoordinator: NotificationCoordinator
 
-    init(entitlementStore: EntitlementStore) {
+    init(
+        entitlementStore: EntitlementStore,
+        notificationCoordinator: NotificationCoordinator = NotificationCoordinator()
+    ) {
         self.entitlementStore = entitlementStore
+        self.notificationCoordinator = notificationCoordinator
         let clerkKey = Self.configurationValue("ClerkPublishableKey")
         if let clerkKey {
             Clerk.configure(publishableKey: clerkKey)
@@ -41,7 +46,10 @@ final class AppSDKCoordinator {
         let revenueCatKey = Self.configurationValue("RevenueCatAPIKey")
         let superwallKey = Self.configurationValue("SuperwallAPIKey")
         if let revenueCatKey {
-            let controller = RevenueCatPurchaseController(entitlementStore: entitlementStore)
+            let controller = RevenueCatPurchaseController(
+                entitlementStore: entitlementStore,
+                notificationCoordinator: notificationCoordinator
+            )
             purchaseController = controller
             if let superwallKey {
                 Superwall.configure(apiKey: superwallKey, purchaseController: controller)
@@ -91,6 +99,7 @@ final class AppSDKCoordinator {
 
     func setMonetizationCohort(_ cohort: MonetizationAccessCohort?) {
         guard let cohort else { return }
+        notificationCoordinator.setAccessCohort(cohort.rawValue)
         let attributes = [
             "access_cohort": cohort.rawValue,
             "access_experiment": "new_user_scan_gate_v1",
@@ -118,6 +127,7 @@ final class AppSDKCoordinator {
     }
 
     func synchronizeIdentity(userID: String?) async {
+        notificationCoordinator.setSubscriberID(userID)
         guard purchasesConfigured else { return }
         if let userID {
             if Purchases.shared.appUserID != userID {

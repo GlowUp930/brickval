@@ -71,4 +71,5 @@ struct AppShellView: View {
         .environment(PreferencesStore())
         .environment(EntitlementStore())
         .environment(MonetizationStore())
+        .environment(NotificationCoordinator())
 }

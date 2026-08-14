@@ -5,10 +5,15 @@ import SuperwallKit
 @MainActor
 final class RevenueCatPurchaseController: PurchaseController {
     private let entitlementStore: EntitlementStore
+    private let notificationCoordinator: NotificationCoordinator
     private var syncTasks: [Task<Void, Never>] = []
 
-    init(entitlementStore: EntitlementStore) {
+    init(
+        entitlementStore: EntitlementStore,
+        notificationCoordinator: NotificationCoordinator
+    ) {
         self.entitlementStore = entitlementStore
+        self.notificationCoordinator = notificationCoordinator
     }
 
     func startSyncing() {
@@ -63,6 +68,15 @@ final class RevenueCatPurchaseController: PurchaseController {
         let entitlements = Set(identifiers.map { Entitlement(id: $0) })
             .union(Superwall.shared.entitlements.web)
         Superwall.shared.subscriptionStatus = entitlements.isEmpty ? .inactive : .active(entitlements)
-        entitlementStore.update(isPro: customerInfo.entitlements["pro"]?.isActive == true)
+        let proEntitlement = customerInfo.entitlements["pro"]
+        await notificationCoordinator.updateSubscription(
+            SubscriptionReminderState(
+                isActive: proEntitlement?.isActive == true,
+                isTrial: proEntitlement?.periodType == .trial,
+                willRenew: proEntitlement?.willRenew == true,
+                expirationDate: proEntitlement?.expirationDate
+            )
+        )
+        entitlementStore.update(isPro: proEntitlement?.isActive == true)
     }
 }

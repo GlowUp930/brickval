@@ -3,10 +3,12 @@ import UIKit
 
 struct ProWelcomeView: View {
     @Environment(EntitlementStore.self) private var entitlements
+    @Environment(NotificationCoordinator.self) private var notifications
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dismiss) private var dismiss
     @State private var heroVisible = false
     @State private var detailsVisible = false
+    @State private var notificationMessage: String?
 
     var body: some View {
         ZStack {
@@ -24,6 +26,7 @@ struct ProWelcomeView: View {
                 VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space24) {
                     header
                     hero
+                    notificationOffer
                     unlockedFeatures
                         .opacity(detailsVisible ? 1 : 0)
                         .offset(y: reduceMotion || detailsVisible ? 0 : 16)
@@ -119,6 +122,66 @@ struct ProWelcomeView: View {
             unlockedRow("Unlimited collection items", icon: "shippingbox")
             Divider().overlay(BrickValStyle.Primitive.white.opacity(0.12))
             unlockedRow("Theme and accent controls", icon: "paintpalette")
+        }
+    }
+
+    @ViewBuilder
+    private var notificationOffer: some View {
+        if let state = notifications.subscriptionState, state.isActive {
+            VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space12) {
+                Label(
+                    state.isTrial ? "Want a trial reminder?" : "Keep important account alerts on hand",
+                    systemImage: state.isTrial ? "bell" : "bell.badge"
+                )
+                .font(.headline.weight(.bold))
+                .foregroundStyle(BrickValStyle.Primitive.white)
+
+                Text(
+                    state.isTrial
+                        ? "We can remind you 2 days before your trial renews."
+                        : "We only use this for billing problems that need your attention."
+                )
+                .font(.subheadline)
+                .foregroundStyle(BrickValStyle.Primitive.white.opacity(0.72))
+                .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    Task {
+                        let success: Bool
+                        if state.isTrial, let expirationDate = state.expirationDate {
+                            success = await notifications.requestTrialReminder(
+                                expirationDate: expirationDate,
+                                willRenew: state.willRenew
+                            )
+                        } else {
+                            success = await notifications.requestAccountAlerts()
+                        }
+                        notificationMessage = success
+                            ? "You’re all set. We’ll only send the reminder you chose."
+                            : "Notifications are off. You can enable them later in Profile."
+                    }
+                } label: {
+                    Label(
+                        state.isTrial ? "Remind me before renewal" : "Get account alerts",
+                        systemImage: notifications.authorizationStatus.canSchedule ? "checkmark" : "bell"
+                    )
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(BrickValStyle.Primitive.black)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .background(BrickValStyle.Primitive.white, in: Capsule())
+                }
+                .disabled(state.isTrial ? notifications.trialReminderEnabled : notifications.accountAlertsEnabled)
+                .accessibilityHint("Requests permission for one useful BrickValue notification")
+
+                if let notificationMessage {
+                    Text(notificationMessage)
+                        .font(.caption)
+                        .foregroundStyle(BrickValStyle.Primitive.white.opacity(0.72))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(BrickValStyle.Primitive.space16)
+            .background(BrickValStyle.Primitive.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
     }
 

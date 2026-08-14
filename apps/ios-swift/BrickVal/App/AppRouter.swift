@@ -31,7 +31,9 @@ final class AppRouter {
         switch url.host {
         case "scan": selectedTab = .scan
         case "collection": selectedTab = .collection
-        case "settings": selectedTab = .settings
+        case "settings":
+            selectedTab = .settings
+            settingsPath = [.subscription]
         default: break
         }
     }

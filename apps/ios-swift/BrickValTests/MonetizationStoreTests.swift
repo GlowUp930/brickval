@@ -216,6 +216,12 @@ struct MonetizationStoreTests {
                 singleScansPerDay: 3,
                 introductoryBulkScans: 1,
                 collectionUniqueItems: 10
+            ),
+            notifications: .init(
+                enabled: true,
+                scanReset: true,
+                trialEnding: true,
+                accountAction: true
             )
         )
     }

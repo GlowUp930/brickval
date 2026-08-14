@@ -65,7 +65,9 @@ private extension BrickValAPIClient {
         },
         partColors: { throw ScanStoreLifecycleTestError.unusedEndpoint },
         submitFeedback: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
-        deleteAccount: { throw ScanStoreLifecycleTestError.unusedEndpoint }
+        deleteAccount: { throw ScanStoreLifecycleTestError.unusedEndpoint },
+        registerNotificationDevice: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+        unregisterNotificationDevice: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint }
     )
 }
 

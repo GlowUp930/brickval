@@ -17,6 +17,12 @@ export interface MonetizationPolicy {
     introductoryBulkScans: number;
     collectionUniqueItems: number;
   };
+  notifications: {
+    enabled: boolean;
+    scanReset: boolean;
+    trialEnding: boolean;
+    accountAction: boolean;
+  };
 }
 
 function booleanValue(name: string, fallback: boolean): boolean {
@@ -55,6 +61,12 @@ export function getMonetizationPolicy(): MonetizationPolicy {
       singleScansPerDay: positiveInteger("BRICKVALUE_FREE_SINGLE_SCANS_PER_DAY", 3),
       introductoryBulkScans: positiveInteger("BRICKVALUE_FREE_BULK_SCANS", 1),
       collectionUniqueItems: positiveInteger("BRICKVALUE_FREE_COLLECTION_ITEMS", 10),
+    },
+    notifications: {
+      enabled: booleanValue("BRICKVALUE_NOTIFICATIONS_ENABLED", true),
+      scanReset: booleanValue("BRICKVALUE_SCAN_RESET_NOTIFICATIONS_ENABLED", true),
+      trialEnding: booleanValue("BRICKVALUE_TRIAL_REMINDER_NOTIFICATIONS_ENABLED", true),
+      accountAction: booleanValue("BRICKVALUE_ACCOUNT_ALERTS_ENABLED", true),
     },
   };
 }
