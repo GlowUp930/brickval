@@ -8,7 +8,7 @@ enum ProductFeedbackSurvey: String, Codable, Equatable, Identifiable, Sendable {
     var id: String { rawValue }
 }
 
-enum PostPurchaseReason: String, CaseIterable, Codable, Equatable, Sendable {
+enum PostPurchaseReason: String, CaseIterable, Codable, Equatable, Hashable, Sendable {
     case unlimitedScans = "unlimited_scans"
     case bulkScanning = "bulk_scanning"
     case collectionTracking = "collection_tracking"
@@ -30,7 +30,7 @@ enum PostPurchaseReason: String, CaseIterable, Codable, Equatable, Sendable {
     }
 }
 
-enum AcquisitionSource: String, CaseIterable, Codable, Equatable, Sendable {
+enum AcquisitionSource: String, CaseIterable, Codable, Equatable, Hashable, Sendable {
     case tiktok
     case instagram
     case youtube
@@ -52,7 +52,7 @@ enum AcquisitionSource: String, CaseIterable, Codable, Equatable, Sendable {
     }
 }
 
-enum PMFSentiment: String, CaseIterable, Codable, Equatable, Sendable {
+enum PMFSentiment: String, CaseIterable, Codable, Equatable, Hashable, Sendable {
     case veryDisappointed = "very_disappointed"
     case somewhatDisappointed = "somewhat_disappointed"
     case notDisappointed = "not_disappointed"
@@ -68,7 +68,7 @@ enum PMFSentiment: String, CaseIterable, Codable, Equatable, Sendable {
     }
 }
 
-enum CancellationReason: String, CaseIterable, Codable, Equatable, Sendable {
+enum CancellationReason: String, CaseIterable, Codable, Equatable, Hashable, Sendable {
     case price
     case scanAccuracy = "scan_accuracy"
     case scanSpeed = "scan_speed"
@@ -103,11 +103,15 @@ struct ProductFeedbackSubmission: Codable, Equatable, Sendable {
     let surveyType: ProductFeedbackSurvey
     let dedupeKey: String
     let postPurchaseReason: PostPurchaseReason?
+    let postPurchaseReasons: [PostPurchaseReason]?
     let acquisitionSource: AcquisitionSource?
     let pmfSentiment: PMFSentiment?
     let pmfBenefit: String?
+    let pmfBenefits: [String]?
     let pmfMissing: String?
+    let pmfImprovements: [String]?
     let cancellationReason: CancellationReason?
+    let cancellationReasons: [CancellationReason]?
     let additionalText: String?
     let accessCohort: String?
     let productID: String?

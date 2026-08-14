@@ -54,15 +54,18 @@ final class ProductFeedbackStore {
     }
 
     func submitPostPurchase(
-        reason: PostPurchaseReason,
+        reasons: Set<PostPurchaseReason>,
         source: AcquisitionSource,
         otherText: String?
     ) async {
         guard let context = postPurchaseContext else { return }
+        let orderedReasons = reasons.sorted { $0.rawValue < $1.rawValue }
+        guard let primaryReason = orderedReasons.first else { return }
         let submission = makeSubmission(
             surveyType: .postPurchase,
             dedupeKey: "post_purchase_v1:\(context.id)",
-            postPurchaseReason: reason,
+            postPurchaseReason: primaryReason,
+            postPurchaseReasons: orderedReasons,
             acquisitionSource: source,
             additionalText: normalized(otherText),
             productID: context.productID,
@@ -114,9 +117,10 @@ final class ProductFeedbackStore {
         }
     }
 
-    func submitPMF(sentiment: PMFSentiment, benefit: String, missing: String) async {
-        guard let benefit = normalized(benefit), !benefit.isEmpty,
-              let missing = normalized(missing), !missing.isEmpty else {
+    func submitPMF(sentiment: PMFSentiment, benefits: Set<String>, improvements: Set<String>) async {
+        let orderedBenefits = benefits.sorted()
+        let orderedImprovements = improvements.sorted()
+        guard !orderedBenefits.isEmpty, !orderedImprovements.isEmpty else {
             errorMessage = "Please answer both questions before sending."
             return
         }
@@ -125,8 +129,10 @@ final class ProductFeedbackStore {
             surveyType: .pmf,
             dedupeKey: "pmf_v1:\(bucket)",
             pmfSentiment: sentiment,
-            pmfBenefit: benefit,
-            pmfMissing: missing
+            pmfBenefit: orderedBenefits.joined(separator: ", "),
+            pmfBenefits: orderedBenefits,
+            pmfMissing: orderedImprovements.joined(separator: ", "),
+            pmfImprovements: orderedImprovements
         )
         await submit(submission) {
             self.lastPMFSurveyAt = self.now()
@@ -134,12 +140,15 @@ final class ProductFeedbackStore {
         }
     }
 
-    func submitCancellation(reason: CancellationReason, additionalText: String?) async {
+    func submitCancellation(reasons: Set<CancellationReason>, additionalText: String?) async {
         guard let eventKey = pendingCancellationEventKey else { return }
+        let orderedReasons = reasons.sorted { $0.rawValue < $1.rawValue }
+        guard let primaryReason = orderedReasons.first else { return }
         let submission = makeSubmission(
             surveyType: .cancellation,
             dedupeKey: eventKey,
-            cancellationReason: reason,
+            cancellationReason: primaryReason,
+            cancellationReasons: orderedReasons,
             additionalText: normalized(additionalText)
         )
         await submit(submission) {
@@ -189,11 +198,15 @@ final class ProductFeedbackStore {
         surveyType: ProductFeedbackSurvey,
         dedupeKey: String,
         postPurchaseReason: PostPurchaseReason? = nil,
+        postPurchaseReasons: [PostPurchaseReason]? = nil,
         acquisitionSource: AcquisitionSource? = nil,
         pmfSentiment: PMFSentiment? = nil,
         pmfBenefit: String? = nil,
+        pmfBenefits: [String]? = nil,
         pmfMissing: String? = nil,
+        pmfImprovements: [String]? = nil,
         cancellationReason: CancellationReason? = nil,
+        cancellationReasons: [CancellationReason]? = nil,
         additionalText: String? = nil,
         productID: String? = nil,
         isTrial: Bool? = nil
@@ -202,11 +215,15 @@ final class ProductFeedbackStore {
             surveyType: surveyType,
             dedupeKey: dedupeKey,
             postPurchaseReason: postPurchaseReason,
+            postPurchaseReasons: postPurchaseReasons,
             acquisitionSource: acquisitionSource,
             pmfSentiment: pmfSentiment,
             pmfBenefit: pmfBenefit,
+            pmfBenefits: pmfBenefits,
             pmfMissing: pmfMissing,
+            pmfImprovements: pmfImprovements,
             cancellationReason: cancellationReason,
+            cancellationReasons: cancellationReasons,
             additionalText: additionalText,
             accessCohort: lastAccessCohort,
             productID: productID,

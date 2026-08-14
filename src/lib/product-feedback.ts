@@ -38,11 +38,15 @@ export type ProductFeedbackPayload = {
   dedupeKey?: unknown;
   anonymousID?: unknown;
   postPurchaseReason?: unknown;
+  postPurchaseReasons?: unknown;
   acquisitionSource?: unknown;
   pmfSentiment?: unknown;
   pmfBenefit?: unknown;
+  pmfBenefits?: unknown;
   pmfMissing?: unknown;
+  pmfImprovements?: unknown;
   cancellationReason?: unknown;
+  cancellationReasons?: unknown;
   additionalText?: unknown;
   accessCohort?: unknown;
   productID?: unknown;
@@ -54,6 +58,11 @@ export type ProductFeedbackPayload = {
 
 export function isAllowedValue(value: unknown, values: readonly string[]): value is string {
   return typeof value === "string" && values.includes(value);
+}
+
+export function isAllowedArray(value: unknown, values: readonly string[], maxLength = 8): value is string[] {
+  return Array.isArray(value) && value.length > 0 && value.length <= maxLength &&
+    value.every((item) => isAllowedValue(item, values));
 }
 
 export function isValidText(value: unknown, maxLength: number, required = false): value is string {
@@ -73,16 +82,25 @@ export function isValidProductFeedbackPayload(payload: ProductFeedbackPayload): 
   switch (payload.surveyType) {
     case "post_purchase":
       return isAllowedValue(payload.postPurchaseReason, postPurchaseReasons) &&
-        isAllowedValue(payload.acquisitionSource, acquisitionSources);
+        isAllowedValue(payload.acquisitionSource, acquisitionSources) &&
+        (payload.postPurchaseReasons === undefined || isAllowedArray(payload.postPurchaseReasons, postPurchaseReasons));
     case "pmf":
       return isAllowedValue(payload.pmfSentiment, pmfSentiments) &&
         isValidText(payload.pmfBenefit, 1000, true) &&
-        isValidText(payload.pmfMissing, 1000, true);
+        isValidText(payload.pmfMissing, 1000, true) &&
+        (payload.pmfBenefits === undefined || isValidTextArray(payload.pmfBenefits, 6)) &&
+        (payload.pmfImprovements === undefined || isValidTextArray(payload.pmfImprovements, 6));
     case "cancellation":
-      return isAllowedValue(payload.cancellationReason, cancellationReasons);
+      return isAllowedValue(payload.cancellationReason, cancellationReasons) &&
+        (payload.cancellationReasons === undefined || isAllowedArray(payload.cancellationReasons, cancellationReasons));
   }
 
   return false;
+}
+
+function isValidTextArray(value: unknown, maxLength: number): value is string[] {
+  return Array.isArray(value) && value.length > 0 && value.length <= maxLength &&
+    value.every((item) => isValidText(item, 200, true));
 }
 
 export function buildProductFeedbackDedupeKey(subject: string, dedupeKey: string): string {

@@ -49,6 +49,31 @@ test("rejects unknown answers and oversized text", () => {
   }), false);
 });
 
+test("accepts choice-first answers and rejects invalid choice arrays", () => {
+  assert.equal(isValidProductFeedbackPayload({
+    ...base,
+    surveyType: "post_purchase",
+    postPurchaseReason: "bulk_scanning",
+    postPurchaseReasons: ["bulk_scanning", "unlimited_scans"],
+    acquisitionSource: "youtube",
+  }), true);
+  assert.equal(isValidProductFeedbackPayload({
+    ...base,
+    surveyType: "pmf",
+    pmfSentiment: "very_disappointed",
+    pmfBenefit: "Fast scans",
+    pmfBenefits: ["Fast scans", "Bulk scan"],
+    pmfMissing: "Better matches",
+    pmfImprovements: ["Better matches"],
+  }), true);
+  assert.equal(isValidProductFeedbackPayload({
+    ...base,
+    surveyType: "cancellation",
+    cancellationReason: "price",
+    cancellationReasons: ["price", "unknown"],
+  }), false);
+});
+
 test("scopes deduplication to the user or device", () => {
   assert.equal(buildProductFeedbackDedupeKey("user-1", "pmf_v1:20"), "user-1:pmf_v1:20");
   assert.notEqual(
