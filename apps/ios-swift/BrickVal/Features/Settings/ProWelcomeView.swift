@@ -4,6 +4,7 @@ import UIKit
 struct ProWelcomeView: View {
     @Environment(EntitlementStore.self) private var entitlements
     @Environment(NotificationCoordinator.self) private var notifications
+    @Environment(ProductFeedbackStore.self) private var feedback
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dismiss) private var dismiss
     @State private var heroVisible = false
@@ -26,6 +27,7 @@ struct ProWelcomeView: View {
                 VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space24) {
                     header
                     hero
+                    PostPurchaseSurveyCard()
                     notificationOffer
                     unlockedFeatures
                         .opacity(detailsVisible ? 1 : 0)
@@ -220,6 +222,9 @@ struct ProWelcomeView: View {
     }
 
     private func finish() {
+        if feedback.postPurchaseContext != nil {
+            feedback.skipPostPurchase()
+        }
         entitlements.dismissProWelcome()
         dismiss()
     }

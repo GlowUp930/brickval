@@ -31,6 +31,24 @@ struct MonetizationStoreTests {
         #expect(store.canUseSingle(isPro: true))
     }
 
+    @Test func successfulScanHistoryOnlyChangesOnSuccessfulScanEvent() {
+        let context = context()
+        let firstScan = Date(timeIntervalSince1970: 1_786_291_200)
+        let store = MonetizationStore(
+            defaults: context.defaults,
+            now: { firstScan },
+            initialPolicy: policy(singleDaily: true)
+        )
+
+        #expect(store.successfulSingleScanCount == 0)
+        #expect(store.firstSuccessfulSingleScanAt == nil)
+
+        store.recordSuccessfulSingle(serverUsage: nil)
+
+        #expect(store.successfulSingleScanCount == 1)
+        #expect(store.firstSuccessfulSingleScanAt == firstScan)
+    }
+
     @Test func dailyReminderUpdatesOnlyAfterSuccessfulScans() {
         let context = context()
         let store = MonetizationStore(

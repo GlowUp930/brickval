@@ -8,6 +8,8 @@ final class MonetizationStore {
     private(set) var usage: UsageSnapshot
     private(set) var isSignedIn = false
     private(set) var accessCohort: MonetizationAccessCohort?
+    private(set) var successfulSingleScanCount: Int
+    private(set) var firstSuccessfulSingleScanAt: Date?
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let now: @Sendable () -> Date
@@ -28,6 +30,8 @@ final class MonetizationStore {
         usage = Self.decode(UsageSnapshot.self, from: defaults.data(forKey: Keys.serverUsage)) ?? .empty()
         accessCohort = defaults.string(forKey: Keys.accessCohort)
             .flatMap(MonetizationAccessCohort.init(rawValue:))
+        successfulSingleScanCount = defaults.integer(forKey: Keys.successfulSingleScanCount)
+        firstSuccessfulSingleScanAt = defaults.object(forKey: Keys.firstSuccessfulSingleScanAt) as? Date
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-showHardAccessDemo") {
             accessCohort = .hardTrial
@@ -104,6 +108,12 @@ final class MonetizationStore {
     }
 
     func recordSuccessfulSingle(serverUsage: UsageSnapshot?) {
+        if firstSuccessfulSingleScanAt == nil {
+            firstSuccessfulSingleScanAt = now()
+            defaults.set(firstSuccessfulSingleScanAt, forKey: Keys.firstSuccessfulSingleScanAt)
+        }
+        successfulSingleScanCount += 1
+        defaults.set(successfulSingleScanCount, forKey: Keys.successfulSingleScanCount)
         if isSignedIn, let serverUsage {
             apply(serverUsage)
             return
@@ -239,5 +249,7 @@ final class MonetizationStore {
         static let onboardingCompleted = "has_completed_onboarding"
         static let accessCohort = "brickvalue_monetization_access_cohort"
         static let hardAccessIntroPresented = "brickvalue_hard_access_intro_presented"
+        static let successfulSingleScanCount = "brickvalue_successful_single_scan_count"
+        static let firstSuccessfulSingleScanAt = "brickvalue_first_successful_single_scan_at"
     }
 }

@@ -57,6 +57,21 @@ struct SubscriptionReminderState: Equatable, Sendable {
     let isTrial: Bool
     let willRenew: Bool
     let expirationDate: Date?
+    let productID: String?
+
+    init(
+        isActive: Bool,
+        isTrial: Bool,
+        willRenew: Bool,
+        expirationDate: Date?,
+        productID: String? = nil
+    ) {
+        self.isActive = isActive
+        self.isTrial = isTrial
+        self.willRenew = willRenew
+        self.expirationDate = expirationDate
+        self.productID = productID
+    }
 }
 
 enum BrickValNotificationSchedulePlanner {

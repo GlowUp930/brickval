@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "test:bulk": "tsx --test tests/bulk-identify.test.ts tests/identify-nonset.test.ts",
+    "test:feedback": "tsx --test tests/product-feedback.test.ts",
     "benchmark:bulk": "tsx scripts/benchmark-bulk-scan.mts",
     "prebuild": "node scripts/assert-homepage-contract.mjs",
     "build": "next build",

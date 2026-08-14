@@ -15,6 +15,11 @@
 		08C31477AC1CC38678FCF17E /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CA9F24F8BE45889A3C91E371 /* LaunchScreen.storyboard */; };
 		09D7E25492AC60F6562332FF /* LegacyPreferenceValues.swift in Sources */ = {isa = PBXBuildFile; fileRef = 290ABA13B70AFB4557194D83 /* LegacyPreferenceValues.swift */; };
 		0A90D9B6555B740187C172CA /* ProWelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B6370B2721603AD443EF2AD /* ProWelcomeView.swift */; };
+		9A62832A0E9D44A8A7B1D48D /* ProductFeedbackModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E13FC24D8F541C3AB3B8917 /* ProductFeedbackModels.swift */; };
+		5406A6A9181445BEB85B6938 /* ProductFeedbackModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 701D6BB760874CE19BE200A8 /* ProductFeedbackModelsTests.swift */; };
+		7D0D0FF123CF4A00B753D03F /* ProductFeedbackStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9B84D0847B74C8B8B71FDD4 /* ProductFeedbackStoreTests.swift */; };
+		DE3069DCBE974B95A5F749CC /* ProductFeedbackStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 741F2B237C054CBDA07137EA /* ProductFeedbackStore.swift */; };
+		AC65832760A142FEAE9DFD16 /* ProductFeedbackSurveyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92A0474A6F6C46C8A469908D /* ProductFeedbackSurveyView.swift */; };
 		0B6F4471F920CB2615445F56 /* SkeletonPlaceholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DD8191F11D45D599A79C607 /* SkeletonPlaceholder.swift */; };
 		0BA0A493FCB6D27B79075140 /* ProfileDesignDraftsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D852B26C280FAE4484AB8D02 /* ProfileDesignDraftsView.swift */; };
 		0D61DA3D984BFE947E25E8C0 /* AppSDKEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E35B79843A4B14E2B919817 /* AppSDKEnvironment.swift */; };
@@ -198,6 +203,11 @@
 		08CF8409E271EB2CE9E51A41 /* PreferencesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesStore.swift; sourceTree = "<group>"; };
 		09D69ECFFDB07A185852CFA8 /* ScanReviewCandidate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanReviewCandidate.swift; sourceTree = "<group>"; };
 		0B6370B2721603AD443EF2AD /* ProWelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProWelcomeView.swift; sourceTree = "<group>"; };
+		0E13FC24D8F541C3AB3B8917 /* ProductFeedbackModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductFeedbackModels.swift; sourceTree = "<group>"; };
+		701D6BB760874CE19BE200A8 /* ProductFeedbackModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductFeedbackModelsTests.swift; sourceTree = "<group>"; };
+		B9B84D0847B74C8B8B71FDD4 /* ProductFeedbackStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductFeedbackStoreTests.swift; sourceTree = "<group>"; };
+		741F2B237C054CBDA07137EA /* ProductFeedbackStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductFeedbackStore.swift; sourceTree = "<group>"; };
+		92A0474A6F6C46C8A469908D /* ProductFeedbackSurveyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductFeedbackSurveyView.swift; sourceTree = "<group>"; };
 		0BD5CBC7EB973B1B43F9B4B1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		10FF7680D1CD08807EB3F84D /* DetectionSampleMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionSampleMode.swift; sourceTree = "<group>"; };
 		166FECAD93F9A42119070C11 /* PartColorOption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartColorOption.swift; sourceTree = "<group>"; };
@@ -468,6 +478,8 @@
 				6CA43A508737EB95B359A1A2 /* LegacyExpoMigrationTests.swift */,
 				9273D6960556EA50BAD93374 /* LocalDetectionScheduleTests.swift */,
 				77B23589E4D5336F6D289E2C /* MonetizationStoreTests.swift */,
+				701D6BB760874CE19BE200A8 /* ProductFeedbackModelsTests.swift */,
+				B9B84D0847B74C8B8B71FDD4 /* ProductFeedbackStoreTests.swift */,
 				8C4AD99E109E65E48613E586 /* MultipartFormDataTests.swift */,
 				5A95320472022CBED5A5F5AD /* NetworkPayloadDecodingTests.swift */,
 				CDCB4B92F3C08735B0415839 /* NotificationCoordinatorTests.swift */,
@@ -478,6 +490,15 @@
 				AED931FC399B0F4FDAF3724D /* VisionBoundingBoxMapperTests.swift */,
 			);
 			path = BrickValTests;
+			sourceTree = "<group>";
+		};
+		CEAC360CA1DD4F6AB114FD4D /* Feedback */ = {
+			isa = PBXGroup;
+			children = (
+				0E13FC24D8F541C3AB3B8917 /* ProductFeedbackModels.swift */,
+				741F2B237C054CBDA07137EA /* ProductFeedbackStore.swift */,
+			);
+			path = Feedback;
 			sourceTree = "<group>";
 		};
 		2DDFAC62943009C235F10B8A /* App */ = {
@@ -611,6 +632,7 @@
 				A917B2242955230630071E9C /* NotificationSettingsView.swift */,
 				D852B26C280FAE4484AB8D02 /* ProfileDesignDraftsView.swift */,
 				0B6370B2721603AD443EF2AD /* ProWelcomeView.swift */,
+				92A0474A6F6C46C8A469908D /* ProductFeedbackSurveyView.swift */,
 				52E253FA0F92DE11FF8055A3 /* SettingsView.swift */,
 				FFBFE5D27E5CABF2ACFE1E55 /* SubscriptionView.swift */,
 			);
@@ -653,6 +675,7 @@
 				1A41E8EB391BC8F6299F7469 /* Configuration */,
 				00E536A1A66FDA2312076F13 /* DesignSystem */,
 				65CA6EDCCF8B011E71CA9884 /* Detection */,
+				CEAC360CA1DD4F6AB114FD4D /* Feedback */,
 				33F636E18AEFE874ABA399FE /* Models */,
 				935AC71F72564AE5D27F0168 /* Monetization */,
 				33C0E7215DF3CF83B5BF98E0 /* Networking */,
@@ -918,6 +941,8 @@
 				E2515733856A1E290C61C6D9 /* LegacyExpoMigrationTests.swift in Sources */,
 				AAD19EE9622D5BF72C418607 /* LocalDetectionScheduleTests.swift in Sources */,
 				04EF67ABE7F1556296CF3FC6 /* MonetizationStoreTests.swift in Sources */,
+				5406A6A9181445BEB85B6938 /* ProductFeedbackModelsTests.swift in Sources */,
+				7D0D0FF123CF4A00B753D03F /* ProductFeedbackStoreTests.swift in Sources */,
 				4B941308784B85F6EB5DA3D7 /* MultipartFormDataTests.swift in Sources */,
 				B27807ED55B5EBDB3A7BA4C2 /* NetworkPayloadDecodingTests.swift in Sources */,
 				03D506752EAFFE2BCBEEAD4A /* NotificationCoordinatorTests.swift in Sources */,
@@ -1018,6 +1043,8 @@
 				6E4F375D74074C97C7DDF6D8 /* MinifigureDetector.mlmodel in Sources */,
 				88CE0531715A8290AA66766E /* MonetizationModels.swift in Sources */,
 				07A91A475DC2CD98C6D3B432 /* MonetizationStore.swift in Sources */,
+				9A62832A0E9D44A8A7B1D48D /* ProductFeedbackModels.swift in Sources */,
+				DE3069DCBE974B95A5F749CC /* ProductFeedbackStore.swift in Sources */,
 				8894C6BF54287386FAD603EE /* MotionStabilityService.swift in Sources */,
 				841433F1E08312586E1EBA24 /* MultipartFormData.swift in Sources */,
 				E29C36978ACC46AB5C5F1A0C /* NormalizedBoundingBox.swift in Sources */,
@@ -1042,6 +1069,7 @@
 				BE162545471F3069EB8BF3FC /* PrimaryGoal.swift in Sources */,
 				F5EF0F8D2F730EB38F42A637 /* ProBadge.swift in Sources */,
 				0A90D9B6555B740187C172CA /* ProWelcomeView.swift in Sources */,
+				AC65832760A142FEAE9DFD16 /* ProductFeedbackSurveyView.swift in Sources */,
 				0BA0A493FCB6D27B79075140 /* ProfileDesignDraftsView.swift in Sources */,
 				F0DCF56E2DE9BC7F0BBAE5FF /* PurchasingError.swift in Sources */,
 				402F0E0F4542BDE2F1C4F4F0 /* RevenueCatPurchaseController.swift in Sources */,

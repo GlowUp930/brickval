@@ -3,6 +3,9 @@ import SwiftUI
 struct AppShellView: View {
     @Environment(AppRouter.self) private var router
     @Environment(EntitlementStore.self) private var entitlements
+    @Environment(MonetizationStore.self) private var monetization
+    @Environment(NotificationCoordinator.self) private var notifications
+    @Environment(ProductFeedbackStore.self) private var feedback
     @Environment(\.appSDKCoordinator) private var coordinator
 
     var body: some View {
@@ -47,6 +50,25 @@ struct AppShellView: View {
         .fullScreenCover(isPresented: proWelcomeBinding) {
             ProWelcomeView()
         }
+        .sheet(item: feedbackBinding) { survey in
+            FeedbackSurveySheet(survey: survey)
+        }
+        .onAppear {
+            consumePendingPurchase()
+            evaluateFeedback()
+        }
+        .onChange(of: entitlements.pendingNewPurchase) { _, _ in
+            consumePendingPurchase()
+        }
+        .onChange(of: notifications.subscriptionState) { _, _ in
+            evaluateFeedback()
+        }
+        .onChange(of: monetization.successfulSingleScanCount) { _, _ in
+            evaluateFeedback()
+        }
+        .onChange(of: entitlements.isPro) { _, _ in
+            evaluateFeedback()
+        }
     }
 
     private var subscriptionFallbackBinding: Binding<Bool> {
@@ -62,6 +84,37 @@ struct AppShellView: View {
             set: { if !$0 { entitlements.dismissProWelcome() } }
         )
     }
+
+    private var feedbackBinding: Binding<ProductFeedbackSurvey?> {
+        Binding(
+            get: { feedback.presentedSurvey },
+            set: { newValue in
+                if newValue == nil {
+                    feedback.dismissPresentedSurvey()
+                } else {
+                    feedback.presentedSurvey = newValue
+                }
+            }
+        )
+    }
+
+    private func consumePendingPurchase() {
+        guard let purchase = entitlements.pendingNewPurchase else { return }
+        feedback.preparePostPurchase(
+            context: PostPurchaseContext(productID: purchase.productID, isTrial: purchase.isTrial)
+        )
+        entitlements.clearPendingNewPurchase()
+    }
+
+    private func evaluateFeedback() {
+        feedback.evaluate(
+            isPro: entitlements.isPro,
+            subscriptionState: notifications.subscriptionState,
+            successfulScanCount: monetization.successfulSingleScanCount,
+            firstSuccessfulScanAt: monetization.firstSuccessfulSingleScanAt,
+            accessCohort: monetization.accessCohort?.rawValue
+        )
+    }
 }
 
 #Preview {
@@ -72,4 +125,5 @@ struct AppShellView: View {
         .environment(EntitlementStore())
         .environment(MonetizationStore())
         .environment(NotificationCoordinator())
+        .environment(ProductFeedbackStore(defaults: UserDefaults(suiteName: "AppShellPreview")!))
 }

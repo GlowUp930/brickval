@@ -10,6 +10,7 @@ struct BrickValAPIClient: Sendable {
     var monetizationStatus: @Sendable () async throws -> MonetizationStatus
     var partColors: @Sendable () async throws -> [PartColorOption]
     var submitFeedback: @Sendable (MinifigFeedback) async throws -> Void
+    var submitProductFeedback: @Sendable (ProductFeedbackSubmission) async throws -> Void
     var deleteAccount: @Sendable () async throws -> Void
     var registerNotificationDevice: @Sendable (BrickValNotificationDeviceRegistration) async throws -> Void
     var unregisterNotificationDevice: @Sendable (String) async throws -> Void
@@ -221,6 +222,19 @@ extension BrickValAPIClient {
                 )
                 let (data, response) = try await session.data(for: request)
                 try validate(response: response, data: data, endpoint: "minifig feedback")
+            },
+            submitProductFeedback: { submission in
+                let body = try JSONEncoder().encode(submission)
+                let request = try await request(
+                    baseURL: configuration.baseURL,
+                    path: "/api/mobile/feedback/surveys",
+                    method: "POST",
+                    body: body,
+                    contentType: "application/json",
+                    token: authToken()
+                )
+                let (data, response) = try await session.data(for: request)
+                try validate(response: response, data: data, endpoint: "product feedback survey")
             },
             deleteAccount: {
                 let request = try await request(

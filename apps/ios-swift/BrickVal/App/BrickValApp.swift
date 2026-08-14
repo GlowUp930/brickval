@@ -10,6 +10,7 @@ struct BrickValApp: App {
     @State private var monetization = MonetizationStore()
     @State private var notifications: NotificationCoordinator
     @State private var sdkCoordinator: AppSDKCoordinator
+    @State private var productFeedback: ProductFeedbackStore
 
     init() {
         let entitlementStore = EntitlementStore()
@@ -20,12 +21,14 @@ struct BrickValApp: App {
             entitlementStore.update(isPro: true)
         }
 #endif
-        _entitlements = State(initialValue: entitlementStore)
-        _notifications = State(initialValue: notificationCoordinator)
-        _sdkCoordinator = State(initialValue: AppSDKCoordinator(
+        let sdkCoordinator = AppSDKCoordinator(
             entitlementStore: entitlementStore,
             notificationCoordinator: notificationCoordinator
-        ))
+        )
+        _entitlements = State(initialValue: entitlementStore)
+        _notifications = State(initialValue: notificationCoordinator)
+        _sdkCoordinator = State(initialValue: sdkCoordinator)
+        _productFeedback = State(initialValue: ProductFeedbackStore(api: sdkCoordinator.apiClient))
     }
 
     var body: some Scene {
@@ -37,6 +40,7 @@ struct BrickValApp: App {
                 .environment(entitlements)
                 .environment(monetization)
                 .environment(notifications)
+                .environment(productFeedback)
                 .environment(\.appSDKCoordinator, sdkCoordinator)
                 .environment(\.brickValAPIClient, sdkCoordinator.apiClient)
                 .preferredColorScheme(activeColorScheme)

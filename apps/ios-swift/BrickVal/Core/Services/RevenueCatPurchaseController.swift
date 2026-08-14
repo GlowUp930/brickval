@@ -45,6 +45,10 @@ final class RevenueCatPurchaseController: PurchaseController {
             let result = try await Purchases.shared.purchase(product: RevenueCat.StoreProduct(sk2Product: product))
             if result.userCancelled { return .cancelled }
             await apply(result.customerInfo)
+            entitlementStore.recordNewPurchase(
+                productID: product.id,
+                isTrial: result.customerInfo.entitlements["pro"]?.periodType == .trial
+            )
             return .purchased
         } catch let error as RevenueCat.ErrorCode where error == .paymentPendingError {
             return .pending
@@ -74,7 +78,8 @@ final class RevenueCatPurchaseController: PurchaseController {
                 isActive: proEntitlement?.isActive == true,
                 isTrial: proEntitlement?.periodType == .trial,
                 willRenew: proEntitlement?.willRenew == true,
-                expirationDate: proEntitlement?.expirationDate
+                expirationDate: proEntitlement?.expirationDate,
+                productID: proEntitlement?.productIdentifier
             )
         )
         entitlementStore.update(isPro: proEntitlement?.isActive == true)

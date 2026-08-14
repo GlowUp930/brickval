@@ -4,7 +4,7 @@ import Testing
 
 @MainActor
 struct EntitlementStoreTests {
-    @Test func freeToProTransitionPresentsWelcomeOnce() {
+    @Test func entitlementRefreshDoesNotTreatRestoreAsANewPurchase() {
         let context = context()
         let store = EntitlementStore(defaults: context.defaults)
 
@@ -12,26 +12,25 @@ struct EntitlementStoreTests {
         #expect(store.shouldPresentProWelcome == false)
 
         store.update(isPro: true)
-        #expect(store.shouldPresentProWelcome)
+        #expect(store.shouldPresentProWelcome == false)
 
-        store.update(isPro: true)
-        #expect(store.shouldPresentProWelcome)
-
-        store.dismissProWelcome()
         store.update(isPro: true)
         #expect(store.shouldPresentProWelcome == false)
     }
 
-    @Test func aLaterReactivationPresentsWelcomeAgain() {
+    @Test func aSuccessfulPurchaseExplicitlyPresentsWelcome() {
         let context = context()
         let store = EntitlementStore(defaults: context.defaults)
 
-        store.update(isPro: true)
-        store.dismissProWelcome()
-        store.update(isPro: false)
-        store.update(isPro: true)
+        store.recordNewPurchase(productID: "com.brickval.app.pro.yearly", isTrial: true)
 
         #expect(store.shouldPresentProWelcome)
+        #expect(store.pendingNewPurchase?.productID == "com.brickval.app.pro.yearly")
+        #expect(store.pendingNewPurchase?.isTrial == true)
+
+        store.clearPendingNewPurchase()
+        store.dismissProWelcome()
+        #expect(store.pendingNewPurchase == nil)
     }
 
     @Test func cachedProAccessIsAvailableWhileFreshStatusLoads() {

@@ -1,12 +1,20 @@
 import Foundation
 import Observation
 
+struct NewProPurchase: Equatable, Identifiable, Sendable {
+    let productID: String
+    let isTrial: Bool
+
+    var id: String { "\(productID):\(isTrial)" }
+}
+
 @Observable
 @MainActor
 final class EntitlementStore {
     private(set) var isPro = false
     private(set) var isLoading = false
     private(set) var shouldPresentProWelcome = false
+    private(set) var pendingNewPurchase: NewProPurchase?
     var errorMessage: String?
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -40,16 +48,23 @@ final class EntitlementStore {
             return
         }
 #endif
-        let wasPro = defaults.object(forKey: Keys.lastKnownPro) as? Bool ?? false
         self.isPro = isPro
-        if isPro && !wasPro {
-            shouldPresentProWelcome = true
-        } else if !isPro {
+        if !isPro {
             shouldPresentProWelcome = false
+            pendingNewPurchase = nil
         }
         defaults.set(isPro, forKey: Keys.lastKnownPro)
         isLoading = false
         errorMessage = nil
+    }
+
+    func recordNewPurchase(productID: String, isTrial: Bool) {
+        pendingNewPurchase = NewProPurchase(productID: productID, isTrial: isTrial)
+        shouldPresentProWelcome = true
+    }
+
+    func clearPendingNewPurchase() {
+        pendingNewPurchase = nil
     }
 
     func dismissProWelcome() {
