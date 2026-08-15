@@ -4,6 +4,11 @@ import ClerkKit
 import SwiftUI
 import UIKit
 
+enum OnboardingEntryPoint {
+    case beginning
+    case account
+}
+
 struct OnboardingView: View {
     @Environment(PreferencesStore.self) private var preferences
     @Environment(MonetizationStore.self) private var monetization
@@ -16,8 +21,12 @@ struct OnboardingView: View {
     @State private var alertMessage: String?
     private let onFinish: () -> Void
 
-    init(onFinish: @escaping () -> Void = {}) {
+    init(
+        entryPoint: OnboardingEntryPoint = .beginning,
+        onFinish: @escaping () -> Void = {}
+    ) {
         self.onFinish = onFinish
+        _step = State(initialValue: entryPoint == .account ? .account : .brand)
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-showOnboardingAccountDemo") {
             _step = State(initialValue: .account)
@@ -187,6 +196,7 @@ struct OnboardingView: View {
         let isReplay = preferences.isReplayingOnboarding
         preferences.primaryGoal = goal
         preferences.isReplayingOnboarding = false
+        preferences.shouldReturnToOnboardingAccount = false
         preferences.hasCompletedOnboarding = true
         if !isReplay {
             monetization.enrollNewUserIfNeeded()

@@ -27,7 +27,9 @@ struct AppRootView: View {
                             AppShellView()
                         }
                     } else {
-                        OnboardingView()
+                        OnboardingView(
+                            entryPoint: preferences.shouldReturnToOnboardingAccount ? .account : .beginning
+                        )
                     }
                 }
             }

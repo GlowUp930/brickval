@@ -6,6 +6,7 @@ import SwiftUI
 @MainActor
 final class PreferencesStore {
     var isReplayingOnboarding = false
+    var shouldReturnToOnboardingAccount = false
     var hasCompletedOnboarding: Bool { didSet { save(hasCompletedOnboarding, for: Keys.onboarding) } }
     var primaryGoal: PrimaryGoal? { didSet { save(primaryGoal?.rawValue, for: Keys.goal) } }
     var smartAutoScanEnabled: Bool { didSet { save(smartAutoScanEnabled, for: Keys.smartScan) } }

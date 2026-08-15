@@ -22,6 +22,7 @@ struct HardAccessStatusView: View {
 
 struct HardScanAccessView: View {
     @Environment(MonetizationStore.self) private var monetization
+    @Environment(PreferencesStore.self) private var preferences
     @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var contentVisible = false
@@ -158,13 +159,22 @@ struct HardScanAccessView: View {
     }
 
     private func presentPaywall(source: String) {
+        var manualDismissal: (@MainActor () -> Void)?
+        if source == "onboarding_complete" {
+            manualDismissal = { @MainActor in
+                preferences.shouldReturnToOnboardingAccount = true
+                preferences.isReplayingOnboarding = true
+            }
+        }
+
         coordinator?.presentUpgrade(
             placement: .onboardingHardAccess,
             params: [
                 "cohort": monetization.accessCohort?.rawValue ?? "unknown",
                 "source": source,
                 "trial_days": monetization.trialDays,
-            ]
+            ],
+            manualDismissal: manualDismissal
         )
     }
 

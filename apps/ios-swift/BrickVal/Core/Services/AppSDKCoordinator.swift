@@ -6,7 +6,7 @@ import SuperwallKit
 
 @Observable
 @MainActor
-final class AppSDKCoordinator {
+final class AppSDKCoordinator: SuperwallDelegate {
     let clerk: Clerk?
     let apiClient: BrickValAPIClient
     private(set) var purchasesConfigured = false
@@ -16,6 +16,8 @@ final class AppSDKCoordinator {
     @ObservationIgnored private var purchaseController: RevenueCatPurchaseController?
     @ObservationIgnored private let entitlementStore: EntitlementStore
     @ObservationIgnored private let notificationCoordinator: NotificationCoordinator
+    @ObservationIgnored private var pendingManualDismissal: (@MainActor () -> Void)?
+    @ObservationIgnored private var pendingManualDismissalPlacement: ProPlacement?
 
     init(
         entitlementStore: EntitlementStore,
@@ -53,6 +55,7 @@ final class AppSDKCoordinator {
             purchaseController = controller
             if let superwallKey {
                 Superwall.configure(apiKey: superwallKey, purchaseController: controller)
+                Superwall.shared.delegate = self
                 superwallConfigured = true
             }
             Purchases.configure(withAPIKey: revenueCatKey)
@@ -69,13 +72,19 @@ final class AppSDKCoordinator {
     @discardableResult
     func presentUpgrade(
         placement: ProPlacement,
-        params: [String: Any]? = nil
+        params: [String: Any]? = nil,
+        manualDismissal: (@MainActor () -> Void)? = nil
     ) -> Bool {
         guard superwallConfigured else {
             showsSubscriptionFallback = true
             return true
         }
-        resolveAndRegister(placement: placement, params: params, feature: nil)
+        resolveAndRegister(
+            placement: placement,
+            params: params,
+            feature: nil,
+            manualDismissal: manualDismissal
+        )
         return true
     }
 
@@ -95,6 +104,19 @@ final class AppSDKCoordinator {
 
     func dismissSubscriptionFallback() {
         showsSubscriptionFallback = false
+    }
+
+    func didDismissPaywall(withInfo paywallInfo: PaywallInfo) {
+        guard let pendingManualDismissal,
+              pendingManualDismissalPlacement?.rawValue == paywallInfo.presentedByPlacementWithName else {
+            return
+        }
+
+        self.pendingManualDismissal = nil
+        pendingManualDismissalPlacement = nil
+
+        guard paywallInfo.closeReason == .manualClose else { return }
+        pendingManualDismissal()
     }
 
     func setMonetizationCohort(_ cohort: MonetizationAccessCohort?) {
@@ -145,13 +167,15 @@ final class AppSDKCoordinator {
     private func resolveAndRegister(
         placement: ProPlacement,
         params: [String: Any]?,
-        feature: (@MainActor () -> Void)?
+        feature: (@MainActor () -> Void)?,
+        manualDismissal: (@MainActor () -> Void)? = nil
     ) {
         resolve(
             UpgradeRequest(
                 placement: placement,
                 params: params,
-                feature: feature
+                feature: feature,
+                manualDismissal: manualDismissal
             )
         )
     }
@@ -176,7 +200,8 @@ final class AppSDKCoordinator {
             register(
                 placement: request.placement,
                 params: request.params,
-                feature: request.feature
+                feature: request.feature,
+                manualDismissal: request.manualDismissal
             )
             return
         }
@@ -192,7 +217,8 @@ final class AppSDKCoordinator {
             UpgradeRequest(
                 placement: .subscriptionUpgrade,
                 params: fallbackParams,
-                feature: request.feature
+                feature: request.feature,
+                manualDismissal: nil
             )
         )
     }
@@ -200,8 +226,12 @@ final class AppSDKCoordinator {
     private func register(
         placement: ProPlacement,
         params: [String: Any]?,
-        feature: (@MainActor () -> Void)?
+        feature: (@MainActor () -> Void)?,
+        manualDismissal: (@MainActor () -> Void)?
     ) {
+        pendingManualDismissal = manualDismissal
+        pendingManualDismissalPlacement = manualDismissal == nil ? nil : placement
+
         if let feature {
             Superwall.shared.register(placement: placement.rawValue, params: params) {
                 Task { @MainActor in feature() }
@@ -222,4 +252,5 @@ private struct UpgradeRequest: @unchecked Sendable {
     let placement: ProPlacement
     let params: [String: Any]?
     let feature: (@MainActor () -> Void)?
+    let manualDismissal: (@MainActor () -> Void)?
 }
