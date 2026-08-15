@@ -86,6 +86,21 @@ final class ScanStore {
         frozenImageData = imageData
         phase = .identifying
     }
+
+    func configureBulkRecoveryDemo() {
+        guard let imageData = BulkRecoveryDemoFixture.imageData else { return }
+        intent = .bulk
+        authorizationStatus = .authorized
+        frozenImageData = imageData
+        phase = .review
+        presentedSheet = .bulkResults(
+            imageData: imageData,
+            items: BulkRecoveryDemoFixture.items,
+            reviewItems: [],
+            unresolvedRegions: BulkRecoveryDemoFixture.unresolvedRegions,
+            recoveryToken: "debug-recovery-token"
+        )
+    }
 #endif
 
     func setFeedbackConsent(_ enabled: Bool) {
@@ -247,6 +262,62 @@ final class ScanStore {
         let image = try await imageProcessor.bulkRecoveryImage(from: imageData, focusBox: focusBox)
         let response = try await api.recoverBulkMinifigure(image, recoveryToken)
         return response.candidates.map(\.normalized)
+    }
+
+    /// Recovers selected physical figures with a small concurrency window so
+    /// recognition stays responsive without flooding the provider.
+    func recoverBulkMinifigures(
+        imageData: Data,
+        selections: [BulkRecoverySelection],
+        recoveryToken: String,
+        onProgress: @escaping @MainActor @Sendable (Int, Int) -> Void
+    ) async -> [BulkRecoveryOutcome] {
+        let processor = imageProcessor
+        let api = api
+        let total = min(selections.count, BulkRecoverySession.maximumSelections)
+        let pendingSelections = Array(selections.prefix(total))
+
+        var outcomes: [BulkRecoveryOutcome] = []
+        await withTaskGroup(of: BulkRecoveryOutcome.self) { group in
+            var nextIndex = 0
+            var inFlight = 0
+
+            while nextIndex < pendingSelections.count || inFlight > 0 {
+                while nextIndex < pendingSelections.count && inFlight < 2 {
+                    let selection = pendingSelections[nextIndex]
+                    nextIndex += 1
+                    inFlight += 1
+                    group.addTask {
+                        do {
+                            let image = try await processor.bulkRecoveryImage(
+                                from: imageData,
+                                focusBox: selection.focusBox
+                            )
+                            let response = try await api.recoverBulkMinifigure(image, recoveryToken)
+                            let candidates = response.candidates.map(\.normalized)
+                            if candidates.isEmpty {
+                                return .skipped(selection: selection, failure: .noMatch)
+                            }
+                            return .matched(selection: selection, candidates: Array(candidates.prefix(3)))
+                        } catch is CancellationError {
+                            return .skipped(selection: selection, failure: .unavailable)
+                        } catch let error as APIError where error.statusCode == 401 {
+                            return .skipped(selection: selection, failure: .expired)
+                        } catch {
+                            return .skipped(selection: selection, failure: .unavailable)
+                        }
+                    }
+                }
+
+                if let outcome = await group.next() {
+                    outcomes.append(outcome)
+                    inFlight -= 1
+                    onProgress(outcomes.count, total)
+                }
+            }
+        }
+
+        return outcomes.sorted { $0.selection.order < $1.selection.order }
     }
 
     func loadPartColors() async throws -> [PartColorOption] {

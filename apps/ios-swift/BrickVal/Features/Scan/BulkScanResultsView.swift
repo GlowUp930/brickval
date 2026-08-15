@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum BulkRecoveryLayout {
-    static let candidateRowHeight: Double = 132
+    static let candidateRowHeight: Double = 176
     static let candidateCardWidth: Double = 124
     static let candidateCardHeight: Double = 124
 }
@@ -16,35 +16,6 @@ enum BulkRecoveryTapPlanner {
             width: 0.26,
             height: 0.30
         )
-    }
-}
-
-enum BulkRecoveryState: Sendable {
-    case idle
-    case selecting
-    case identifying(box: NormalizedBoundingBox)
-    case choosing(box: NormalizedBoundingBox, candidates: [BulkScanReviewCandidate])
-    case failed(box: NormalizedBoundingBox, message: String)
-
-    var isActive: Bool {
-        if case .idle = self { return false }
-        return true
-    }
-
-    var selectedBox: NormalizedBoundingBox? {
-        switch self {
-        case .idle, .selecting: nil
-        case .identifying(let box), .choosing(let box, _), .failed(let box, _): box
-        }
-    }
-
-    var candidateCount: Int {
-        guard case .choosing(_, let candidates) = self else { return 0 }
-        return candidates.count
-    }
-
-    var candidateChooserHeight: Double {
-        candidateCount > 0 ? BulkRecoveryLayout.candidateRowHeight : 0
     }
 }
 
@@ -108,8 +79,8 @@ struct BulkScanResultsView: View {
             }
             photoResults
                 .layoutPriority(1)
-            if case .choosing(_, let candidates) = recoveryState, !candidates.isEmpty {
-                recoveryCandidateChooser(candidates)
+            if !currentRecoveryCandidates.isEmpty {
+                recoveryCandidateChooser(currentRecoveryCandidates)
                     .transition(recoveryTransition)
             }
             actionButtons
@@ -235,17 +206,6 @@ struct BulkScanResultsView: View {
     @ViewBuilder
     private func recoveryPhotoContent(imageRect: CGRect, containerSize: CGSize) -> some View {
         if isRecoverySelecting {
-            ForEach(Array(unresolvedRegions.enumerated()), id: \.offset) { index, box in
-                recoveryTargetButton(
-                    box: box,
-                    index: index,
-                    imageRect: imageRect,
-                    containerSize: containerSize
-                )
-            }
-
-            // Keep direct finger taps on the photo so the crop follows the
-            // user's actual tap instead of snapping to a broad server region.
             Color.clear
                 .contentShape(Rectangle())
                 .gesture(
@@ -254,13 +214,28 @@ struct BulkScanResultsView: View {
                             beginRecovery(at: value.location, imageRect: imageRect)
                         }
                 )
-                .accessibilityLabel("Bulk scan photo")
-                .accessibilityHint("Double tap the minifigure itself, not the surrounding area, to identify it")
-                .accessibilityAddTraits(.isButton)
+                .accessibilityHidden(true)
+
+            ForEach(Array(unresolvedRegions.enumerated()), id: \.offset) { index, box in
+                recoveryTargetButton(
+                    box: box,
+                    index: index,
+                    imageRect: imageRect,
+                    containerSize: containerSize
+                )
+            }
         }
 
-        if let selectedBox = recoveryState.selectedBox {
-            recoveryFocusOverlay(box: selectedBox, imageRect: imageRect, containerSize: containerSize)
+        if let session = recoveryState.session {
+            ForEach(Array(session.selections.enumerated()), id: \.element.id) { index, selection in
+                recoverySelectionOverlay(
+                    selection: selection,
+                    number: index + 1,
+                    isFocused: selection.id == recoveryState.currentSelection?.id,
+                    imageRect: imageRect,
+                    containerSize: containerSize
+                )
+            }
         }
     }
 
@@ -312,8 +287,7 @@ struct BulkScanResultsView: View {
     }
 
     private var isRecoverySelecting: Bool {
-        if case .selecting = recoveryState { return true }
-        return false
+        if case .selecting = recoveryState { true } else { false }
     }
 
     private var recoveryTransition: AnyTransition {
@@ -325,32 +299,37 @@ struct BulkScanResultsView: View {
     private var recoveryTitle: String {
         switch recoveryState {
         case .idle: "Find a missed figure"
-        case .selecting: "Select the missed minifigure"
-        case .identifying: "Checking this figure…"
-        case .choosing: "Choose the best match"
-        case .failed: "Try that figure again"
+        case .selecting: "Tap each missed minifigure"
+        case .processing(let session): "Checking \(session.completedCount) of \(session.totalCount) figures"
+        case .reviewing(let session):
+            "Match \(min(session.reviewIndex + 1, max(session.reviewableOutcomes.count, 1))) of \(max(session.reviewableOutcomes.count, 1))"
+        case .failed: "Couldn’t finish checking"
+        case .completed: "Recovery complete"
         }
     }
 
     private var recoveryIcon: String {
         switch recoveryState {
         case .idle, .selecting: "hand.tap.fill"
-        case .identifying: "viewfinder"
-        case .choosing: "checkmark.circle.fill"
+        case .processing: "hourglass"
+        case .reviewing: "checkmark.circle.fill"
         case .failed: "exclamationmark.triangle.fill"
+        case .completed: "checkmark.circle.fill"
         }
     }
 
     private var recoverySubtitle: String {
         switch recoveryState {
         case .idle: "Tap near the center for the best match."
-        case .selecting:
-            unresolvedRegions.isEmpty
-                ? "Tap the minifigure itself, not the surrounding area."
-                : "Tap the minifigure itself. We’ll check the spot you choose."
-        case .identifying: "Checking the area you tapped."
-        case .choosing: "Choose the card that matches the selected area."
+        case .selecting(let session):
+            session.selectedCount == 0
+                ? "Tap the center of each figure. Tap a number again to remove it."
+                : "\(session.selectedCount) selected. Tap another figure or check them together."
+        case .processing: "Recognition is running in the background. You can cancel."
+        case .reviewing: "Choose the card that matches the highlighted figure."
         case .failed(_, let message): message
+        case .completed(let addedCount, let skippedCount):
+            "Added \(addedCount) figures · \(skippedCount) couldn’t be matched"
         }
     }
 
@@ -360,6 +339,9 @@ struct BulkScanResultsView: View {
         imageRect: CGRect,
         containerSize: CGSize
     ) -> some View {
+        let isSelected = recoveryState.session?.selections.contains {
+            $0.unresolvedRegionIndex == index || $0.focusBox.contains(BulkRecoveryPoint(box.center))
+        } == true
         let targetRect = imageBox(box, in: imageRect)
         let hitWidth = max(targetRect.width, 112)
         let hitHeight = max(targetRect.height, 132)
@@ -369,7 +351,7 @@ struct BulkScanResultsView: View {
         )
 
         return Button {
-            beginRecovery(box: box)
+            toggleRecovery(at: box.center, unresolvedRegionIndex: index)
         } label: {
             // Keep the known recovery regions accessible without drawing a box
             // that could suggest the user should tap empty space.
@@ -379,42 +361,62 @@ struct BulkScanResultsView: View {
         }
         .buttonStyle(.plain)
         .position(center)
-        .accessibilityLabel("Missed figure \(index + 1), identify")
-        .accessibilityHint("Double tap the minifigure itself to check it")
+        .accessibilityLabel("Missed figure \(index + 1)")
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityHint(isSelected ? "Double tap to remove this figure" : "Double tap to select this figure")
+        .accessibilityIdentifier("bulkRecovery.target.\(index + 1)")
     }
 
-    private func recoveryFocusOverlay(
-        box: NormalizedBoundingBox,
+    private func recoverySelectionOverlay(
+        selection: BulkRecoverySelection,
+        number: Int,
+        isFocused: Bool,
         imageRect: CGRect,
         containerSize: CGSize
     ) -> some View {
-        let targetRect = imageBox(box, in: imageRect)
+        let targetRect = imageBox(selection.focusBox, in: imageRect)
         let center = CGPoint(
             x: min(max(targetRect.midX, 80), containerSize.width - 80),
             y: min(max(targetRect.midY, 80), containerSize.height - 80)
         )
 
-        return RecoveryFocusOverlay(
+        return RecoverySelectionOverlay(
             targetRect: targetRect,
             center: center,
-            containerSize: containerSize
+            containerSize: containerSize,
+            number: number,
+            accent: accent,
+            isFocused: isFocused
         )
-        .id("focus-\(box.x)-\(box.y)-\(box.width)-\(box.height)")
+        .id(selection.id)
     }
 
     private func recoveryCandidateChooser(_ candidates: [BulkScanReviewCandidate]) -> some View {
-        ScrollView(.horizontal) {
-            LazyHStack(spacing: 10) {
-                ForEach(candidates.prefix(3)) { candidate in
-                    recoveryCandidateCard(candidate)
+        VStack(spacing: 8) {
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 10) {
+                    ForEach(candidates.prefix(3)) { candidate in
+                        recoveryCandidateCard(candidate)
+                    }
                 }
+                .padding(.horizontal, 2)
             }
-            .padding(.horizontal, 2)
+            .scrollIndicators(.hidden)
+
+            Button("None match", systemImage: "questionmark") {
+                skipCurrentRecoveryMatch()
+            }
+            .font(.subheadline.weight(.semibold))
+            .frame(maxWidth: .infinity, minHeight: 42)
+            .background(BrickValStyle.ScanResult.surface, in: .rect(cornerRadius: 12))
+            .foregroundStyle(.white)
+            .overlay { RoundedRectangle(cornerRadius: 12).stroke(BrickValStyle.ScanResult.border) }
+            .accessibilityIdentifier("bulkRecovery.noneMatch")
         }
-        .scrollIndicators(.hidden)
         .frame(maxWidth: .infinity)
         .frame(height: CGFloat(recoveryState.candidateChooserHeight), alignment: .top)
-        .accessibilityLabel("Possible matches")
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Possible matches for the highlighted figure")
     }
 
     private var resultCarousel: some View {
@@ -704,6 +706,7 @@ struct BulkScanResultsView: View {
                         .tint(.orange)
                         .foregroundStyle(.black)
                         .accessibilityHint("Opens an unobstructed photo review")
+                        .accessibilityIdentifier("bulkRecovery.enter")
                     }
 
                     Button("Retake", systemImage: "camera", action: close)
@@ -719,34 +722,73 @@ struct BulkScanResultsView: View {
     }
 
     private var recoveryBottomActions: some View {
-        HStack(spacing: 12) {
-            if case .failed(let box, _) = recoveryState {
-                Button("Tap again", systemImage: "hand.tap") {
-                    beginRecovery(box: box)
+        VStack(spacing: 10) {
+            switch recoveryState {
+            case .selecting(let session):
+                Button(action: checkSelectedFigures) {
+                    Label("Check \(session.selectedCount) figures", systemImage: "sparkles")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 58)
+                        .background(accent, in: .rect(cornerRadius: 14))
+                        .foregroundStyle(.black)
+                }
+                .buttonStyle(.plain)
+                .disabled(session.selectedCount == 0)
+                .opacity(session.selectedCount == 0 ? 0.45 : 1)
+                .accessibilityIdentifier("bulkRecovery.check")
+
+            case .processing:
+                ProgressView()
+                    .tint(accent)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .accessibilityLabel(recoveryTitle)
+
+            case .reviewing:
+                EmptyView()
+
+            case .failed(let session, _):
+                Button("Retry", systemImage: "arrow.clockwise") {
+                    retryRecovery(session: session)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.orange)
+                .tint(accent)
                 .foregroundStyle(.black)
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .accessibilityIdentifier("bulkRecovery.retry")
+
+            case .idle, .completed:
+                EmptyView()
             }
 
-            Button("Retake", systemImage: "camera", action: close)
+            HStack(spacing: 12) {
+                Button("Retake", systemImage: "camera", action: close)
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 54)
+                    .background(BrickValStyle.ScanResult.surface, in: .rect(cornerRadius: 14))
+                    .foregroundStyle(.white)
+                    .disabled(isSaving)
+                    .accessibilityIdentifier("bulkRecovery.retake")
+
+                Button("Cancel", systemImage: "xmark") {
+                    cancelRecovery()
+                }
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity, minHeight: 54)
                 .background(BrickValStyle.ScanResult.surface, in: .rect(cornerRadius: 14))
                 .foregroundStyle(.white)
-
-            Button("Cancel", systemImage: "xmark") {
-                cancelRecovery()
+                .disabled(isSaving)
+                .accessibilityIdentifier("bulkRecovery.cancel")
             }
-            .font(.subheadline.weight(.semibold))
-            .frame(maxWidth: .infinity, minHeight: 54)
-            .background(BrickValStyle.ScanResult.surface, in: .rect(cornerRadius: 14))
-            .foregroundStyle(.white)
         }
     }
 
     private var canReviewMissedFigure: Bool {
         recoveryToken != nil
+    }
+
+    private var currentRecoveryCandidates: [BulkScanReviewCandidate] {
+        guard case .reviewing(let session) = recoveryState else { return [] }
+        return session.currentReviewOutcome?.candidates ?? []
     }
 
     private var recoveryActionTitle: String {
@@ -832,74 +874,119 @@ struct BulkScanResultsView: View {
         guard isRecoverySelecting, recoveryToken != nil else { return }
         let x = min(max((location.x - imageRect.minX) / imageRect.width, 0), 1)
         let y = min(max((location.y - imageRect.minY) / imageRect.height, 0), 1)
-        // Use the exact tap center for the crop. Reusing a broad server region
-        // can include a neighboring figure and return the wrong match.
-        let tapBox = BulkRecoveryTapPlanner.focusBox(for: CGPoint(x: x, y: y))
-        beginRecovery(box: tapBox)
+        let point = CGPoint(x: x, y: y)
+        let regionIndex = unresolvedRegions.firstIndex { region in
+            point.x >= region.x && point.x <= region.x + region.width
+                && point.y >= region.y && point.y <= region.y + region.height
+        }
+        toggleRecovery(at: point, unresolvedRegionIndex: regionIndex)
     }
 
     private func enterRecovery() {
         recoveryConfirmation = nil
         withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86)) {
-            recoveryState = .selecting
+            recoveryState = .selecting(BulkRecoverySession())
         }
     }
 
     private func cancelRecovery() {
         recoveryRequestID += 1
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
-            recoveryState = .idle
+            switch recoveryState {
+            case .processing(let session):
+                // Keep the numbered selections so the user can adjust and retry.
+                recoveryState = .selecting(session)
+            case .selecting, .reviewing, .failed:
+                // Leaving an active review returns to the unchanged result list.
+                recoveryState = .idle
+            case .idle, .completed:
+                break
+            }
         }
     }
 
-    private func beginRecovery(box: NormalizedBoundingBox) {
-        guard let recoveryToken else {
-            recoveryState = .failed(
-                box: box,
-                message: "Recovery expired. Retake the photo to try again."
-            )
+    private func toggleRecovery(at point: CGPoint, unresolvedRegionIndex: Int?) {
+        guard case .selecting(var session) = recoveryState else { return }
+        let normalizedPoint = BulkRecoveryPoint(point)
+
+        if session.removeSelection(containing: normalizedPoint) {
+            recoveryHapticTrigger += 1
+            recoveryState = .selecting(session)
             return
         }
 
-        recoveryRequestID += 1
-        let requestID = recoveryRequestID
+        guard session.canAddSelection else { return }
+        let selection = BulkRecoverySelection(
+            id: "selection-\(UUID().uuidString)",
+            order: session.selectedCount,
+            normalizedPoint: normalizedPoint,
+            focusBox: BulkRecoveryTapPlanner.focusBox(for: normalizedPoint.cgPoint),
+            unresolvedRegionIndex: unresolvedRegionIndex
+        )
+        session.toggle(selection)
         recoveryHapticTrigger += 1
-        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) {
-            recoveryState = .identifying(box: box)
+        withAnimation(reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.84)) {
+            recoveryState = .selecting(session)
+        }
+    }
+
+    private func checkSelectedFigures() {
+        guard case .selecting(var session) = recoveryState else { return }
+        guard let recoveryToken else {
+            recoveryState = .failed(session, message: "Recovery expired. Retake the photo to try again.")
+            return
         }
 
+        session.beginProcessing()
+        recoveryRequestID += 1
+        let requestID = recoveryRequestID
+        recoveryState = .processing(session)
+
         Task { [imageData, store] in
-            do {
-                let candidates = try await store.recoverBulkMinifigure(
-                    imageData: imageData,
-                    focusBox: box,
-                    recoveryToken: recoveryToken
-                )
-                await MainActor.run {
-                    guard requestID == recoveryRequestID else { return }
-                    withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.86)) {
-                        if candidates.isEmpty {
-                            recoveryState = .failed(
-                                box: box,
-                                message: "Couldn’t identify this figure. Try again or retake the photo."
-                            )
-                        } else {
-                            recoveryState = .choosing(box: box, candidates: Array(candidates.prefix(3)))
-                        }
-                    }
+            let outcomes = await store.recoverBulkMinifigures(
+                imageData: imageData,
+                selections: session.selections,
+                recoveryToken: recoveryToken,
+                onProgress: { completed, _ in
+                    guard requestID == recoveryRequestID,
+                          case .processing(var progressSession) = recoveryState
+                    else { return }
+                    progressSession.updateProgress(completed)
+                    recoveryState = .processing(progressSession)
                 }
-            } catch is CancellationError {
-                // Cancellation is expected when the user leaves recovery mode.
-            } catch {
-                await MainActor.run {
-                    guard requestID == recoveryRequestID else { return }
-                    recoveryState = .failed(
-                        box: box,
-                        message: "Couldn’t identify this figure. Check your connection and try again."
-                    )
+            )
+
+            guard requestID == recoveryRequestID else { return }
+            var completedSession = session
+            completedSession.record(outcomes)
+
+            withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.86)) {
+                if completedSession.reviewableOutcomes.isEmpty {
+                    let allExpired = !outcomes.isEmpty && outcomes.allSatisfy {
+                        if case .skipped(_, .expired) = $0 { return true }
+                        return false
+                    }
+                    let allUnavailable = !outcomes.isEmpty && outcomes.allSatisfy {
+                        if case .skipped(_, .unavailable) = $0 { return true }
+                        return false
+                    }
+                    if allExpired {
+                        recoveryState = .failed(completedSession, message: "Recovery expired. Retake the photo to try again.")
+                    } else if allUnavailable {
+                        recoveryState = .failed(completedSession, message: "Couldn’t check these figures. Check your connection and try again.")
+                    } else {
+                        finishRecovery(completedSession)
+                    }
+                } else {
+                    recoveryState = .reviewing(completedSession)
                 }
             }
         }
+    }
+
+    private func retryRecovery(session: BulkRecoverySession) {
+        recoveryState = .selecting(session)
+        checkSelectedFigures()
     }
 
     private func choose(_ candidate: BulkScanReviewCandidate, for review: BulkScanReviewItem) {
@@ -915,33 +1002,57 @@ struct BulkScanResultsView: View {
     }
 
     private func acceptRecovery(_ candidate: BulkScanReviewCandidate) {
-        guard case .choosing(let box, _) = recoveryState else { return }
+        guard case .reviewing(var session) = recoveryState,
+              case .matched(let selection, _) = session.currentReviewOutcome
+        else { return }
         let item = BulkScanResultItem(
-            id: "recovered-\(UUID().uuidString)",
+            id: "recovered-\(selection.id)",
             result: candidate.result,
-            boundingBox: box
+            boundingBox: selection.focusBox
         )
         itemStates.insert(BulkScanItemState(item: item), at: 0)
         unresolvedRegions.removeAll { region in
-            let center = box.center
-            return center.x >= region.x && center.x <= region.x + region.width
-                && center.y >= region.y && center.y <= region.y + region.height
+            selection.normalizedPoint.x >= region.x && selection.normalizedPoint.x <= region.x + region.width
+                && selection.normalizedPoint.y >= region.y && selection.normalizedPoint.y <= region.y + region.height
         }
         focusedResultID = item.id
-        recoveryConfirmation = "Added \(candidate.result.name) to review"
-        withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86)) {
-            recoveryState = .idle
+        session.advanceAfterCandidateSelection()
+        if session.currentReviewOutcome == nil {
+            finishRecovery(session)
+        } else {
+            recoveryState = .reviewing(session)
         }
+    }
+
+    private func skipCurrentRecoveryMatch() {
+        guard case .reviewing(var session) = recoveryState else { return }
+        session.skipCurrentCandidate()
+        if session.currentReviewOutcome == nil {
+            finishRecovery(session)
+        } else {
+            recoveryState = .reviewing(session)
+        }
+    }
+
+    private func finishRecovery(_ session: BulkRecoverySession) {
+        let skipped = session.skippedCount
+        recoveryConfirmation = skipped == 0
+            ? "Added \(session.acceptedCount) figures"
+            : "Added \(session.acceptedCount) figures · \(skipped) couldn’t be matched"
+        recoveryHapticTrigger += 1
+        recoveryState = .idle
     }
 }
 
-private struct RecoveryFocusOverlay: View {
+private struct RecoverySelectionOverlay: View {
     let targetRect: CGRect
     let center: CGPoint
     let containerSize: CGSize
+    let number: Int
+    let accent: Color
+    let isFocused: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isEmphasized = false
 
     private var focusSize: CGSize {
         CGSize(
@@ -959,28 +1070,28 @@ private struct RecoveryFocusOverlay: View {
     }
 
     var body: some View {
-        RecoveryFocusCorners()
-            .stroke(
-                .orange.opacity(isEmphasized || reduceMotion ? 1 : 0.68),
-                style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
-            )
-            .background {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(.orange.opacity(0.045))
-            }
-            .frame(width: focusSize.width, height: focusSize.height)
-            .shadow(color: .orange.opacity(isEmphasized ? 0.34 : 0.12), radius: 10)
-            .scaleEffect(reduceMotion || isEmphasized ? 1 : 0.96)
-            .opacity(reduceMotion || isEmphasized ? 1 : 0.72)
-            .position(clampedCenter)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-            .onAppear {
-                guard !reduceMotion else { return }
-                withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
-                    isEmphasized = true
+        ZStack(alignment: .topLeading) {
+            RecoveryFocusCorners()
+                .stroke(
+                    accent.opacity(isFocused || reduceMotion ? 1 : 0.72),
+                    style: StrokeStyle(lineWidth: isFocused ? 4 : 3, lineCap: .round, lineJoin: .round)
+                )
+                .background {
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(accent.opacity(isFocused ? 0.045 : 0.02))
                 }
-            }
+            Text("\(number)")
+                .font(.caption.bold().monospacedDigit())
+                .foregroundStyle(.black)
+                .frame(minWidth: 28, minHeight: 28)
+                .background(accent, in: .circle)
+                .offset(x: -4, y: -4)
+        }
+        .frame(width: focusSize.width, height: focusSize.height)
+        .shadow(color: accent.opacity(isFocused ? 0.28 : 0.08), radius: 8)
+        .position(clampedCenter)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 

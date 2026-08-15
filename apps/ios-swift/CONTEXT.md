@@ -89,7 +89,10 @@ The native bulk scan flow is:
 8. Selection and New/Used changes update the total immediately.
 9. Add saves all selected items through one atomic collection operation. A failed save must not leave a partial collection.
 10. Successful Add closes the sheet, resets the scanner, and shows confirmation. Retake or Close returns to the live scanner.
-11. Tapping an unresolved area in the frozen photo runs a focused recovery scan. Recovery is token-bound and rate-limited, does not consume another bulk allowance, and adds the recovered candidate to the same result sheet.
+11. Recovery is a multi-figure workflow: users enter `Review X missed figures`, tap up to 10 physical figures in order, and see numbered accent corner brackets. Tapping an existing bracket removes that selection and renumbers the remaining queue.
+12. `Check X figures` processes selected crops with at most two concurrent recovery requests and determinate progress. Successful candidates are reviewed one figure at a time in tap order; `None match` skips an outcome and the final banner reports partial success.
+13. Recovery cancellation invalidates stale responses. Cancelling during processing preserves the numbered selections for adjustment and retry; cancelling normal selection or candidate review returns to the unchanged result list. Retake always returns to the live scanner.
+14. Recovery tokens remain valid for 10 minutes and are budgeted server-side at 20 calls per token window, allowing up to 10 selected figures plus one retry each. The backend rate-limit key hashes the signed token and never uses the client IP.
 
 Older installed builds retain the legacy flow:
 

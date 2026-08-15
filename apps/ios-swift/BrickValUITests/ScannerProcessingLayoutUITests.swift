@@ -22,4 +22,25 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         XCTAssertLessThanOrEqual(cameraStage.frame.maxY, controls.frame.minY)
         XCTAssertEqual(cameraStage.frame.height / cameraStage.frame.width, 4.0 / 3.0, accuracy: 0.03)
     }
+
+    func testBulkRecoverySelectsMultipleFiguresBeforeChecking() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-showBulkRecoveryDemo"]
+        app.launch()
+
+        let enterRecovery = app.buttons["bulkRecovery.enter"]
+        XCTAssertTrue(enterRecovery.waitForExistence(timeout: 3))
+        enterRecovery.tap()
+
+        let firstTarget = app.buttons["bulkRecovery.target.1"]
+        let secondTarget = app.buttons["bulkRecovery.target.2"]
+        XCTAssertTrue(firstTarget.waitForExistence(timeout: 3))
+        XCTAssertTrue(secondTarget.waitForExistence(timeout: 3))
+        firstTarget.tap()
+        secondTarget.tap()
+
+        let check = app.buttons["bulkRecovery.check"]
+        XCTAssertTrue(check.waitForExistence(timeout: 3))
+        XCTAssertEqual(check.label, "Check 2 figures")
+    }
 }

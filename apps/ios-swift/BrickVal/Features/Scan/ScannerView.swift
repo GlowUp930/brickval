@@ -20,14 +20,18 @@ struct ScannerView: View {
         let store = ScanStore(api: api)
 #if DEBUG
         let isProcessingLayoutDemo = ProcessInfo.processInfo.arguments.contains("-showScannerProcessingLayoutDemo")
+        let isBulkRecoveryDemo = ProcessInfo.processInfo.arguments.contains("-showBulkRecoveryDemo")
         if isProcessingLayoutDemo,
            let imageData = UIImage(named: "AvatarClassic")?.jpegData(compressionQuality: 0.9) {
             store.configureProcessingLayoutDemo(imageData: imageData)
         }
+        if isBulkRecoveryDemo {
+            store.configureBulkRecoveryDemo()
+        }
         if ProcessInfo.processInfo.arguments.contains("-showBulkGatingDemo") {
             store.intent = .bulk
         }
-        runsCameraLoop = !isProcessingLayoutDemo
+        runsCameraLoop = !isProcessingLayoutDemo && !isBulkRecoveryDemo
 #else
         runsCameraLoop = true
 #endif

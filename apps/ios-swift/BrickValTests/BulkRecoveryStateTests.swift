@@ -1,79 +1,118 @@
-import Testing
 import CoreGraphics
+import Testing
 @testable import BrickVal
 
 struct BulkRecoveryStateTests {
-    private let box = NormalizedBoundingBox(x: 0.2, y: 0.3, width: 0.25, height: 0.4)
-
-    @Test
-    func idleAndSelectingStatesHaveNoFocusedBox() {
-        #expect(!BulkRecoveryState.idle.isActive)
-        #expect(BulkRecoveryState.idle.selectedBox == nil)
-        #expect(BulkRecoveryState.selecting.isActive)
-        #expect(BulkRecoveryState.selecting.selectedBox == nil)
-    }
-
-    @Test
-    func activeStatesExposeTheFocusedBox() {
-        #expect(BulkRecoveryState.identifying(box: box).selectedBox == box)
-        #expect(BulkRecoveryState.choosing(box: box, candidates: []).selectedBox == box)
-        #expect(BulkRecoveryState.failed(box: box, message: "Try again").selectedBox == box)
-    }
-
-    @Test
-    func choosingWithCandidatesReservesSpaceForTheCandidateRow() {
-        let candidate = BulkScanReviewCandidate(
-            identifier: "sh0115",
-            score: 0.82,
-            result: LookupResult(
-                identifier: "sh0115",
-                itemType: .minifig,
-                name: "Spider-Man",
-                theme: "Super Heroes",
-                pieces: nil,
-                yearReleased: nil,
-                isObsolete: nil,
-                imageURL: nil,
-                pricing: LookupPricing(
-                    heroNewAverageUSD: nil,
-                    rrpUSD: nil,
-                    gainPercent: nil,
-                    dataSource: nil,
-                    newSoldAverageUSD: nil,
-                    usedSoldAverageUSD: 5.14,
-                    newStockAverageUSD: nil,
-                    usedStockAverageUSD: nil,
-                    brickLinkNewAverageUSD: nil,
-                    brickLinkUsedAverageUSD: nil
-                ),
-                marketHistory: [],
-                colorID: nil,
-                colorName: nil
-            )
+    private func selection(_ index: Int, point: CGPoint? = nil) -> BulkRecoverySelection {
+        let point = point ?? CGPoint(x: 0.18 + Double(index) * 0.2, y: 0.35)
+        return BulkRecoverySelection(
+            id: "selection-\(index)",
+            order: index,
+            normalizedPoint: BulkRecoveryPoint(point),
+            focusBox: BulkRecoveryTapPlanner.focusBox(for: point)
         )
-
-        let state = BulkRecoveryState.choosing(box: box, candidates: [candidate])
-
-        #expect(state.candidateCount == 1)
-        #expect(state.candidateChooserHeight >= 120)
     }
 
     @Test
-    func tapPlannerCentersRecoveryCropOnTheUserTap() {
-        let box = BulkRecoveryTapPlanner.focusBox(for: CGPoint(x: 0.35, y: 0.35))
+    func selectingSeveralFiguresPreservesTapOrder() {
+        var session = BulkRecoverySession()
+        let first = selection(0)
+        let second = selection(1)
+        let third = selection(2)
 
-        #expect(box.center.x == 0.35)
-        #expect(box.center.y == 0.35)
-        #expect(box.width == 0.26)
-        #expect(box.height == 0.30)
+        session.toggle(first)
+        session.toggle(second)
+        session.toggle(third)
+
+        #expect(session.selections.map(\.id) == ["selection-0", "selection-1", "selection-2"])
+        #expect(session.selectedCount == 3)
     }
 
     @Test
-    func choosingStateKeepsTheReviewFlowActiveUntilCandidateIsAccepted() {
-        let state = BulkRecoveryState.choosing(box: box, candidates: [])
+    func tappingInsideExistingFocusBracketRemovesOnlyThatSelection() {
+        var session = BulkRecoverySession()
+        let first = selection(0)
+        let second = selection(1)
+        session.toggle(first)
+        session.toggle(second)
+
+        let didRemove = session.removeSelection(containing: first.normalizedPoint)
+        #expect(didRemove)
+        #expect(session.selections.map(\.id) == ["selection-1"])
+    }
+
+    @Test
+    func removingAndAddingASelectionKeepsTapOrderContiguous() {
+        var session = BulkRecoverySession()
+        session.toggle(selection(0))
+        session.toggle(selection(1))
+        session.toggle(selection(2))
+
+        let didRemove = session.removeSelection(containing: selection(1).normalizedPoint)
+        session.toggle(selection(3))
+
+        #expect(didRemove)
+        #expect(session.selections.map(\.order) == [0, 1, 2])
+        #expect(session.selections.map(\.id) == ["selection-0", "selection-2", "selection-3"])
+    }
+
+    @Test
+    func selectionCountIsCappedAtTen() {
+        var session = BulkRecoverySession()
+        for index in 0..<12 {
+            session.toggle(selection(index))
+        }
+
+        #expect(session.selectedCount == BulkRecoverySession.maximumSelections)
+        #expect(!session.canAddSelection)
+    }
+
+    @Test
+    func processingRetainsSelectionsAndReportsProgressResultsInOrder() {
+        var session = BulkRecoverySession()
+        let first = selection(0)
+        let second = selection(1)
+        session.toggle(first)
+        session.toggle(second)
+        session.beginProcessing()
+
+        session.record([
+            .skipped(selection: second, failure: .unavailable),
+            .skipped(selection: first, failure: .noMatch)
+        ])
+
+        #expect(session.selections.map(\.id) == ["selection-0", "selection-1"])
+        #expect(session.completedCount == 2)
+        #expect(session.skippedCount == 2)
+        #expect(session.reviewableOutcomes.isEmpty)
+    }
+
+    @Test
+    func matchedOutcomesAreReviewedInTapOrderDespiteCompletionOrder() {
+        var session = BulkRecoverySession()
+        let first = selection(0)
+        let second = selection(1)
+        session.toggle(first)
+        session.toggle(second)
+        session.beginProcessing()
+
+        session.record([
+            .matched(selection: second, candidates: []),
+            .matched(selection: first, candidates: [])
+        ])
+
+        #expect(session.reviewableOutcomes.map(\.selection.id) == ["selection-0", "selection-1"])
+    }
+
+    @Test
+    func activeStatesExposeTheSessionAndFocusedReviewSelection() {
+        let first = selection(0)
+        var session = BulkRecoverySession()
+        session.toggle(first)
+        let state = BulkRecoveryState.reviewing(session)
 
         #expect(state.isActive)
-        #expect(state.selectedBox == box)
-        #expect(state.candidateCount == 0)
+        #expect(state.session?.selectedCount == 1)
+        #expect(state.currentSelection == nil)
     }
 }

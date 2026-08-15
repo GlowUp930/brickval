@@ -37,6 +37,8 @@ struct SDKEnvironmentRootView: View {
             }
         } else if ProcessInfo.processInfo.arguments.contains("-showScannerProcessingLayoutDemo") {
             AppShellView()
+        } else if ProcessInfo.processInfo.arguments.contains("-showBulkRecoveryDemo") {
+            AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showHardAccessDemo") {
             HardScanAccessView()
         } else if ProcessInfo.processInfo.arguments.contains("-showScannerDemo") ||
