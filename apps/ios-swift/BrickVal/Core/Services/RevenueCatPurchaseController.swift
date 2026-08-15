@@ -3,7 +3,7 @@ import StoreKit
 import SuperwallKit
 
 @MainActor
-final class RevenueCatPurchaseController: PurchaseController {
+final class RevenueCatPurchaseController: PurchaseController, OfferCodeRedemptionClient {
     private let entitlementStore: EntitlementStore
     private let notificationCoordinator: NotificationCoordinator
     private var syncTasks: [Task<Void, Never>] = []
@@ -65,6 +65,12 @@ final class RevenueCatPurchaseController: PurchaseController {
         } catch {
             return .failed(error)
         }
+    }
+
+    func syncPurchases() async throws -> Bool {
+        let info = try await Purchases.shared.syncPurchases()
+        await apply(info)
+        return info.entitlements["pro"]?.isActive == true
     }
 
     private func apply(_ customerInfo: RevenueCat.CustomerInfo) async {

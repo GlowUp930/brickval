@@ -45,6 +45,8 @@ final class MonetizationStore {
 
     var collectionLimit: Int { policy.limits.collectionUniqueItems }
 
+    var offerCodesEnabled: Bool { policy.gates.offerCodes }
+
     var trialDays: Int { policy.effectiveAccessExperiment.trialDays }
 
     func protectExistingUserIfNeeded(hasCompletedOnboarding: Bool) {

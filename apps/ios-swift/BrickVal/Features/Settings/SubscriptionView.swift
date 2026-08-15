@@ -3,6 +3,7 @@ import SwiftUI
 
 struct SubscriptionView: View {
     @Environment(EntitlementStore.self) private var entitlements
+    @Environment(MonetizationStore.self) private var monetization
     @Environment(\.appSDKCoordinator) private var coordinator
     @State private var showAccount = false
     @State private var message: String?
@@ -53,6 +54,28 @@ struct SubscriptionView: View {
                 proFeature("Unlimited bulk scanning", systemImage: "square.stack.3d.up")
                 proFeature("Unlimited collection items", systemImage: "shippingbox")
                 proFeature("Theme and accent controls", systemImage: "paintpalette")
+            }
+
+            if monetization.offerCodesEnabled {
+                Section {
+                    Button {
+                        coordinator?.requestOfferCodeRedemption()
+                    } label: {
+                        Label("Redeem offer code", systemImage: "ticket")
+                    }
+                    .disabled(coordinator?.isOfferCodeRedemptionBusy == true)
+
+                    OfferCodeRedemptionStatusView(
+                        state: coordinator?.offerCodeRedemptionState ?? .idle,
+                        onCheckAccess: {
+                            Task { await coordinator?.checkOfferCodeAccess() }
+                        }
+                    )
+                } header: {
+                    Text("Offer code")
+                } footer: {
+                    Text("Redeem an eligible Apple offer code to unlock BrickValue Pro.")
+                }
             }
 
             if let message {

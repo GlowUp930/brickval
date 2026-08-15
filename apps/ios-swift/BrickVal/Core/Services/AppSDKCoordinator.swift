@@ -2,6 +2,7 @@ import ClerkKit
 import Observation
 import RevenueCat
 import Sentry
+import StoreKit
 import SuperwallKit
 
 @Observable
@@ -12,8 +13,10 @@ final class AppSDKCoordinator: SuperwallDelegate {
     private(set) var purchasesConfigured = false
     private(set) var superwallConfigured = false
     private(set) var showsSubscriptionFallback = false
+    private(set) var offerCodeRedemptionState: OfferCodeRedemptionState = .idle
 
     @ObservationIgnored private var purchaseController: RevenueCatPurchaseController?
+    @ObservationIgnored private var offerCodeClient: (any OfferCodeRedemptionClient)?
     @ObservationIgnored private let entitlementStore: EntitlementStore
     @ObservationIgnored private let notificationCoordinator: NotificationCoordinator
     @ObservationIgnored private var pendingManualDismissal: (@MainActor () -> Void)?
@@ -21,10 +24,12 @@ final class AppSDKCoordinator: SuperwallDelegate {
 
     init(
         entitlementStore: EntitlementStore,
-        notificationCoordinator: NotificationCoordinator = NotificationCoordinator()
+        notificationCoordinator: NotificationCoordinator = NotificationCoordinator(),
+        offerCodeClient: (any OfferCodeRedemptionClient)? = nil
     ) {
         self.entitlementStore = entitlementStore
         self.notificationCoordinator = notificationCoordinator
+        self.offerCodeClient = offerCodeClient
         let clerkKey = Self.configurationValue("ClerkPublishableKey")
         if let clerkKey {
             Clerk.configure(publishableKey: clerkKey)
@@ -53,6 +58,9 @@ final class AppSDKCoordinator: SuperwallDelegate {
                 notificationCoordinator: notificationCoordinator
             )
             purchaseController = controller
+            if self.offerCodeClient == nil {
+                self.offerCodeClient = controller
+            }
             if let superwallKey {
                 Superwall.configure(apiKey: superwallKey, purchaseController: controller)
                 Superwall.shared.delegate = self
@@ -106,6 +114,63 @@ final class AppSDKCoordinator: SuperwallDelegate {
         showsSubscriptionFallback = false
     }
 
+    var isOfferCodeRedemptionPresented: Bool {
+        get { offerCodeRedemptionState == .presenting }
+        set {
+            guard !newValue, offerCodeRedemptionState == .presenting else { return }
+            offerCodeRedemptionState = .idle
+        }
+    }
+
+    var isOfferCodeRedemptionBusy: Bool {
+        switch offerCodeRedemptionState {
+        case .presenting, .confirming:
+            true
+        case .idle, .failed:
+            false
+        }
+    }
+
+    func requestOfferCodeRedemption() {
+        guard !isOfferCodeRedemptionBusy else { return }
+        offerCodeRedemptionState = .presenting
+    }
+
+    func completeOfferCodeRedemption(_ result: Result<Void, Error>) async {
+        switch result {
+        case .success:
+            await checkOfferCodeAccess()
+        case .failure(let error):
+            if case StoreKitError.userCancelled = error {
+                offerCodeRedemptionState = .idle
+            } else {
+                offerCodeRedemptionState = .failed("We couldn't redeem that offer code. Please try again.")
+            }
+        }
+    }
+
+    func checkOfferCodeAccess() async {
+        guard offerCodeRedemptionState != .confirming else { return }
+        offerCodeRedemptionState = .confirming
+
+        guard let offerCodeClient else {
+            offerCodeRedemptionState = .failed("Offer codes aren't available in this build.")
+            return
+        }
+
+        do {
+            let isPro = try await offerCodeClient.syncPurchases()
+            if isPro {
+                entitlementStore.update(isPro: true)
+                offerCodeRedemptionState = .idle
+            } else {
+                offerCodeRedemptionState = .failed("We couldn't confirm Pro access yet. Try checking again or restore purchases.")
+            }
+        } catch {
+            offerCodeRedemptionState = .failed("We couldn't confirm Pro access yet. Try checking again or restore purchases.")
+        }
+    }
+
     func didDismissPaywall(withInfo paywallInfo: PaywallInfo) {
         guard let pendingManualDismissal,
               pendingManualDismissalPlacement?.rawValue == paywallInfo.presentedByPlacementWithName else {
@@ -155,6 +220,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
             if Purchases.shared.appUserID != userID {
                 _ = try? await Purchases.shared.logIn(userID)
             }
+            await synchronizeServerEntitlement()
             if superwallConfigured { Superwall.shared.identify(userId: userID) }
         } else {
             if !Purchases.shared.isAnonymous {
@@ -162,6 +228,14 @@ final class AppSDKCoordinator: SuperwallDelegate {
             }
             if superwallConfigured { Superwall.shared.reset() }
         }
+    }
+
+    func synchronizeServerEntitlement() async {
+        guard purchasesConfigured else { return }
+        guard let result = try? await apiClient.syncSubscription(), result.verified, result.isPro else {
+            return
+        }
+        entitlementStore.update(isPro: true)
     }
 
     private func resolveAndRegister(

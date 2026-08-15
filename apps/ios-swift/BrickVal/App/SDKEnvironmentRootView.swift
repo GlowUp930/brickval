@@ -1,7 +1,9 @@
+import StoreKit
 import SwiftUI
 
 struct SDKEnvironmentRootView: View {
     @Environment(MonetizationStore.self) private var monetization
+    @Environment(EntitlementStore.self) private var entitlements
     @State private var hasDismissedOnboardingDemo = false
     let coordinator: AppSDKCoordinator
 
@@ -65,24 +67,45 @@ struct SDKEnvironmentRootView: View {
 
     @ViewBuilder
     private var appRoot: some View {
-        if let clerk = coordinator.clerk {
-            AppRootView()
-                .environment(clerk)
-                .task(id: clerk.user?.id) {
-                    await coordinator.synchronizeIdentity(userID: clerk.user?.id)
-                    await monetization.refresh(
-                        using: coordinator.apiClient,
-                        signedIn: clerk.user != nil
-                    )
-                    coordinator.setMonetizationCohort(monetization.accessCohort)
-                }
-        } else {
-            AppRootView()
-                .task {
-                    await monetization.refresh(using: coordinator.apiClient, signedIn: false)
-                    coordinator.setMonetizationCohort(monetization.accessCohort)
-                }
+        Group {
+            if let clerk = coordinator.clerk {
+                AppRootView()
+                    .environment(clerk)
+                    .task(id: clerk.user?.id) {
+                        await coordinator.synchronizeIdentity(userID: clerk.user?.id)
+                        await monetization.refresh(
+                            using: coordinator.apiClient,
+                            signedIn: clerk.user != nil
+                        )
+                        coordinator.setMonetizationCohort(monetization.accessCohort)
+                    }
+            } else {
+                AppRootView()
+                    .task {
+                        await monetization.refresh(using: coordinator.apiClient, signedIn: false)
+                        coordinator.setMonetizationCohort(monetization.accessCohort)
+                    }
+            }
         }
+        .offerCodeRedemption(
+            isPresented: offerCodePresentationBinding,
+            onCompletion: { result in
+                Task { @MainActor in
+                    await coordinator.completeOfferCodeRedemption(result)
+                }
+            }
+        )
+        .onChange(of: entitlements.isPro) { _, isPro in
+            guard isPro else { return }
+            Task { await coordinator.synchronizeServerEntitlement() }
+        }
+    }
+
+    private var offerCodePresentationBinding: Binding<Bool> {
+        Binding(
+            get: { coordinator.isOfferCodeRedemptionPresented },
+            set: { coordinator.isOfferCodeRedemptionPresented = $0 }
+        )
     }
 }
 

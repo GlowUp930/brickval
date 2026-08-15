@@ -128,6 +128,25 @@ struct HardScanAccessView: View {
                     .background(BrickValStyle.Semantic.builderYellow, in: Capsule())
             }
 
+            if monetization.offerCodesEnabled {
+                Button {
+                    coordinator?.requestOfferCodeRedemption()
+                } label: {
+                    Label("Redeem offer code", systemImage: "ticket")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .disabled(coordinator?.isOfferCodeRedemptionBusy == true)
+
+                OfferCodeRedemptionStatusView(
+                    state: coordinator?.offerCodeRedemptionState ?? .idle,
+                    onCheckAccess: {
+                        Task { await coordinator?.checkOfferCodeAccess() }
+                    }
+                )
+            }
+
             Button("Restore purchases") {
                 Task { try? await coordinator?.restorePurchases() }
             }

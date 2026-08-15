@@ -14,9 +14,68 @@ struct MonetizationStoreTests {
 
         let store = MonetizationStore(defaults: context.defaults)
 
-        #expect(store.policy.version == 3)
+        #expect(store.policy.version == 4)
         #expect(store.policy.gates.singleDaily)
         #expect(store.scanReminder(isPro: false) == "3 free scans left today")
+    }
+
+    @Test func offerCodeRedemptionIsEnabledByDefault() {
+        let context = context()
+        let store = MonetizationStore(defaults: context.defaults)
+
+        #expect(store.policy.gates.offerCodes)
+    }
+
+    @Test func olderCachedPolicyWithoutOfferCodeFlagRemainsReadable() throws {
+        let context = context()
+        let legacyJSON = """
+        {
+          "version": 3,
+          "accessExperiment": null,
+          "gates": {
+            "singleDaily": false,
+            "bulkRepeat": true,
+            "collectionCapacity": true,
+            "marketHistory": false,
+            "appearance": true
+          },
+          "limits": {
+            "singleScansPerDay": 3,
+            "introductoryBulkScans": 1,
+            "collectionUniqueItems": 10
+          },
+          "notifications": {
+            "enabled": true,
+            "scanReset": true,
+            "trialEnding": true,
+            "accountAction": true
+          }
+        }
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(MonetizationPolicy.self, from: legacyJSON)
+        #expect(decoded.version == 3)
+        #expect(decoded.gates.singleDaily == false)
+        #expect(decoded.gates.offerCodes)
+
+        context.defaults.set(legacyJSON, forKey: "brickvalue_monetization_policy")
+
+        let store = MonetizationStore(defaults: context.defaults)
+
+        #expect(store.policy.version == 4)
+        #expect(store.policy.gates.singleDaily)
+        #expect(store.policy.gates.offerCodes)
+    }
+
+    @Test func remotePolicyCanDisableOfferCodeRedemption() {
+        let context = context()
+        let policy = policy(singleDaily: true, offerCodes: false)
+        let store = MonetizationStore(
+            defaults: context.defaults,
+            initialPolicy: policy
+        )
+
+        #expect(store.policy.gates.offerCodes == false)
     }
 
     @Test func currentPolicyShowsDailyScanAllowance() {
@@ -214,7 +273,8 @@ struct MonetizationStoreTests {
 
     private func policy(
         singleDaily: Bool,
-        hardPaywallEnabled: Bool = false
+        hardPaywallEnabled: Bool = false,
+        offerCodes: Bool = true
     ) -> MonetizationPolicy {
         MonetizationPolicy(
             version: hardPaywallEnabled ? 3 : 1,
@@ -228,7 +288,8 @@ struct MonetizationStoreTests {
                 bulkRepeat: true,
                 collectionCapacity: true,
                 marketHistory: false,
-                appearance: true
+                appearance: true,
+                offerCodes: offerCodes
             ),
             limits: .init(
                 singleScansPerDay: 3,

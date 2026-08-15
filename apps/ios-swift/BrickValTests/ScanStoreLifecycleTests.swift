@@ -27,6 +27,19 @@ struct ScanStoreLifecycleTests {
     }
 
     @Test @MainActor
+    func localProCanRecoverFromAnUnexpectedServerLimit() async {
+        var api = BrickValAPIClient.successfulLookupStub
+        api.syncSubscription = {
+            SubscriptionSyncResult(verified: true, isPro: true)
+        }
+        let store = ScanStore(api: api)
+        store.updateProStatus(true)
+
+        #expect(await store.attemptProAccessRecovery())
+        #expect(await store.attemptProAccessRecovery() == false)
+    }
+
+    @Test @MainActor
     func bulkRecoveryUsesTwoRequestsAtMostAndReportsTapOrder() async throws {
         let probe = RecoveryConcurrencyProbe()
         let payload = try recoveryPayload()
@@ -43,6 +56,7 @@ struct ScanStoreLifecycleTests {
             lookup: { _, _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
             bulkLookupMinifigures: { _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
             monetizationStatus: { throw ScanStoreLifecycleTestError.unusedEndpoint },
+            syncSubscription: { throw ScanStoreLifecycleTestError.unusedEndpoint },
             partColors: { throw ScanStoreLifecycleTestError.unusedEndpoint },
             submitFeedback: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
             submitProductFeedback: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
@@ -172,6 +186,7 @@ private extension BrickValAPIClient {
         monetizationStatus: {
             MonetizationStatus(policy: .phaseOne, usage: .empty())
         },
+        syncSubscription: { throw ScanStoreLifecycleTestError.unusedEndpoint },
         partColors: { throw ScanStoreLifecycleTestError.unusedEndpoint },
         submitFeedback: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
         submitProductFeedback: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },

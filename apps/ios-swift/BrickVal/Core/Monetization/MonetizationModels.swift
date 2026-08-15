@@ -33,6 +33,7 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
         let collectionCapacity: Bool
         let marketHistory: Bool
         let appearance: Bool
+        let offerCodes: Bool
     }
 
     struct Limits: Codable, Equatable, Sendable {
@@ -55,7 +56,7 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
     let notifications: Notifications
 
     static let phaseOne = MonetizationPolicy(
-        version: 3,
+        version: 4,
         accessExperiment: AccessExperiment(
             enabled: false,
             hardPaywallPercent: 50,
@@ -66,7 +67,8 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
             bulkRepeat: true,
             collectionCapacity: true,
             marketHistory: false,
-            appearance: true
+            appearance: true,
+            offerCodes: true
         ),
         limits: Limits(
             singleScansPerDay: 3,
@@ -87,6 +89,27 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
             hardPaywallPercent: 0,
             trialDays: 7
         )
+    }
+}
+
+extension MonetizationPolicy.Gates {
+    private enum CodingKeys: String, CodingKey {
+        case singleDaily
+        case bulkRepeat
+        case collectionCapacity
+        case marketHistory
+        case appearance
+        case offerCodes
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        singleDaily = try container.decode(Bool.self, forKey: .singleDaily)
+        bulkRepeat = try container.decode(Bool.self, forKey: .bulkRepeat)
+        collectionCapacity = try container.decode(Bool.self, forKey: .collectionCapacity)
+        marketHistory = try container.decode(Bool.self, forKey: .marketHistory)
+        appearance = try container.decode(Bool.self, forKey: .appearance)
+        offerCodes = try container.decodeIfPresent(Bool.self, forKey: .offerCodes) ?? true
     }
 }
 

@@ -39,6 +39,8 @@ final class ScanStore {
     @ObservationIgnored private let soundEffects: SoundEffectPlayer
     @ObservationIgnored private var monetization: MonetizationStore?
     @ObservationIgnored private var isProSubscriber = false
+    @ObservationIgnored private var frozenBulkRegions: [BulkScanRegion] = []
+    @ObservationIgnored private var attemptedProAccessRecovery = false
     @ObservationIgnored private var autoSession = AutoScanSession()
     @ObservationIgnored private var bulkDetectionTracker = BulkDetectionTracker()
     @ObservationIgnored private var schedule = LocalDetectionSchedule()
@@ -186,10 +188,12 @@ final class ScanStore {
             }
             let data = capture.data
             frozenImageData = data
+            frozenBulkRegions = capture.regions
+            attemptedProAccessRecovery = false
             logCaptureDuration(since: captureStartedAt, automatic: false)
             try await identify(imageData: data, bulkRegions: capture.regions)
         } catch {
-            handleIdentificationError(error)
+            await handleIdentificationError(error)
         }
     }
 
@@ -202,7 +206,7 @@ final class ScanStore {
         do {
             try await identify(imageData: data)
         } catch {
-            handleIdentificationError(error)
+            await handleIdentificationError(error)
         }
     }
 
@@ -346,6 +350,8 @@ final class ScanStore {
 
     private func returnToLiveScanner() {
         frozenImageData = nil
+        frozenBulkRegions = []
+        attemptedProAccessRecovery = false
         phase = .searching
         resetDetectionState()
     }
@@ -411,12 +417,14 @@ final class ScanStore {
             let captureStartedAt = Date.now
             let data = try await camera.jpegData(for: frame)
             frozenImageData = data
+            frozenBulkRegions = []
+            attemptedProAccessRecovery = false
             logCaptureDuration(since: captureStartedAt, automatic: true)
             try await identify(imageData: data, focusBox: focusBox)
         } catch is CancellationError {
             return
         } catch {
-            handleIdentificationError(error)
+            await handleIdentificationError(error)
         }
     }
 
@@ -536,15 +544,43 @@ final class ScanStore {
         phase = .searching
     }
 
-    private func handleIdentificationError(_ error: Error) {
-        frozenImageData = nil
+    private func handleIdentificationError(_ error: Error) async {
         if let apiError = error as? APIError, apiError.isProLimit {
+            if isProSubscriber {
+                if await attemptProAccessRecovery(), let frozenImageData {
+                    do {
+                        try await identify(imageData: frozenImageData, bulkRegions: frozenBulkRegions)
+                        return
+                    } catch {
+                        phase = .failed("We couldn't verify Pro access. Check your connection and try again.")
+                        return
+                    }
+                }
+                phase = .failed("We couldn't verify Pro access. Check your connection and try again.")
+                return
+            }
+
+            frozenImageData = nil
             monetization?.applyServerUsage(apiError.usage)
             proLimitFeature = apiError.feature
             returnToLiveScanner()
             return
         }
+
+        frozenImageData = nil
         phase = .failed(error.localizedDescription)
+    }
+
+    func attemptProAccessRecovery() async -> Bool {
+        guard !attemptedProAccessRecovery else { return false }
+        attemptedProAccessRecovery = true
+        guard let result = try? await api.syncSubscription(),
+              result.verified,
+              result.isPro else {
+            return false
+        }
+        isProSubscriber = true
+        return true
     }
 
     private var canBeginSingleScan: Bool {

@@ -8,6 +8,7 @@ struct BrickValAPIClient: Sendable {
     var lookup: @Sendable (String, ItemType, Int?) async throws -> LookupResult
     var bulkLookupMinifigures: @Sendable ([String], BulkLookupSource) async throws -> BulkMinifigLookupResult
     var monetizationStatus: @Sendable () async throws -> MonetizationStatus
+    var syncSubscription: @Sendable () async throws -> SubscriptionSyncResult
     var partColors: @Sendable () async throws -> [PartColorOption]
     var submitFeedback: @Sendable (MinifigFeedback) async throws -> Void
     var submitProductFeedback: @Sendable (ProductFeedbackSubmission) async throws -> Void
@@ -185,6 +186,20 @@ extension BrickValAPIClient {
                     endpoint: "monetization status"
                 )
             },
+            syncSubscription: {
+                let request = try await request(
+                    baseURL: configuration.baseURL,
+                    path: "/api/mobile/subscription/sync",
+                    method: "POST",
+                    token: authToken()
+                )
+                let (data, response) = try await session.data(for: request)
+                return try decodeResponse(
+                    data: data,
+                    response: response,
+                    endpoint: "subscription sync"
+                )
+            },
             partColors: {
                 let request = try await request(
                     baseURL: configuration.baseURL,
@@ -274,6 +289,11 @@ extension BrickValAPIClient {
             }
         )
     }
+}
+
+struct SubscriptionSyncResult: Decodable, Sendable {
+    let verified: Bool
+    let isPro: Bool
 }
 
 private func request(

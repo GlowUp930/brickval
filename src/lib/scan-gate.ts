@@ -1,4 +1,5 @@
 import { getMonetizationPolicy, type MonetizationPolicy } from "./monetization-policy";
+import { fetchRevenueCatProEntitlement } from "./revenuecat-entitlement";
 import { supabase } from "./supabase";
 
 export type MeteredFeature = "single_scan" | "bulk_scan";
@@ -25,6 +26,9 @@ export interface UsageGateResult {
   allowed: boolean;
   usage: UsageSnapshot;
 }
+
+export type ProEntitlementVerifier = (userId: string) => Promise<boolean | null>;
+export type ProStatusPersister = (userId: string, isPro: boolean) => Promise<void>;
 
 function utcDay(now: Date): string {
   return now.toISOString().slice(0, 10);
@@ -67,6 +71,52 @@ function counter(
     remaining: Math.max(0, limit - used),
     resetsAt,
   };
+}
+
+function markStatusAsPro(status: MonetizationStatus): MonetizationStatus {
+  return {
+    ...status,
+    usage: {
+      ...status.usage,
+      isPro: true,
+    },
+  };
+}
+
+async function persistProStatus(userId: string, isPro: boolean): Promise<void> {
+  const { error } = await supabase
+    .from("users")
+    .upsert({ id: userId, is_pro: isPro }, { onConflict: "id" });
+  if (error) throw error;
+}
+
+export async function reconcileDeniedProStatus(
+  userId: string,
+  status: MonetizationStatus,
+  verify: ProEntitlementVerifier = fetchRevenueCatProEntitlement,
+  persist: ProStatusPersister = persistProStatus
+): Promise<MonetizationStatus> {
+  if (status.usage.isPro) return status;
+
+  try {
+    const isPro = await verify(userId);
+    if (isPro !== true) return status;
+    await persist(userId, true);
+    return markStatusAsPro(status);
+  } catch (error) {
+    console.warn("[scan-gate] Pro entitlement reconciliation failed", error);
+    return status;
+  }
+}
+
+export async function refreshProEntitlement(
+  userId: string,
+  now = new Date()
+): Promise<boolean | null> {
+  const isPro = await fetchRevenueCatProEntitlement(userId, fetch, now);
+  if (isPro === null) return null;
+  await persistProStatus(userId, isPro);
+  return isPro;
 }
 
 export async function getMonetizationStatus(
@@ -122,10 +172,13 @@ export async function checkFeatureAccess(
     ? status.policy.gates.singleDaily
     : status.policy.gates.bulkRepeat;
   const usage = feature === "single_scan" ? status.usage.singleScan : status.usage.bulkScan;
-  return {
-    allowed: !enabled || status.usage.isPro || usage.remaining > 0,
-    usage: status.usage,
-  };
+  let resolvedStatus = status;
+  let allowed = !enabled || status.usage.isPro || usage.remaining > 0;
+  if (!allowed) {
+    resolvedStatus = await reconcileDeniedProStatus(userId, status);
+    allowed = resolvedStatus.usage.isPro;
+  }
+  return { allowed, usage: resolvedStatus.usage };
 }
 
 export async function consumeFeatureUsage(
@@ -162,7 +215,13 @@ export async function consumeFeatureUsage(
     if (error || !data) throw error ?? new Error("Usage RPC returned no data");
 
     const status = await getMonetizationStatus(userId, now);
-    return { allowed: Boolean(data.allowed), usage: status.usage };
+    if (Boolean(data.allowed)) return { allowed: true, usage: status.usage };
+
+    const repairedStatus = await reconcileDeniedProStatus(userId, status);
+    return {
+      allowed: repairedStatus.usage.isPro,
+      usage: repairedStatus.usage,
+    };
   } catch (error) {
     console.warn("[scan-gate] Usage consume failed; failing open.", error);
     const status = await getMonetizationStatus(userId, now);
