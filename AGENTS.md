@@ -4,6 +4,12 @@
 **Current restructuring work happens on `codex/swift-repo-structure`.**
 Do NOT push to or edit the `codex/loveable-design-practices-ihFVU` branch.
 
+## Repository Source Of Truth
+The active repository for the native app and backend is `/Users/holamchan/brickval`.
+The native SwiftUI source is `/Users/holamchan/brickval/apps/ios-swift/` and is the source used for TestFlight builds.
+`/Users/holamchan/Desktop/brickval-mobile/ios` is a separate legacy Expo checkout and must not be used as the source for native builds or releases.
+When building, testing, committing, or pushing the current app, work from `/Users/holamchan/brickval` on `codex/swift-repo-structure`.
+
 ## Default Focus
 If a task does not explicitly say otherwise, assume we are working on the native Swift iOS app in `apps/ios-swift/`.
 
