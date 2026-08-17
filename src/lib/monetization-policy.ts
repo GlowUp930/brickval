@@ -11,6 +11,7 @@ export interface MonetizationPolicy {
     collectionCapacity: boolean;
     marketHistory: boolean;
     appearance: boolean;
+    offerCodes: boolean;
   };
   limits: {
     singleScansPerDay: number;
@@ -44,7 +45,7 @@ function percentage(name: string, fallback: number): number {
 
 export function getMonetizationPolicy(): MonetizationPolicy {
   return {
-    version: 3,
+    version: 4,
     accessExperiment: {
       enabled: booleanValue("BRICKVALUE_HARD_PAYWALL_EXPERIMENT_ENABLED", false),
       hardPaywallPercent: percentage("BRICKVALUE_HARD_PAYWALL_PERCENT", 50),
@@ -56,6 +57,7 @@ export function getMonetizationPolicy(): MonetizationPolicy {
       collectionCapacity: booleanValue("BRICKVALUE_COLLECTION_GATE_ENABLED", true),
       marketHistory: booleanValue("BRICKVALUE_MARKET_HISTORY_GATE_ENABLED", false),
       appearance: true,
+      offerCodes: booleanValue("BRICKVALUE_OFFER_CODES_ENABLED", true),
     },
     limits: {
       singleScansPerDay: positiveInteger("BRICKVALUE_FREE_SINGLE_SCANS_PER_DAY", 3),
