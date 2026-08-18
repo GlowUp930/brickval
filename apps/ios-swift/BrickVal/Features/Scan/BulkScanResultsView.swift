@@ -41,6 +41,10 @@ struct BulkScanResultsView: View {
     @State private var focusedResultID: String?
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var revealStep = 0
+    @State private var revealSkipped = false
+    @State private var didPlayRevealSound = false
+    @State private var sharePayload: BulkSharePayload?
 
     private let capturedImage: UIImage?
     private let canvas = BrickValStyle.ScanResult.canvas
@@ -94,13 +98,19 @@ struct BulkScanResultsView: View {
         .presentationDragIndicator(.hidden)
         .presentationBackground(canvas)
         .interactiveDismissDisabled(isSaving)
-        .onDisappear {
-            recoveryRequestID += 1
-            store.reset()
-        }
-        .sensoryFeedback(.selection, trigger: selectedCount)
-        .sensoryFeedback(.impact(flexibility: .soft), trigger: recoveryHapticTrigger)
-        .alert("Could not add items", isPresented: errorBinding) {
+            .onDisappear {
+                recoveryRequestID += 1
+                store.reset()
+            }
+            .task(id: revealKey) {
+                await runReveal()
+            }
+            .sensoryFeedback(.selection, trigger: selectedCount)
+            .sensoryFeedback(.impact(flexibility: .soft), trigger: recoveryHapticTrigger)
+            .sheet(item: $sharePayload) { payload in
+                BulkSharePreviewView(payload: payload)
+            }
+            .alert("Could not add items", isPresented: errorBinding) {
             Button("OK", role: .cancel) { errorMessage = nil }
         } message: {
             Text(errorMessage ?? "Please try again.")
@@ -123,6 +133,18 @@ struct BulkScanResultsView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Spacer(minLength: 8)
+            Button {
+                sharePayload = makeSharePayload()
+            } label: {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.title3.bold())
+            }
+            .foregroundStyle(.white)
+            .frame(width: 46, height: 46)
+            .disabled(!revealComplete || selectedCount == 0 || isSaving)
+            .opacity(!revealComplete || selectedCount == 0 ? 0.45 : 1)
+            .accessibilityLabel("Share bulk scan result")
+            .accessibilityHint("Creates a shareable value card with the scan photo")
             Button("Close", systemImage: "xmark", action: close)
                 .labelStyle(.iconOnly)
                 .font(.title3.bold())
@@ -150,24 +172,35 @@ struct BulkScanResultsView: View {
                         recoveryPhotoContent(imageRect: imageRect, containerSize: proxy.size)
                             .transition(recoveryTransition)
                     } else {
-                        ForEach(itemStates.map(\.item)) { item in
-                            if let box = item.boundingBox {
-                                detectionBox(for: item, box: box, imageRect: imageRect, containerSize: proxy.size)
+                        ForEach(Array(itemStates.enumerated()), id: \.element.id) { index, state in
+                            if (revealComplete || revealStep > index), let box = state.item.boundingBox {
+                                detectionBox(for: state.item, box: box, imageRect: imageRect, containerSize: proxy.size)
                             }
                         }
 
-                        ForEach(reviewItems) { item in
-                            if let box = item.boundingBox {
-                                reviewBox(box, imageRect: imageRect, containerSize: proxy.size)
+                        if revealComplete {
+                            ForEach(reviewItems) { item in
+                                if let box = item.boundingBox {
+                                    reviewBox(box, imageRect: imageRect, containerSize: proxy.size)
+                                }
                             }
                         }
 
-                        VStack(spacing: 0) {
-                            summaryPill
-                                .padding(.top, 14)
-                            Spacer(minLength: 150)
-                            resultCarousel
-                                .padding(.bottom, 12)
+                        if revealComplete {
+                            VStack(spacing: 0) {
+                                summaryPill
+                                    .padding(.top, 14)
+                                Spacer(minLength: 150)
+                                resultCarousel
+                                    .padding(.bottom, 12)
+                            }
+                        } else {
+                            BulkRevealOverlay(
+                                itemCount: itemStates.count,
+                                visibleCount: revealStep,
+                                revealedTotal: revealedTotal,
+                                skip: skipReveal
+                            )
                         }
                     }
                 }
@@ -690,8 +723,8 @@ struct BulkScanResultsView: View {
                     .foregroundStyle(.black)
                 }
                 .buttonStyle(.plain)
-                .disabled(selectedCount == 0 || isSaving)
-                .opacity(selectedCount == 0 ? 0.45 : 1)
+                .disabled(!revealComplete || selectedCount == 0 || isSaving)
+                .opacity(!revealComplete || selectedCount == 0 ? 0.45 : 1)
 
                 HStack(spacing: 12) {
                     if canReviewMissedFigure {
@@ -784,6 +817,86 @@ struct BulkScanResultsView: View {
 
     private var canReviewMissedFigure: Bool {
         recoveryToken != nil
+    }
+
+    private var revealKey: String {
+        items.map(\.id).joined(separator: "|")
+    }
+
+    private var revealComplete: Bool {
+        revealSkipped || revealStep >= itemStates.count
+    }
+
+    private var revealedTotal: Double {
+        itemStates.prefix(revealStep).reduce(0) { $0 + ($1.price ?? 0) }
+    }
+
+    private func runReveal() async {
+        guard !items.isEmpty else { return }
+        revealStep = 0
+        revealSkipped = false
+        didPlayRevealSound = false
+
+        guard !reduceMotion else {
+            completeReveal()
+            return
+        }
+
+        do {
+            try await Task.sleep(nanoseconds: 220_000_000)
+            for step in 1...itemStates.count {
+                try await Task.sleep(nanoseconds: 180_000_000)
+                guard !Task.isCancelled, !revealSkipped else { return }
+                withAnimation(.easeOut(duration: 0.18)) {
+                    revealStep = step
+                }
+            }
+            // Keep the final value on screen long enough to read before opening review.
+            try await Task.sleep(nanoseconds: 1_200_000_000)
+            guard !Task.isCancelled, !revealSkipped else { return }
+            completeReveal()
+        } catch {
+            return
+        }
+    }
+
+    private func skipReveal() {
+        revealSkipped = true
+        completeReveal()
+    }
+
+    private func completeReveal() {
+        if reduceMotion {
+            revealStep = itemStates.count
+            revealSkipped = true
+        } else {
+            withAnimation(.easeOut(duration: 0.22)) {
+                revealStep = itemStates.count
+                revealSkipped = true
+            }
+        }
+        guard !didPlayRevealSound else { return }
+        didPlayRevealSound = true
+        store.playBulkRevealSound()
+    }
+
+    @MainActor
+    private func makeSharePayload() -> BulkSharePayload? {
+        guard let capturedImage, revealComplete else { return nil }
+        let entries = itemStates.compactMap { state -> BulkShareEntry? in
+            guard state.isSelected, let price = state.price, price > 0 else { return nil }
+            return BulkShareEntry(
+                id: state.id,
+                identifier: state.item.result.identifier,
+                name: state.item.result.name,
+                price: price,
+                boundingBox: state.item.boundingBox
+            )
+        }
+        guard !entries.isEmpty else { return nil }
+        let cropBox = BulkShareCropper.cropBox(for: entries.compactMap(\.boundingBox))
+        let photo = BulkShareCropper.crop(capturedImage, to: cropBox) ?? capturedImage
+        return BulkSharePayload(photo: photo, cropBox: cropBox, entries: entries)
     }
 
     private var currentRecoveryCandidates: [BulkScanReviewCandidate] {

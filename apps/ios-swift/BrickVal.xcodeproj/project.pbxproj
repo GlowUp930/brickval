@@ -147,6 +147,7 @@
 		BD5C55DC1EA6C50A5B4272ED /* IdentificationCandidate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5F4907120BC1A16ACF2F22 /* IdentificationCandidate.swift */; };
 		BE087EBEF8D4F6BBD64960AD /* BulkRecoveryDemoFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47B3934D078FDDBACD996FFC /* BulkRecoveryDemoFixture.swift */; };
 		BE162545471F3069EB8BF3FC /* PrimaryGoal.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE6CC33FE02AEEC394A6BA95 /* PrimaryGoal.swift */; };
+		BEF66B9FEF44FAA656FAC3DE /* BulkShareCardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42859537BC630597753FFD1 /* BulkShareCardTests.swift */; };
 		BF013D0A4964914481031BC6 /* ScanProcessingOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D61E6D6F834D68E54B0A94 /* ScanProcessingOverlayView.swift */; };
 		C1596A1FF17789D4371F5558 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFBC2210305E1EDC17B72B9D /* OnboardingView.swift */; };
 		C3CDD43E8EDE4C3F3E680AFC /* ManualSetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70BEA2066B1A6BF1D07EFC0F /* ManualSetEntryView.swift */; };
@@ -154,8 +155,10 @@
 		C44D3A2878BBD8D7658E9342 /* BulkDetectionTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 682C25B2470F84B42642FFD1 /* BulkDetectionTracker.swift */; };
 		C92A925EDB8C5785FDB6CF82 /* CollectionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = C24218ECAA86EC39E12B0367 /* CollectionItem.swift */; };
 		CC2AE860738E18E8DD2B114D /* AppSDKCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06D75EF1138BB59ECAFAF414 /* AppSDKCoordinator.swift */; };
+		CC972C6B6B681A66ACD02CAC /* BulkShareCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2709B02949B308441BEDBABB /* BulkShareCard.swift */; };
 		CC990AE74A1BECC5AB724822 /* MinifigureDetecting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E425BFAF3639759CF05EF19 /* MinifigureDetecting.swift */; };
 		CF99662BD385ECA5ED8D7906 /* SDKEnvironmentRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF5986CE67C8CCD199CAB39 /* SDKEnvironmentRootView.swift */; };
+		D1AFDF14E68AAF6CEE3635D9 /* BulkRevealOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ED72367906518C9E91CE0C5 /* BulkRevealOverlay.swift */; };
 		D5A1DDD064E9BE7F0E5DFFDC /* PartColorSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F4AEB722B741DCE2C9C67E5 /* PartColorSelectionView.swift */; };
 		D62760CA78B5BF94C3466CCD /* OfferCodeRedemption.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31F9057D5EB20B52943F223F /* OfferCodeRedemption.swift */; };
 		D86D0B9AB2207D672A921E86 /* BrickValStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 842B4A17C7F3C3CCD3B92C1A /* BrickValStyle.swift */; };
@@ -220,6 +223,7 @@
 		234FAE646F70D83B0F0089D3 /* MotionStabilityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionStabilityService.swift; sourceTree = "<group>"; };
 		235637548F2BFE985EBCD90F /* OfferCodeRedemptionStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferCodeRedemptionStatusView.swift; sourceTree = "<group>"; };
 		2441B872E77FF1CA73446492 /* LegacyKeychainReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyKeychainReader.swift; sourceTree = "<group>"; };
+		2709B02949B308441BEDBABB /* BulkShareCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkShareCard.swift; sourceTree = "<group>"; };
 		27F265F5D62B021D33D73070 /* PortfolioHistoryBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioHistoryBuilder.swift; sourceTree = "<group>"; };
 		28CBB95E72FCC9866478E98A /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		290ABA13B70AFB4557194D83 /* LegacyPreferenceValues.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyPreferenceValues.swift; sourceTree = "<group>"; };
@@ -277,6 +281,7 @@
 		6BC93CDDC526B5A5108C24B3 /* ScanReviewCandidateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanReviewCandidateTests.swift; sourceTree = "<group>"; };
 		6CA43A508737EB95B359A1A2 /* LegacyExpoMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyExpoMigrationTests.swift; sourceTree = "<group>"; };
 		6D94C6E9B8E4D8C3DB776585 /* CollectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionStore.swift; sourceTree = "<group>"; };
+		6ED72367906518C9E91CE0C5 /* BulkRevealOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkRevealOverlay.swift; sourceTree = "<group>"; };
 		6FE889BCC15D13FA8FD8BC8C /* BulkRecoverySession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkRecoverySession.swift; sourceTree = "<group>"; };
 		706356F3011820760559C3B3 /* ItemDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemDetailView.swift; sourceTree = "<group>"; };
 		7078C232F61B02B4CBE8C1A8 /* BrickValueAuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrickValueAuthView.swift; sourceTree = "<group>"; };
@@ -328,6 +333,7 @@
 		B11B009B7EA15DF13E630D06 /* AutoScanBlockReason.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoScanBlockReason.swift; sourceTree = "<group>"; };
 		B1E535BDEA80BE24EE73AE67 /* BulkMinifigScanPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkMinifigScanPayload.swift; sourceTree = "<group>"; };
 		B2C02FA239DC1586A462BA9D /* NotificationModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationModelsTests.swift; sourceTree = "<group>"; };
+		B42859537BC630597753FFD1 /* BulkShareCardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkShareCardTests.swift; sourceTree = "<group>"; };
 		B50BCC8C03FE362629D0F4BB /* PortfolioChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioChartView.swift; sourceTree = "<group>"; };
 		BA91C00010B7FE9351243FE7 /* MinifigureDetector.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = MinifigureDetector.mlmodel; sourceTree = "<group>"; };
 		BCEBEFD62589431068064A5A /* CollectionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionRowView.swift; sourceTree = "<group>"; };
@@ -481,6 +487,7 @@
 				8252484A128C31D174837A08 /* AutoScanSessionTests.swift */,
 				3F9372BB4AE52F24593EE363 /* BulkDetectionTrackerTests.swift */,
 				0374015F9BD2157183F144A5 /* BulkRecoveryStateTests.swift */,
+				B42859537BC630597753FFD1 /* BulkShareCardTests.swift */,
 				5CAB427CBB7DB51C81765919 /* CollectionStoreTests.swift */,
 				A585AFB1013097D35D10D137 /* CoreMLMinifigureDetectorTests.swift */,
 				48061BC9635051EF2FB80112 /* DetectionSamplePlannerTests.swift */,
@@ -716,7 +723,9 @@
 				7923F89B165DBE64790485D1 /* AutoScanSession.swift */,
 				47B3934D078FDDBACD996FFC /* BulkRecoveryDemoFixture.swift */,
 				6FE889BCC15D13FA8FD8BC8C /* BulkRecoverySession.swift */,
+				6ED72367906518C9E91CE0C5 /* BulkRevealOverlay.swift */,
 				9768DDF1E1F096EC49D4CE7F /* BulkScanResultsView.swift */,
+				2709B02949B308441BEDBABB /* BulkShareCard.swift */,
 				88AFF015450D23262EF56D40 /* DetectionOverlayView.swift */,
 				10FF7680D1CD08807EB3F84D /* DetectionSampleMode.swift */,
 				5C23138D0889D0013BA8299F /* DetectionSamplePlan.swift */,
@@ -948,6 +957,7 @@
 				83C8DECF87342144916542EE /* AutoScanSessionTests.swift in Sources */,
 				4C1707FBD9D657DAE41B9141 /* BulkDetectionTrackerTests.swift in Sources */,
 				2500C998A95D1093F4439001 /* BulkRecoveryStateTests.swift in Sources */,
+				BEF66B9FEF44FAA656FAC3DE /* BulkShareCardTests.swift in Sources */,
 				1B136F1F4434437A235835BB /* CollectionStoreTests.swift in Sources */,
 				204B39504255B458FA3AC870 /* CoreMLMinifigureDetectorTests.swift in Sources */,
 				EE9784DB917B1C62C1F9840F /* DetectionSamplePlannerTests.swift in Sources */,
@@ -1004,7 +1014,9 @@
 				BE087EBEF8D4F6BBD64960AD /* BulkRecoveryDemoFixture.swift in Sources */,
 				9FAE99A4329317ED4D97DDA7 /* BulkRecoveryPayload.swift in Sources */,
 				8FE77974FC5C20AC0DB48BEC /* BulkRecoverySession.swift in Sources */,
+				D1AFDF14E68AAF6CEE3635D9 /* BulkRevealOverlay.swift in Sources */,
 				BC50C75331C93F9F1AA5A1E4 /* BulkScanResultsView.swift in Sources */,
+				CC972C6B6B681A66ACD02CAC /* BulkShareCard.swift in Sources */,
 				20C45383EC4C3BC86058AC79 /* CameraAuthorizationStatus.swift in Sources */,
 				4C1786FA4D97FA8C629884F5 /* CameraError.swift in Sources */,
 				E2E557427D166E5DFB32CCC0 /* CameraFrame.swift in Sources */,
@@ -1145,13 +1157,13 @@
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution: HO LAM CHAN (4CQHLZBSU7)";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 128;
+				CURRENT_PROJECT_VERSION = 129;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.4;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.brickval.app;
 				PRODUCT_NAME = BrickVal;
 				PROVISIONING_PROFILE_SPECIFIER = "BrickVal App Store Build 125";
@@ -1273,13 +1285,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 128;
+				CURRENT_PROJECT_VERSION = 129;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.4;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.brickval.app;
 				PRODUCT_NAME = BrickVal;
 				SDKROOT = iphoneos;

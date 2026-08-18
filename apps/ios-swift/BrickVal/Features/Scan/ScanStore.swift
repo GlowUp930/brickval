@@ -268,6 +268,10 @@ final class ScanStore {
         return response.candidates.map(\.normalized)
     }
 
+    func playBulkRevealSound() {
+        soundEffects.play(.cashRegister)
+    }
+
     /// Recovers selected physical figures with a small concurrency window so
     /// recognition stays responsive without flooding the provider.
     func recoverBulkMinifigures(
@@ -456,7 +460,6 @@ final class ScanStore {
                 unresolvedRegions: response.unresolvedRegions.map(\.boundingBox),
                 recoveryToken: response.recoveryToken
             )
-            soundEffects.play(.cashRegister)
             logBulkResult(response, startedAt: startedAt)
             return
         }
