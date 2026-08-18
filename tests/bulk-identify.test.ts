@@ -5,7 +5,9 @@ import {
   assignDetectionsToRegions,
   mergeBulkDetections,
   planAccuracyBulkRecoveryCrops,
+  planPhotoLibraryFallbackCrops,
   parseBulkRegionManifest,
+  parseBulkRegions,
   planGuidedBulkCrops,
   unresolvedBulkRegions,
 } from "../src/lib/bulk-identify";
@@ -72,7 +74,7 @@ test("guided crop plan covers ten regions with no more than four crops", () => {
   );
 });
 
-test("guided crop plan isolates up to four figures for stronger identification", () => {
+test("guided crop plan groups up to five figures per provider request", () => {
   const regions = Array.from({ length: 3 }, (_, index) => ({
     regionId: `region-${index + 1}`,
     boundingBox: { x: index * 0.3 + 0.04, y: 0.2, width: 0.18, height: 0.55 },
@@ -80,8 +82,45 @@ test("guided crop plan isolates up to four figures for stronger identification",
 
   const crops = planGuidedBulkCrops(regions);
 
-  assert.equal(crops.length, 3);
-  assert.ok(crops.every((crop) => crop.regions.length === 1));
+  assert.equal(crops.length, 1);
+  assert.ok(crops.every((crop) => crop.regions.length <= 5));
+});
+
+test("photo-library crop plan covers forty regions in at most eight groups", () => {
+  const regions = Array.from({ length: 40 }, (_, index) => ({
+    regionId: `region-${index + 1}`,
+    boundingBox: {
+      x: (index % 8) * 0.11,
+      y: Math.floor(index / 8) * 0.19,
+      width: 0.08,
+      height: 0.15,
+    },
+  }));
+
+  const crops = planGuidedBulkCrops(regions, 40);
+
+  assert.ok(crops.length <= 8);
+  assert.ok(crops.every((crop) => crop.regions.length <= 5));
+  assert.equal(crops.flatMap((crop) => crop.regions).length, 40);
+});
+
+test("photo-library manifests accept forty regions while camera manifests stay capped at ten", () => {
+  const value = JSON.stringify(Array.from({ length: 40 }, (_, index) => ({
+    regionId: `region-${index + 1}`,
+    boundingBox: { x: (index % 10) * 0.09, y: Math.floor(index / 10) * 0.2, width: 0.07, height: 0.16 },
+  })));
+
+  assert.equal(parseBulkRegions(value, 40)?.length, 40);
+  assert.equal(parseBulkRegions(value, 10), null);
+});
+
+test("photo-library fallback keeps small figures covered across the image", () => {
+  const crops = planPhotoLibraryFallbackCrops();
+
+  assert.equal(crops.length, 8);
+  assert.ok(crops.every((crop) => crop.width > 0 && crop.height > 0));
+  assert.ok(crops.some((crop) => crop.x > 0));
+  assert.ok(crops.some((crop) => crop.y > 0));
 });
 
 test("bulk merge collapses duplicate provider responses for one physical region", () => {

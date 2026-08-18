@@ -185,8 +185,15 @@ struct ScannerView: View {
                     isImportingBulkPhoto = false
                     selectedBulkPhoto = nil
                 }
-                let data = try? await item.loadTransferable(type: Data.self)
-                await store.importBulkPhoto(data)
+                do {
+                    guard let data = try await item.loadTransferable(type: Data.self) else {
+                        await store.importBulkPhotoLoadFailed()
+                        return
+                    }
+                    await store.importBulkPhoto(data)
+                } catch {
+                    await store.importBulkPhotoLoadFailed()
+                }
             }
         }
         .onChange(of: store.proLimitFeature) { _, feature in

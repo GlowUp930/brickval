@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
-import { parseBulkRegions } from "@/lib/bulk-identify";
+import { MAX_CAMERA_BULK_REGIONS, MAX_LIBRARY_BULK_REGIONS, parseBulkRegions } from "@/lib/bulk-identify";
 import { runBulkMinifigScan } from "@/lib/bulk-minifig-scan-service";
 import { BrickognizeUnavailableError } from "@/lib/brickognize";
 import { issueBulkRecoveryToken } from "@/lib/bulk-recovery-token";
@@ -18,7 +18,9 @@ export async function POST(req: NextRequest) {
   }
 
   const image = formData.get("image");
-  const regions = parseBulkRegions(formData.get("regions"));
+  const scanSource = formData.get("scanSource") === "photoLibrary" ? "photoLibrary" : "camera";
+  const regionLimit = scanSource === "photoLibrary" ? MAX_LIBRARY_BULK_REGIONS : MAX_CAMERA_BULK_REGIONS;
+  const regions = parseBulkRegions(formData.get("regions"), regionLimit);
   if (!(image instanceof File) || regions === null) {
     return NextResponse.json({ error: "Invalid bulk scan" }, { status: 400 });
   }
@@ -51,9 +53,11 @@ export async function POST(req: NextRequest) {
   try {
     const scan = await runBulkMinifigScan(image, regions, {
       guided: process.env.BRICKVALUE_GUIDED_BULK_ENABLED !== "false",
+      source: scanSource,
     });
     console.info("[bulk-scan]", scan.timings, {
       input_regions: regions.length,
+      source: scanSource,
       priced_results: scan.items.length,
       unresolved: scan.unresolvedCount,
       partial: scan.partial,

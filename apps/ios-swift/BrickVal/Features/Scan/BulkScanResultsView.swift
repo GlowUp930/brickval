@@ -17,6 +17,23 @@ enum BulkRecoveryTapPlanner {
             height: 0.30
         )
     }
+
+    static func recognitionBox(
+        for normalizedPoint: CGPoint,
+        referenceBox: NormalizedBoundingBox?
+    ) -> NormalizedBoundingBox {
+        guard let referenceBox else { return focusBox(for: normalizedPoint) }
+        let contextX = max(referenceBox.width * 0.30, 0.08)
+        let contextY = max(referenceBox.height * 0.30, 0.08)
+        let x = max(0, referenceBox.x - contextX)
+        let y = max(0, referenceBox.y - contextY)
+        return NormalizedBoundingBox(
+            x: x,
+            y: y,
+            width: min(1, referenceBox.width + contextX * 2),
+            height: min(1, referenceBox.height + contextY * 2)
+        ).clamped
+    }
 }
 
 struct BulkScanResultsView: View {
@@ -45,6 +62,7 @@ struct BulkScanResultsView: View {
     @State private var revealSkipped = false
     @State private var didPlayRevealSound = false
     @State private var sharePayload: BulkSharePayload?
+    @State private var activeResultPage = 0
 
     private let capturedImage: UIImage?
     private let canvas = BrickValStyle.ScanResult.canvas
@@ -61,7 +79,14 @@ struct BulkScanResultsView: View {
         self.store = store
         self.recoveryToken = recoveryToken
         capturedImage = UIImage(data: imageData)
-        _itemStates = State(initialValue: items.map { BulkScanItemState(item: $0) })
+        let orderedItems = items.sorted { lhs, rhs in
+            guard let left = lhs.boundingBox, let right = rhs.boundingBox else {
+                return lhs.id < rhs.id
+            }
+            let rowDelta = left.y - right.y
+            return abs(rowDelta) > 0.10 ? rowDelta < 0 : left.x < right.x
+        }
+        _itemStates = State(initialValue: orderedItems.map { BulkScanItemState(item: $0) })
         _reviewItems = State(initialValue: reviewItems)
         _unresolvedRegions = State(initialValue: unresolvedRegions)
         self.imageData = imageData
@@ -172,9 +197,17 @@ struct BulkScanResultsView: View {
                         recoveryPhotoContent(imageRect: imageRect, containerSize: proxy.size)
                             .transition(recoveryTransition)
                     } else {
-                        ForEach(Array(itemStates.enumerated()), id: \.element.id) { index, state in
-                            if (revealComplete || revealStep > index), let box = state.item.boundingBox {
-                                detectionBox(for: state.item, box: box, imageRect: imageRect, containerSize: proxy.size)
+                        if isDenseResultSet {
+                            ForEach(activePageItems) { state in
+                                if let box = state.item.boundingBox {
+                                    detectionBox(for: state.item, box: box, imageRect: imageRect, containerSize: proxy.size)
+                                }
+                            }
+                        } else {
+                            ForEach(Array(itemStates.enumerated()), id: \.element.id) { index, state in
+                                if (revealComplete || revealStep > index), let box = state.item.boundingBox {
+                                    detectionBox(for: state.item, box: box, imageRect: imageRect, containerSize: proxy.size)
+                                }
                             }
                         }
 
@@ -376,8 +409,8 @@ struct BulkScanResultsView: View {
             $0.unresolvedRegionIndex == index || $0.focusBox.contains(BulkRecoveryPoint(box.center))
         } == true
         let targetRect = imageBox(box, in: imageRect)
-        let hitWidth = max(targetRect.width, 112)
-        let hitHeight = max(targetRect.height, 132)
+        let hitWidth = max(targetRect.width, 44)
+        let hitHeight = max(targetRect.height, 44)
         let center = CGPoint(
             x: min(max(targetRect.midX, hitWidth / 2), containerSize.width - hitWidth / 2),
             y: min(max(targetRect.midY, hitHeight / 2), containerSize.height - hitHeight / 2)
@@ -407,10 +440,14 @@ struct BulkScanResultsView: View {
         imageRect: CGRect,
         containerSize: CGSize
     ) -> some View {
-        let targetRect = imageBox(selection.focusBox, in: imageRect)
+        let targetRect = imageBox(selection.recognitionBox, in: imageRect)
+        let anchor = CGPoint(
+            x: imageRect.minX + selection.visualAnchor.x * imageRect.width,
+            y: imageRect.minY + selection.visualAnchor.y * imageRect.height
+        )
         let center = CGPoint(
-            x: min(max(targetRect.midX, 80), containerSize.width - 80),
-            y: min(max(targetRect.midY, 80), containerSize.height - 80)
+            x: min(max(anchor.x, 40), containerSize.width - 40),
+            y: min(max(anchor.y, 40), containerSize.height - 40)
         )
 
         return RecoverySelectionOverlay(
@@ -419,7 +456,8 @@ struct BulkScanResultsView: View {
             containerSize: containerSize,
             number: number,
             accent: accent,
-            isFocused: isFocused
+            isFocused: isFocused,
+            confirmedValue: recoveryState.session?.confirmedValues[selection.id]
         )
         .id(selection.id)
     }
@@ -454,21 +492,35 @@ struct BulkScanResultsView: View {
 
     private var resultCarousel: some View {
         ScrollViewReader { proxy in
-            ScrollView(.horizontal) {
-                LazyHStack(spacing: 10) {
-                    ForEach($itemStates) { $state in
-                        resultCard($state)
-                            .id(state.id)
-                    }
-                    ForEach(reviewItems) { review in
-                        ForEach(review.candidates) { candidate in
-                            reviewCandidateCard(candidate, review: review)
+            VStack(spacing: 8) {
+                if isDenseResultSet {
+                    densePageControl
+                }
+                ScrollView(.horizontal) {
+                    LazyHStack(spacing: 10) {
+                        if isDenseResultSet {
+                            ForEach(activePageIDs, id: \.self) { id in
+                                if let index = itemStates.firstIndex(where: { $0.id == id }) {
+                                    resultCard($itemStates[index])
+                                        .id(id)
+                                }
+                            }
+                        } else {
+                            ForEach($itemStates) { $state in
+                                resultCard($state)
+                                    .id(state.id)
+                            }
+                        }
+                        ForEach(reviewItems) { review in
+                            ForEach(review.candidates) { candidate in
+                                reviewCandidateCard(candidate, review: review)
+                            }
                         }
                     }
+                    .padding(.horizontal, 12)
                 }
-                .padding(.horizontal, 12)
+                .scrollIndicators(.hidden)
             }
-            .scrollIndicators(.hidden)
             .onChange(of: focusedResultID) { _, id in
                 guard let id else { return }
                 Task { @MainActor in
@@ -827,6 +879,54 @@ struct BulkScanResultsView: View {
         revealSkipped || revealStep >= itemStates.count
     }
 
+    private var isDenseResultSet: Bool { itemStates.count > 10 }
+
+    private var resultPageCount: Int {
+        max(1, (itemStates.count + 9) / 10)
+    }
+
+    private var activePageItems: [BulkScanItemState] {
+        let start = min(activeResultPage * 10, max(itemStates.count - 1, 0))
+        return Array(itemStates.dropFirst(start).prefix(10))
+    }
+
+    private var activePageIDs: [String] { activePageItems.map(\.id) }
+
+    private var densePageControl: some View {
+        HStack(spacing: 12) {
+            Button {
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
+                    activeResultPage = max(0, activeResultPage - 1)
+                }
+            } label: {
+                Image(systemName: "chevron.left")
+                    .frame(width: 44, height: 36)
+            }
+            .disabled(activeResultPage == 0)
+
+            Text("\(activeResultPage * 10 + 1)–\(min((activeResultPage + 1) * 10, itemStates.count)) of \(itemStates.count)")
+                .font(.caption.weight(.semibold).monospacedDigit())
+                .foregroundStyle(.white)
+                .accessibilityLabel("Showing results \(activeResultPage * 10 + 1) through \(min((activeResultPage + 1) * 10, itemStates.count)) of \(itemStates.count)")
+
+            Button {
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
+                    activeResultPage = min(resultPageCount - 1, activeResultPage + 1)
+                }
+            } label: {
+                Image(systemName: "chevron.right")
+                    .frame(width: 44, height: 36)
+            }
+            .disabled(activeResultPage >= resultPageCount - 1)
+        }
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity)
+        .background(BrickValStyle.ScanResult.surface, in: .capsule)
+        .overlay { Capsule().stroke(BrickValStyle.ScanResult.border) }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("bulkResults.pageControl")
+    }
+
     private var revealedTotal: Double {
         itemStates.prefix(revealStep).reduce(0) { $0 + ($1.price ?? 0) }
     }
@@ -836,6 +936,11 @@ struct BulkScanResultsView: View {
         revealStep = 0
         revealSkipped = false
         didPlayRevealSound = false
+
+        if isDenseResultSet {
+            completeReveal()
+            return
+        }
 
         guard !reduceMotion else {
             completeReveal()
@@ -1022,18 +1127,25 @@ struct BulkScanResultsView: View {
         guard case .selecting(var session) = recoveryState else { return }
         let normalizedPoint = BulkRecoveryPoint(point)
 
-        if session.removeSelection(containing: normalizedPoint) {
+        if session.removeSelection(near: normalizedPoint) {
             recoveryHapticTrigger += 1
             recoveryState = .selecting(session)
             return
         }
 
         guard session.canAddSelection else { return }
+        let referenceBox = unresolvedRegionIndex.flatMap { index in
+            unresolvedRegions.indices.contains(index) ? unresolvedRegions[index] : nil
+        } ?? nearestKnownDetectionBox(to: normalizedPoint)
         let selection = BulkRecoverySelection(
             id: "selection-\(UUID().uuidString)",
             order: session.selectedCount,
             normalizedPoint: normalizedPoint,
-            focusBox: BulkRecoveryTapPlanner.focusBox(for: normalizedPoint.cgPoint),
+            focusBox: BulkRecoveryTapPlanner.recognitionBox(
+                for: normalizedPoint.cgPoint,
+                referenceBox: referenceBox
+            ),
+            visualAnchor: normalizedPoint,
             unresolvedRegionIndex: unresolvedRegionIndex
         )
         session.toggle(selection)
@@ -1041,6 +1153,20 @@ struct BulkScanResultsView: View {
         withAnimation(reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.84)) {
             recoveryState = .selecting(session)
         }
+    }
+
+    private func nearestKnownDetectionBox(to point: BulkRecoveryPoint) -> NormalizedBoundingBox? {
+        let candidates = itemStates.compactMap(\.item.boundingBox) + reviewItems.compactMap(\.boundingBox)
+        guard let nearest = candidates.min(by: { lhs, rhs in
+            distance(from: lhs.center, to: point) < distance(from: rhs.center, to: point)
+        }), distance(from: nearest.center, to: point) <= 0.18 else { return nil }
+        return nearest
+    }
+
+    private func distance(from point: CGPoint, to other: BulkRecoveryPoint) -> Double {
+        let dx = point.x - other.x
+        let dy = point.y - other.y
+        return (dx * dx + dy * dy).squareRoot()
     }
 
     private func checkSelectedFigures() {
@@ -1109,6 +1235,7 @@ struct BulkScanResultsView: View {
             boundingBox: review.boundingBox
         )
         itemStates.insert(BulkScanItemState(item: item), at: 0)
+        activeResultPage = 0
         reviewItems.removeAll { $0.id == review.id }
         focusedResultID = item.id
         recoveryConfirmation = "Added \(candidate.result.name) to review"
@@ -1121,7 +1248,7 @@ struct BulkScanResultsView: View {
         let item = BulkScanResultItem(
             id: "recovered-\(selection.id)",
             result: candidate.result,
-            boundingBox: selection.focusBox
+            boundingBox: selection.recognitionBox
         )
         itemStates.insert(BulkScanItemState(item: item), at: 0)
         unresolvedRegions.removeAll { region in
@@ -1129,7 +1256,8 @@ struct BulkScanResultsView: View {
                 && selection.normalizedPoint.y >= region.y && selection.normalizedPoint.y <= region.y + region.height
         }
         focusedResultID = item.id
-        session.advanceAfterCandidateSelection()
+        session.advanceAfterCandidateSelection(value: candidate.result.pricing.preferredUsedValue)
+        activeResultPage = 0
         if session.currentReviewOutcome == nil {
             finishRecovery(session)
         } else {
@@ -1164,72 +1292,69 @@ private struct RecoverySelectionOverlay: View {
     let number: Int
     let accent: Color
     let isFocused: Bool
+    let confirmedValue: Double?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var focusSize: CGSize {
-        CGSize(
-            width: min(max(targetRect.width * 0.82, 112), min(containerSize.width - 28, 210)),
-            height: min(max(targetRect.height * 0.42, 112), min(containerSize.height - 28, 190))
-        )
+    private var glowSize: CGFloat {
+        min(max(max(targetRect.width, targetRect.height) * 0.34, 46), 92)
     }
 
     private var clampedCenter: CGPoint {
-        let size = focusSize
+        let inset = glowSize / 2 + 8
         return CGPoint(
-            x: min(max(center.x, size.width / 2 + 14), containerSize.width - size.width / 2 - 14),
-            y: min(max(center.y, size.height / 2 + 14), containerSize.height - size.height / 2 - 14)
+            x: min(max(center.x, inset), containerSize.width - inset),
+            y: min(max(center.y, inset), containerSize.height - inset)
         )
     }
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            RecoveryFocusCorners()
-                .stroke(
-                    accent.opacity(isFocused || reduceMotion ? 1 : 0.72),
-                    style: StrokeStyle(lineWidth: isFocused ? 4 : 3, lineCap: .round, lineJoin: .round)
-                )
-                .background {
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(accent.opacity(isFocused ? 0.045 : 0.02))
-                }
-            Text("\(number)")
-                .font(.caption.bold().monospacedDigit())
-                .foregroundStyle(.black)
-                .frame(minWidth: 28, minHeight: 28)
-                .background(accent, in: .circle)
-                .offset(x: -4, y: -4)
+        VStack(spacing: 3) {
+            ZStack(alignment: .topTrailing) {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                accent.opacity(isFocused ? 0.72 : 0.38),
+                                accent.opacity(isFocused ? 0.22 : 0.10),
+                                .clear,
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: glowSize / 2
+                        )
+                    )
+                    .frame(width: glowSize, height: glowSize)
+                    .overlay {
+                        Circle()
+                            .stroke(accent.opacity(isFocused ? 0.72 : 0.34), lineWidth: 1.5)
+                            .padding(glowSize * 0.18)
+                    }
+                Text("\(number)")
+                    .font(.caption2.bold().monospacedDigit())
+                    .foregroundStyle(.black)
+                    .frame(minWidth: 24, minHeight: 24)
+                    .background(accent, in: .circle)
+                    .offset(x: 3, y: -3)
+            }
+
+            if let confirmedValue {
+                Text(confirmedValue, format: .currency(code: "USD"))
+                    .font(.caption2.bold().monospacedDigit())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(.black.opacity(0.78), in: .capsule)
+            }
         }
-        .frame(width: focusSize.width, height: focusSize.height)
-        .shadow(color: accent.opacity(isFocused ? 0.28 : 0.08), radius: 8)
+        .frame(minWidth: 44, minHeight: 44)
+        .shadow(color: accent.opacity(isFocused ? 0.36 : 0.14), radius: isFocused ? 16 : 8)
+        .opacity(isFocused || confirmedValue != nil ? 1 : 0.82)
+        .scaleEffect(reduceMotion ? 1 : (isFocused ? 1.06 : 1))
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.22), value: isFocused)
         .position(clampedCenter)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-    }
-}
-
-private struct RecoveryFocusCorners: Shape {
-    func path(in rect: CGRect) -> Path {
-        let length = min(28, min(rect.width, rect.height) * 0.24)
-        var path = Path()
-
-        path.move(to: CGPoint(x: rect.minX + length, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + length))
-
-        path.move(to: CGPoint(x: rect.maxX - length, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + length))
-
-        path.move(to: CGPoint(x: rect.minX, y: rect.maxY - length))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX + length, y: rect.maxY))
-
-        path.move(to: CGPoint(x: rect.maxX, y: rect.maxY - length))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.maxX - length, y: rect.maxY))
-
-        return path
     }
 }
 

@@ -57,13 +57,10 @@ actor ImageProcessor {
     ) throws -> Data {
         guard let image = UIImage(data: data) else { throw CameraError.invalidImage }
         let normalized = normalize(image)
-        let center = CGPoint(
-            x: focusBox.x + focusBox.width / 2,
-            y: focusBox.y + focusBox.height / 2
-        )
-        guard let rect = BulkRecoveryCropPlanner.cropRect(
-            around: center,
-            imageSize: normalized.size
+        guard let rect = FocusedScanCropPlanner.cropRect(
+            for: focusBox,
+            imageSize: normalized.size,
+            contextRatio: 0.20
         ) else {
             throw CameraError.invalidImage
         }

@@ -1,8 +1,13 @@
 import Foundation
 
+enum BulkScanSource: String, Codable, Sendable {
+    case camera
+    case photoLibrary
+}
+
 struct BrickValAPIClient: Sendable {
     var scanMinifigure: @Sendable (Data) async throws -> MinifigScanResult
-    var scanBulkMinifigures: @Sendable (Data, [BulkScanRegion]) async throws -> BulkMinifigScanPayload
+    var scanBulkMinifigures: @Sendable (Data, [BulkScanRegion], BulkScanSource) async throws -> BulkMinifigScanPayload
     var recoverBulkMinifigure: @Sendable (Data, String) async throws -> BulkRecoveryPayload
     var identify: @Sendable (Data, ScanMode, ScanIntent) async throws -> IdentificationResult
     var lookup: @Sendable (String, ItemType, Int?) async throws -> LookupResult
@@ -59,15 +64,17 @@ extension BrickValAPIClient {
                     return .notFound(timings: payload.timings)
                 }
             },
-            scanBulkMinifigures: { imageData, regions in
+            scanBulkMinifigures: { imageData, regions, source in
                 var form = MultipartFormData()
                 form.append(name: "image", filename: "bulk-scan.jpg", contentType: "image/jpeg", fileData: imageData)
                 let encoder = JSONEncoder()
-                let regionData = try encoder.encode(Array(regions.prefix(10)))
+                let regionLimit = source == .photoLibrary ? 40 : 10
+                let regionData = try encoder.encode(Array(regions.prefix(regionLimit)))
                 guard let regionJSON = String(data: regionData, encoding: .utf8) else {
                     throw APIError(endpoint: "bulk minifig scan", statusCode: 0, serverMessage: "The scan regions could not be prepared.")
                 }
                 form.append(name: "regions", value: regionJSON)
+                form.append(name: "scanSource", value: source.rawValue)
                 form.finalize()
                 let request = try await request(
                     baseURL: configuration.baseURL,

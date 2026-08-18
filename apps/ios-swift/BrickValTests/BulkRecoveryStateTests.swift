@@ -36,7 +36,7 @@ struct BulkRecoveryStateTests {
         session.toggle(first)
         session.toggle(second)
 
-        let didRemove = session.removeSelection(containing: first.normalizedPoint)
+        let didRemove = session.removeSelection(near: first.normalizedPoint)
         #expect(didRemove)
         #expect(session.selections.map(\.id) == ["selection-1"])
     }
@@ -48,7 +48,7 @@ struct BulkRecoveryStateTests {
         session.toggle(selection(1))
         session.toggle(selection(2))
 
-        let didRemove = session.removeSelection(containing: selection(1).normalizedPoint)
+        let didRemove = session.removeSelection(near: selection(1).normalizedPoint)
         session.toggle(selection(3))
 
         #expect(didRemove)

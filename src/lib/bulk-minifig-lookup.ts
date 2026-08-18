@@ -25,9 +25,10 @@ async function lookupOneMinifig(figNumber: string): Promise<BulkMinifigLookupRow
 
 export async function lookupBulkMinifigures(
   identifiers: unknown[],
-  concurrency = 5
+  concurrency = 5,
+  limit = 40
 ): Promise<BulkMinifigLookupRow[]> {
-  const figNumbers = sanitizeBulkMinifigNumbers(identifiers, 10);
+  const figNumbers = sanitizeBulkMinifigNumbers(identifiers, limit);
   const rows: BulkMinifigLookupRow[] = [];
   for (let index = 0; index < figNumbers.length; index += concurrency) {
     rows.push(...await Promise.all(figNumbers.slice(index, index + concurrency).map(lookupOneMinifig)));

@@ -48,9 +48,9 @@ struct ScanProcessingOverlayView: View {
     private var title: String {
         switch phase {
         case .capturing:
-            "Locking the photo"
+            intent == .bulk ? "Finding minifigures" : "Locking the photo"
         case .identifying:
-            intent == .bulk ? "Reading the group" : "Finding the best match"
+            intent == .bulk ? "Checking matches" : "Finding the best match"
         default:
             "Finishing the scan"
         }
@@ -59,7 +59,9 @@ struct ScanProcessingOverlayView: View {
     private var subtitle: String {
         switch phase {
         case .capturing:
-            "Keeping this exact frame for analysis."
+            intent == .bulk
+                ? "Searching the photo for every visible figure."
+                : "Keeping this exact frame for analysis."
         case .identifying:
             intent == .bulk
                 ? "Matching and pricing each minifigure."

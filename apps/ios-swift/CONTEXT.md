@@ -1,6 +1,6 @@
 # BrickVal Native iOS Context
 
-Last verified: 2026-08-15
+Last verified: 2026-08-18
 
 This is the working context for the canonical BrickVal mobile app. It is intentionally specific to the native SwiftUI app. Repository-wide rules remain in [`AGENTS.md`](../../AGENTS.md).
 
@@ -79,9 +79,9 @@ The bundled model is `coreml-v3-500`, trained with Create ML. Its source-data at
 
 The native bulk scan flow is:
 
-1. The bundled Core ML model provides live framing boxes at up to three frames per second. A short-lived local tracker retains boxes through detector flicker, so the capture manifest does not lose a visible figure because of one empty frame. Bulk capture remains manual and supports up to 10 front-facing, separated figures.
-2. The user captures one exact camera frame. Fresh local boxes are sent as normalized regions with a resized JPEG.
-3. `/api/minifig/bulk-scan` runs one full-image recognition request plus guided crops and overlapping coverage crops. The backend favors recall over latency, associates results to physical regions, collapses overlapping provider duplicates, and prices unique identifiers.
+1. The bundled Core ML model provides live framing boxes at up to three frames per second. A short-lived local tracker retains boxes through detector flicker, so the capture manifest does not lose a visible figure because of one empty frame. Live camera bulk capture remains manual and supports up to 10 front-facing, separated figures.
+2. A camera capture sends fresh local boxes as normalized regions with a resized JPEG. A photo-library import first runs the same model over overlapping tiles, merges duplicate detections, sorts them spatially, and sends up to 40 regions. Photo imports show `Finding minifigures` before recognition.
+3. `/api/minifig/bulk-scan` runs one full-image recognition request plus spatial guided crops and overlapping coverage crops. Photo-library requests group at most five figures per crop, use at most eight guided provider requests with three concurrent requests, and upscale small crops before recognition. The backend favors recall, associates results to physical regions, collapses overlapping provider duplicates, and prices unique identifiers.
 4. The server returns confirmed results, ambiguous candidates for user review, unresolved regions for tap-to-recover, and a short-lived recovery token. It consumes the introductory bulk allowance only when at least one priced result or review candidate remains.
 5. The captured image is frozen over the live camera while identification runs, with a visible progress overlay so the user knows the scan is active.
 6. Missing, unresolved, non-minifigure, and unpriced results are excluded.
@@ -89,7 +89,7 @@ The native bulk scan flow is:
 8. Selection and New/Used changes update the total immediately.
 9. Add saves all selected items through one atomic collection operation. A failed save must not leave a partial collection.
 10. Successful Add closes the sheet, resets the scanner, and shows confirmation. Retake or Close returns to the live scanner.
-11. Recovery is a multi-figure workflow: users enter `Review X missed figures`, tap up to 10 physical figures in order, and see numbered accent corner brackets. Tapping an existing bracket removes that selection and renumbers the remaining queue.
+11. Recovery is a multi-figure workflow: users enter `Review X missed figures`, tap up to 10 physical figures in order, and see a compact accent glow with a selection number. Tapping near an existing glow removes that selection and renumbers the remaining queue; visible recognition crops remain separate from the selection indicator, and a confirmed match can show its value in the glow.
 12. `Check X figures` processes selected crops with at most two concurrent recovery requests and determinate progress. Successful candidates are reviewed one figure at a time in tap order; `None match` skips an outcome and the final banner reports partial success.
 13. Recovery cancellation invalidates stale responses. Cancelling during processing preserves the numbered selections for adjustment and retry; cancelling normal selection or candidate review returns to the unchanged result list. Retake always returns to the live scanner.
 14. Recovery tokens remain valid for 10 minutes and are budgeted server-side at 20 calls per token window, allowing up to 10 selected figures plus one retry each. The backend rate-limit key hashes the signed token and never uses the client IP.
@@ -126,6 +126,7 @@ Bulk result UI requirements:
 - The current policy enables three successful single-minifigure scans per UTC day, repeat-bulk, 10-unique-item collection, and appearance gates. The 3M/6M history gate remains implemented but disabled by server policy.
 - Anonymous scan usage is local to the device. Signed-in usage is enforced by atomic `user_feature_usage` records across devices.
 - Manual number lookups, failed matches, network failures, cancellations, and retries do not consume scan usage.
+- Bulk request `scanSource` defaults to `camera` for older clients. The server caps camera requests at 10 regions and photo-library requests at 40; imported photo detection never silently falls back to an empty region list.
 
 ## Build And Test
 

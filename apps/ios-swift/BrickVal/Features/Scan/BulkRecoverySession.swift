@@ -21,20 +21,25 @@ struct BulkRecoverySelection: Identifiable, Hashable, Sendable {
     let id: String
     let order: Int
     let normalizedPoint: BulkRecoveryPoint
-    let focusBox: NormalizedBoundingBox
+    let recognitionBox: NormalizedBoundingBox
+    let visualAnchor: BulkRecoveryPoint
     let unresolvedRegionIndex: Int?
+
+    var focusBox: NormalizedBoundingBox { recognitionBox }
 
     init(
         id: String,
         order: Int = 0,
         normalizedPoint: BulkRecoveryPoint,
         focusBox: NormalizedBoundingBox,
+        visualAnchor: BulkRecoveryPoint? = nil,
         unresolvedRegionIndex: Int? = nil
     ) {
         self.id = id
         self.order = order
         self.normalizedPoint = normalizedPoint
-        self.focusBox = focusBox
+        self.recognitionBox = focusBox
+        self.visualAnchor = visualAnchor ?? normalizedPoint
         self.unresolvedRegionIndex = unresolvedRegionIndex
     }
 }
@@ -81,6 +86,7 @@ struct BulkRecoverySession: Sendable {
     private(set) var reviewIndex = 0
     private(set) var acceptedCount = 0
     private(set) var skippedCount = 0
+    private(set) var confirmedValues: [String: Double] = [:]
 
     var selectedCount: Int { selections.count }
     var totalCount: Int { selections.count }
@@ -104,20 +110,34 @@ struct BulkRecoverySession: Sendable {
                 order: selections.count,
                 normalizedPoint: selection.normalizedPoint,
                 focusBox: selection.focusBox,
+                visualAnchor: selection.visualAnchor,
                 unresolvedRegionIndex: selection.unresolvedRegionIndex
             )
         )
     }
 
-    mutating func removeSelection(containing point: BulkRecoveryPoint) -> Bool {
-        guard let index = selections.firstIndex(where: { $0.focusBox.contains(point) }) else { return false }
+    mutating func removeSelection(near point: BulkRecoveryPoint) -> Bool {
+        guard let index = selections.firstIndex(where: {
+            let dx = $0.visualAnchor.x - point.x
+            let dy = $0.visualAnchor.y - point.y
+            return (dx * dx + dy * dy).squareRoot() <= 0.09
+        }) else { return false }
         selections.remove(at: index)
         renumberSelections()
         return true
     }
 
+    @available(*, deprecated, message: "Use removeSelection(near:) to avoid oversized recognition crops.")
+    mutating func removeSelection(containing point: BulkRecoveryPoint) -> Bool {
+        removeSelection(near: point)
+    }
+
     func containsSelection(at point: BulkRecoveryPoint) -> Bool {
-        selections.contains { $0.focusBox.contains(point) }
+        selections.contains {
+            let dx = $0.visualAnchor.x - point.x
+            let dy = $0.visualAnchor.y - point.y
+            return (dx * dx + dy * dy).squareRoot() <= 0.09
+        }
     }
 
     mutating func beginProcessing() {
@@ -126,6 +146,7 @@ struct BulkRecoverySession: Sendable {
         reviewIndex = 0
         acceptedCount = 0
         skippedCount = 0
+        confirmedValues = [:]
     }
 
     mutating func updateProgress(_ count: Int) {
@@ -138,7 +159,10 @@ struct BulkRecoverySession: Sendable {
         skippedCount = self.outcomes.filter { !$0.isMatched }.count
     }
 
-    mutating func advanceAfterCandidateSelection() {
+    mutating func advanceAfterCandidateSelection(value: Double? = nil) {
+        if let value, let selection = currentReviewOutcome?.selection {
+            confirmedValues[selection.id] = value
+        }
         acceptedCount += 1
         reviewIndex += 1
     }
@@ -155,6 +179,7 @@ struct BulkRecoverySession: Sendable {
                 order: index,
                 normalizedPoint: selection.normalizedPoint,
                 focusBox: selection.focusBox,
+                visualAnchor: selection.visualAnchor,
                 unresolvedRegionIndex: selection.unresolvedRegionIndex
             )
         }

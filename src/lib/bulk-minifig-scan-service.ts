@@ -5,6 +5,7 @@ import {
   assignDetectionsToRegions,
   mergeBulkDetections,
   planAccuracyBulkRecoveryCrops,
+  planPhotoLibraryFallbackCrops,
   planGuidedBulkCrops,
   unresolvedBulkRegions,
   type BulkManifestRegion,
@@ -42,10 +43,12 @@ export type BulkMinifigScanResult = {
   timings: BulkScanTimings;
 };
 
+export type BulkScanSource = "camera" | "photoLibrary";
+
 export async function runBulkMinifigScan(
   imageFile: File,
   regions: BulkManifestRegion[],
-  options: { guided?: boolean } = {}
+  options: { guided?: boolean; source?: BulkScanSource } = {}
 ): Promise<BulkMinifigScanResult> {
   const startedAt = performance.now();
   const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
@@ -53,22 +56,29 @@ export async function runBulkMinifigScan(
   const imageWidth = source.bitmap.width;
   const imageHeight = source.bitmap.height;
   const guided = options.guided !== false;
-  const crops = guided && regions.length ? planGuidedBulkCrops(regions) : [];
-  const accuracyRecoveryCrops = planAccuracyBulkRecoveryCrops();
+  const scanSource = options.source ?? "camera";
+  const regionLimit = scanSource === "photoLibrary" ? 40 : 10;
+  const crops = guided && regions.length ? planGuidedBulkCrops(regions, regionLimit) : [];
+  const accuracyRecoveryCrops = scanSource === "photoLibrary"
+    ? planPhotoLibraryFallbackCrops()
+    : planAccuracyBulkRecoveryCrops();
+  const maxGuidedProviderRequests = 8;
   const coverageCrops = regions.length < 4
-    ? accuracyRecoveryCrops.map((boundingBox) => ({ boundingBox, regions: [] }))
+    ? accuracyRecoveryCrops
+      .slice(0, Math.max(0, maxGuidedProviderRequests - crops.length))
+      .map((boundingBox) => ({ boundingBox, regions: [] }))
     : [];
   const preprocessingFinishedAt = performance.now();
 
-  const jobs: Array<Promise<NonSetDetection[]>> = [
-    identifyNonSet(imageFile, {
+  const jobs: Array<() => Promise<NonSetDetection[]>> = [
+    () => identifyNonSet(imageFile, {
       bulk: true,
       skipRecovery: true,
       throwOnFailure: true,
       timeoutMilliseconds: 9_000,
     }).then((response) => response.detections),
-    ...crops.map((crop, index) => identifyCrop(source, crop, index, imageWidth, imageHeight)),
-    ...coverageCrops.map((crop, index) => identifyCrop(
+    ...crops.map((crop, index) => () => identifyCrop(source, crop, index, imageWidth, imageHeight)),
+    ...coverageCrops.map((crop, index) => () => identifyCrop(
       source,
       crop,
       crops.length + index,
@@ -77,7 +87,7 @@ export async function runBulkMinifigScan(
       5_000
     )),
   ];
-  const firstWave = await Promise.allSettled(jobs);
+  const firstWave = await allSettledWithConcurrency(jobs, 3);
   const fulfilled = firstWave.filter(
     (result): result is PromiseFulfilledResult<NonSetDetection[]> => result.status === "fulfilled"
   );
@@ -87,36 +97,50 @@ export async function runBulkMinifigScan(
   let providerRequests = jobs.length;
   let partial = firstWave.some((result) => result.status === "rejected");
   const unresolved = guided ? unresolvedBulkRegions(regions, collected) : [];
-  const detectedCount = mergeBulkDetections(collected).length;
+  const detectedCount = mergeBulkDetections(collected, regionLimit).length;
   const shouldRunCoverageRecovery = regions.length < 4 || detectedCount < Math.min(4, regions.length);
   const recoveryBudgetMilliseconds = 10_000;
   if (shouldRunCoverageRecovery && coverageCrops.length === 0 && performance.now() - startedAt < recoveryBudgetMilliseconds) {
-    const recoveryCrops = accuracyRecoveryCrops.map((boundingBox) => ({
+    const recoveryCrops = accuracyRecoveryCrops
+      .slice(0, Math.max(0, maxGuidedProviderRequests - crops.length))
+      .map((boundingBox) => ({
       boundingBox,
       regions: [],
     }));
-    const retries = await Promise.allSettled(recoveryCrops.map((crop, index) => identifyCrop(
-      source,
-      crop,
-      crops.length + index,
-      imageWidth,
-      imageHeight,
-      5_000
-    )));
+    const retries = await allSettledWithConcurrency(
+      recoveryCrops.map((crop, index) => () => identifyCrop(
+        source,
+        crop,
+        crops.length + index,
+        imageWidth,
+        imageHeight,
+        5_000
+      )),
+      3
+    );
     providerRequests += retries.length;
     partial ||= retries.some((result) => result.status === "rejected");
     collected.push(...retries.flatMap((result) => result.status === "fulfilled" ? result.value : []));
   }
 
-  if (unresolved.length && performance.now() - startedAt < recoveryBudgetMilliseconds) {
-    const retries = await Promise.allSettled(unresolved.map((region, index) => identifyCrop(
-      source,
-      { boundingBox: paddedRegionBox(region.boundingBox, 0.4), regions: [region] },
-      crops.length + accuracyRecoveryCrops.length + index,
-      imageWidth,
-      imageHeight,
-      4_000
-    )));
+  // Library requests already spend their guided budget across the eight
+  // spatial groups. Leave remaining regions for the in-app recovery flow
+  // instead of turning a dense photo into one provider request per figure.
+  if (scanSource === "camera" && unresolved.length && performance.now() - startedAt < recoveryBudgetMilliseconds) {
+    const guidedRequestsUsed = crops.length + coverageCrops.length;
+    const retries = await allSettledWithConcurrency(
+      unresolved
+        .slice(0, Math.max(0, maxGuidedProviderRequests - guidedRequestsUsed))
+        .map((region, index) => () => identifyCrop(
+          source,
+          { boundingBox: paddedRegionBox(region.boundingBox, 0.4), regions: [region] },
+          crops.length + coverageCrops.length + index,
+          imageWidth,
+          imageHeight,
+          4_000
+        )),
+      3
+    );
     providerRequests += retries.length;
     partial ||= retries.some((result) => result.status === "rejected");
     collected.push(...retries.flatMap((result) => result.status === "fulfilled" ? result.value : []));
@@ -135,13 +159,13 @@ export async function runBulkMinifigScan(
     ...collected.filter((detection) => Boolean(detection.regionId)),
     ...assignedRecoveryDetections,
     ...collected.filter((detection) => !detection.regionId && !assignedRecoveryKeys.has(detectionKey(detection))),
-  ]);
+  ], regionLimit);
   const identificationFinishedAt = performance.now();
   const candidateIDs = detections.flatMap((detection) => [
     detection.id,
     ...(detection.alternatives ?? []).map((candidate) => candidate.id),
   ]);
-  const lookupRows = await lookupBulkMinifigures(candidateIDs);
+  const lookupRows = await lookupBulkMinifigures(candidateIDs, 5, regionLimit);
   const pricedByIdentifier = new Map(
     lookupRows.filter(hasUsableMinifigPrice).map((row) => [row.figNumber.toLowerCase(), row.result])
   );
@@ -218,6 +242,7 @@ async function identifyCrop(
 ): Promise<NonSetDetection[]> {
   const rect = pixelRect(crop.boundingBox, imageWidth, imageHeight);
   const cropped = source.clone().crop(rect.left, rect.top, rect.width, rect.height).quality(84);
+  if (Math.max(cropped.bitmap.width, cropped.bitmap.height) < 896) cropped.scaleToFit(896, 896);
   if (Math.max(cropped.bitmap.width, cropped.bitmap.height) > 1280) cropped.scaleToFit(1280, 1280);
   const data = await cropped.getBufferAsync("image/jpeg");
   const arrayBuffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
@@ -282,4 +307,28 @@ function pixelRect(box: NormalizedRegionBox, width: number, height: number) {
   const right = Math.min(width, Math.ceil((box.x + box.width) * width));
   const bottom = Math.min(height, Math.ceil((box.y + box.height) * height));
   return { left, top, width: Math.max(1, right - left), height: Math.max(1, bottom - top) };
+}
+
+async function allSettledWithConcurrency<T>(
+  jobs: Array<() => Promise<T>>,
+  concurrency: number
+): Promise<Array<PromiseSettledResult<T>>> {
+  const results = new Array<PromiseSettledResult<T>>(jobs.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, concurrency), jobs.length);
+
+  async function worker() {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= jobs.length) return;
+      try {
+        results[index] = { status: "fulfilled", value: await jobs[index]() };
+      } catch (reason) {
+        results[index] = { status: "rejected", reason };
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
 }

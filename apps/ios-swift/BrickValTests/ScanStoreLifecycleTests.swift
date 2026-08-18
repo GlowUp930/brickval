@@ -43,8 +43,9 @@ struct ScanStoreLifecycleTests {
     func importedPhotoUsesBulkScanPipeline() async throws {
         let api = BrickValAPIClient(
             scanMinifigure: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
-            scanBulkMinifigures: { _, regions in
-                #expect(regions.isEmpty)
+            scanBulkMinifigures: { _, regions, source in
+                #expect(regions.map(\.regionId) == ["photo-1"])
+                #expect(source == .photoLibrary)
                 let json = #"""
                 {
                     "items": [],
@@ -72,7 +73,15 @@ struct ScanStoreLifecycleTests {
             registerNotificationDevice: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
             unregisterNotificationDevice: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint }
         )
-        let store = ScanStore(api: api)
+        let store = ScanStore(
+            api: api,
+            bulkPhotoDetector: StubBulkPhotoDetector(
+                regions: [BulkScanRegion(
+                    regionId: "photo-1",
+                    boundingBox: NormalizedBoundingBox(x: 0.2, y: 0.2, width: 0.3, height: 0.5)
+                )]
+            )
+        )
         store.intent = .bulk
 
         await store.importBulkPhoto(try recoveryImageData())
@@ -88,7 +97,7 @@ struct ScanStoreLifecycleTests {
         let payload = try recoveryPayload()
         let api = BrickValAPIClient(
             scanMinifigure: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
-            scanBulkMinifigures: { _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            scanBulkMinifigures: { _, _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
             recoverBulkMinifigure: { _, _ in
                 await probe.begin()
                 try await Task.sleep(for: .milliseconds(30))
@@ -192,10 +201,23 @@ private actor RecoveryConcurrencyProbe {
     func maximumInFlight() -> Int { maximum }
 }
 
+private struct StubBulkPhotoDetector: BulkPhotoDetecting {
+    let regions: [BulkScanRegion]
+
+    func detectBulkRegions(in imageData: Data, limit: Int) async throws -> BulkPhotoDetectionBatch {
+        BulkPhotoDetectionBatch(
+            regions: Array(regions.prefix(limit)),
+            inferenceMilliseconds: 12,
+            modelVersion: "test-detector",
+            tileCount: 26
+        )
+    }
+}
+
 private extension BrickValAPIClient {
     static let successfulLookupStub = BrickValAPIClient(
         scanMinifigure: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
-        scanBulkMinifigures: { _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+        scanBulkMinifigures: { _, _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
         recoverBulkMinifigure: { _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
         identify: { _, _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
         lookup: { identifier, type, _ in

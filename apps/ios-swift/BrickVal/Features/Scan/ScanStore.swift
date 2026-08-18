@@ -36,6 +36,7 @@ final class ScanStore {
     @ObservationIgnored private let imageProcessor: ImageProcessor
     @ObservationIgnored private let api: BrickValAPIClient
     @ObservationIgnored private let detector: any MinifigureDetecting
+    @ObservationIgnored private let bulkPhotoDetector: any BulkPhotoDetecting
     @ObservationIgnored private let soundEffects: SoundEffectPlayer
     @ObservationIgnored private var monetization: MonetizationStore?
     @ObservationIgnored private var isProSubscriber = false
@@ -59,6 +60,7 @@ final class ScanStore {
         imageProcessor: ImageProcessor = ImageProcessor(),
         api: BrickValAPIClient = .live(),
         detector: any MinifigureDetecting = CoreMLMinifigureDetector(),
+        bulkPhotoDetector: (any BulkPhotoDetecting)? = nil,
         onDeviceSmartScanEnabled: Bool = true
     ) {
         self.camera = camera
@@ -66,6 +68,7 @@ final class ScanStore {
         self.imageProcessor = imageProcessor
         self.api = api
         self.detector = detector
+        self.bulkPhotoDetector = bulkPhotoDetector ?? (detector as? any BulkPhotoDetecting) ?? NoopBulkPhotoDetector()
         self.soundEffects = SoundEffectPlayer()
         smartScanAvailable = onDeviceSmartScanEnabled
         smartScanMessage = onDeviceSmartScanEnabled
@@ -212,13 +215,28 @@ final class ScanStore {
             phase = .capturing
             let captureStartedAt = Date.now
             frozenImageData = data
-            frozenBulkRegions = []
+            let detection = try await bulkPhotoDetector.detectBulkRegions(
+                in: data,
+                limit: 40
+            )
+            frozenBulkRegions = detection.regions
+            detectorModelVersion = detection.modelVersion
+            detectorDetectionMilliseconds = detection.inferenceMilliseconds
             attemptedProAccessRecovery = false
             logCaptureDuration(since: captureStartedAt, automatic: false)
-            try await identify(imageData: data, bulkRegions: [])
+            try await identify(
+                imageData: data,
+                bulkRegions: detection.regions,
+                bulkSource: .photoLibrary
+            )
         } catch {
             await handleIdentificationError(error)
         }
+    }
+
+    func importBulkPhotoLoadFailed() async {
+        guard intent == .bulk else { return }
+        phase = .failed("We couldn't load that photo. Check your Photos permission and choose another image.")
     }
 
     func identifyGalleryImage(_ data: Data) async {
@@ -459,20 +477,22 @@ final class ScanStore {
     private func identify(
         imageData: Data,
         focusBox: NormalizedBoundingBox? = nil,
-        bulkRegions: [BulkScanRegion] = []
+        bulkRegions: [BulkScanRegion] = [],
+        bulkSource: BulkScanSource = .camera
     ) async throws {
         let startedAt = Date.now
         phase = .identifying
         frozenImageData = imageData
         if mode == .minifig, intent == .bulk {
             let image = try await imageProcessor.bulkScanImage(from: imageData)
-            let response = try await api.scanBulkMinifigures(image, bulkRegions)
+            let response = try await api.scanBulkMinifigures(image, bulkRegions, bulkSource)
             let items = response.items.map(\.normalized)
             guard let frozenImageData,
                   !items.isEmpty || !response.reviewItems.isEmpty || !response.unresolvedRegions.isEmpty
             else {
                 self.frozenImageData = nil
-                phase = .failed("No priced minifigures were found. Try a brighter photo with up to 10 figures separated and facing forward.")
+                let limit = bulkSource == .photoLibrary ? 40 : 10
+                phase = .failed("No priced minifigures were found. Try a brighter photo with up to \(limit) figures separated and facing forward.")
                 return
             }
             monetization?.recordSuccessfulBulk(serverUsage: response.usage)

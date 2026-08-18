@@ -1,8 +1,12 @@
 import type { NonSetDetection } from "./identify-nonset";
 
 export const MAX_GUIDED_BULK_IMAGES = 4;
-export const MAX_GUIDED_BULK_REGIONS = 40;
+export const MAX_CAMERA_BULK_REGIONS = 10;
+export const MAX_LIBRARY_BULK_REGIONS = 40;
+export const MAX_GUIDED_BULK_REGIONS = MAX_LIBRARY_BULK_REGIONS;
 export const MAX_GUIDED_REGIONS_PER_IMAGE = 10;
+export const MAX_GUIDED_BULK_CROPS = 8;
+export const MAX_GUIDED_REGIONS_PER_CROP = 5;
 export const MAX_GUIDED_BULK_BYTES = Math.floor(3.5 * 1024 * 1024);
 
 export type NormalizedRegionBox = { x: number; y: number; width: number; height: number };
@@ -80,7 +84,10 @@ export function parseBulkRegionManifest(value: unknown): BulkRegionManifest | nu
   return { shards };
 }
 
-export function parseBulkRegions(value: unknown): BulkManifestRegion[] | null {
+export function parseBulkRegions(
+  value: unknown,
+  maxRegions = MAX_CAMERA_BULK_REGIONS
+): BulkManifestRegion[] | null {
   if (typeof value !== "string") return null;
   let raw: unknown;
   try {
@@ -88,7 +95,7 @@ export function parseBulkRegions(value: unknown): BulkManifestRegion[] | null {
   } catch {
     return null;
   }
-  if (!Array.isArray(raw) || raw.length > 10) return null;
+  if (!Array.isArray(raw) || raw.length > maxRegions) return null;
   const seen = new Set<string>();
   const regions: BulkManifestRegion[] = [];
   for (const candidate of raw) {
@@ -128,17 +135,21 @@ export function assignDetectionsToRegions(
   return assigned;
 }
 
-export function planGuidedBulkCrops(regions: BulkManifestRegion[]): GuidedBulkCrop[] {
+export function planGuidedBulkCrops(
+  regions: BulkManifestRegion[],
+  maxRegions = MAX_CAMERA_BULK_REGIONS
+): GuidedBulkCrop[] {
   const validRegions = regions
     .filter((region) => parseBox(region.boundingBox) !== null)
-    .slice(0, 10)
+    .slice(0, maxRegions)
     .sort((a, b) => {
       const rowDelta = a.boundingBox.y - b.boundingBox.y;
       return Math.abs(rowDelta) > 0.12 ? rowDelta : a.boundingBox.x - b.boundingBox.x;
     });
   if (!validRegions.length) return fallbackQuadrants();
 
-  const groupCount = Math.min(MAX_GUIDED_BULK_IMAGES, validRegions.length);
+  const maxCrops = maxRegions > MAX_CAMERA_BULK_REGIONS ? MAX_GUIDED_BULK_CROPS : MAX_GUIDED_BULK_IMAGES;
+  const groupCount = Math.min(maxCrops, Math.ceil(validRegions.length / MAX_GUIDED_REGIONS_PER_CROP));
   const groupSize = Math.ceil(validRegions.length / groupCount);
   const groups = Array.from(
     { length: groupCount },
@@ -150,7 +161,31 @@ export function planGuidedBulkCrops(regions: BulkManifestRegion[]): GuidedBulkCr
   }));
 }
 
-export function mergeBulkDetections(detections: NonSetDetection[]): NonSetDetection[] {
+/** Coverage fallback for imported photos where the local detector found no regions. */
+export function planPhotoLibraryFallbackCrops(): NormalizedRegionBox[] {
+  const columns = 4;
+  const rows = 2;
+  const tileWidth = 0.42;
+  const tileHeight = 0.68;
+  const horizontalStep = (1 - tileWidth) / (columns - 1);
+  const verticalStep = (1 - tileHeight) / (rows - 1);
+
+  return Array.from({ length: rows * columns }, (_, index) => {
+    const row = Math.floor(index / columns);
+    const column = index % columns;
+    return {
+      x: column * horizontalStep,
+      y: row * verticalStep,
+      width: tileWidth,
+      height: tileHeight,
+    };
+  });
+}
+
+export function mergeBulkDetections(
+  detections: NonSetDetection[],
+  maxRegions = MAX_CAMERA_BULK_REGIONS
+): NonSetDetection[] {
   const kept: NonSetDetection[] = [];
   for (const candidate of [...detections].sort((a, b) => {
     const guidedDelta = Number(Boolean(b.regionId)) - Number(Boolean(a.regionId));
@@ -166,7 +201,7 @@ export function mergeBulkDetections(detections: NonSetDetection[]): NonSetDetect
     });
     if (!duplicate) kept.push(candidate);
   }
-  return withStableFallbackRegionIds(kept).slice(0, 10);
+  return withStableFallbackRegionIds(kept).slice(0, maxRegions);
 }
 
 export function unresolvedBulkRegions(
