@@ -56,6 +56,11 @@ final class AppSDKCoordinator: SuperwallDelegate {
         if let dsn = Self.configurationValue("SentryDSN") {
             SentrySDK.start { options in
                 options.dsn = dsn
+                let bundle = Bundle.main
+                let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+                let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+                options.releaseName = "com.brickval.app@\(version)+\(build)"
+                options.environment = "production"
                 options.sendDefaultPii = false
                 options.enableAutoSessionTracking = true
             }
