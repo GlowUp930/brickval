@@ -199,7 +199,7 @@ struct OnboardingView: View {
         preferences.shouldReturnToOnboardingAccount = false
         preferences.hasCompletedOnboarding = true
         if !isReplay {
-            monetization.enrollNewUserIfNeeded()
+            monetization.enrollNewUserIfNeeded(seed: coordinator?.superwallSeed)
         }
         coordinator?.setMonetizationCohort(monetization.accessCohort)
         onFinish()

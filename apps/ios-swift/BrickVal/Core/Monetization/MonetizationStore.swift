@@ -8,6 +8,7 @@ final class MonetizationStore {
     private(set) var usage: UsageSnapshot
     private(set) var isSignedIn = false
     private(set) var accessCohort: MonetizationAccessCohort?
+    private(set) var experimentSeed: Int?
     private(set) var successfulSingleScanCount: Int
     private(set) var firstSuccessfulSingleScanAt: Date?
 
@@ -30,6 +31,7 @@ final class MonetizationStore {
         usage = Self.decode(UsageSnapshot.self, from: defaults.data(forKey: Keys.serverUsage)) ?? .empty()
         accessCohort = defaults.string(forKey: Keys.accessCohort)
             .flatMap(MonetizationAccessCohort.init(rawValue:))
+        experimentSeed = defaults.object(forKey: Keys.experimentSeed) as? Int
         successfulSingleScanCount = defaults.integer(forKey: Keys.successfulSingleScanCount)
         firstSuccessfulSingleScanAt = defaults.object(forKey: Keys.firstSuccessfulSingleScanAt) as? Date
 #if DEBUG
@@ -54,10 +56,12 @@ final class MonetizationStore {
         setAccessCohort(.legacySoft)
     }
 
-    func enrollNewUserIfNeeded() {
+    func enrollNewUserIfNeeded(seed: Int? = nil) {
         guard accessCohort == nil else { return }
         let experiment = policy.effectiveAccessExperiment
-        let roll = min(max(experimentRoll(), 0), 99)
+        let roll = min(max(seed ?? experimentSeed ?? experimentRoll(), 0), 99)
+        experimentSeed = roll
+        defaults.set(roll, forKey: Keys.experimentSeed)
         let cohort: MonetizationAccessCohort = experiment.enabled && roll < experiment.hardPaywallPercent
             ? .hardTrial
             : .experimentSoft
@@ -81,8 +85,16 @@ final class MonetizationStore {
         accessCohort == .hardTrial && !defaults.bool(forKey: Keys.hardAccessIntroPresented)
     }
 
+    var shouldPresentSoftAccessIntro: Bool {
+        accessCohort == .experimentSoft && !defaults.bool(forKey: Keys.softAccessIntroPresented)
+    }
+
     func markHardAccessIntroPresented() {
         defaults.set(true, forKey: Keys.hardAccessIntroPresented)
+    }
+
+    func markSoftAccessIntroPresented() {
+        defaults.set(true, forKey: Keys.softAccessIntroPresented)
     }
 
     func refresh(using api: BrickValAPIClient, signedIn: Bool) async {
@@ -250,7 +262,9 @@ final class MonetizationStore {
         static let guestBulkUsed = "brickvalue_guest_bulk_scans_used"
         static let onboardingCompleted = "has_completed_onboarding"
         static let accessCohort = "brickvalue_monetization_access_cohort"
+        static let experimentSeed = "brickvalue_monetization_experiment_seed"
         static let hardAccessIntroPresented = "brickvalue_hard_access_intro_presented"
+        static let softAccessIntroPresented = "brickvalue_soft_access_intro_presented"
         static let successfulSingleScanCount = "brickvalue_successful_single_scan_count"
         static let firstSuccessfulSingleScanAt = "brickvalue_first_successful_single_scan_at"
     }

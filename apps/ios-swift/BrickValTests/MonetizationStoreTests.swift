@@ -232,6 +232,43 @@ struct MonetizationStoreTests {
         #expect(store.requiresProForApp(isPro: false) == false)
     }
 
+    @Test func superwallSeedWinsOverLocalFallbackAndPersists() {
+        let context = context()
+        let firstStore = MonetizationStore(
+            defaults: context.defaults,
+            experimentRoll: { 99 },
+            initialPolicy: policy(singleDaily: true, hardPaywallEnabled: true)
+        )
+
+        firstStore.enrollNewUserIfNeeded(seed: 49)
+
+        #expect(firstStore.experimentSeed == 49)
+        #expect(firstStore.accessCohort == .hardTrial)
+
+        let secondStore = MonetizationStore(
+            defaults: context.defaults,
+            experimentRoll: { 99 },
+            initialPolicy: policy(singleDaily: true, hardPaywallEnabled: true)
+        )
+
+        #expect(secondStore.experimentSeed == 49)
+        #expect(secondStore.accessCohort == .hardTrial)
+    }
+
+    @Test func softAccessIntroPresentsOnlyOnce() {
+        let context = context()
+        let store = MonetizationStore(
+            defaults: context.defaults,
+            initialPolicy: policy(singleDaily: true, hardPaywallEnabled: true)
+        )
+
+        store.enrollNewUserIfNeeded(seed: 50)
+
+        #expect(store.shouldPresentSoftAccessIntro)
+        store.markSoftAccessIntroPresented()
+        #expect(store.shouldPresentSoftAccessIntro == false)
+    }
+
     @Test func hardAccessIntroPresentsOnlyOnce() {
         let context = context()
         let store = MonetizationStore(

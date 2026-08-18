@@ -57,6 +57,20 @@ struct AppShellView: View {
             consumePendingPurchase()
             evaluateFeedback()
         }
+        .task(id: monetization.accessCohort) {
+            guard monetization.accessCohort == .experimentSoft,
+                  !entitlements.isPro,
+                  monetization.shouldPresentSoftAccessIntro else { return }
+
+            monetization.markSoftAccessIntroPresented()
+            coordinator?.presentUpgrade(
+                placement: .subscriptionUpgrade,
+                params: [
+                    "cohort": MonetizationAccessCohort.experimentSoft.rawValue,
+                    "source": "onboarding_soft_access",
+                ]
+            )
+        }
         .onChange(of: entitlements.pendingNewPurchase) { _, _ in
             consumePendingPurchase()
         }

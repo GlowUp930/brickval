@@ -15,6 +15,17 @@ final class AppSDKCoordinator: SuperwallDelegate {
     private(set) var showsSubscriptionFallback = false
     private(set) var offerCodeRedemptionState: OfferCodeRedemptionState = .idle
 
+    var superwallSeed: Int? {
+        guard superwallConfigured else { return nil }
+        if let seed = Superwall.shared.userAttributes["seed"] as? Int {
+            return seed
+        }
+        if let seed = Superwall.shared.userAttributes["seed"] as? NSNumber {
+            return seed.intValue
+        }
+        return nil
+    }
+
     @ObservationIgnored private var purchaseController: RevenueCatPurchaseController?
     @ObservationIgnored private var offerCodeClient: (any OfferCodeRedemptionClient)?
     @ObservationIgnored private let entitlementStore: EntitlementStore
