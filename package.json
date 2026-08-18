@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "test:bulk": "tsx --test tests/bulk-identify.test.ts tests/identify-nonset.test.ts tests/bulk-recovery-rate-limit.test.ts",
+    "test:bulk": "tsx --test tests/bulk-identify.test.ts tests/bulk-scan-input.test.ts tests/identify-nonset.test.ts tests/bulk-recovery-rate-limit.test.ts",
     "test:feedback": "tsx --test tests/product-feedback.test.ts",
     "benchmark:bulk": "tsx scripts/benchmark-bulk-scan.mts",
     "prebuild": "node scripts/assert-homepage-contract.mjs",
@@ -15,6 +15,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.77.0",
     "@clerk/nextjs": "^6.38.0",
+    "@sentry/nextjs": "^10.70.0",
     "@stripe/stripe-js": "^8.7.0",
     "@supabase/supabase-js": "^2.97.0",
     "@vercel/analytics": "^1.6.1",

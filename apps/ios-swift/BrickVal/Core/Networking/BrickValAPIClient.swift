@@ -76,7 +76,7 @@ extension BrickValAPIClient {
                 form.append(name: "regions", value: regionJSON)
                 form.append(name: "scanSource", value: source.rawValue)
                 form.finalize()
-                let request = try await request(
+                var request = try await request(
                     baseURL: configuration.baseURL,
                     path: "/api/minifig/bulk-scan",
                     method: "POST",
@@ -84,6 +84,7 @@ extension BrickValAPIClient {
                     contentType: form.contentType,
                     token: authToken()
                 )
+                request.setValue(source.rawValue, forHTTPHeaderField: "X-BrickValue-Scan-Source")
                 let (data, response) = try await session.data(for: request)
                 return try decodeResponse(
                     data: data,
@@ -318,6 +319,13 @@ private func request(
     request.httpMethod = method
     request.httpBody = body
     request.timeoutInterval = 30
+    if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
+        request.setValue(version, forHTTPHeaderField: "X-BrickValue-App-Version")
+    }
+    if let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String {
+        request.setValue(build, forHTTPHeaderField: "X-BrickValue-App-Build")
+    }
+    request.setValue("ios", forHTTPHeaderField: "X-BrickValue-Platform")
     if let contentType { request.setValue(contentType, forHTTPHeaderField: "Content-Type") }
     if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
     return request
@@ -351,7 +359,7 @@ private func validate(
         throw APIError(
             endpoint: endpoint,
             statusCode: http.statusCode,
-            serverMessage: payload?.message,
+            serverMessage: payload?.message ?? payload?.error,
             feature: payload?.feature,
             usage: payload?.usage
         )
@@ -364,6 +372,7 @@ private func append<T>(_ value: T?, name: String, to form: inout MultipartFormDa
 
 private struct ServerErrorPayload: Decodable {
     let message: String?
+    let error: String?
     let feature: ProFeature?
     let usage: UsageSnapshot?
 }

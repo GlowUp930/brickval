@@ -1,11 +1,12 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
-import { MAX_CAMERA_BULK_REGIONS, MAX_LIBRARY_BULK_REGIONS, parseBulkRegions } from "@/lib/bulk-identify";
+import { reportBulkScanError } from "@/lib/backend-error-reporting";
 import { runBulkMinifigScan } from "@/lib/bulk-minifig-scan-service";
 import { BrickognizeUnavailableError } from "@/lib/brickognize";
 import { issueBulkRecoveryToken } from "@/lib/bulk-recovery-token";
 import { checkFeatureAccess, consumeFeatureUsage } from "@/lib/scan-gate";
+import { parseBulkScanInput } from "@/lib/bulk-scan-input";
 
 const MAX_CAPTURE_BYTES = 700 * 1024;
 
@@ -13,17 +14,29 @@ export async function POST(req: NextRequest) {
   let formData: FormData;
   try {
     formData = await req.formData();
-  } catch {
-    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+  } catch (error) {
+    await reportBulkScanError(error, requestErrorContext(req, 400, "camera", null));
+    return NextResponse.json({
+      error: "invalid_form_data",
+      message: "The bulk scan upload could not be read. Please try again.",
+    }, { status: 400 });
   }
 
-  const image = formData.get("image");
-  const scanSource = formData.get("scanSource") === "photoLibrary" ? "photoLibrary" : "camera";
-  const regionLimit = scanSource === "photoLibrary" ? MAX_LIBRARY_BULK_REGIONS : MAX_CAMERA_BULK_REGIONS;
-  const regions = parseBulkRegions(formData.get("regions"), regionLimit);
-  if (!(image instanceof File) || regions === null) {
-    return NextResponse.json({ error: "Invalid bulk scan" }, { status: 400 });
+  const input = parseBulkScanInput(formData);
+  if (!input.ok) {
+    await reportBulkScanError(new Error(input.error.message), requestErrorContext(
+      req,
+      input.error.status,
+      input.error.scanSource,
+      input.error.regionCount,
+    ));
+    return NextResponse.json({
+      error: input.error.code,
+      code: input.error.code,
+      message: input.error.message,
+    }, { status: input.error.status });
   }
+  const { image, regions, scanSource } = input.value;
   if (image.type !== "image/jpeg") {
     return NextResponse.json({ error: "Only JPEG images are supported" }, { status: 415 });
   }
@@ -77,15 +90,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ...scan, recoveryToken: issueBulkRecoveryToken(userId), usage: gate.usage });
   } catch (error) {
     if (error instanceof BrickognizeUnavailableError) {
+      await reportBulkScanError(error, requestErrorContext(req, 502, scanSource, regions.length));
       return NextResponse.json(
         { error: "upstream", message: "Recognition is temporarily unavailable. Please try again." },
         { status: 502 }
       );
     }
+    await reportBulkScanError(error, requestErrorContext(req, 502, scanSource, regions.length));
     console.error("[bulk-scan] Failed:", error);
     return NextResponse.json(
       { error: "upstream", message: "Something went wrong. Please try again in a moment." },
       { status: 502 }
     );
   }
+}
+
+function requestErrorContext(
+  request: NextRequest,
+  statusCode: number,
+  scanSource: "camera" | "photoLibrary",
+  regionCount: number | null,
+) {
+  return {
+    endpoint: "/api/minifig/bulk-scan",
+    statusCode,
+    scanSource,
+    regionCount,
+    appPlatform: request.headers.get("x-brickvalue-platform"),
+    appVersion: request.headers.get("x-brickvalue-app-version"),
+    appBuild: request.headers.get("x-brickvalue-app-build"),
+  };
 }

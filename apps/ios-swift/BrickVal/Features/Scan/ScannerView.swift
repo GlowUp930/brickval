@@ -88,7 +88,10 @@ struct ScannerView: View {
                             ScannerStatusView(
                                 phase: store.phase,
                                 intent: store.intent,
-                                smartScanMessage: store.intent == .single ? store.smartScanMessage : nil
+                                smartScanMessage: store.intent == .single ? store.smartScanMessage : nil,
+                                retryBulkScan: store.intent == .bulk ? {
+                                    Task { await store.retryBulkScan() }
+                                } : nil
                             )
                         }
                     }

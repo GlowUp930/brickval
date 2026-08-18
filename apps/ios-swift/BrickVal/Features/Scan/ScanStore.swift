@@ -38,9 +38,11 @@ final class ScanStore {
     @ObservationIgnored private let detector: any MinifigureDetecting
     @ObservationIgnored private let bulkPhotoDetector: any BulkPhotoDetecting
     @ObservationIgnored private let soundEffects: SoundEffectPlayer
+    @ObservationIgnored private let errorReporter: any AppErrorReporting
     @ObservationIgnored private var monetization: MonetizationStore?
     @ObservationIgnored private var isProSubscriber = false
     @ObservationIgnored private var frozenBulkRegions: [BulkScanRegion] = []
+    @ObservationIgnored private var frozenBulkSource: BulkScanSource = .camera
     @ObservationIgnored private var attemptedProAccessRecovery = false
     @ObservationIgnored private var autoSession = AutoScanSession()
     @ObservationIgnored private var bulkDetectionTracker = BulkDetectionTracker()
@@ -61,7 +63,8 @@ final class ScanStore {
         api: BrickValAPIClient = .live(),
         detector: any MinifigureDetecting = CoreMLMinifigureDetector(),
         bulkPhotoDetector: (any BulkPhotoDetecting)? = nil,
-        onDeviceSmartScanEnabled: Bool = true
+        onDeviceSmartScanEnabled: Bool = true,
+        errorReporter: any AppErrorReporting = SentryAppErrorReporter()
     ) {
         self.camera = camera
         self.motion = motion
@@ -70,6 +73,7 @@ final class ScanStore {
         self.detector = detector
         self.bulkPhotoDetector = bulkPhotoDetector ?? (detector as? any BulkPhotoDetecting) ?? NoopBulkPhotoDetector()
         self.soundEffects = SoundEffectPlayer()
+        self.errorReporter = errorReporter
         smartScanAvailable = onDeviceSmartScanEnabled
         smartScanMessage = onDeviceSmartScanEnabled
             ? nil
@@ -192,6 +196,7 @@ final class ScanStore {
             let data = capture.data
             frozenImageData = data
             frozenBulkRegions = capture.regions
+            frozenBulkSource = .camera
             attemptedProAccessRecovery = false
             logCaptureDuration(since: captureStartedAt, automatic: false)
             try await identify(imageData: data, bulkRegions: capture.regions)
@@ -215,6 +220,7 @@ final class ScanStore {
             phase = .capturing
             let captureStartedAt = Date.now
             frozenImageData = data
+            frozenBulkSource = .photoLibrary
             let detection = try await bulkPhotoDetector.detectBulkRegions(
                 in: data,
                 limit: 40
@@ -237,6 +243,20 @@ final class ScanStore {
     func importBulkPhotoLoadFailed() async {
         guard intent == .bulk else { return }
         phase = .failed("We couldn't load that photo. Check your Photos permission and choose another image.")
+    }
+
+    func retryBulkScan() async {
+        guard intent == .bulk, case .failed = phase, let frozenImageData else { return }
+        attemptedProAccessRecovery = false
+        do {
+            try await identify(
+                imageData: frozenImageData,
+                bulkRegions: frozenBulkRegions,
+                bulkSource: frozenBulkSource
+            )
+        } catch {
+            await handleIdentificationError(error)
+        }
     }
 
     func identifyGalleryImage(_ data: Data) async {
@@ -397,6 +417,7 @@ final class ScanStore {
     private func returnToLiveScanner() {
         frozenImageData = nil
         frozenBulkRegions = []
+        frozenBulkSource = .camera
         attemptedProAccessRecovery = false
         phase = .searching
         resetDetectionState()
@@ -592,11 +613,17 @@ final class ScanStore {
     }
 
     private func handleIdentificationError(_ error: Error) async {
+        if error is CancellationError { return }
         if let apiError = error as? APIError, apiError.isProLimit {
             if isProSubscriber {
+                reportScanError(error, statusCode: apiError.statusCode)
                 if await attemptProAccessRecovery(), let frozenImageData {
                     do {
-                        try await identify(imageData: frozenImageData, bulkRegions: frozenBulkRegions)
+                        try await identify(
+                            imageData: frozenImageData,
+                            bulkRegions: frozenBulkRegions,
+                            bulkSource: frozenBulkSource
+                        )
                         return
                     } catch {
                         phase = .failed("We couldn't verify Pro access. Check your connection and try again.")
@@ -607,15 +634,28 @@ final class ScanStore {
                 return
             }
 
-            frozenImageData = nil
             monetization?.applyServerUsage(apiError.usage)
             proLimitFeature = apiError.feature
             returnToLiveScanner()
             return
         }
 
-        frozenImageData = nil
+        let statusCode = (error as? APIError)?.statusCode ?? 0
+        reportScanError(error, statusCode: statusCode)
         phase = .failed(error.localizedDescription)
+    }
+
+    private func reportScanError(_ error: Error, statusCode: Int) {
+        guard statusCode != 401, statusCode != 402 else { return }
+        let context = AppErrorContext(
+            endpoint: intent == .bulk ? "bulk minifig scan" : "minifig scan",
+            statusCode: statusCode,
+            scanSource: intent == .bulk ? frozenBulkSource : .camera,
+            regionCount: intent == .bulk ? frozenBulkRegions.count : 0,
+            appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
+            appBuild: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+        )
+        errorReporter.capture(error: error, context: context)
     }
 
     func attemptProAccessRecovery() async -> Bool {

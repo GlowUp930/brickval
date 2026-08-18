@@ -92,6 +92,59 @@ struct ScanStoreLifecycleTests {
     }
 
     @Test @MainActor
+    func importedPhoto400ReportsAndKeepsPhotoForRetry() async throws {
+        let reporter = RecordingAppErrorReporter()
+        let api = BrickValAPIClient(
+            scanMinifigure: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            scanBulkMinifigures: { _, _, _ in
+                throw APIError(
+                    endpoint: "bulk minifig scan",
+                    statusCode: 400,
+                    serverMessage: "The scan included an invalid region list."
+                )
+            },
+            recoverBulkMinifigure: { _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            identify: { _, _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            lookup: { _, _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            bulkLookupMinifigures: { _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            monetizationStatus: { throw ScanStoreLifecycleTestError.unusedEndpoint },
+            syncSubscription: { throw ScanStoreLifecycleTestError.unusedEndpoint },
+            partColors: { throw ScanStoreLifecycleTestError.unusedEndpoint },
+            submitFeedback: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            submitProductFeedback: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            deleteAccount: { throw ScanStoreLifecycleTestError.unusedEndpoint },
+            registerNotificationDevice: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            unregisterNotificationDevice: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint }
+        )
+        let store = ScanStore(
+            api: api,
+            bulkPhotoDetector: StubBulkPhotoDetector(
+                regions: [BulkScanRegion(
+                    regionId: "photo-1",
+                    boundingBox: NormalizedBoundingBox(x: 0.2, y: 0.2, width: 0.3, height: 0.5)
+                )]
+            ),
+            errorReporter: reporter
+        )
+        store.intent = .bulk
+        let imageData = try recoveryImageData()
+
+        await store.importBulkPhoto(imageData)
+
+        #expect(store.phase == .failed("The scan included an invalid region list."))
+        #expect(store.frozenImageData == imageData)
+        #expect(reporter.contexts.count == 1)
+        #expect(reporter.contexts.first?.statusCode == 400)
+        #expect(reporter.contexts.first?.scanSource == .photoLibrary)
+        #expect(reporter.contexts.first?.regionCount == 1)
+
+        await store.retryBulkScan()
+
+        #expect(store.frozenImageData == imageData)
+        #expect(reporter.contexts.count == 2)
+    }
+
+    @Test @MainActor
     func bulkRecoveryUsesTwoRequestsAtMostAndReportsTapOrder() async throws {
         let probe = RecoveryConcurrencyProbe()
         let payload = try recoveryPayload()
@@ -211,6 +264,15 @@ private struct StubBulkPhotoDetector: BulkPhotoDetecting {
             modelVersion: "test-detector",
             tileCount: 26
         )
+    }
+}
+
+@MainActor
+private final class RecordingAppErrorReporter: AppErrorReporting {
+    var contexts: [AppErrorContext] = []
+
+    func capture(error: Error, context: AppErrorContext) {
+        contexts.append(context)
     }
 }
 
