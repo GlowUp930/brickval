@@ -40,6 +40,49 @@ struct ScanStoreLifecycleTests {
     }
 
     @Test @MainActor
+    func importedPhotoUsesBulkScanPipeline() async throws {
+        let api = BrickValAPIClient(
+            scanMinifigure: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            scanBulkMinifigures: { _, regions in
+                #expect(regions.isEmpty)
+                let json = #"""
+                {
+                    "items": [],
+                    "reviewItems": [],
+                    "unresolvedRegions": [{"regionId":"photo-1","boundingBox":{"x":0.2,"y":0.2,"width":0.3,"height":0.5}}],
+                    "unresolvedCount": 1,
+                    "partial": true,
+                    "timings": {},
+                    "usage": null,
+                    "recoveryToken": null
+                }
+                """#
+                return try JSONDecoder().decode(BulkMinifigScanPayload.self, from: Data(json.utf8))
+            },
+            recoverBulkMinifigure: { _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            identify: { _, _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            lookup: { _, _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            bulkLookupMinifigures: { _, _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            monetizationStatus: { throw ScanStoreLifecycleTestError.unusedEndpoint },
+            syncSubscription: { throw ScanStoreLifecycleTestError.unusedEndpoint },
+            partColors: { throw ScanStoreLifecycleTestError.unusedEndpoint },
+            submitFeedback: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            submitProductFeedback: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            deleteAccount: { throw ScanStoreLifecycleTestError.unusedEndpoint },
+            registerNotificationDevice: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint },
+            unregisterNotificationDevice: { _ in throw ScanStoreLifecycleTestError.unusedEndpoint }
+        )
+        let store = ScanStore(api: api)
+        store.intent = .bulk
+
+        await store.importBulkPhoto(try recoveryImageData())
+
+        #expect(store.phase == .review)
+        #expect(store.presentedSheet != nil)
+        #expect(store.frozenImageData != nil)
+    }
+
+    @Test @MainActor
     func bulkRecoveryUsesTwoRequestsAtMostAndReportsTapOrder() async throws {
         let probe = RecoveryConcurrencyProbe()
         let payload = try recoveryPayload()

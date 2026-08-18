@@ -171,8 +171,8 @@ final class ScanStore {
 
     func captureManually() async {
         guard phase != .capturing, phase != .identifying else { return }
-        guard canBeginSingleScan else {
-            proLimitFeature = .singleScan
+        guard canBeginCurrentScan else {
+            proLimitFeature = intent == .bulk ? .bulkScan : .singleScan
             return
         }
         do {
@@ -192,6 +192,30 @@ final class ScanStore {
             attemptedProAccessRecovery = false
             logCaptureDuration(since: captureStartedAt, automatic: false)
             try await identify(imageData: data, bulkRegions: capture.regions)
+        } catch {
+            await handleIdentificationError(error)
+        }
+    }
+
+    func importBulkPhoto(_ data: Data?) async {
+        guard intent == .bulk, phase != .capturing, phase != .identifying else { return }
+        guard canBeginCurrentScan else {
+            proLimitFeature = .bulkScan
+            return
+        }
+        guard let data else {
+            phase = .failed("We couldn't read that photo. Choose another image and try again.")
+            return
+        }
+
+        do {
+            phase = .capturing
+            let captureStartedAt = Date.now
+            frozenImageData = data
+            frozenBulkRegions = []
+            attemptedProAccessRecovery = false
+            logCaptureDuration(since: captureStartedAt, automatic: false)
+            try await identify(imageData: data, bulkRegions: [])
         } catch {
             await handleIdentificationError(error)
         }
@@ -588,6 +612,12 @@ final class ScanStore {
 
     private var canBeginSingleScan: Bool {
         intent != .single || monetization?.canUseSingle(isPro: isProSubscriber) != false
+    }
+
+    private var canBeginCurrentScan: Bool {
+        intent == .bulk
+            ? monetization?.canUseBulk(isPro: isProSubscriber) != false
+            : canBeginSingleScan
     }
 
     private func resetDetectionState() {

@@ -1,4 +1,5 @@
 import UIKit
+import PhotosUI
 import SwiftUI
 
 struct ScannerView: View {
@@ -13,6 +14,8 @@ struct ScannerView: View {
     @Environment(\.openURL) private var openURL
     @State private var store: ScanStore
     @State private var isShowingScanTips = false
+    @State private var selectedBulkPhoto: PhotosPickerItem?
+    @State private var isImportingBulkPhoto = false
     @State private var purchaseMessage: String?
     private let runsCameraLoop: Bool
 
@@ -130,6 +133,8 @@ struct ScannerView: View {
                 automaticScanAvailable: store.canUseSmartScan,
                 isTorchEnabled: store.isTorchEnabled,
                 isBusy: [.capturing, .identifying].contains(store.phase),
+                isImportingPhoto: isImportingBulkPhoto,
+                bulkPhotoItem: $selectedBulkPhoto,
                 toggleTorch: { Task { await store.toggleTorch() } },
                 capture: {
                     dismissScanTips()
@@ -171,6 +176,18 @@ struct ScannerView: View {
         .onChange(of: store.phase) { _, phase in
             guard [.capturing, .identifying, .review, .result].contains(phase) else { return }
             dismissScanTips()
+        }
+        .onChange(of: selectedBulkPhoto) { _, item in
+            guard let item else { return }
+            isImportingBulkPhoto = true
+            Task { @MainActor in
+                defer {
+                    isImportingBulkPhoto = false
+                    selectedBulkPhoto = nil
+                }
+                let data = try? await item.loadTransferable(type: Data.self)
+                await store.importBulkPhoto(data)
+            }
         }
         .onChange(of: store.proLimitFeature) { _, feature in
             guard let feature else { return }
