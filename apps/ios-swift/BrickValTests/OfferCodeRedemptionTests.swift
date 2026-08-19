@@ -49,6 +49,20 @@ struct OfferCodeRedemptionTests {
         #expect(coordinator.offerCodeRedemptionState == .idle)
     }
 
+    @Test func dismissingThePresentationResetsOnlyThePresentationState() {
+        let client = FakeOfferCodeRedemptionClient()
+        let coordinator = AppSDKCoordinator(
+            entitlementStore: EntitlementStore(defaults: testDefaults()),
+            offerCodeClient: client
+        )
+
+        coordinator.requestOfferCodeRedemption()
+        coordinator.dismissOfferCodeRedemptionPresentation()
+
+        #expect(client.syncCallCount == 0)
+        #expect(coordinator.offerCodeRedemptionState == .idle)
+    }
+
     @Test func invalidOrUnconfirmedRedemptionStaysLockedWithRetryableError() async {
         let client = FakeOfferCodeRedemptionClient(syncResult: false)
         let entitlements = EntitlementStore(defaults: testDefaults())

@@ -5,6 +5,7 @@ struct SDKEnvironmentRootView: View {
     @Environment(MonetizationStore.self) private var monetization
     @Environment(EntitlementStore.self) private var entitlements
     @State private var hasDismissedOnboardingDemo = false
+    @State private var isOfferCodeRedemptionPresented = false
     let coordinator: AppSDKCoordinator
 
     var body: some View {
@@ -88,24 +89,31 @@ struct SDKEnvironmentRootView: View {
             }
         }
         .offerCodeRedemption(
-            isPresented: offerCodePresentationBinding,
+            isPresented: $isOfferCodeRedemptionPresented,
             onCompletion: { result in
                 Task { @MainActor in
                     await coordinator.completeOfferCodeRedemption(result)
                 }
             }
         )
+        .onChange(of: coordinator.offerCodeRedemptionState) { _, state in
+            switch state {
+            case .presenting:
+                isOfferCodeRedemptionPresented = true
+            case .idle, .failed:
+                isOfferCodeRedemptionPresented = false
+            case .confirming:
+                break
+            }
+        }
+        .onChange(of: isOfferCodeRedemptionPresented) { _, isPresented in
+            guard !isPresented, coordinator.offerCodeRedemptionState == .presenting else { return }
+            coordinator.dismissOfferCodeRedemptionPresentation()
+        }
         .onChange(of: entitlements.isPro) { _, isPro in
             guard isPro else { return }
             Task { await coordinator.synchronizeServerEntitlement() }
         }
-    }
-
-    private var offerCodePresentationBinding: Binding<Bool> {
-        Binding(
-            get: { coordinator.isOfferCodeRedemptionPresented },
-            set: { coordinator.isOfferCodeRedemptionPresented = $0 }
-        )
     }
 }
 

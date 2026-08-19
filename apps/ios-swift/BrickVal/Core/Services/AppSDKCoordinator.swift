@@ -130,14 +130,6 @@ final class AppSDKCoordinator: SuperwallDelegate {
         showsSubscriptionFallback = false
     }
 
-    var isOfferCodeRedemptionPresented: Bool {
-        get { offerCodeRedemptionState == .presenting }
-        set {
-            guard !newValue, offerCodeRedemptionState == .presenting else { return }
-            offerCodeRedemptionState = .idle
-        }
-    }
-
     var isOfferCodeRedemptionBusy: Bool {
         switch offerCodeRedemptionState {
         case .presenting, .confirming:
@@ -150,6 +142,11 @@ final class AppSDKCoordinator: SuperwallDelegate {
     func requestOfferCodeRedemption() {
         guard !isOfferCodeRedemptionBusy else { return }
         offerCodeRedemptionState = .presenting
+    }
+
+    func dismissOfferCodeRedemptionPresentation() {
+        guard offerCodeRedemptionState == .presenting else { return }
+        offerCodeRedemptionState = .idle
     }
 
     func completeOfferCodeRedemption(_ result: Result<Void, Error>) async {
