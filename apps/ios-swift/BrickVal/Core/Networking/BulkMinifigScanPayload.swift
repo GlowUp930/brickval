@@ -18,7 +18,8 @@ struct BulkMinifigScanPayload: Decodable, Sendable {
             BulkScanResultItem(
                 id: detection.regionID ?? detection.id,
                 result: result.normalized,
-                boundingBox: detection.boundingBox?.normalized
+                boundingBox: detection.boundingBox?.normalized,
+                confidence: detection.score
             )
         }
     }

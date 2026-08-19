@@ -16,6 +16,28 @@ struct BulkSharePayload: Identifiable {
     let photo: UIImage
     let cropBox: NormalizedBoundingBox
     let entries: [BulkShareEntry]
+    let conditionTitle: String
+    let pricingSourceTitle: String
+    let reviewCount: Int
+    let unresolvedCount: Int
+
+    init(
+        photo: UIImage,
+        cropBox: NormalizedBoundingBox,
+        entries: [BulkShareEntry],
+        conditionTitle: String = "Used",
+        pricingSourceTitle: String = "Sold-market data",
+        reviewCount: Int = 0,
+        unresolvedCount: Int = 0
+    ) {
+        self.photo = photo
+        self.cropBox = cropBox
+        self.entries = entries
+        self.conditionTitle = conditionTitle
+        self.pricingSourceTitle = pricingSourceTitle
+        self.reviewCount = reviewCount
+        self.unresolvedCount = unresolvedCount
+    }
 
     var total: Double {
         entries.reduce(0) { $0 + $1.price }
@@ -146,6 +168,16 @@ struct BulkShareCardView: View {
 
                 ForEach(payload.entries) { entry in
                     if let box = relativeBox(for: entry.boundingBox) {
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(accent, lineWidth: 2)
+                            .frame(
+                                width: proxy.size.width * box.width,
+                                height: proxy.size.height * box.height
+                            )
+                            .position(
+                                x: proxy.size.width * (box.x + box.width / 2),
+                                y: proxy.size.height * (box.y + box.height / 2)
+                            )
                         Text(entry.price, format: .currency(code: "USD"))
                             .font(.system(size: 13, weight: .bold, design: .rounded))
                             .foregroundStyle(.black)
@@ -192,11 +224,28 @@ struct BulkShareCardView: View {
             .font(.system(size: 14, weight: .medium, design: .rounded))
             .foregroundStyle(.white.opacity(0.58))
 
+            HStack(spacing: 8) {
+                Text(payload.conditionTitle)
+                Text("·")
+                Text(payload.pricingSourceTitle)
+                if payload.reviewCount > 0 {
+                    Text("·")
+                    Text("\(payload.reviewCount) to review")
+                }
+                if payload.unresolvedCount > 0 {
+                    Text("·")
+                    Text("\(payload.unresolvedCount) unresolved")
+                }
+            }
+            .font(.system(size: 11, weight: .medium, design: .rounded))
+            .foregroundStyle(.white.opacity(0.52))
+            .lineLimit(2)
+
             Divider()
                 .overlay(.white.opacity(0.16))
 
             HStack {
-                Text("Estimated used value")
+                Text("\(payload.conditionTitle) value · \(payload.pricingSourceTitle)")
                 Spacer()
                 Text("Scan yours with BrickValue")
             }
@@ -221,7 +270,7 @@ struct BulkShareCardView: View {
     }
 
     private func topFindLabel(_ entry: BulkShareEntry) -> String {
-        "Top find \(entry.identifier) · \(entry.price.formatted(.currency(code: "USD")))"
+        "Top find \(entry.name) · \(entry.price.formatted(.currency(code: "USD")))"
     }
 }
 

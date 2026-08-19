@@ -47,6 +47,7 @@ struct BulkScanResultsView: View {
 
     let items: [BulkScanResultItem]
     let store: ScanStore
+    private let source: BulkScanSource
 
     @State private var itemStates: [BulkScanItemState]
     @State private var reviewItems: [BulkScanReviewItem]
@@ -58,9 +59,10 @@ struct BulkScanResultsView: View {
     @State private var focusedResultID: String?
     @State private var isSaving = false
     @State private var errorMessage: String?
-    @State private var revealStep = 0
-    @State private var revealSkipped = false
+    @State private var revealSession: BulkRevealSession
+    @State private var revealRunID = 0
     @State private var didPlayRevealSound = false
+    @State private var globalCondition: CollectionCondition = .used
     @State private var sharePayload: BulkSharePayload?
     @State private var activeResultPage = 0
 
@@ -73,10 +75,12 @@ struct BulkScanResultsView: View {
         reviewItems: [BulkScanReviewItem] = [],
         unresolvedRegions: [NormalizedBoundingBox] = [],
         recoveryToken: String? = nil,
+        source: BulkScanSource = .camera,
         store: ScanStore
     ) {
         self.items = items
         self.store = store
+        self.source = source
         self.recoveryToken = recoveryToken
         capturedImage = UIImage(data: imageData)
         let orderedItems = items.sorted { lhs, rhs in
@@ -87,6 +91,7 @@ struct BulkScanResultsView: View {
             return abs(rowDelta) > 0.10 ? rowDelta < 0 : left.x < right.x
         }
         _itemStates = State(initialValue: orderedItems.map { BulkScanItemState(item: $0) })
+        _revealSession = State(initialValue: BulkRevealSession(items: orderedItems))
         _reviewItems = State(initialValue: reviewItems)
         _unresolvedRegions = State(initialValue: unresolvedRegions)
         self.imageData = imageData
@@ -112,6 +117,9 @@ struct BulkScanResultsView: View {
                 recoveryCandidateChooser(currentRecoveryCandidates)
                     .transition(recoveryTransition)
             }
+            if revealComplete && !recoveryState.isActive {
+                finalReviewPanel
+            }
             actionButtons
         }
         .padding(.horizontal, 16)
@@ -119,7 +127,6 @@ struct BulkScanResultsView: View {
         .padding(.bottom, 10)
         .background(canvas.ignoresSafeArea())
         .preferredColorScheme(.dark)
-        .presentationDetents([.large])
         .presentationDragIndicator(.hidden)
         .presentationBackground(canvas)
         .interactiveDismissDisabled(isSaving)
@@ -127,7 +134,7 @@ struct BulkScanResultsView: View {
                 recoveryRequestID += 1
                 store.reset()
             }
-            .task(id: revealKey) {
+            .task(id: "\(revealKey)-\(revealRunID)") {
                 await runReveal()
             }
             .sensoryFeedback(.selection, trigger: selectedCount)
@@ -197,18 +204,27 @@ struct BulkScanResultsView: View {
                         recoveryPhotoContent(imageRect: imageRect, containerSize: proxy.size)
                             .transition(recoveryTransition)
                     } else {
-                        if isDenseResultSet {
-                            ForEach(activePageItems) { state in
-                                if let box = state.item.boundingBox {
-                                    detectionBox(for: state.item, box: box, imageRect: imageRect, containerSize: proxy.size)
+                        if revealComplete {
+                            if isDenseResultSet {
+                                ForEach(activePageItems) { state in
+                                    if let box = state.item.boundingBox {
+                                        detectionBox(for: state.item, box: box, imageRect: imageRect, containerSize: proxy.size)
+                                    }
+                                }
+                            } else {
+                                ForEach(itemStates) { state in
+                                    if let box = state.item.boundingBox {
+                                        detectionBox(for: state.item, box: box, imageRect: imageRect, containerSize: proxy.size)
+                                    }
                                 }
                             }
                         } else {
-                            ForEach(Array(itemStates.enumerated()), id: \.element.id) { index, state in
-                                if (revealComplete || revealStep > index), let box = state.item.boundingBox {
-                                    detectionBox(for: state.item, box: box, imageRect: imageRect, containerSize: proxy.size)
-                                }
-                            }
+                            BulkFocusOverlay(
+                                regions: revealFocusRegions,
+                                imageRect: imageRect,
+                                containerSize: proxy.size,
+                                accent: accent
+                            )
                         }
 
                         if revealComplete {
@@ -230,8 +246,10 @@ struct BulkScanResultsView: View {
                         } else {
                             BulkRevealOverlay(
                                 itemCount: itemStates.count,
-                                visibleCount: revealStep,
+                                visibleCount: revealSession.revealedCount,
                                 revealedTotal: revealedTotal,
+                                activeEntry: revealSession.activeEntry,
+                                isHighValue: isHighValue(revealSession.activeEntry),
                                 skip: skipReveal
                             )
                         }
@@ -267,6 +285,78 @@ struct BulkScanResultsView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Selected value")
         .accessibilityValue("\(selectedTotal.formatted(.currency(code: "USD"))), \(selectedCount) selected")
+    }
+
+    private var finalReviewPanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Lot reveal complete")
+                        .font(.headline.weight(.bold))
+                    Text(finalSummaryText)
+                        .font(.caption)
+                        .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                }
+                Spacer()
+                Button("Replay", systemImage: "arrow.counterclockwise", action: replayReveal)
+                    .font(.caption.weight(.semibold))
+                    .labelStyle(.titleAndIcon)
+                    .frame(minHeight: 38)
+                    .padding(.horizontal, 10)
+                    .background(BrickValStyle.ScanResult.surface, in: .capsule)
+                    .overlay { Capsule().stroke(BrickValStyle.ScanResult.border) }
+                    .accessibilityHint("Replays the lot reveal without scanning again")
+            }
+
+            HStack(spacing: 10) {
+                Text("Value as")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                HStack(spacing: 2) {
+                    globalConditionButton("Used", condition: .used)
+                    globalConditionButton("New", condition: .newSealed)
+                }
+                .padding(2)
+                .background(BrickValStyle.ScanResult.surface, in: .capsule)
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(BrickValStyle.ScanResult.surface.opacity(0.86), in: .rect(cornerRadius: 14))
+        .overlay { RoundedRectangle(cornerRadius: 14).stroke(BrickValStyle.ScanResult.border) }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("bulkResults.finalSummary")
+    }
+
+    private func globalConditionButton(_ title: String, condition: CollectionCondition) -> some View {
+        Button(title) {
+            globalCondition = condition
+            revealSession.setCondition(condition)
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) {
+                for index in itemStates.indices {
+                    itemStates[index].condition = condition
+                }
+            }
+        }
+        .font(.caption.weight(.bold))
+        .foregroundStyle(globalCondition == condition ? .black : BrickValStyle.ScanResult.textSecondary)
+        .frame(minWidth: 54, minHeight: 30)
+        .background(globalCondition == condition ? accent : .clear, in: .capsule)
+        .accessibilityAddTraits(globalCondition == condition ? .isSelected : [])
+    }
+
+    private var finalSummaryText: String {
+        let valuedCount = itemStates.filter { $0.price != nil }.count
+        let needsReview = reviewItems.count
+        let unresolved = unresolvedRegions.count
+        var text = "\(valuedCount) figure\(valuedCount == 1 ? "" : "s") valued"
+        if let topFind = itemStates.max(by: { ($0.price ?? 0) < ($1.price ?? 0) }) {
+            text += " · Top find: \(topFind.item.result.name)"
+        }
+        if needsReview > 0 { text += " · \(needsReview) to review" }
+        if unresolved > 0 { text += " · \(unresolved) unresolved" }
+        return text
     }
 
     @ViewBuilder
@@ -876,7 +966,26 @@ struct BulkScanResultsView: View {
     }
 
     private var revealComplete: Bool {
-        revealSkipped || revealStep >= itemStates.count
+        revealSession.isComplete
+    }
+
+    private var revealFocusRegions: [BulkFocusRegion] {
+        revealSession.entries.map { entry in
+            let state: BulkFocusState
+            if let activeEntry = revealSession.activeEntry, activeEntry.id == entry.id {
+                state = .active
+            } else if revealSession.revealedCount > entry.spatialNumber - 1 {
+                state = .completed
+            } else {
+                state = .pending
+            }
+            return BulkFocusRegion(
+                id: entry.id,
+                box: entry.boundingBox,
+                number: entry.spatialNumber,
+                state: state
+            )
+        }
     }
 
     private var isDenseResultSet: Bool { itemStates.count > 10 }
@@ -928,61 +1037,58 @@ struct BulkScanResultsView: View {
     }
 
     private var revealedTotal: Double {
-        itemStates.prefix(revealStep).reduce(0) { $0 + ($1.price ?? 0) }
+        revealSession.revealedTotal
+    }
+
+    private func isHighValue(_ entry: BulkRevealEntry?) -> Bool {
+        guard let entry, let value = entry.usedValue else { return false }
+        let values = revealSession.entries.compactMap(\.usedValue).sorted()
+        guard !values.isEmpty else { return false }
+        let middle = values.count / 2
+        let median = values.count.isMultiple(of: 2)
+            ? (values[middle - 1] + values[middle]) / 2
+            : values[middle]
+        return value >= 25 && value >= median * 2
     }
 
     private func runReveal() async {
         guard !items.isEmpty else { return }
-        revealStep = 0
-        revealSkipped = false
+        revealSession.replay()
         didPlayRevealSound = false
 
-        if isDenseResultSet {
-            completeReveal()
-            return
-        }
-
-        guard !reduceMotion else {
-            completeReveal()
-            return
-        }
-
         do {
-            try await Task.sleep(nanoseconds: 220_000_000)
-            for step in 1...itemStates.count {
-                try await Task.sleep(nanoseconds: 180_000_000)
-                guard !Task.isCancelled, !revealSkipped else { return }
-                withAnimation(.easeOut(duration: 0.18)) {
-                    revealStep = step
+            try await Task.sleep(for: .milliseconds(reduceMotion ? 120 : 360))
+            revealSession.begin()
+            let itemDuration = revealSession.duration / Double(max(revealSession.entries.count, 1))
+            while !revealComplete {
+                guard !Task.isCancelled else { return }
+                try await Task.sleep(for: .milliseconds(Int(itemDuration * 1_000)))
+                guard !Task.isCancelled else { return }
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.24)) {
+                    revealSession.commitActiveEntry()
                 }
             }
-            // Keep the final value on screen long enough to read before opening review.
-            try await Task.sleep(nanoseconds: 1_200_000_000)
-            guard !Task.isCancelled, !revealSkipped else { return }
-            completeReveal()
+            finishReveal()
         } catch {
             return
         }
     }
 
     private func skipReveal() {
-        revealSkipped = true
-        completeReveal()
+        revealSession.skip()
+        finishReveal()
     }
 
-    private func completeReveal() {
-        if reduceMotion {
-            revealStep = itemStates.count
-            revealSkipped = true
-        } else {
-            withAnimation(.easeOut(duration: 0.22)) {
-                revealStep = itemStates.count
-                revealSkipped = true
-            }
-        }
+    private func finishReveal() {
+        revealSession.skip()
         guard !didPlayRevealSound else { return }
         didPlayRevealSound = true
         store.playBulkRevealSound()
+    }
+
+    private func replayReveal() {
+        revealSession.replay()
+        revealRunID += 1
     }
 
     @MainActor
@@ -1001,7 +1107,15 @@ struct BulkScanResultsView: View {
         guard !entries.isEmpty else { return nil }
         let cropBox = BulkShareCropper.cropBox(for: entries.compactMap(\.boundingBox))
         let photo = BulkShareCropper.crop(capturedImage, to: cropBox) ?? capturedImage
-        return BulkSharePayload(photo: photo, cropBox: cropBox, entries: entries)
+        return BulkSharePayload(
+            photo: photo,
+            cropBox: cropBox,
+            entries: entries,
+            conditionTitle: globalCondition == .used ? "Used" : "New / sealed",
+            pricingSourceTitle: "Sold-market data",
+            reviewCount: reviewItems.count,
+            unresolvedCount: unresolvedRegions.count
+        )
     }
 
     private var currentRecoveryCandidates: [BulkScanReviewCandidate] {
@@ -1371,7 +1485,7 @@ private struct BulkScanItemState: Identifiable {
     }
 }
 
-private struct MinifigureThumbnail: View {
+struct MinifigureThumbnail: View {
     let imageURL: URL?
     let identifier: String
     let accent: Color

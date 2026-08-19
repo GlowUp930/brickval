@@ -81,8 +81,23 @@ struct ScannerView: View {
                                 .transition(.opacity)
                         }
                         if ![.capturing, .identifying].contains(store.phase) {
-                            ViewfinderOverlayView()
-                            if store.intent != .bulk {
+                            if store.intent == .bulk {
+                                BulkFocusOverlay(
+                                    regions: store.observations.prefix(10).enumerated().map { index, observation in
+                                        BulkFocusRegion(
+                                            id: observation.id,
+                                            box: observation.boundingBox,
+                                            number: index + 1,
+                                            state: .active
+                                        )
+                                    },
+                                    imageRect: CGRect(origin: .zero, size: cameraSize),
+                                    containerSize: cameraSize,
+                                    accent: accent
+                                )
+                                BulkCameraDetectionHeader(count: store.observations.count)
+                            } else {
+                                ViewfinderOverlayView()
                                 DetectionOverlayView(observations: store.observations)
                             }
                             ScannerStatusView(
@@ -97,7 +112,16 @@ struct ScannerView: View {
                     }
                     .overlay {
                         if [.capturing, .identifying].contains(store.phase) {
-                            ScanProcessingOverlayView(phase: store.phase, intent: store.intent)
+                            if store.intent == .bulk {
+                                BulkProcessingOverlayView(
+                                    imageData: store.frozenImageData,
+                                    regions: store.bulkProcessingRegions,
+                                    phase: store.phase,
+                                    source: store.bulkProcessingSource
+                                )
+                            } else {
+                                ScanProcessingOverlayView(phase: store.phase, intent: store.intent)
+                            }
                         }
                     }
                     .frame(width: cameraSize.width, height: cameraSize.height)
@@ -220,6 +244,17 @@ struct ScannerView: View {
             case .result(let result): ScanResultView(result: result, reset: store.reset)
             case .review(let review): ScanReviewView(review: review, store: store)
             }
+        }
+        .fullScreenCover(item: $store.presentedBulkResults) { presentation in
+            BulkScanResultsView(
+                imageData: presentation.imageData,
+                items: presentation.items,
+                reviewItems: presentation.reviewItems,
+                unresolvedRegions: presentation.unresolvedRegions,
+                recoveryToken: presentation.recoveryToken,
+                source: presentation.source,
+                store: store
+            )
         }
         .overlay(alignment: .top) {
             if isShowingScanTips {

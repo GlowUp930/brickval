@@ -23,11 +23,14 @@ final class ScanStore {
             returnToLiveScanner()
         }
     }
+    var presentedBulkResults: BulkScanPresentation?
     private(set) var smartScanAvailable = true
     private(set) var smartScanMessage: String?
     private(set) var detectorModelVersion: String?
     private(set) var isTorchEnabled = false
     private(set) var frozenImageData: Data?
+    private(set) var bulkProcessingRegions: [NormalizedBoundingBox] = []
+    private(set) var bulkProcessingSource: BulkScanSource = .camera
     private(set) var successMessage: String?
     private(set) var proLimitFeature: ProFeature?
 
@@ -102,12 +105,13 @@ final class ScanStore {
         authorizationStatus = .authorized
         frozenImageData = imageData
         phase = .review
-        presentedSheet = .bulkResults(
+        presentedBulkResults = BulkScanPresentation(
             imageData: imageData,
             items: BulkRecoveryDemoFixture.items,
             reviewItems: [],
             unresolvedRegions: BulkRecoveryDemoFixture.unresolvedRegions,
-            recoveryToken: "debug-recovery-token"
+            recoveryToken: "debug-recovery-token",
+            source: .camera
         )
     }
 #endif
@@ -197,6 +201,8 @@ final class ScanStore {
             frozenImageData = data
             frozenBulkRegions = capture.regions
             frozenBulkSource = .camera
+            bulkProcessingRegions = capture.regions.map(\.boundingBox)
+            bulkProcessingSource = .camera
             attemptedProAccessRecovery = false
             logCaptureDuration(since: captureStartedAt, automatic: false)
             try await identify(imageData: data, bulkRegions: capture.regions)
@@ -226,6 +232,8 @@ final class ScanStore {
                 limit: 40
             )
             frozenBulkRegions = detection.regions
+            bulkProcessingRegions = detection.regions.map(\.boundingBox)
+            bulkProcessingSource = .photoLibrary
             detectorModelVersion = detection.modelVersion
             detectorDetectionMilliseconds = detection.inferenceMilliseconds
             attemptedProAccessRecovery = false
@@ -407,6 +415,11 @@ final class ScanStore {
     }
 
     func reset() {
+        if presentedBulkResults != nil {
+            presentedBulkResults = nil
+            returnToLiveScanner()
+            return
+        }
         guard presentedSheet == nil else {
             presentedSheet = nil
             return
@@ -418,6 +431,8 @@ final class ScanStore {
         frozenImageData = nil
         frozenBulkRegions = []
         frozenBulkSource = .camera
+        bulkProcessingRegions = []
+        bulkProcessingSource = .camera
         attemptedProAccessRecovery = false
         phase = .searching
         resetDetectionState()
@@ -518,12 +533,13 @@ final class ScanStore {
             }
             monetization?.recordSuccessfulBulk(serverUsage: response.usage)
             phase = .review
-            presentedSheet = .bulkResults(
+            presentedBulkResults = BulkScanPresentation(
                 imageData: frozenImageData,
                 items: items,
                 reviewItems: response.reviewItems.map(\.normalized),
                 unresolvedRegions: response.unresolvedRegions.map(\.boundingBox),
-                recoveryToken: response.recoveryToken
+                recoveryToken: response.recoveryToken,
+                source: bulkSource
             )
             logBulkResult(response, startedAt: startedAt)
             return

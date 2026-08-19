@@ -25,6 +25,16 @@ enum ScannerSheet: Identifiable {
     }
 }
 
+struct BulkScanPresentation: Identifiable {
+    let id = UUID()
+    let imageData: Data
+    let items: [BulkScanResultItem]
+    let reviewItems: [BulkScanReviewItem]
+    let unresolvedRegions: [NormalizedBoundingBox]
+    let recoveryToken: String?
+    let source: BulkScanSource
+}
+
 struct BulkScanReviewItem: Identifiable, Sendable {
     let id: String
     let boundingBox: NormalizedBoundingBox?
@@ -43,11 +53,18 @@ struct BulkScanResultItem: Identifiable, Sendable {
     let id: String
     let result: LookupResult
     let boundingBox: NormalizedBoundingBox?
+    let confidence: Double
 
-    init(id: String, result: LookupResult, boundingBox: NormalizedBoundingBox?) {
+    init(
+        id: String,
+        result: LookupResult,
+        boundingBox: NormalizedBoundingBox?,
+        confidence: Double = 0
+    ) {
         self.id = id
         self.result = result
         self.boundingBox = boundingBox
+        self.confidence = confidence
     }
 
     private struct Candidate {
@@ -103,7 +120,8 @@ struct BulkScanResultItem: Identifiable, Sendable {
             BulkScanResultItem(
                 id: candidate.detection.regionID ?? "\(candidate.detection.id)-\(candidate.index)",
                 result: candidate.result,
-                boundingBox: candidate.boundingBox
+                boundingBox: candidate.boundingBox,
+                confidence: candidate.detection.score
             )
         }
     }

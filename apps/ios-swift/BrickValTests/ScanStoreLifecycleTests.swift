@@ -87,7 +87,8 @@ struct ScanStoreLifecycleTests {
         await store.importBulkPhoto(try recoveryImageData())
 
         #expect(store.phase == .review)
-        #expect(store.presentedSheet != nil)
+        #expect(store.presentedBulkResults != nil)
+        #expect(store.presentedBulkResults?.source == .photoLibrary)
         #expect(store.frozenImageData != nil)
     }
 
