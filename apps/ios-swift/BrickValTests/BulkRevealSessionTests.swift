@@ -16,11 +16,30 @@ struct BulkRevealSessionTests {
         #expect(session.phase == .preparing)
 
         session.begin()
-        #expect(session.activeEntry?.id == "left-top")
-        session.commitActiveEntry()
+        #expect(session.phase == .sweeping(index: 0))
+        #expect(session.currentEntry?.id == "left-top")
+        session.commitSweepStep()
         #expect(session.revealedCount == 1)
         #expect(session.revealedTotal == 2)
-        #expect(session.activeEntry?.id == "right-top")
+        #expect(session.phase == .sweeping(index: 1))
+        #expect(session.currentEntry?.id == "right-top")
+    }
+
+    @Test
+    func sweepCadenceScalesForDenseLots() {
+        #expect(BulkRevealSession.stepInterval(for: 3) == 0.40)
+        #expect(BulkRevealSession.stepInterval(for: 10) == 0.25)
+        #expect(BulkRevealSession.stepInterval(for: 40) == 0.18)
+
+        var session = BulkRevealSession(items: (0..<40).map { index in
+            fixture(id: "figure-\(index)", x: Double(index % 8) / 8, y: Double(index / 8) / 5, used: 1)
+        })
+        #expect(session.duration <= BulkRevealSession.maximumDuration)
+        session.begin()
+        for _ in 0..<40 { session.commitSweepStep() }
+        #expect(session.isComplete)
+        #expect(session.revealedCount == 40)
+        #expect(session.revealedTotal == 40)
     }
 
     @Test

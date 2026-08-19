@@ -73,22 +73,29 @@ struct BulkFocusOverlay: View {
     private func maskOpacity(for state: BulkFocusState) -> Double {
         switch state {
         case .active: 1
-        case .completed: 0.76
-        case .pending: 0.42
+        case .completed: 0.94
+        case .pending: 0.84
         }
     }
 
     private func strokeColor(for state: BulkFocusState) -> Color {
         switch state {
         case .active: accent
-        case .completed: accent.opacity(0.62)
-        case .pending: .white.opacity(0.54)
+        case .completed: accent.opacity(0.72)
+        case .pending: .white.opacity(0.46)
         }
     }
 
     private func numberBadge(_ number: Int, state: BulkFocusState) -> some View {
-        Text("\(number)")
-            .font(.caption2.bold().monospacedDigit())
+        Group {
+            if state == .completed {
+                Image(systemName: "checkmark")
+                    .font(.caption2.bold())
+            } else {
+                Text("\(number)")
+                    .font(.caption2.bold().monospacedDigit())
+            }
+        }
             .foregroundStyle(state == .active ? .black : .white)
             .frame(width: 24, height: 24)
             .background(state == .active ? accent : .black.opacity(0.70), in: .circle)

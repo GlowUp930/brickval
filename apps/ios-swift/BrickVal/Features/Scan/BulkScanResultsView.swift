@@ -225,6 +225,17 @@ struct BulkScanResultsView: View {
                                 containerSize: proxy.size,
                                 accent: accent
                             )
+
+                            ForEach(revealSession.entries) { entry in
+                                if let box = entry.boundingBox {
+                                    sweepDetectionBox(
+                                        for: entry,
+                                        box: box,
+                                        imageRect: imageRect,
+                                        containerSize: proxy.size
+                                    )
+                                }
+                            }
                         }
 
                         if revealComplete {
@@ -245,11 +256,9 @@ struct BulkScanResultsView: View {
                             }
                         } else {
                             BulkRevealOverlay(
-                                itemCount: itemStates.count,
+                                entries: revealSession.entries,
                                 visibleCount: revealSession.revealedCount,
                                 revealedTotal: revealedTotal,
-                                activeEntry: revealSession.activeEntry,
-                                isHighValue: isHighValue(revealSession.activeEntry),
                                 skip: skipReveal
                             )
                         }
@@ -801,6 +810,45 @@ struct BulkScanResultsView: View {
         .accessibilityHidden(true)
     }
 
+    private func sweepDetectionBox(
+        for entry: BulkRevealEntry,
+        box: NormalizedBoundingBox,
+        imageRect: CGRect,
+        containerSize: CGSize
+    ) -> some View {
+        let rect = imageBox(box, in: imageRect)
+        let isRevealed = revealSession.revealedCount >= entry.spatialNumber
+        let isCurrent = revealSession.currentEntry?.id == entry.id
+        let price = entry.value(for: revealSession.condition)
+
+        return ZStack {
+            if isRevealed, let price {
+                Text(price, format: .currency(code: "USD"))
+                    .font(.caption.bold().monospacedDigit())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(accent, in: .capsule)
+                    .position(
+                        x: min(max(rect.midX, 40), containerSize.width - 40),
+                        y: max(rect.minY, 18)
+                    )
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.86)))
+            }
+
+            if isCurrent, !reduceMotion {
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(accent.opacity(0.72), lineWidth: 2)
+                    .frame(width: rect.width + 8, height: rect.height + 8)
+                    .position(x: rect.midX, y: rect.midY)
+                    .transition(.opacity)
+            }
+        }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.20), value: isRevealed)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
     private func reviewBox(
         _ box: NormalizedBoundingBox,
         imageRect: CGRect,
@@ -972,7 +1020,7 @@ struct BulkScanResultsView: View {
     private var revealFocusRegions: [BulkFocusRegion] {
         revealSession.entries.map { entry in
             let state: BulkFocusState
-            if let activeEntry = revealSession.activeEntry, activeEntry.id == entry.id {
+            if let currentEntry = revealSession.currentEntry, currentEntry.id == entry.id {
                 state = .active
             } else if revealSession.revealedCount > entry.spatialNumber - 1 {
                 state = .completed
@@ -1040,17 +1088,6 @@ struct BulkScanResultsView: View {
         revealSession.revealedTotal
     }
 
-    private func isHighValue(_ entry: BulkRevealEntry?) -> Bool {
-        guard let entry, let value = entry.usedValue else { return false }
-        let values = revealSession.entries.compactMap(\.usedValue).sorted()
-        guard !values.isEmpty else { return false }
-        let middle = values.count / 2
-        let median = values.count.isMultiple(of: 2)
-            ? (values[middle - 1] + values[middle]) / 2
-            : values[middle]
-        return value >= 25 && value >= median * 2
-    }
-
     private func runReveal() async {
         guard !items.isEmpty else { return }
         revealSession.replay()
@@ -1059,13 +1096,12 @@ struct BulkScanResultsView: View {
         do {
             try await Task.sleep(for: .milliseconds(reduceMotion ? 120 : 360))
             revealSession.begin()
-            let itemDuration = revealSession.duration / Double(max(revealSession.entries.count, 1))
             while !revealComplete {
                 guard !Task.isCancelled else { return }
-                try await Task.sleep(for: .milliseconds(Int(itemDuration * 1_000)))
+                try await Task.sleep(for: .milliseconds(Int(revealSession.stepInterval * 1_000)))
                 guard !Task.isCancelled else { return }
                 withAnimation(reduceMotion ? nil : .easeOut(duration: 0.24)) {
-                    revealSession.commitActiveEntry()
+                    revealSession.commitSweepStep()
                 }
             }
             finishReveal()
