@@ -6,6 +6,8 @@ struct BulkProcessingOverlayView: View {
     let regions: [NormalizedBoundingBox]
     let phase: ScanPhase
     let source: BulkScanSource
+    let completed: Int
+    let total: Int
 
     @Environment(\.brickValAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -64,6 +66,9 @@ struct BulkProcessingOverlayView: View {
     private var subtitle: String {
         if phase == .capturing {
             return source == .photoLibrary ? "Mapping every figure in your photo" : "Freezing your lot and its detected figures"
+        }
+        if total > 0 {
+            return "Comparing \(completed) of \(total) detected figure\(total == 1 ? "" : "s")"
         }
         return regions.isEmpty ? "Comparing matches and market values" : "Comparing \(regions.count) detected figure\(regions.count == 1 ? "" : "s")"
     }

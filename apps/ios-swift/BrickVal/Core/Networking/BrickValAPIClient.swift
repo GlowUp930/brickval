@@ -8,6 +8,8 @@ enum BulkScanSource: String, Codable, Sendable {
 struct BrickValAPIClient: Sendable {
     var scanMinifigure: @Sendable (Data) async throws -> MinifigScanResult
     var scanBulkMinifigures: @Sendable (Data, [BulkScanRegion], BulkScanSource) async throws -> BulkMinifigScanPayload
+    var startBulkScan: (@Sendable (Data, [BulkScanRegion], BulkScanSource) async throws -> BulkScanStartPayload)? = nil
+    var identifyBulkRegion: (@Sendable (Data, String, String) async throws -> BulkRegionIdentificationPayload)? = nil
     var recoverBulkMinifigure: @Sendable (Data, String) async throws -> BulkRecoveryPayload
     var identify: @Sendable (Data, ScanMode, ScanIntent) async throws -> IdentificationResult
     var lookup: @Sendable (String, ItemType, Int?) async throws -> LookupResult
@@ -91,6 +93,46 @@ extension BrickValAPIClient {
                     response: response,
                     endpoint: "bulk minifig scan"
                 )
+            },
+            startBulkScan: { imageData, regions, source in
+                var form = MultipartFormData()
+                form.append(name: "image", filename: "bulk-scan.jpg", contentType: "image/jpeg", fileData: imageData)
+                let encoder = JSONEncoder()
+                let regionData = try encoder.encode(Array(regions.prefix(source == .photoLibrary ? 40 : 10)))
+                guard let regionJSON = String(data: regionData, encoding: .utf8) else {
+                    throw APIError(endpoint: "bulk minifig scan start", statusCode: 0, serverMessage: "The scan regions could not be prepared.")
+                }
+                form.append(name: "regions", value: regionJSON)
+                form.append(name: "scanSource", value: source.rawValue)
+                form.finalize()
+                var request = try await request(
+                    baseURL: configuration.baseURL,
+                    path: "/api/minifig/bulk-scan/start",
+                    method: "POST",
+                    body: form.data,
+                    contentType: form.contentType,
+                    token: authToken()
+                )
+                request.setValue(source.rawValue, forHTTPHeaderField: "X-BrickValue-Scan-Source")
+                let (data, response) = try await session.data(for: request)
+                return try decodeResponse(data: data, response: response, endpoint: "bulk minifig scan start")
+            },
+            identifyBulkRegion: { imageData, regionID, sessionToken in
+                var form = MultipartFormData()
+                form.append(name: "image", filename: "bulk-region.jpg", contentType: "image/jpeg", fileData: imageData)
+                form.append(name: "regionId", value: regionID)
+                form.append(name: "sessionToken", value: sessionToken)
+                form.finalize()
+                let request = try await request(
+                    baseURL: configuration.baseURL,
+                    path: "/api/minifig/bulk-scan/identify-region",
+                    method: "POST",
+                    body: form.data,
+                    contentType: form.contentType,
+                    token: authToken()
+                )
+                let (data, response) = try await session.data(for: request)
+                return try decodeResponse(data: data, response: response, endpoint: "bulk minifig region")
             },
             recoverBulkMinifigure: { imageData, recoveryToken in
                 var form = MultipartFormData()

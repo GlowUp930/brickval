@@ -57,7 +57,7 @@ actor CoreMLMinifigureDetector: MinifigureDetecting, BulkPhotoDetecting {
 
         let sourceWidth = CGFloat(source.width)
         let sourceHeight = CGFloat(source.height)
-        let tileRects = bulkTileRects(width: sourceWidth, height: sourceHeight)
+        let tileRects = Self.bulkTileRects(width: sourceWidth, height: sourceHeight)
         var observations: [DetectionObservation] = []
 
         for (index, tileRect) in tileRects.enumerated() {
@@ -146,21 +146,32 @@ actor CoreMLMinifigureDetector: MinifigureDetecting, BulkPhotoDetecting {
         }
     }
 
-    private func bulkTileRects(width: CGFloat, height: CGFloat) -> [CGRect] {
+    static func bulkTileRects(width: CGFloat, height: CGFloat) -> [CGRect] {
         guard width > 0, height > 0 else { return [] }
-        let columns = 5
-        let rows = 5
-        let tileWidth = width / CGFloat(columns) * 1.42
-        let tileHeight = height / CGFloat(rows) * 1.42
-        let horizontalStep = (width - tileWidth) / CGFloat(max(columns - 1, 1))
-        let verticalStep = (height - tileHeight) / CGFloat(max(rows - 1, 1))
-
         var rects = [CGRect(x: 0, y: 0, width: width, height: height)]
-        for row in 0..<rows {
-            for column in 0..<columns {
-                let x = min(CGFloat(column) * horizontalStep, width - tileWidth)
-                let y = min(CGFloat(row) * verticalStep, height - tileHeight)
-                rects.append(CGRect(x: max(0, x), y: max(0, y), width: tileWidth, height: tileHeight))
+
+        // The detector is strongest when a small figure occupies more of the
+        // model input. Run overlapping 3x3, 4x4, and 5x5 passes so dense
+        // photos are proposed at several useful scales.
+        for gridSize in [3, 4, 5] {
+            let columns = gridSize
+            let rows = gridSize
+            let tileWidth = min(width, width / CGFloat(columns) * 1.55)
+            let tileHeight = min(height, height / CGFloat(rows) * 1.55)
+            let horizontalStep = (width - tileWidth) / CGFloat(max(columns - 1, 1))
+            let verticalStep = (height - tileHeight) / CGFloat(max(rows - 1, 1))
+
+            for row in 0..<rows {
+                for column in 0..<columns {
+                    let x = min(CGFloat(column) * horizontalStep, width - tileWidth)
+                    let y = min(CGFloat(row) * verticalStep, height - tileHeight)
+                    rects.append(CGRect(
+                        x: max(0, x),
+                        y: max(0, y),
+                        width: tileWidth,
+                        height: tileHeight
+                    ))
+                }
             }
         }
         return rects

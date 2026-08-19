@@ -3,6 +3,35 @@ import Foundation
 import Observation
 import OSLog
 
+private struct BulkPerRegionScanOutput: Sendable {
+    let items: [BulkScanResultItem]
+    let reviewItems: [BulkScanReviewItem]
+    let unresolvedRegions: [NormalizedBoundingBox]
+    let recoveryToken: String?
+    let usage: UsageSnapshot?
+    let failedRequestCount: Int
+    let requestCount: Int
+
+    var hasResults: Bool {
+        !items.isEmpty || !reviewItems.isEmpty || !unresolvedRegions.isEmpty
+    }
+
+    var allRequestsFailed: Bool {
+        requestCount > 0 && failedRequestCount == requestCount
+    }
+}
+
+private enum BulkRegionOutcome: Sendable {
+    case completed(region: BulkScanRegion, payload: BulkRegionIdentificationPayload)
+    case failed(region: BulkScanRegion, error: APIError?)
+
+    var region: BulkScanRegion {
+        switch self {
+        case .completed(let region, _), .failed(let region, _): region
+        }
+    }
+}
+
 @Observable
 @MainActor
 final class ScanStore {
@@ -31,6 +60,8 @@ final class ScanStore {
     private(set) var frozenImageData: Data?
     private(set) var bulkProcessingRegions: [NormalizedBoundingBox] = []
     private(set) var bulkProcessingSource: BulkScanSource = .camera
+    private(set) var bulkProcessingCompleted = 0
+    private(set) var bulkProcessingTotal = 0
     private(set) var successMessage: String?
     private(set) var proLimitFeature: ProFeature?
 
@@ -203,6 +234,8 @@ final class ScanStore {
             frozenBulkSource = .camera
             bulkProcessingRegions = capture.regions.map(\.boundingBox)
             bulkProcessingSource = .camera
+            bulkProcessingCompleted = 0
+            bulkProcessingTotal = capture.regions.count
             attemptedProAccessRecovery = false
             logCaptureDuration(since: captureStartedAt, automatic: false)
             try await identify(imageData: data, bulkRegions: capture.regions)
@@ -234,6 +267,8 @@ final class ScanStore {
             frozenBulkRegions = detection.regions
             bulkProcessingRegions = detection.regions.map(\.boundingBox)
             bulkProcessingSource = .photoLibrary
+            bulkProcessingCompleted = 0
+            bulkProcessingTotal = detection.regions.count
             detectorModelVersion = detection.modelVersion
             detectorDetectionMilliseconds = detection.inferenceMilliseconds
             attemptedProAccessRecovery = false
@@ -433,6 +468,8 @@ final class ScanStore {
         frozenBulkSource = .camera
         bulkProcessingRegions = []
         bulkProcessingSource = .camera
+        bulkProcessingCompleted = 0
+        bulkProcessingTotal = 0
         attemptedProAccessRecovery = false
         phase = .searching
         resetDetectionState()
@@ -521,6 +558,49 @@ final class ScanStore {
         frozenImageData = imageData
         if mode == .minifig, intent == .bulk {
             let image = try await imageProcessor.bulkScanImage(from: imageData)
+
+            // New builds use the session contract when the local detector has
+            // supplied physical regions. An empty region list intentionally
+            // falls back to the compatibility endpoint so older camera frames
+            // can still use the provider's global detector.
+            if !bulkRegions.isEmpty,
+               let startBulkScan = api.startBulkScan,
+               let identifyBulkRegion = api.identifyBulkRegion,
+               let output = try await identifyBulkPerRegion(
+                   imageData: image,
+                   bulkRegions: bulkRegions,
+                   bulkSource: bulkSource,
+                   startBulkScan: startBulkScan,
+                   identifyBulkRegion: identifyBulkRegion
+               ) {
+                guard !output.allRequestsFailed else {
+                    phase = .failed("We couldn't check the figures. Your photo is saved. Tap Try again or retake the photo.")
+                    return
+                }
+                guard output.hasResults else {
+                    let limit = bulkSource == .photoLibrary ? 40 : 10
+                    phase = .failed("No priced minifigures were found. Try a brighter photo with up to \(limit) figures separated and facing forward.")
+                    return
+                }
+                guard let frozenImageData else {
+                    phase = .failed("The captured photo is no longer available. Please retake the photo.")
+                    return
+                }
+                monetization?.recordSuccessfulBulk(serverUsage: output.usage)
+                phase = .review
+                presentedBulkResults = BulkScanPresentation(
+                    imageData: frozenImageData,
+                    items: output.items,
+                    reviewItems: output.reviewItems,
+                    unresolvedRegions: output.unresolvedRegions,
+                    recoveryToken: output.recoveryToken,
+                    source: bulkSource
+                )
+                return
+            }
+
+            bulkProcessingCompleted = 0
+            bulkProcessingTotal = 0
             let response = try await api.scanBulkMinifigures(image, bulkRegions, bulkSource)
             let items = response.items.map(\.normalized)
             guard let frozenImageData,
@@ -619,6 +699,156 @@ final class ScanStore {
         phase = .result
         presentedSheet = .result(result)
         soundEffects.play(.cashRegister)
+    }
+
+    private func identifyBulkPerRegion(
+        imageData: Data,
+        bulkRegions: [BulkScanRegion],
+        bulkSource: BulkScanSource,
+        startBulkScan: @escaping @Sendable (Data, [BulkScanRegion], BulkScanSource) async throws -> BulkScanStartPayload,
+        identifyBulkRegion: @escaping @Sendable (Data, String, String) async throws -> BulkRegionIdentificationPayload
+    ) async throws -> BulkPerRegionScanOutput? {
+        let start = try await startBulkScan(imageData, bulkRegions, bulkSource)
+        let regionLimit = bulkSource == .photoLibrary ? 40 : 10
+        let regions = Array(start.regions.prefix(regionLimit))
+        guard !regions.isEmpty else { return nil }
+
+        let processor = imageProcessor
+        let sessionToken = start.sessionToken
+        bulkProcessingCompleted = 0
+        bulkProcessingTotal = regions.count
+        let outcomes = try await withThrowingTaskGroup(of: BulkRegionOutcome.self, returning: [BulkRegionOutcome].self) { group in
+            var nextIndex = 0
+            var inFlight = 0
+            var completed: [BulkRegionOutcome] = []
+
+            while nextIndex < regions.count || inFlight > 0 {
+                while nextIndex < regions.count && inFlight < 4 {
+                    let region = regions[nextIndex]
+                    nextIndex += 1
+                    inFlight += 1
+                    group.addTask {
+                        try Task.checkCancellation()
+                        do {
+                            let crop = try await processor.bulkRegionImage(
+                                from: imageData,
+                                region: region.boundingBox,
+                                contextRatio: 0.25
+                            )
+                            let first = try await identifyBulkRegion(crop, region.regionId, sessionToken)
+                            let payload = try await Self.retryWeakBulkRegion(
+                                first: first,
+                                imageData: imageData,
+                                region: region,
+                                processor: processor,
+                                sessionToken: sessionToken,
+                                identifyBulkRegion: identifyBulkRegion
+                            )
+                            return .completed(region: region, payload: payload)
+                        } catch is CancellationError {
+                            throw CancellationError()
+                        } catch let error as APIError {
+                            return .failed(region: region, error: error)
+                        } catch {
+                            return .failed(region: region, error: nil)
+                        }
+                    }
+                }
+
+                if let outcome = try await group.next() {
+                    completed.append(outcome)
+                    inFlight -= 1
+                    bulkProcessingCompleted = completed.count
+                }
+            }
+            return completed
+        }
+
+        if let limitError = outcomes.compactMap({ outcome -> APIError? in
+            guard case .failed(_, let error) = outcome else { return nil }
+            return error?.isProLimit == true ? error : nil
+        }).first {
+            throw limitError
+        }
+
+        let orderedOutcomes = outcomes.sorted { lhs, rhs in
+            guard let left = regions.firstIndex(where: { $0.regionId == lhs.region.regionId }),
+                  let right = regions.firstIndex(where: { $0.regionId == rhs.region.regionId })
+            else { return lhs.region.regionId < rhs.region.regionId }
+            return left < right
+        }
+        var items: [BulkScanResultItem] = []
+        var reviewItems: [BulkScanReviewItem] = []
+        var unresolvedRegions: [NormalizedBoundingBox] = []
+        var usage: UsageSnapshot?
+        var failedRequestCount = 0
+
+        for outcome in orderedOutcomes {
+            switch outcome {
+            case .completed(let region, let payload):
+                usage = usage ?? payload.usage
+                guard !payload.candidates.isEmpty else {
+                    unresolvedRegions.append(region.boundingBox)
+                    continue
+                }
+                switch payload.status {
+                case .matched:
+                    let candidate = payload.candidates[0]
+                    items.append(BulkScanResultItem(
+                        id: region.regionId,
+                        result: candidate.result.normalized,
+                        boundingBox: region.boundingBox,
+                        confidence: candidate.score
+                    ))
+                case .review:
+                    reviewItems.append(BulkScanReviewItem(
+                        id: region.regionId,
+                        boundingBox: region.boundingBox,
+                        candidates: payload.candidates.map(\.normalized)
+                    ))
+                case .unresolved:
+                    unresolvedRegions.append(region.boundingBox)
+                }
+            case .failed(let region, _):
+                failedRequestCount += 1
+                unresolvedRegions.append(region.boundingBox)
+            }
+        }
+
+        return BulkPerRegionScanOutput(
+            items: items,
+            reviewItems: reviewItems,
+            unresolvedRegions: unresolvedRegions,
+            recoveryToken: start.recoveryToken,
+            usage: usage,
+            failedRequestCount: failedRequestCount,
+            requestCount: regions.count
+        )
+    }
+
+    nonisolated private static func retryWeakBulkRegion(
+        first: BulkRegionIdentificationPayload,
+        imageData: Data,
+        region: BulkScanRegion,
+        processor: ImageProcessor,
+        sessionToken: String,
+        identifyBulkRegion: @escaping @Sendable (Data, String, String) async throws -> BulkRegionIdentificationPayload
+    ) async throws -> BulkRegionIdentificationPayload {
+        let score = first.candidates.first?.score ?? 0
+        guard first.status != .matched || score < 0.60 else { return first }
+
+        do {
+            let widerCrop = try await processor.bulkRegionImage(
+                from: imageData,
+                region: region.boundingBox,
+                contextRatio: 0.40
+            )
+            return try await identifyBulkRegion(widerCrop, region.regionId, sessionToken)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            return first
+        }
     }
 
     private func disableSmartScan(message: String) {

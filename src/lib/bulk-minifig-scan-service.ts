@@ -5,8 +5,8 @@ import {
   assignDetectionsToRegions,
   mergeBulkDetections,
   planAccuracyBulkRecoveryCrops,
+  planPerRegionRecognitionCrops,
   planPhotoLibraryFallbackCrops,
-  planGuidedBulkCrops,
   unresolvedBulkRegions,
   type BulkManifestRegion,
   type GuidedBulkCrop,
@@ -58,36 +58,46 @@ export async function runBulkMinifigScan(
   const guided = options.guided !== false;
   const scanSource = options.source ?? "camera";
   const regionLimit = scanSource === "photoLibrary" ? 40 : 10;
-  const crops = guided && regions.length ? planGuidedBulkCrops(regions, regionLimit) : [];
+  const perRegionCrops = guided && regions.length
+    ? planPerRegionRecognitionCrops(regions, regionLimit)
+    : [];
+  const perRegionMode = perRegionCrops.length > 0;
   const accuracyRecoveryCrops = scanSource === "photoLibrary"
     ? planPhotoLibraryFallbackCrops()
     : planAccuracyBulkRecoveryCrops();
   const maxGuidedProviderRequests = 8;
-  const coverageCrops = regions.length < 4
+  const coverageCrops = !perRegionMode && regions.length < 4
     ? accuracyRecoveryCrops
-      .slice(0, Math.max(0, maxGuidedProviderRequests - crops.length))
+      .slice(0, maxGuidedProviderRequests)
       .map((boundingBox) => ({ boundingBox, regions: [] }))
     : [];
   const preprocessingFinishedAt = performance.now();
 
-  const jobs: Array<() => Promise<NonSetDetection[]>> = [
-    () => identifyNonSet(imageFile, {
-      bulk: true,
-      skipRecovery: true,
-      throwOnFailure: true,
-      timeoutMilliseconds: 9_000,
-    }).then((response) => response.detections),
-    ...crops.map((crop, index) => () => identifyCrop(source, crop, index, imageWidth, imageHeight)),
-    ...coverageCrops.map((crop, index) => () => identifyCrop(
+  const jobs: Array<() => Promise<NonSetDetection[]>> = perRegionMode
+    ? perRegionCrops.map((crop, index) => () => identifyPerRegionCrop(
       source,
       crop,
-      crops.length + index,
+      index,
       imageWidth,
-      imageHeight,
-      5_000
-    )),
-  ];
-  const firstWave = await allSettledWithConcurrency(jobs, 3);
+      imageHeight
+    ))
+    : [
+      () => identifyNonSet(imageFile, {
+        bulk: true,
+        skipRecovery: true,
+        throwOnFailure: true,
+        timeoutMilliseconds: 9_000,
+      }).then((response) => response.detections),
+      ...coverageCrops.map((crop, index) => () => identifyCrop(
+        source,
+        crop,
+        index,
+        imageWidth,
+        imageHeight,
+        5_000
+      )),
+    ];
+  const firstWave = await allSettledWithConcurrency(jobs, perRegionMode ? 4 : 3);
   const fulfilled = firstWave.filter(
     (result): result is PromiseFulfilledResult<NonSetDetection[]> => result.status === "fulfilled"
   );
@@ -98,11 +108,11 @@ export async function runBulkMinifigScan(
   let partial = firstWave.some((result) => result.status === "rejected");
   const unresolved = guided ? unresolvedBulkRegions(regions, collected) : [];
   const detectedCount = mergeBulkDetections(collected, regionLimit).length;
-  const shouldRunCoverageRecovery = regions.length < 4 || detectedCount < Math.min(4, regions.length);
+  const shouldRunCoverageRecovery = !perRegionMode && (regions.length < 4 || detectedCount < Math.min(4, regions.length));
   const recoveryBudgetMilliseconds = 10_000;
   if (shouldRunCoverageRecovery && coverageCrops.length === 0 && performance.now() - startedAt < recoveryBudgetMilliseconds) {
     const recoveryCrops = accuracyRecoveryCrops
-      .slice(0, Math.max(0, maxGuidedProviderRequests - crops.length))
+      .slice(0, maxGuidedProviderRequests)
       .map((boundingBox) => ({
       boundingBox,
       regions: [],
@@ -111,12 +121,12 @@ export async function runBulkMinifigScan(
       recoveryCrops.map((crop, index) => () => identifyCrop(
         source,
         crop,
-        crops.length + index,
+        coverageCrops.length + index,
         imageWidth,
         imageHeight,
         5_000
       )),
-      3
+      4
     );
     providerRequests += retries.length;
     partial ||= retries.some((result) => result.status === "rejected");
@@ -126,15 +136,15 @@ export async function runBulkMinifigScan(
   // Library requests already spend their guided budget across the eight
   // spatial groups. Leave remaining regions for the in-app recovery flow
   // instead of turning a dense photo into one provider request per figure.
-  if (scanSource === "camera" && unresolved.length && performance.now() - startedAt < recoveryBudgetMilliseconds) {
-    const guidedRequestsUsed = crops.length + coverageCrops.length;
+  if (!perRegionMode && scanSource === "camera" && unresolved.length && performance.now() - startedAt < recoveryBudgetMilliseconds) {
+    const guidedRequestsUsed = coverageCrops.length;
     const retries = await allSettledWithConcurrency(
       unresolved
         .slice(0, Math.max(0, maxGuidedProviderRequests - guidedRequestsUsed))
         .map((region, index) => () => identifyCrop(
           source,
           { boundingBox: paddedRegionBox(region.boundingBox, 0.4), regions: [region] },
-          crops.length + coverageCrops.length + index,
+          coverageCrops.length + index,
           imageWidth,
           imageHeight,
           4_000
@@ -259,8 +269,22 @@ async function identifyCrop(
   const assigned = localRegions.length
     ? assignDetectionsToRegions(response.detections, localRegions)
     : response.detections;
+  const fallbackAssigned = assigned.length || localRegions.length !== 1
+    ? assigned
+    : response.detections
+      .filter((detection) => detection.item_type === "minifig")
+      .slice(0, 1)
+      .map((detection) => ({
+        ...detection,
+        regionId: localRegions[0].regionId,
+        bounding_box: detection.bounding_box ?? normalizedBoxToPixel(
+          crop.regions[0].boundingBox,
+          imageWidth,
+          imageHeight
+        ),
+      }));
 
-  return assigned.map((detection) => {
+  return fallbackAssigned.map((detection) => {
     const box = detection.bounding_box;
     if (!box) return detection;
     const scaleX = rect.width / box.imageWidth;
@@ -277,6 +301,34 @@ async function identifyCrop(
       },
     };
   });
+}
+
+async function identifyPerRegionCrop(
+  source: Awaited<ReturnType<typeof Jimp.read>>,
+  crop: GuidedBulkCrop,
+  index: number,
+  imageWidth: number,
+  imageHeight: number
+): Promise<NonSetDetection[]> {
+  const first = await identifyCrop(source, crop, index, imageWidth, imageHeight, 8_000);
+  const topScore = Math.max(...first.map((detection) => detection.score), 0);
+  if (topScore >= 0.60) return first;
+
+  // A slightly wider second crop is useful for capes, accessories, and
+  // figures that were detected close to a neighboring object. It remains a
+  // one-figure request and is only spent for a weak or empty first result.
+  const region = crop.regions[0];
+  if (!region) return first;
+  const retry = await identifyCrop(
+    source,
+    { boundingBox: paddedRegionBox(region.boundingBox, 0.40), regions: [region] },
+    index + 10_000,
+    imageWidth,
+    imageHeight,
+    8_000
+  );
+  const retryScore = Math.max(...retry.map((detection) => detection.score), 0);
+  return retryScore >= topScore && retry.length ? retry : first;
 }
 
 function paddedRegionBox(box: NormalizedRegionBox, contextRatio: number): NormalizedRegionBox {
@@ -307,6 +359,17 @@ function pixelRect(box: NormalizedRegionBox, width: number, height: number) {
   const right = Math.min(width, Math.ceil((box.x + box.width) * width));
   const bottom = Math.min(height, Math.ceil((box.y + box.height) * height));
   return { left, top, width: Math.max(1, right - left), height: Math.max(1, bottom - top) };
+}
+
+function normalizedBoxToPixel(box: NormalizedRegionBox, width: number, height: number) {
+  return {
+    left: Math.max(0, Math.floor(box.x * width)),
+    top: Math.max(0, Math.floor(box.y * height)),
+    right: Math.min(width, Math.ceil((box.x + box.width) * width)),
+    bottom: Math.min(height, Math.ceil((box.y + box.height) * height)),
+    imageWidth: width,
+    imageHeight: height,
+  };
 }
 
 async function allSettledWithConcurrency<T>(

@@ -91,3 +91,49 @@ struct BulkScanRegion: Codable, Sendable {
     let regionId: String
     let boundingBox: NormalizedBoundingBox
 }
+
+struct BulkScanStartPayload: Decodable, Sendable {
+    let scanSource: BulkScanSource
+    let regions: [BulkScanRegion]
+    let sessionToken: String
+    let recoveryToken: String?
+    let proposalSource: String?
+}
+
+struct BulkRegionIdentificationPayload: Decodable, Sendable {
+    let regionId: String
+    let status: Status
+    let candidates: [Candidate]
+    let usage: UsageSnapshot?
+
+    enum Status: String, Decodable, Sendable {
+        case matched
+        case review
+        case unresolved
+    }
+
+    struct Candidate: Decodable, Sendable {
+        let id: String
+        let score: Double
+        let result: MinifigLookupPayload
+
+        var normalized: BulkScanReviewCandidate {
+            BulkScanReviewCandidate(identifier: id, score: score, result: result.normalized)
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case regionId
+        case status
+        case candidates
+        case usage
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        regionId = try container.decode(String.self, forKey: .regionId)
+        status = try container.decodeIfPresent(Status.self, forKey: .status) ?? .unresolved
+        candidates = try container.decodeIfPresent([Candidate].self, forKey: .candidates) ?? []
+        usage = try container.decodeIfPresent(UsageSnapshot.self, forKey: .usage)
+    }
+}

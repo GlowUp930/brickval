@@ -161,6 +161,29 @@ export function planGuidedBulkCrops(
   }));
 }
 
+/**
+ * Brickognize identifies the dominant item in an image. Dense bulk scans
+ * therefore need one isolated crop per physical region instead of a crop
+ * containing several neighboring figures.
+ */
+export function planPerRegionRecognitionCrops(
+  regions: BulkManifestRegion[],
+  maxRegions = MAX_CAMERA_BULK_REGIONS,
+  contextRatio = 0.25
+): GuidedBulkCrop[] {
+  return regions
+    .filter((region) => parseBox(region.boundingBox) !== null)
+    .slice(0, maxRegions)
+    .sort((a, b) => {
+      const rowDelta = a.boundingBox.y - b.boundingBox.y;
+      return Math.abs(rowDelta) > 0.10 ? rowDelta : a.boundingBox.x - b.boundingBox.x;
+    })
+    .map((region) => ({
+      boundingBox: paddedUnion([region.boundingBox], contextRatio),
+      regions: [region],
+    }));
+}
+
 /** Coverage fallback for imported photos where the local detector found no regions. */
 export function planPhotoLibraryFallbackCrops(): NormalizedRegionBox[] {
   const columns = 4;
@@ -210,6 +233,37 @@ export function unresolvedBulkRegions(
 ): BulkManifestRegion[] {
   const resolved = new Set(detections.map((detection) => detection.regionId).filter(Boolean));
   return regions.filter((region) => !resolved.has(region.regionId));
+}
+
+export function mergeBulkRegionProposals(
+  localRegions: BulkManifestRegion[],
+  proposedBoxes: NormalizedRegionBox[],
+  maxRegions = MAX_CAMERA_BULK_REGIONS,
+): BulkManifestRegion[] {
+  const merged: BulkManifestRegion[] = localRegions
+    .filter((region) => parseBox(region.boundingBox) !== null)
+    .slice(0, maxRegions)
+    .map((region) => ({ ...region, boundingBox: parseBox(region.boundingBox)! }));
+  let nextIndex = merged.length + 1;
+
+  for (const box of proposedBoxes) {
+    const normalized = parseBox(box);
+    if (!normalized) continue;
+    const overlapsKnown = merged.some((region) => overlapOfSmaller(region.boundingBox, normalized) >= 0.45);
+    if (overlapsKnown || merged.length >= maxRegions) continue;
+    merged.push({ regionId: `proposal-${nextIndex}`, boundingBox: normalized });
+    nextIndex += 1;
+  }
+
+  return merged
+    .sort((a, b) => {
+      const rowDelta = a.boundingBox.y - b.boundingBox.y;
+      return Math.abs(rowDelta) > 0.10 ? rowDelta : a.boundingBox.x - b.boundingBox.x;
+    })
+    .map((region, index) => ({
+      ...region,
+      regionId: region.regionId.startsWith("proposal-") ? `region-${index + 1}` : region.regionId,
+    }));
 }
 
 function withStableFallbackRegionIds(detections: NonSetDetection[]): NonSetDetection[] {

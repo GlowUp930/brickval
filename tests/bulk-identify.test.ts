@@ -4,8 +4,10 @@ import test from "node:test";
 import {
   assignDetectionsToRegions,
   mergeBulkDetections,
+  mergeBulkRegionProposals,
   planAccuracyBulkRecoveryCrops,
   planPhotoLibraryFallbackCrops,
+  planPerRegionRecognitionCrops,
   parseBulkRegionManifest,
   parseBulkRegions,
   planGuidedBulkCrops,
@@ -104,6 +106,27 @@ test("photo-library crop plan covers forty regions in at most eight groups", () 
   assert.equal(crops.flatMap((crop) => crop.regions).length, 40);
 });
 
+test("per-region recognition creates one isolated crop for every physical figure", () => {
+  const regions = Array.from({ length: 24 }, (_, index) => ({
+    regionId: `figure-${index + 1}`,
+    boundingBox: {
+      x: (index % 6) * 0.15 + 0.02,
+      y: Math.floor(index / 6) * 0.23 + 0.03,
+      width: 0.10,
+      height: 0.18,
+    },
+  }));
+
+  const crops = planPerRegionRecognitionCrops(regions, 40);
+
+  assert.equal(crops.length, 24);
+  assert.ok(crops.every((crop) => crop.regions.length === 1));
+  assert.deepEqual(
+    crops.map((crop) => crop.regions[0]?.regionId),
+    regions.map((region) => region.regionId),
+  );
+});
+
 test("photo-library manifests accept forty regions while camera manifests stay capped at ten", () => {
   const value = JSON.stringify(Array.from({ length: 40 }, (_, index) => ({
     regionId: `region-${index + 1}`,
@@ -121,6 +144,20 @@ test("photo-library fallback keeps small figures covered across the image", () =
   assert.ok(crops.every((crop) => crop.width > 0 && crop.height > 0));
   assert.ok(crops.some((crop) => crop.x > 0));
   assert.ok(crops.some((crop) => crop.y > 0));
+});
+
+test("cloud proposals augment local regions without collapsing separate figures", () => {
+  const merged = mergeBulkRegionProposals([
+    { regionId: "local-1", boundingBox: { x: 0.05, y: 0.1, width: 0.12, height: 0.24 } },
+  ], [
+    { x: 0.052, y: 0.102, width: 0.12, height: 0.24 },
+    { x: 0.45, y: 0.1, width: 0.12, height: 0.24 },
+    { x: 0.72, y: 0.1, width: 0.12, height: 0.24 },
+  ], 40);
+
+  assert.equal(merged.length, 3);
+  assert.equal(merged[0]?.regionId, "local-1");
+  assert.deepEqual(merged.map((region) => region.boundingBox.x), [0.05, 0.45, 0.72]);
 });
 
 test("bulk merge collapses duplicate provider responses for one physical region", () => {

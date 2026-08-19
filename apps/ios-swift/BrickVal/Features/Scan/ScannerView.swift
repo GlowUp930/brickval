@@ -115,10 +115,12 @@ struct ScannerView: View {
                             if store.intent == .bulk {
                                 BulkProcessingOverlayView(
                                     imageData: store.frozenImageData,
-                                    regions: store.bulkProcessingRegions,
-                                    phase: store.phase,
-                                    source: store.bulkProcessingSource
-                                )
+                                regions: store.bulkProcessingRegions,
+                                phase: store.phase,
+                                source: store.bulkProcessingSource,
+                                completed: store.bulkProcessingCompleted,
+                                total: store.bulkProcessingTotal
+                            )
                             } else {
                                 ScanProcessingOverlayView(phase: store.phase, intent: store.intent)
                             }
