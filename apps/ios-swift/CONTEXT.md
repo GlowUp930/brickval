@@ -1,6 +1,6 @@
 # BrickVal Native iOS Context
 
-Last verified: 2026-08-19
+Last verified: 2026-08-20
 
 This is the working context for the canonical BrickVal mobile app. It is intentionally specific to the native SwiftUI app. Repository-wide rules remain in [`AGENTS.md`](../../AGENTS.md).
 
@@ -83,7 +83,7 @@ The native bulk scan flow is:
 1. The bundled Core ML model provides live framing boxes at up to three frames per second. A short-lived local tracker retains boxes through detector flicker, so the capture manifest does not lose a visible figure because of one empty frame. Live camera bulk capture remains manual and supports up to 10 front-facing, separated figures.
 2. A camera capture sends fresh local boxes as normalized regions with a resized JPEG. A photo-library import first runs the model over overlapping 3x3, 4x4, and 5x5 tiles plus a full-image pass, merges duplicate detections, sorts them spatially, and sends up to 40 regions. Photo imports show `Finding minifigures` before recognition.
 3. New native clients call `/api/minifig/bulk-scan/start`, which validates the source-aware 10-camera/40-library manifest, optionally merges Google Vision object-localization proposals when the server flag is enabled, and returns a signed ten-minute session. The client then creates one isolated crop per physical region and calls `/api/minifig/bulk-scan/identify-region` with at most four requests in flight. Weak or unresolved crops receive one wider-context retry. Brickognize therefore sees one figure per image rather than a crop containing several neighboring figures. The server prices up to three unique candidates per region and preserves spatial duplicates by region ID.
-4. The server returns confirmed results, ambiguous candidates for user review, unresolved regions, usage, and a short-lived recovery token. It consumes the introductory bulk allowance only after the first priced or reviewable region succeeds. The compatibility `/api/minifig/bulk-scan` route remains for older builds and uses the same per-region service when a region manifest is present. If an imported photo request fails unexpectedly, the native scanner keeps the frozen photo and regions in place and shows `Try again`; backend and native Sentry events exclude images, request bodies, tokens, and collection data.
+4. The server returns confirmed results, candidate alternatives, unresolved regions, usage, and a short-lived recovery token. The normal bulk path automatically uses the highest-scoring priced candidate for every region, even when the provider marks it for review; it does not interrupt the user with candidate cards. Candidate review remains only in user-initiated missed-figure recovery. It consumes the introductory bulk allowance only after the first priced region succeeds. The compatibility `/api/minifig/bulk-scan` route remains for older builds and uses the same per-region service when a region manifest is present. If an imported photo request fails unexpectedly, the native scanner keeps the frozen photo and regions in place and shows `Try again`; backend and native Sentry events exclude images, request bodies, tokens, and collection data.
 5. The captured image is frozen over the live camera while identification runs, with a visible progress overlay so the user knows the scan is active.
 6. Missing, unresolved, non-minifigure, and unpriced results are excluded.
 7. The result sheet opens with every priced item selected as Used by default.
@@ -115,6 +115,8 @@ Bulk result UI requirements:
 - If the result photo is cropped to fit the available space, transform detection boxes using the same aspect-fill rectangle as the image.
 - Product thumbnails should normalize protocol-relative BrickLink URLs and use an identifier-based fallback when the returned image is missing or unavailable.
 - Keep accessibility labels and values for selection, condition, price, and primary actions.
+
+Bulk accuracy decisions and the private evaluation workflow are recorded in [`docs/decisions/0005-bulk-scan-evaluation-and-auto-best-match.md`](docs/decisions/0005-bulk-scan-evaluation-and-auto-best-match.md). The current product behavior is intentionally recall-first: no normal bulk candidate-review interruption, unresolved regions remain recoverable, and detector/provider changes must pass the documented holdout gates before rollout.
 
 ## API And Data Rules
 

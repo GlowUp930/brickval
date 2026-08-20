@@ -28,6 +28,16 @@ struct BulkMinifigScanPayload: Decodable, Sendable {
         let detection: IdentificationDetection
         let candidates: [Candidate]
 
+        var bestResultItem: BulkScanResultItem? {
+            guard let candidate = candidates.max(by: { $0.score < $1.score }) else { return nil }
+            return BulkScanResultItem(
+                id: detection.regionID ?? detection.id,
+                result: candidate.result.normalized,
+                boundingBox: detection.boundingBox?.normalized,
+                confidence: candidate.score
+            )
+        }
+
         struct Candidate: Decodable, Sendable {
             let id: String
             let score: Double
@@ -120,6 +130,10 @@ struct BulkRegionIdentificationPayload: Decodable, Sendable {
         var normalized: BulkScanReviewCandidate {
             BulkScanReviewCandidate(identifier: id, score: score, result: result.normalized)
         }
+    }
+
+    var bestCandidate: Candidate? {
+        candidates.max(by: { $0.score < $1.score })
     }
 
     enum CodingKeys: String, CodingKey {

@@ -18,7 +18,7 @@ Use a session-based, one-region recognition pipeline:
 2. The native client sends a source-aware manifest to `/api/minifig/bulk-scan/start`. Camera manifests are capped at 10 regions; photo-library manifests are capped at 40.
 3. The server issues a signed ten-minute session. The native client crops each region with 25% context, upscales within the image processor, and sends one crop at a time to `/api/minifig/bulk-scan/identify-region`.
 4. Four recognition requests may run concurrently. A weak result may receive one 40%-context retry. Results are associated with stable region IDs and remain ordered spatially, even when requests finish out of order.
-5. Each region returns up to three priced candidates. High-confidence matches are accepted; ambiguous matches enter the existing review UI; unresolved regions are disclosed but excluded from totals.
+5. Each region returns up to three priced candidates. The normal bulk path selects the highest-scoring priced candidate locally, regardless of the provider status; unresolved regions are disclosed but excluded from totals. Candidate review remains available only for user-initiated missed-figure recovery.
 
 Google Vision object localization is an optional proposal source, disabled by default. It can be enabled server-side only after a benchmark demonstrates a meaningful recall gain without unacceptable precision loss. The native detector remains the default source of truth.
 

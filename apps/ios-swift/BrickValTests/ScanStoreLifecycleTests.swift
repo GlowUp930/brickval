@@ -93,6 +93,74 @@ struct ScanStoreLifecycleTests {
     }
 
     @Test @MainActor
+    func lowConfidenceBulkMatchUsesBestPricedCandidateWithoutReview() async throws {
+        var api = BrickValAPIClient.successfulLookupStub
+        api.startBulkScan = { _, regions, source in
+            #expect(source == .photoLibrary)
+            #expect(regions.map(\.regionId) == ["photo-1"])
+            let json = #"""
+            {
+              "scanSource": "photoLibrary",
+              "regions": [{"regionId":"photo-1","boundingBox":{"x":0.2,"y":0.2,"width":0.3,"height":0.5}}],
+              "sessionToken": "test-session",
+              "recoveryToken": null,
+              "proposalSource": "local"
+            }
+            """#
+            return try JSONDecoder().decode(BulkScanStartPayload.self, from: Data(json.utf8))
+        }
+        api.identifyBulkRegion = { _, regionID, _ in
+            #expect(regionID == "photo-1")
+            let json = #"""
+            {
+              "regionId": "photo-1",
+              "status": "review",
+              "candidates": [
+                {
+                  "id": "sh0133",
+                  "score": 0.31,
+                  "result": {
+                    "figInfo": {"name":"Joker variant", "image_url":null, "fig_number":"sh0133", "year_released":2017},
+                    "pricing": {"hero_new_avg_usd":null, "rrp_usd":null, "gain_pct":null, "data_source":"sold", "new_sold_avg_usd":null, "used_sold_avg_usd":14.45, "new_stock_avg_usd":null, "used_stock_avg_usd":null, "bricklink_new_avg_usd":null, "bricklink_used_avg_usd":null},
+                    "market_history": []
+                  }
+                },
+                {
+                  "id": "sh1022",
+                  "score": 0.42,
+                  "result": {
+                    "figInfo": {"name":"Joker", "image_url":null, "fig_number":"sh1022", "year_released":2017},
+                    "pricing": {"hero_new_avg_usd":null, "rrp_usd":null, "gain_pct":null, "data_source":"sold", "new_sold_avg_usd":null, "used_sold_avg_usd":59.50, "new_stock_avg_usd":null, "used_stock_avg_usd":null, "bricklink_new_avg_usd":null, "bricklink_used_avg_usd":null},
+                    "market_history": []
+                  }
+                }
+              ],
+              "usage": null
+            }
+            """#
+            return try JSONDecoder().decode(BulkRegionIdentificationPayload.self, from: Data(json.utf8))
+        }
+
+        let store = ScanStore(
+            api: api,
+            bulkPhotoDetector: StubBulkPhotoDetector(
+                regions: [BulkScanRegion(
+                    regionId: "photo-1",
+                    boundingBox: NormalizedBoundingBox(x: 0.2, y: 0.2, width: 0.3, height: 0.5)
+                )]
+            )
+        )
+        store.intent = .bulk
+
+        await store.importBulkPhoto(try recoveryImageData())
+
+        #expect(store.presentedBulkResults?.items.count == 1)
+        #expect(store.presentedBulkResults?.reviewItems.isEmpty == true)
+        #expect(store.presentedBulkResults?.items.first?.result.identifier == "sh1022")
+        #expect(store.presentedBulkResults?.items.first?.confidence == 0.42)
+    }
+
+    @Test @MainActor
     func importedPhoto400ReportsAndKeepsPhotoForRetry() async throws {
         let reporter = RecordingAppErrorReporter()
         let api = BrickValAPIClient(

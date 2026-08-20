@@ -602,7 +602,7 @@ final class ScanStore {
             bulkProcessingCompleted = 0
             bulkProcessingTotal = 0
             let response = try await api.scanBulkMinifigures(image, bulkRegions, bulkSource)
-            let items = response.items.map(\.normalized)
+            let items = response.items.map(\.normalized) + response.reviewItems.compactMap(\.bestResultItem)
             guard let frozenImageData,
                   !items.isEmpty || !response.reviewItems.isEmpty || !response.unresolvedRegions.isEmpty
             else {
@@ -616,7 +616,7 @@ final class ScanStore {
             presentedBulkResults = BulkScanPresentation(
                 imageData: frozenImageData,
                 items: items,
-                reviewItems: response.reviewItems.map(\.normalized),
+                reviewItems: [],
                 unresolvedRegions: response.unresolvedRegions.map(\.boundingBox),
                 recoveryToken: response.recoveryToken,
                 source: bulkSource
@@ -778,7 +778,6 @@ final class ScanStore {
             return left < right
         }
         var items: [BulkScanResultItem] = []
-        var reviewItems: [BulkScanReviewItem] = []
         var unresolvedRegions: [NormalizedBoundingBox] = []
         var usage: UsageSnapshot?
         var failedRequestCount = 0
@@ -793,7 +792,10 @@ final class ScanStore {
                 }
                 switch payload.status {
                 case .matched:
-                    let candidate = payload.candidates[0]
+                    guard let candidate = payload.bestCandidate else {
+                        unresolvedRegions.append(region.boundingBox)
+                        continue
+                    }
                     items.append(BulkScanResultItem(
                         id: region.regionId,
                         result: candidate.result.normalized,
@@ -801,10 +803,15 @@ final class ScanStore {
                         confidence: candidate.score
                     ))
                 case .review:
-                    reviewItems.append(BulkScanReviewItem(
+                    guard let candidate = payload.bestCandidate else {
+                        unresolvedRegions.append(region.boundingBox)
+                        continue
+                    }
+                    items.append(BulkScanResultItem(
                         id: region.regionId,
+                        result: candidate.result.normalized,
                         boundingBox: region.boundingBox,
-                        candidates: payload.candidates.map(\.normalized)
+                        confidence: candidate.score
                     ))
                 case .unresolved:
                     unresolvedRegions.append(region.boundingBox)
@@ -817,7 +824,7 @@ final class ScanStore {
 
         return BulkPerRegionScanOutput(
             items: items,
-            reviewItems: reviewItems,
+            reviewItems: [],
             unresolvedRegions: unresolvedRegions,
             recoveryToken: start.recoveryToken,
             usage: usage,

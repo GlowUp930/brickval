@@ -5,8 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "test:bulk": "tsx --test tests/bulk-identify.test.ts tests/bulk-scan-input.test.ts tests/identify-nonset.test.ts tests/bulk-recovery-rate-limit.test.ts tests/bulk-recovery-token.test.ts",
+    "test:bulk-eval": "tsx --test tests/bulk-eval.test.ts",
     "test:feedback": "tsx --test tests/product-feedback.test.ts",
     "benchmark:bulk": "tsx scripts/benchmark-bulk-scan.mts",
+    "eval:bulk": "tsx scripts/eval-bulk-scan.mts",
     "prebuild": "node scripts/assert-homepage-contract.mjs",
     "build": "next build",
     "start": "next start",
