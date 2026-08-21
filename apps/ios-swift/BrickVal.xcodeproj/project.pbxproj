@@ -99,6 +99,7 @@
 		7CD8E4C4F8A75976B4BDA0EF /* FocusedScanCropPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73BC21A199D8811A6A84473D /* FocusedScanCropPlanner.swift */; };
 		7ED5EDBFF17F71EDAFA82EB3 /* AppTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = C024586D59EC5B7AD2A5F91B /* AppTab.swift */; };
 		7FA7668D42CF7A04E26BE994 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFBFE5D27E5CABF2ACFE1E55 /* SubscriptionView.swift */; };
+		81E23CEB89523800F6164D95 /* BulkMinifigureDetector.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 3B324CCF35E9F9BEA04E081E /* BulkMinifigureDetector.mlpackage */; };
 		8353567F991A0A506E62958B /* ProductFeedbackStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 464388EF246573C5CBA70B6D /* ProductFeedbackStoreTests.swift */; };
 		83C8DECF87342144916542EE /* AutoScanSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8252484A128C31D174837A08 /* AutoScanSessionTests.swift */; };
 		841433F1E08312586E1EBA24 /* MultipartFormData.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA6E3C4140E799CD52D1894 /* MultipartFormData.swift */; };
@@ -246,6 +247,7 @@
 		38DA6B33E490682F88613CB2 /* ProductFeedbackSurveyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductFeedbackSurveyView.swift; sourceTree = "<group>"; };
 		39A70A303419108D3B28363A /* ScanStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanStore.swift; sourceTree = "<group>"; };
 		3A6E4E193E1DF277A26CBA67 /* ProductFeedbackStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductFeedbackStore.swift; sourceTree = "<group>"; };
+		3B324CCF35E9F9BEA04E081E /* BulkMinifigureDetector.mlpackage */ = {isa = PBXFileReference; path = BulkMinifigureDetector.mlpackage; sourceTree = "<group>"; };
 		3DA331DC281100089FF5A7D1 /* IdentificationDetection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentificationDetection.swift; sourceTree = "<group>"; };
 		3E90F936A1789385BD03F0D3 /* LocalDetectionSchedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalDetectionSchedule.swift; sourceTree = "<group>"; };
 		3F4AEB722B741DCE2C9C67E5 /* PartColorSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartColorSelectionView.swift; sourceTree = "<group>"; };
@@ -426,6 +428,7 @@
 		08E7D44AD0EFFC76BD8BEDE7 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				3B324CCF35E9F9BEA04E081E /* BulkMinifigureDetector.mlpackage */,
 				BA91C00010B7FE9351243FE7 /* MinifigureDetector.mlmodel */,
 			);
 			path = Models;
@@ -1029,6 +1032,7 @@
 				57CD2963F83F170849D5F569 /* BulkMinifigLookupPayload.swift in Sources */,
 				AAA777803A3BA83E0F8D462A /* BulkMinifigLookupRow.swift in Sources */,
 				1EB721E15C336E9FE07190E4 /* BulkMinifigScanPayload.swift in Sources */,
+				81E23CEB89523800F6164D95 /* BulkMinifigureDetector.mlpackage in Sources */,
 				C5D449AD90B548B9985E56EE /* BulkProcessingOverlayView.swift in Sources */,
 				BE087EBEF8D4F6BBD64960AD /* BulkRecoveryDemoFixture.swift in Sources */,
 				9FAE99A4329317ED4D97DDA7 /* BulkRecoveryPayload.swift in Sources */,
@@ -1177,7 +1181,7 @@
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution: HO LAM CHAN (4CQHLZBSU7)";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 139;
+				CURRENT_PROJECT_VERSION = 140;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1305,7 +1309,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 139;
+				CURRENT_PROJECT_VERSION = 140;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

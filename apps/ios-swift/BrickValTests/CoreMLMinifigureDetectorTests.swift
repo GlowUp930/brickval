@@ -38,4 +38,26 @@ struct CoreMLMinifigureDetectorTests {
         #expect(result.modelVersion == CoreMLMinifigureDetector.modelVersion)
         #expect(result.inferenceMilliseconds >= 0)
     }
+
+    @Test func bulkModelLoadsForBulkFrames() async throws {
+        var pixelBuffer: CVPixelBuffer?
+        let status = CVPixelBufferCreate(
+            nil,
+            416,
+            416,
+            kCVPixelFormatType_32BGRA,
+            nil,
+            &pixelBuffer
+        )
+        #expect(status == kCVReturnSuccess)
+        let buffer = try #require(pixelBuffer)
+
+        let detector = CoreMLMinifigureDetector()
+        let result = try await detector.detectBulk(
+            in: CameraFrame(pixelBuffer: buffer, timestamp: .now)
+        )
+
+        #expect(result.modelVersion == CoreMLMinifigureDetector.bulkModelVersion)
+        #expect(result.inferenceMilliseconds >= 0)
+    }
 }

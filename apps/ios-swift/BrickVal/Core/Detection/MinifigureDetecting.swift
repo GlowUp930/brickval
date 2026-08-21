@@ -10,6 +10,10 @@ protocol MinifigureDetecting: Sendable {
     func detect(in frame: CameraFrame) async throws -> MinifigureDetectionBatch
 }
 
+protocol BulkFrameDetecting: Sendable {
+    func detectBulk(in frame: CameraFrame) async throws -> MinifigureDetectionBatch
+}
+
 struct BulkPhotoDetectionBatch: Sendable {
     let regions: [BulkScanRegion]
     let inferenceMilliseconds: Int

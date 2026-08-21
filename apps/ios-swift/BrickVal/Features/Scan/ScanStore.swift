@@ -70,6 +70,7 @@ final class ScanStore {
     @ObservationIgnored private let imageProcessor: ImageProcessor
     @ObservationIgnored private let api: BrickValAPIClient
     @ObservationIgnored private let detector: any MinifigureDetecting
+    @ObservationIgnored private let bulkFrameDetector: (any BulkFrameDetecting)?
     @ObservationIgnored private let bulkPhotoDetector: any BulkPhotoDetecting
     @ObservationIgnored private let soundEffects: SoundEffectPlayer
     @ObservationIgnored private let errorReporter: any AppErrorReporting
@@ -105,6 +106,7 @@ final class ScanStore {
         self.imageProcessor = imageProcessor
         self.api = api
         self.detector = detector
+        self.bulkFrameDetector = detector as? any BulkFrameDetecting
         self.bulkPhotoDetector = bulkPhotoDetector ?? (detector as? any BulkPhotoDetecting) ?? NoopBulkPhotoDetector()
         self.soundEffects = SoundEffectPlayer()
         self.errorReporter = errorReporter
@@ -494,7 +496,12 @@ final class ScanStore {
             defer { schedule.didFinish() }
 
             let deviceStable = await motion.isStable()
-            let batch = try await detector.detect(in: frame)
+            let batch: MinifigureDetectionBatch
+            if intent == .bulk, let bulkFrameDetector {
+                batch = try await bulkFrameDetector.detectBulk(in: frame)
+            } else {
+                batch = try await detector.detect(in: frame)
+            }
             detectorModelVersion = batch.modelVersion
             detectorDetectionMilliseconds = batch.inferenceMilliseconds
             if intent == .bulk {

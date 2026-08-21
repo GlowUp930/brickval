@@ -4,16 +4,30 @@ import ImageIO
 import UIKit
 import Vision
 
-actor CoreMLMinifigureDetector: MinifigureDetecting, BulkPhotoDetecting {
+actor CoreMLMinifigureDetector: MinifigureDetecting, BulkFrameDetecting, BulkPhotoDetecting {
     static let modelVersion = "coreml-v3-500"
+    static let bulkModelVersion = "yolo-v7-stock-bulk-1024"
     static let minimumConfidence = 0.30
     static let frameEdgeMargin = 0.03
 
     private var visionModel: VNCoreMLModel?
+    private var bulkVisionModel: VNCoreMLModel?
 
     func detect(in frame: CameraFrame) throws -> MinifigureDetectionBatch {
+        try detect(in: frame, using: try model(), modelVersion: Self.modelVersion)
+    }
+
+    func detectBulk(in frame: CameraFrame) throws -> MinifigureDetectionBatch {
+        try detect(in: frame, using: try bulkModel(), modelVersion: Self.bulkModelVersion)
+    }
+
+    private func detect(
+        in frame: CameraFrame,
+        using visionModel: VNCoreMLModel,
+        modelVersion: String
+    ) throws -> MinifigureDetectionBatch {
         let startedAt = CFAbsoluteTimeGetCurrent()
-        let request = VNCoreMLRequest(model: try model())
+        let request = VNCoreMLRequest(model: visionModel)
         request.imageCropAndScaleOption = .scaleFit
 
         let handler = VNImageRequestHandler(
@@ -44,7 +58,7 @@ actor CoreMLMinifigureDetector: MinifigureDetecting, BulkPhotoDetecting {
         return MinifigureDetectionBatch(
             observations: observations,
             inferenceMilliseconds: Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1_000),
-            modelVersion: Self.modelVersion
+            modelVersion: modelVersion
         )
     }
 
@@ -64,7 +78,7 @@ actor CoreMLMinifigureDetector: MinifigureDetecting, BulkPhotoDetecting {
             try Task.checkCancellation()
             let tile = index == 0 ? source : source.cropping(to: tileRect.integral)
             guard let tile else { continue }
-            let request = VNCoreMLRequest(model: try model())
+            let request = VNCoreMLRequest(model: try bulkModel())
             request.imageCropAndScaleOption = .scaleFit
             let handler = VNImageRequestHandler(cgImage: tile, orientation: .up, options: [:])
             try handler.perform([request])
@@ -108,7 +122,7 @@ actor CoreMLMinifigureDetector: MinifigureDetecting, BulkPhotoDetecting {
         return BulkPhotoDetectionBatch(
             regions: Array(merged),
             inferenceMilliseconds: Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1_000),
-            modelVersion: Self.modelVersion,
+            modelVersion: Self.bulkModelVersion,
             tileCount: tileRects.count
         )
     }
@@ -125,6 +139,21 @@ actor CoreMLMinifigureDetector: MinifigureDetecting, BulkPhotoDetecting {
         configuration.computeUnits = .all
         let loaded = try VNCoreMLModel(for: MLModel(contentsOf: modelURL, configuration: configuration))
         visionModel = loaded
+        return loaded
+    }
+
+    private func bulkModel() throws -> VNCoreMLModel {
+        if let bulkVisionModel { return bulkVisionModel }
+        guard let modelURL = Bundle(for: ModelBundleToken.self).url(
+            forResource: "BulkMinifigureDetector",
+            withExtension: "mlmodelc"
+        ) else {
+            throw MinifigureDetectorError.modelMissing
+        }
+        let configuration = MLModelConfiguration()
+        configuration.computeUnits = .all
+        let loaded = try VNCoreMLModel(for: MLModel(contentsOf: modelURL, configuration: configuration))
+        bulkVisionModel = loaded
         return loaded
     }
 
