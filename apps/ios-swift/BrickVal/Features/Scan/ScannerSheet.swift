@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 enum ScannerSheet: Identifiable {
     case manualLookup
@@ -25,14 +26,132 @@ enum ScannerSheet: Identifiable {
     }
 }
 
-struct BulkScanPresentation: Identifiable {
+enum BulkRegionProgressState: Sendable {
+    case pending
+    case loading
+    case resolved(BulkScanResultItem)
+    case unresolved
+
+    var isTerminal: Bool {
+        switch self {
+        case .resolved, .unresolved: true
+        case .pending, .loading: false
+        }
+    }
+}
+
+@Observable
+@MainActor
+final class BulkScanPresentation: Identifiable {
     let id = UUID()
     let imageData: Data
-    let items: [BulkScanResultItem]
-    let reviewItems: [BulkScanReviewItem]
-    let unresolvedRegions: [NormalizedBoundingBox]
-    let recoveryToken: String?
+    let regions: [BulkScanRegion]
     let source: BulkScanSource
+    let sessionToken: String?
+    var recoveryToken: String?
+    private(set) var reviewItems: [BulkScanReviewItem]
+    private(set) var regionStates: [String: BulkRegionProgressState]
+    private(set) var revision = 0
+    var terminalError: String?
+
+    init(
+        imageData: Data,
+        regions: [BulkScanRegion],
+        recoveryToken: String?,
+        source: BulkScanSource,
+        sessionToken: String? = nil
+    ) {
+        self.imageData = imageData
+        self.regions = regions
+        self.recoveryToken = recoveryToken
+        self.source = source
+        self.sessionToken = sessionToken
+        reviewItems = []
+        regionStates = Dictionary(uniqueKeysWithValues: regions.map { ($0.regionId, .pending) })
+    }
+
+    convenience init(
+        imageData: Data,
+        items: [BulkScanResultItem],
+        reviewItems: [BulkScanReviewItem],
+        unresolvedRegions: [NormalizedBoundingBox],
+        recoveryToken: String?,
+        source: BulkScanSource
+    ) {
+        let emptyBox = NormalizedBoundingBox(x: 0, y: 0, width: 0, height: 0)
+        var regions = items.map { BulkScanRegion(regionId: $0.id, boundingBox: $0.boundingBox ?? emptyBox) }
+        for review in reviewItems where !regions.contains(where: { $0.regionId == review.id }) {
+            regions.append(BulkScanRegion(regionId: review.id, boundingBox: review.boundingBox ?? emptyBox))
+        }
+        for (index, box) in unresolvedRegions.enumerated() {
+            let regionID = "unresolved-\(index)"
+            guard !regions.contains(where: { $0.regionId == regionID }) else { continue }
+            regions.append(BulkScanRegion(regionId: regionID, boundingBox: box))
+        }
+        self.init(
+            imageData: imageData,
+            regions: regions,
+            recoveryToken: recoveryToken,
+            source: source
+        )
+        self.reviewItems = reviewItems
+        for item in items {
+            regionStates[item.id] = .resolved(item)
+        }
+        for review in reviewItems {
+            regionStates[review.id] = .unresolved
+        }
+        for index in unresolvedRegions.indices {
+            regionStates["unresolved-\(index)"] = .unresolved
+        }
+        revision += 1
+    }
+
+    var resolvedItems: [BulkScanResultItem] {
+        regions.compactMap { region in
+            guard case .resolved(let item) = regionStates[region.regionId] else { return nil }
+            return item
+        }
+    }
+
+    var items: [BulkScanResultItem] { resolvedItems }
+
+    var unresolvedRegions: [NormalizedBoundingBox] {
+        regions.compactMap { region in
+            guard case .unresolved = regionStates[region.regionId] else { return nil }
+            return region.boundingBox
+        }
+    }
+
+    var terminalCount: Int {
+        regions.reduce(into: 0) { count, region in
+            if regionStates[region.regionId]?.isTerminal == true { count += 1 }
+        }
+    }
+
+    var isTerminal: Bool {
+        !regions.isEmpty && terminalCount == regions.count
+    }
+
+    var successfulCount: Int { resolvedItems.count }
+
+    func markLoading(_ regionID: String) {
+        guard regionStates[regionID] != nil else { return }
+        regionStates[regionID] = .loading
+        revision += 1
+    }
+
+    func markResolved(_ item: BulkScanResultItem) {
+        guard regionStates[item.id] != nil else { return }
+        regionStates[item.id] = .resolved(item)
+        revision += 1
+    }
+
+    func markUnresolved(_ regionID: String) {
+        guard regionStates[regionID] != nil else { return }
+        regionStates[regionID] = .unresolved
+        revision += 1
+    }
 }
 
 struct BulkScanReviewItem: Identifiable, Sendable {

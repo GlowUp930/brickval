@@ -60,7 +60,7 @@ actor ImageProcessor {
         guard let rect = FocusedScanCropPlanner.cropRect(
             for: focusBox,
             imageSize: normalized.size,
-            contextRatio: 0.20
+            contextRatio: 0
         ) else {
             throw CameraError.invalidImage
         }

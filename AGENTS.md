@@ -32,6 +32,7 @@ The existing Next.js app remains the hosted API/web backend at `brickvalue.live`
 - ✅ Collection, Scan, Onboarding, and Settings feature folders
 - ✅ Local persistence modules for collection and preferences
 - ✅ Camera module and auto-scan session logic
+- ✅ Progressive bulk results session with bounded four-request pricing, spatial reveal ordering, compact result rail, and tap-centered recovery crops
 - ✅ Design system and interactive stock chart
 - ✅ Unit tests for collection storage and auto-scan session behavior
 - ✅ XcodeGen project source in `apps/ios-swift/project.yml`

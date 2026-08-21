@@ -254,12 +254,7 @@ struct ScannerView: View {
         }
         .fullScreenCover(item: $store.presentedBulkResults) { presentation in
             BulkScanResultsView(
-                imageData: presentation.imageData,
-                items: presentation.items,
-                reviewItems: presentation.reviewItems,
-                unresolvedRegions: presentation.unresolvedRegions,
-                recoveryToken: presentation.recoveryToken,
-                source: presentation.source,
+                presentation: presentation,
                 store: store
             )
         }

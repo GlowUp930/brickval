@@ -79,40 +79,43 @@ struct BulkSweepResultCarousel: View {
         .accessibilityLabel("Valued figures")
     }
 
+    @ViewBuilder
     private func compactCard(_ entry: BulkRevealEntry) -> some View {
-        HStack(spacing: 7) {
-            MinifigureThumbnail(
-                imageURL: entry.item.result.imageURL,
-                identifier: entry.item.result.identifier,
-                accent: accent
-            )
-            .frame(width: 48, height: 58)
-            .background(.white, in: .rect(cornerRadius: 8))
+        if let item = entry.item {
+            HStack(spacing: 7) {
+                MinifigureThumbnail(
+                    imageURL: item.result.imageURL,
+                    identifier: item.result.identifier,
+                    accent: accent
+                )
+                .frame(width: 48, height: 58)
+                .background(.white, in: .rect(cornerRadius: 8))
 
-            VStack(alignment: .leading, spacing: 2) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.caption.bold())
-                    .foregroundStyle(accent)
-                Text(entry.item.result.identifier)
-                    .font(.caption2.bold())
-                    .lineLimit(1)
-                if let usedValue = entry.usedValue {
-                    Text(usedValue, format: .currency(code: "USD"))
-                        .font(.caption.bold().monospacedDigit())
+                VStack(alignment: .leading, spacing: 2) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption.bold())
                         .foregroundStyle(accent)
-                } else {
-                    Text("No price")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.58))
+                    Text(item.result.identifier)
+                        .font(.caption2.bold())
+                        .lineLimit(1)
+                    if let usedValue = entry.usedValue {
+                        Text(usedValue, format: .currency(code: "USD"))
+                            .font(.caption.bold().monospacedDigit())
+                            .foregroundStyle(accent)
+                    } else {
+                        Text("No price")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.58))
+                    }
                 }
+                .foregroundStyle(.white)
             }
-            .foregroundStyle(.white)
+            .padding(6)
+            .background(.black.opacity(0.78), in: .rect(cornerRadius: 11))
+            .overlay { RoundedRectangle(cornerRadius: 11).stroke(accent.opacity(0.52)) }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(item.result.name), \(entry.usedValue?.formatted(.currency(code: "USD")) ?? "no price")")
         }
-        .padding(6)
-        .background(.black.opacity(0.78), in: .rect(cornerRadius: 11))
-        .overlay { RoundedRectangle(cornerRadius: 11).stroke(accent.opacity(0.52)) }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(entry.item.result.name), \(entry.usedValue?.formatted(.currency(code: "USD")) ?? "no price")")
     }
 }
 
@@ -120,6 +123,7 @@ struct BulkRevealOverlay: View {
     let entries: [BulkRevealEntry]
     let visibleCount: Int
     let revealedTotal: Double
+    let currentStatus: String?
 
     @Environment(\.brickValAccent) private var accent
 
@@ -128,7 +132,7 @@ struct BulkRevealOverlay: View {
             HStack(alignment: .top) {
                 BulkSweepTotalPill(
                     total: revealedTotal,
-                    valuedCount: visibleCount,
+                    valuedCount: entries.prefix(visibleCount).filter(\.isResolved).count,
                     itemCount: entries.count,
                     accent: accent
                 )
@@ -138,12 +142,21 @@ struct BulkRevealOverlay: View {
             Spacer(minLength: 0)
 
             VStack(spacing: 8) {
+                if let currentStatus {
+                    Text(currentStatus)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.72))
+                        .accessibilityLabel(currentStatus)
+                }
                 BulkSweepResultCarousel(
                     entries: entries,
                     revealedCount: visibleCount,
                     accent: accent
                 )
-                BulkSweepProgress(valuedCount: visibleCount, itemCount: entries.count)
+                BulkSweepProgress(
+                    valuedCount: entries.prefix(visibleCount).filter(\.isResolved).count,
+                    itemCount: entries.count
+                )
             }
             .padding(.bottom, 12)
         }

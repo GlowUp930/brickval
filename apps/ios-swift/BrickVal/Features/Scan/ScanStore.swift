@@ -3,24 +3,6 @@ import Foundation
 import Observation
 import OSLog
 
-private struct BulkPerRegionScanOutput: Sendable {
-    let items: [BulkScanResultItem]
-    let reviewItems: [BulkScanReviewItem]
-    let unresolvedRegions: [NormalizedBoundingBox]
-    let recoveryToken: String?
-    let usage: UsageSnapshot?
-    let failedRequestCount: Int
-    let requestCount: Int
-
-    var hasResults: Bool {
-        !items.isEmpty || !reviewItems.isEmpty || !unresolvedRegions.isEmpty
-    }
-
-    var allRequestsFailed: Bool {
-        requestCount > 0 && failedRequestCount == requestCount
-    }
-}
-
 private enum BulkRegionOutcome: Sendable {
     case completed(region: BulkScanRegion, payload: BulkRegionIdentificationPayload)
     case failed(region: BulkScanRegion, error: APIError?)
@@ -585,36 +567,27 @@ final class ScanStore {
             // can still use the provider's global detector.
             if !bulkRegions.isEmpty,
                let startBulkScan = api.startBulkScan,
-               let identifyBulkRegion = api.identifyBulkRegion,
-               let output = try await identifyBulkPerRegion(
-                   imageData: image,
-                   bulkRegions: bulkRegions,
-                   bulkSource: bulkSource,
-                   startBulkScan: startBulkScan,
-                   identifyBulkRegion: identifyBulkRegion
-               ) {
-                guard !output.allRequestsFailed else {
-                    phase = .failed("We couldn't check the figures. Your photo is saved. Tap Try again or retake the photo.")
-                    return
-                }
-                guard output.hasResults else {
-                    let limit = bulkSource == .photoLibrary ? 40 : 10
-                    phase = .failed("No priced minifigures were found. Try a brighter photo with up to \(limit) figures separated and facing forward.")
+               api.identifyBulkRegion != nil {
+                let start = try await startBulkScan(image, bulkRegions, bulkSource)
+                let regionLimit = bulkSource == .photoLibrary ? 40 : 10
+                let regions = Array(start.regions.prefix(regionLimit))
+                guard !regions.isEmpty else {
+                    phase = .failed("No minifigures were found. Try a brighter photo with the figures separated and facing forward.")
                     return
                 }
                 guard let frozenImageData else {
                     phase = .failed("The captured photo is no longer available. Please retake the photo.")
                     return
                 }
-                monetization?.recordSuccessfulBulk(serverUsage: output.usage)
+                bulkProcessingCompleted = 0
+                bulkProcessingTotal = regions.count
                 phase = .review
                 presentedBulkResults = BulkScanPresentation(
                     imageData: frozenImageData,
-                    items: output.items,
-                    reviewItems: output.reviewItems,
-                    unresolvedRegions: output.unresolvedRegions,
-                    recoveryToken: output.recoveryToken,
-                    source: bulkSource
+                    regions: regions,
+                    recoveryToken: start.recoveryToken,
+                    source: bulkSource,
+                    sessionToken: start.sessionToken
                 )
                 return
             }
@@ -636,7 +609,7 @@ final class ScanStore {
             presentedBulkResults = BulkScanPresentation(
                 imageData: frozenImageData,
                 items: items,
-                reviewItems: [],
+                reviewItems: response.reviewItems.map(\.normalized),
                 unresolvedRegions: response.unresolvedRegions.map(\.boundingBox),
                 recoveryToken: response.recoveryToken,
                 source: bulkSource
@@ -721,35 +694,38 @@ final class ScanStore {
         soundEffects.play(.cashRegister)
     }
 
-    private func identifyBulkPerRegion(
-        imageData: Data,
-        bulkRegions: [BulkScanRegion],
-        bulkSource: BulkScanSource,
-        startBulkScan: @escaping @Sendable (Data, [BulkScanRegion], BulkScanSource) async throws -> BulkScanStartPayload,
-        identifyBulkRegion: @escaping @Sendable (Data, String, String) async throws -> BulkRegionIdentificationPayload
-    ) async throws -> BulkPerRegionScanOutput? {
-        let start = try await startBulkScan(imageData, bulkRegions, bulkSource)
-        let regionLimit = bulkSource == .photoLibrary ? 40 : 10
-        let regions = Array(start.regions.prefix(regionLimit))
-        guard !regions.isEmpty else { return nil }
+    /// Resolves bulk regions in a bounded window while the results screen is visible.
+    /// The view owns the task lifecycle, so dismissing the screen cancels this work.
+    func processBulkPresentation(_ presentation: BulkScanPresentation) async {
+        guard presentedBulkResults?.id == presentation.id,
+              let identifyBulkRegion = api.identifyBulkRegion,
+              let sessionToken = presentation.sessionToken
+        else { return }
 
         let processor = imageProcessor
-        let sessionToken = start.sessionToken
-        bulkProcessingCompleted = 0
-        bulkProcessingTotal = regions.count
-        let outcomes = try await withThrowingTaskGroup(of: BulkRegionOutcome.self, returning: [BulkRegionOutcome].self) { group in
-            var nextIndex = 0
-            var inFlight = 0
-            var completed: [BulkRegionOutcome] = []
+        let imageData = presentation.imageData
+        var usage: UsageSnapshot?
+        var nextIndex = 0
+        var inFlight = 0
+        var sawProLimit = false
 
-            while nextIndex < regions.count || inFlight > 0 {
-                while nextIndex < regions.count && inFlight < 4 {
-                    let region = regions[nextIndex]
+        await withTaskGroup(of: BulkRegionOutcome.self) { group in
+            while nextIndex < presentation.regions.count || inFlight > 0 {
+                guard !Task.isCancelled,
+                      presentedBulkResults?.id == presentation.id
+                else {
+                    group.cancelAll()
+                    return
+                }
+
+                while nextIndex < presentation.regions.count && inFlight < 4 {
+                    let region = presentation.regions[nextIndex]
                     nextIndex += 1
                     inFlight += 1
+                    presentation.markLoading(region.regionId)
                     group.addTask {
-                        try Task.checkCancellation()
                         do {
+                            try Task.checkCancellation()
                             let crop = try await processor.bulkRegionImage(
                                 from: imageData,
                                 region: region.boundingBox,
@@ -766,7 +742,7 @@ final class ScanStore {
                             )
                             return .completed(region: region, payload: payload)
                         } catch is CancellationError {
-                            throw CancellationError()
+                            return .failed(region: region, error: nil)
                         } catch let error as APIError {
                             return .failed(region: region, error: error)
                         } catch {
@@ -775,82 +751,44 @@ final class ScanStore {
                     }
                 }
 
-                if let outcome = try await group.next() {
-                    completed.append(outcome)
-                    inFlight -= 1
-                    bulkProcessingCompleted = completed.count
-                }
-            }
-            return completed
-        }
+                guard let outcome = await group.next() else { continue }
+                inFlight -= 1
+                bulkProcessingCompleted += 1
 
-        if let limitError = outcomes.compactMap({ outcome -> APIError? in
-            guard case .failed(_, let error) = outcome else { return nil }
-            return error?.isProLimit == true ? error : nil
-        }).first {
-            throw limitError
-        }
-
-        let orderedOutcomes = outcomes.sorted { lhs, rhs in
-            guard let left = regions.firstIndex(where: { $0.regionId == lhs.region.regionId }),
-                  let right = regions.firstIndex(where: { $0.regionId == rhs.region.regionId })
-            else { return lhs.region.regionId < rhs.region.regionId }
-            return left < right
-        }
-        var items: [BulkScanResultItem] = []
-        var unresolvedRegions: [NormalizedBoundingBox] = []
-        var usage: UsageSnapshot?
-        var failedRequestCount = 0
-
-        for outcome in orderedOutcomes {
-            switch outcome {
-            case .completed(let region, let payload):
-                usage = usage ?? payload.usage
-                guard !payload.candidates.isEmpty else {
-                    unresolvedRegions.append(region.boundingBox)
-                    continue
-                }
-                switch payload.status {
-                case .matched:
-                    guard let candidate = payload.bestCandidate else {
-                        unresolvedRegions.append(region.boundingBox)
+                switch outcome {
+                case .completed(let region, let payload):
+                    usage = usage ?? payload.usage
+                    guard payload.status != .unresolved,
+                          let candidate = payload.bestCandidate
+                    else {
+                        presentation.markUnresolved(region.regionId)
                         continue
                     }
-                    items.append(BulkScanResultItem(
+                    presentation.markResolved(BulkScanResultItem(
                         id: region.regionId,
                         result: candidate.result.normalized,
                         boundingBox: region.boundingBox,
                         confidence: candidate.score
                     ))
-                case .review:
-                    guard let candidate = payload.bestCandidate else {
-                        unresolvedRegions.append(region.boundingBox)
-                        continue
-                    }
-                    items.append(BulkScanResultItem(
-                        id: region.regionId,
-                        result: candidate.result.normalized,
-                        boundingBox: region.boundingBox,
-                        confidence: candidate.score
-                    ))
-                case .unresolved:
-                    unresolvedRegions.append(region.boundingBox)
+                case .failed(let region, let error):
+                    sawProLimit = sawProLimit || error?.isProLimit == true
+                    presentation.markUnresolved(region.regionId)
                 }
-            case .failed(let region, _):
-                failedRequestCount += 1
-                unresolvedRegions.append(region.boundingBox)
             }
         }
 
-        return BulkPerRegionScanOutput(
-            items: items,
-            reviewItems: [],
-            unresolvedRegions: unresolvedRegions,
-            recoveryToken: start.recoveryToken,
-            usage: usage,
-            failedRequestCount: failedRequestCount,
-            requestCount: regions.count
-        )
+        guard !Task.isCancelled,
+              presentedBulkResults?.id == presentation.id
+        else { return }
+
+        if sawProLimit {
+            presentation.terminalError = "You've reached the bulk scan limit. Upgrade to continue."
+            proLimitFeature = .bulkScan
+        } else if presentation.successfulCount == 0 {
+            presentation.terminalError = "We couldn't identify any figures. Try a brighter photo with the figures separated and facing forward."
+        } else {
+            monetization?.recordSuccessfulBulk(serverUsage: usage)
+        }
     }
 
     nonisolated private static func retryWeakBulkRegion(

@@ -164,11 +164,86 @@ struct ScanStoreLifecycleTests {
         store.intent = .bulk
 
         await store.importBulkPhoto(try recoveryImageData())
+        if let presentation = store.presentedBulkResults {
+            await store.processBulkPresentation(presentation)
+        }
 
         #expect(store.presentedBulkResults?.items.count == 1)
         #expect(store.presentedBulkResults?.reviewItems.isEmpty == true)
         #expect(store.presentedBulkResults?.items.first?.result.identifier == "sh1022")
         #expect(store.presentedBulkResults?.items.first?.confidence == 0.42)
+    }
+
+    @Test @MainActor
+    func progressiveBulkPresentationKeepsFourLookupsInFlightAndCompletesPartialFailures() async throws {
+        let probe = RecoveryConcurrencyProbe()
+        let regions = (0..<5).map { index in
+            BulkScanRegion(
+                regionId: "region-\(index)",
+                boundingBox: NormalizedBoundingBox(
+                    x: Double(index) * 0.18,
+                    y: 0.2,
+                    width: 0.14,
+                    height: 0.3
+                )
+            )
+        }
+        var api = BrickValAPIClient.successfulLookupStub
+        api.startBulkScan = { _, incomingRegions, source in
+            BulkScanStartPayload(
+                scanSource: source,
+                regions: incomingRegions,
+                sessionToken: "progressive-session",
+                recoveryToken: nil,
+                proposalSource: "test"
+            )
+        }
+        api.identifyBulkRegion = { _, regionID, _ in
+            await probe.begin()
+            if regionID == "region-4" {
+                await probe.end()
+                throw ScanStoreLifecycleTestError.unusedEndpoint
+            }
+            do {
+                try await Task.sleep(for: .milliseconds(regionID == "region-0" ? 40 : 10))
+            } catch {
+                await probe.end()
+                throw error
+            }
+            await probe.end()
+            return try ScanStoreLifecycleTests.bulkRegionPayload(regionID: regionID)
+        }
+
+        let store = ScanStore(
+            api: api,
+            bulkPhotoDetector: StubBulkPhotoDetector(regions: regions)
+        )
+        store.intent = .bulk
+
+        await store.importBulkPhoto(try recoveryImageData())
+        let presentation = try #require(store.presentedBulkResults)
+        #expect(presentation.items.isEmpty)
+        #expect(presentation.terminalCount == 0)
+
+        await store.processBulkPresentation(presentation)
+
+        #expect(presentation.isTerminal)
+        #expect(presentation.items.count == 4)
+        #expect(presentation.unresolvedRegions.count == 1)
+        #expect(await probe.maximumInFlight() <= 4)
+
+        let failedPresentation = BulkScanPresentation(
+            imageData: try recoveryImageData(),
+            regions: regions,
+            recoveryToken: nil,
+            source: .photoLibrary,
+            sessionToken: nil
+        )
+        for region in regions {
+            failedPresentation.markUnresolved(region.regionId)
+        }
+        #expect(failedPresentation.isTerminal)
+        #expect(failedPresentation.successfulCount == 0)
     }
 
     @Test @MainActor
@@ -315,6 +390,45 @@ struct ScanStoreLifecycleTests {
             UIColor.white.setFill()
             context.fill(CGRect(x: 0, y: 0, width: 400, height: 400))
         }
+    }
+
+    private static func bulkRegionPayload(regionID: String) throws -> BulkRegionIdentificationPayload {
+        let json = """
+        {
+          "regionId": "\(regionID)",
+          "status": "matched",
+          "candidates": [{
+            "id": "sh0115",
+            "score": 0.92,
+            "result": {
+              "figInfo": {
+                "name": "Spider-Man",
+                "image_url": null,
+                "fig_number": "sh0115",
+                "year_released": 2017
+              },
+              "pricing": {
+                "hero_new_avg_usd": null,
+                "rrp_usd": null,
+                "gain_pct": null,
+                "data_source": "test",
+                "new_sold_avg_usd": null,
+                "used_sold_avg_usd": 5.14,
+                "new_stock_avg_usd": null,
+                "used_stock_avg_usd": null,
+                "bricklink_new_avg_usd": null,
+                "bricklink_used_avg_usd": null
+              },
+              "market_history": []
+            }
+          }],
+          "usage": null
+        }
+        """
+        return try JSONDecoder().decode(
+            BulkRegionIdentificationPayload.self,
+            from: Data(json.utf8)
+        )
     }
 }
 

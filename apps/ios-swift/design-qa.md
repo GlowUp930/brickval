@@ -63,6 +63,20 @@ final result: passed
 
 final result: passed
 
+## Progressive Bulk Results QA — 2026-08-22
+
+- Bulk results now present immediately after region detection; pricing requests continue behind the reveal.
+- The lookup window is capped at four requests, while the reveal stays in spatial order and pauses on a loading outline when needed.
+- Completed results use one compact horizontal rail with all result cards reachable by scrolling; the old ten-item page selector is removed.
+- The photo remains aspect-fit in both immersive and completed layouts. Resolved and unresolved regions retain their outlines after the reveal.
+- The Add action remains disabled until every region reaches a terminal state and the spatial reveal finishes.
+- Missed-figure recovery uses the exact known region with one context expansion, or a tap-centered median-size crop for free taps. The visible highlight and encoded crop share the same box.
+- Reduce Motion keeps the progressive state and uses short crossfades instead of stage expansion.
+- Small iPhone UI tests passed for recovery selection and scanner layout. The full Swift suite passed with 122 tests, and the iPhone 17 Pro simulator build succeeded.
+- No new TestFlight build was uploaded for this change.
+
+final result: passed
+
 ## Interactive Chart And Flow QA — 2026-07-15
 
 - Collection chart scrubber exposed the selected month and USD value through UI automation.

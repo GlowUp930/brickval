@@ -3,6 +3,32 @@ import Testing
 @testable import BrickVal
 
 struct FocusedScanCropPlannerTests {
+    @Test func recoveryTapUsesReferenceSizeButNotNearbyFigureOrigin() {
+        let tap = CGPoint(x: 0.36, y: 0.61)
+        let nearbyDetection = NormalizedBoundingBox(x: 0.35, y: 0.35, width: 0.12, height: 0.20)
+        let box = BulkRecoveryTapPlanner.recognitionBox(for: tap, referenceBox: nearbyDetection)
+
+        #expect(abs(box.center.x - tap.x) < 0.01)
+        #expect(abs(box.center.y - tap.y) < 0.01)
+        #expect(!box.contains(BulkRecoveryPoint(x: 0.36, y: 0.35)))
+    }
+
+    @Test func freeRecoveryTapUsesMedianSizeAndStaysCentered() {
+        let tap = CGPoint(x: 0.91, y: 0.08)
+        let box = BulkRecoveryTapPlanner.recognitionBox(
+            for: tap,
+            referenceBox: nil,
+            fallbackSize: CGSize(width: 0.20, height: 0.30)
+        )
+
+        #expect(box.width == 0.20)
+        #expect(box.height == 0.30)
+        #expect(box.x + box.width == 1)
+        #expect(box.y == 0)
+        #expect(abs(box.center.x - 0.90) < 0.01)
+        #expect(abs(box.center.y - 0.15) < 0.01)
+    }
+
     @Test func bulkRecoveryTapCropExcludesNearbyFigure() throws {
         let imageSize = CGSize(width: 1000, height: 2165)
         let tappedFigure = CGPoint(x: 0.35, y: 0.35)

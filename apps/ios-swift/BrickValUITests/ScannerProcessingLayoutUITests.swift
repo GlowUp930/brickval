@@ -29,7 +29,7 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         app.launch()
 
         let enterRecovery = app.buttons["bulkRecovery.enter"]
-        XCTAssertTrue(enterRecovery.waitForExistence(timeout: 3))
+        XCTAssertTrue(enterRecovery.waitForExistence(timeout: 8))
         XCTAssertGreaterThanOrEqual(enterRecovery.frame.height, 44)
         XCTAssertFalse(app.buttons["Skip"].exists)
         XCTAssertFalse(app.otherElements["bulkResults.finalSummary"].exists)

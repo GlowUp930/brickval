@@ -11,28 +11,30 @@ enum BulkRecoveryTapPlanner {
         let x = min(max(normalizedPoint.x, 0), 1)
         let y = min(max(normalizedPoint.y, 0), 1)
         return NormalizedBoundingBox(
-            x: min(max(x - 0.13, 0), 0.74),
-            y: min(max(y - 0.15, 0), 0.70),
-            width: 0.26,
-            height: 0.30
+            x: min(max(x - 0.08, 0), 0.84),
+            y: min(max(y - 0.12, 0), 0.76),
+            width: 0.16,
+            height: 0.24
         )
     }
 
     static func recognitionBox(
         for normalizedPoint: CGPoint,
-        referenceBox: NormalizedBoundingBox?
+        referenceBox: NormalizedBoundingBox?,
+        fallbackSize: CGSize = CGSize(width: 0.16, height: 0.24)
     ) -> NormalizedBoundingBox {
-        guard let referenceBox else { return focusBox(for: normalizedPoint) }
-        let contextX = max(referenceBox.width * 0.30, 0.08)
-        let contextY = max(referenceBox.height * 0.30, 0.08)
-        let x = max(0, referenceBox.x - contextX)
-        let y = max(0, referenceBox.y - contextY)
-        return NormalizedBoundingBox(
-            x: x,
-            y: y,
-            width: min(1, referenceBox.width + contextX * 2),
-            height: min(1, referenceBox.height + contextY * 2)
-        ).clamped
+        guard let referenceBox, referenceBox.width > 0, referenceBox.height > 0 else {
+            let width = min(max(fallbackSize.width, 0.12), 0.24)
+            let height = min(max(fallbackSize.height, 0.18), 0.34)
+            let x = min(max(normalizedPoint.x - width / 2, 0), 1 - width)
+            let y = min(max(normalizedPoint.y - height / 2, 0), 1 - height)
+            return NormalizedBoundingBox(x: x, y: y, width: width, height: height)
+        }
+        let width = min(max(referenceBox.width * 1.15, 0.12), 0.24)
+        let height = min(max(referenceBox.height * 1.15, 0.18), 0.34)
+        let x = min(max(normalizedPoint.x - width / 2, 0), 1 - width)
+        let y = min(max(normalizedPoint.y - height / 2, 0), 1 - height)
+        return NormalizedBoundingBox(x: x, y: y, width: width, height: height)
     }
 }
 
@@ -42,6 +44,7 @@ private enum BulkResultsPresentationPhase {
     case completedReview
 }
 
+@MainActor
 struct BulkScanResultsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(CollectionStore.self) private var collection
@@ -53,9 +56,9 @@ struct BulkScanResultsView: View {
 
     @Namespace private var photoStageNamespace
 
-    let items: [BulkScanResultItem]
+    let presentation: BulkScanPresentation
     let store: ScanStore
-    private let source: BulkScanSource
+    private var source: BulkScanSource { presentation.source }
 
     @State private var itemStates: [BulkScanItemState]
     @State private var reviewItems: [BulkScanReviewItem]
@@ -69,12 +72,25 @@ struct BulkScanResultsView: View {
     @State private var errorMessage: String?
     @State private var revealSession: BulkRevealSession
     @State private var presentationPhase: BulkResultsPresentationPhase = .compactIntro
+    @State private var reviewInteractionReady = false
     @State private var didPlayRevealSound = false
     @State private var sharePayload: BulkSharePayload?
-    @State private var activeResultPage = 0
 
     private let capturedImage: UIImage?
     private let canvas = BrickValStyle.ScanResult.canvas
+
+    init(presentation: BulkScanPresentation, store: ScanStore) {
+        self.presentation = presentation
+        self.store = store
+        capturedImage = UIImage(data: presentation.imageData)
+        _itemStates = State(initialValue: presentation.resolvedItems.map { BulkScanItemState(item: $0) })
+        _reviewItems = State(initialValue: presentation.reviewItems)
+        _unresolvedRegions = State(initialValue: presentation.unresolvedRegions)
+        _revealSession = State(initialValue: BulkRevealSession(
+            regions: presentation.regions,
+            items: presentation.resolvedItems
+        ))
+    }
 
     init(
         imageData: Data,
@@ -85,27 +101,21 @@ struct BulkScanResultsView: View {
         source: BulkScanSource = .camera,
         store: ScanStore
     ) {
-        self.items = items
-        self.store = store
-        self.source = source
-        self.recoveryToken = recoveryToken
-        capturedImage = UIImage(data: imageData)
-        let orderedItems = items.sorted { lhs, rhs in
-            guard let left = lhs.boundingBox, let right = rhs.boundingBox else {
-                return lhs.id < rhs.id
-            }
-            let rowDelta = left.y - right.y
-            return abs(rowDelta) > 0.10 ? rowDelta < 0 : left.x < right.x
-        }
-        _itemStates = State(initialValue: orderedItems.map { BulkScanItemState(item: $0) })
-        _revealSession = State(initialValue: BulkRevealSession(items: orderedItems))
-        _reviewItems = State(initialValue: reviewItems)
-        _unresolvedRegions = State(initialValue: unresolvedRegions)
-        self.imageData = imageData
+        self.init(
+            presentation: BulkScanPresentation(
+                imageData: imageData,
+                items: items,
+                reviewItems: reviewItems,
+                unresolvedRegions: unresolvedRegions,
+                recoveryToken: recoveryToken,
+                source: source
+            ),
+            store: store
+        )
     }
 
-    private let imageData: Data
-    private let recoveryToken: String?
+    private var imageData: Data { presentation.imageData }
+    private var recoveryToken: String? { presentation.recoveryToken }
 
     var body: some View {
         ZStack {
@@ -113,7 +123,8 @@ struct BulkScanResultsView: View {
 
             reviewLayout
                 .opacity(isImmersiveReveal ? 0 : 1)
-                .allowsHitTesting(!isImmersiveReveal)
+                .allowsHitTesting(!isImmersiveReveal && reviewInteractionReady)
+                .accessibilityHidden(isImmersiveReveal || !reviewInteractionReady)
                 .zIndex(0)
 
             if isImmersiveReveal {
@@ -131,8 +142,17 @@ struct BulkScanResultsView: View {
             recoveryRequestID += 1
             store.reset()
         }
-        .task(id: revealKey) {
-            await runReveal()
+        .task {
+            await runRevealProgressively()
+        }
+        .task(id: presentation.id) {
+            await store.processBulkPresentation(presentation)
+        }
+        .onChange(of: presentation.revision) { _, _ in
+            syncPresentation()
+        }
+        .onAppear {
+            syncPresentation()
         }
         .sensoryFeedback(.selection, trigger: selectedCount)
         .sensoryFeedback(.impact(flexibility: .soft), trigger: recoveryHapticTrigger)
@@ -149,6 +169,15 @@ struct BulkScanResultsView: View {
     private var reviewLayout: some View {
         VStack(spacing: 14) {
             header
+            if let terminalError = presentation.terminalError {
+                Label(terminalError, systemImage: "exclamationmark.triangle")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(.orange.opacity(0.12), in: .rect(cornerRadius: 12))
+            }
             if recoveryState.isActive {
                 recoveryStatusPanel
                     .transition(recoveryTransition)
@@ -158,7 +187,8 @@ struct BulkScanResultsView: View {
                     .transition(recoveryTransition)
             }
             reviewPhotoStage
-                .layoutPriority(1)
+                .frame(maxWidth: .infinity, minHeight: 360, maxHeight: 620)
+            .layoutPriority(1)
             if !currentRecoveryCandidates.isEmpty {
                 recoveryCandidateChooser(currentRecoveryCandidates)
                     .transition(recoveryTransition)
@@ -293,34 +323,40 @@ struct BulkScanResultsView: View {
                         }
 
                         if presentationPhase == .completedReview {
-                            ForEach(reviewItems) { item in
-                                if let box = item.boundingBox {
-                                    reviewBox(box, imageRect: imageRect, containerSize: proxy.size)
-                                }
+                            ForEach(unresolvedRegions.indices, id: \.self) { index in
+                                reviewBox(
+                                    unresolvedRegions[index],
+                                    imageRect: imageRect,
+                                    containerSize: proxy.size
+                                )
                             }
                         }
 
                         if presentationPhase == .completedReview {
-                            ZStack(alignment: .bottomTrailing) {
+                            ZStack {
                                 VStack(spacing: 0) {
                                     summaryPill
                                         .padding(.top, 14)
-                                    Spacer(minLength: 150)
+                                    Spacer(minLength: 0)
                                     resultCarousel
                                         .padding(.bottom, 12)
                                 }
-
-                                if canReviewMissedFigure && !recoveryState.isActive {
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .overlay(alignment: .bottomTrailing) {
+                                if canReviewMissedFigure && !recoveryState.isActive && reviewInteractionReady {
                                     compactMissedFigureButton
                                         .padding(.trailing, 12)
-                                        .padding(.bottom, 116)
+                                        .padding(.bottom, 136)
                                 }
                             }
                         } else {
                             BulkRevealOverlay(
                                 entries: revealSession.entries,
                                 visibleCount: revealSession.revealedCount,
-                                revealedTotal: revealedTotal
+                                revealedTotal: revealedTotal,
+                                currentStatus: revealStatusTitle
                             )
                         }
                     }
@@ -368,12 +404,13 @@ struct BulkScanResultsView: View {
                 .font(.caption.weight(.semibold))
                 .labelStyle(.titleAndIcon)
                 .foregroundStyle(.white)
-                .padding(.horizontal, 12)
-                .frame(minHeight: 44)
+                .frame(width: 112, height: 44)
         }
         .buttonStyle(.plain)
+        .contentShape(Rectangle())
         .background(.black.opacity(0.78), in: .capsule)
         .overlay { Capsule().stroke(.white.opacity(0.24)) }
+        .zIndex(2)
         .accessibilityLabel(recoveryActionTitle)
         .accessibilityHint("Opens an unobstructed photo review")
         .accessibilityIdentifier("bulkRecovery.enter")
@@ -602,35 +639,22 @@ struct BulkScanResultsView: View {
 
     private var resultCarousel: some View {
         ScrollViewReader { proxy in
-            VStack(spacing: 8) {
-                if isDenseResultSet {
-                    densePageControl
-                }
-                ScrollView(.horizontal) {
-                    LazyHStack(spacing: 10) {
-                        if isDenseResultSet {
-                            ForEach(activePageIDs, id: \.self) { id in
-                                if let index = itemStates.firstIndex(where: { $0.id == id }) {
-                                    resultCard($itemStates[index])
-                                        .id(id)
-                                }
-                            }
-                        } else {
-                            ForEach($itemStates) { $state in
-                                resultCard($state)
-                                    .id(state.id)
-                            }
-                        }
-                        ForEach(reviewItems) { review in
-                            ForEach(review.candidates) { candidate in
-                                reviewCandidateCard(candidate, review: review)
-                            }
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 8) {
+                    ForEach($itemStates) { $state in
+                        resultCard($state)
+                            .id(state.id)
+                    }
+                    ForEach(reviewItems) { review in
+                        ForEach(review.candidates) { candidate in
+                            reviewCandidateCard(candidate, review: review)
                         }
                     }
                     .padding(.horizontal, 12)
                 }
-                .scrollIndicators(.hidden)
             }
+            .scrollIndicators(.hidden)
+            .frame(height: 124)
             .onChange(of: focusedResultID) { _, id in
                 guard let id else { return }
                 Task { @MainActor in
@@ -710,7 +734,7 @@ struct BulkScanResultsView: View {
         let item = state.wrappedValue.item
         let isSelected = state.wrappedValue.isSelected
         let condition = state.wrappedValue.condition
-        return VStack(spacing: 6) {
+        return HStack(spacing: 7) {
             Button {
                 withAnimation(.easeOut(duration: 0.16)) {
                     state.wrappedValue.isSelected.toggle()
@@ -722,7 +746,7 @@ struct BulkScanResultsView: View {
                         identifier: item.result.identifier,
                         accent: accent
                     )
-                    .frame(width: 82, height: 76)
+                    .frame(width: 48, height: 56)
                     .background(.white)
                     .clipShape(.rect(cornerRadius: 10))
                     .overlay {
@@ -742,22 +766,30 @@ struct BulkScanResultsView: View {
             .accessibilityValue(isSelected ? "Selected" : "Not selected")
             .accessibilityHint("Double tap to toggle selection")
 
-            Group {
-                if let price = price(for: item) {
-                    Text(price, format: .currency(code: "USD"))
-                } else {
-                    Text("No data")
-                }
-            }
-            .font(.subheadline.bold())
-            .foregroundStyle(isSelected ? .white : .gray)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.result.identifier)
+                    .font(.caption2.bold())
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
 
-            conditionControl(state: state, selection: condition)
+                Group {
+                    if let price = price(for: item) {
+                        Text(price, format: .currency(code: "USD"))
+                    } else {
+                        Text("No data")
+                    }
+                }
+                .font(.caption.bold().monospacedDigit())
+                .foregroundStyle(isSelected ? accent : .gray)
+
+                conditionControl(state: state, selection: condition)
+            }
+            .foregroundStyle(.white)
         }
         .padding(8)
         .background(.black.opacity(0.72), in: .rect(cornerRadius: 12))
         .opacity(isSelected ? 1 : 0.72)
-        .frame(width: 116)
+        .frame(width: 154, height: 96)
     }
 
     private func conditionControl(state: Binding<BulkScanItemState>, selection: CollectionCondition) -> some View {
@@ -780,7 +812,7 @@ struct BulkScanResultsView: View {
         }
         .font(.caption2.bold())
         .foregroundStyle(selection == condition ? .black : BrickValStyle.ScanResult.textSecondary)
-        .frame(maxWidth: .infinity, minHeight: 25)
+        .frame(maxWidth: .infinity, minHeight: 44)
         .background(selection == condition ? accent : .clear, in: .capsule)
         .accessibilityLabel("\(title) condition")
         .accessibilityAddTraits(selection == condition ? .isSelected : [])
@@ -976,12 +1008,8 @@ struct BulkScanResultsView: View {
         recoveryToken != nil
     }
 
-    private var revealKey: String {
-        items.map(\.id).joined(separator: "|")
-    }
-
     private var revealComplete: Bool {
-        revealSession.isComplete
+        revealSession.isComplete && presentation.isTerminal
     }
 
     private var isImmersiveReveal: Bool {
@@ -1011,61 +1039,22 @@ struct BulkScanResultsView: View {
         }
     }
 
-    private var isDenseResultSet: Bool { itemStates.count > 10 }
-
-    private var resultPageCount: Int {
-        max(1, (itemStates.count + 9) / 10)
-    }
-
-    private var activePageItems: [BulkScanItemState] {
-        let start = min(activeResultPage * 10, max(itemStates.count - 1, 0))
-        return Array(itemStates.dropFirst(start).prefix(10))
-    }
-
-    private var activePageIDs: [String] { activePageItems.map(\.id) }
-
-    private var densePageControl: some View {
-        HStack(spacing: 12) {
-            Button {
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
-                    activeResultPage = max(0, activeResultPage - 1)
-                }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .frame(width: 44, height: 36)
-            }
-            .disabled(activeResultPage == 0)
-
-            Text("\(activeResultPage * 10 + 1)–\(min((activeResultPage + 1) * 10, itemStates.count)) of \(itemStates.count)")
-                .font(.caption.weight(.semibold).monospacedDigit())
-                .foregroundStyle(.white)
-                .accessibilityLabel("Showing results \(activeResultPage * 10 + 1) through \(min((activeResultPage + 1) * 10, itemStates.count)) of \(itemStates.count)")
-
-            Button {
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
-                    activeResultPage = min(resultPageCount - 1, activeResultPage + 1)
-                }
-            } label: {
-                Image(systemName: "chevron.right")
-                    .frame(width: 44, height: 36)
-            }
-            .disabled(activeResultPage >= resultPageCount - 1)
-        }
-        .foregroundStyle(.white)
-        .frame(maxWidth: .infinity)
-        .background(BrickValStyle.ScanResult.surface, in: .capsule)
-        .overlay { Capsule().stroke(BrickValStyle.ScanResult.border) }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("bulkResults.pageControl")
-    }
-
     private var revealedTotal: Double {
         revealSession.revealedTotal
     }
 
-    private func runReveal() async {
-        guard !items.isEmpty else { return }
+    private var revealStatusTitle: String? {
+        guard let entry = revealSession.currentEntry else { return nil }
+        if entry.isResolved {
+            return "Figure \(entry.spatialNumber) of \(revealSession.entries.count)"
+        }
+        return "Checking figure \(entry.spatialNumber) of \(revealSession.entries.count)"
+    }
+
+    private func runRevealProgressively() async {
         revealSession.reset()
+        syncPresentation()
+        reviewInteractionReady = false
         didPlayRevealSound = false
         presentationPhase = .compactIntro
 
@@ -1080,17 +1069,54 @@ struct BulkScanResultsView: View {
             }
             guard !Task.isCancelled else { return }
             revealSession.begin()
-            while !revealComplete {
+            while !revealSession.isComplete {
                 guard !Task.isCancelled else { return }
-                try await Task.sleep(for: .milliseconds(Int(revealSession.stepInterval * 1_000)))
+                if !revealSession.canAdvanceCurrentEntry {
+                    syncPresentation()
+                    try await Task.sleep(for: .milliseconds(100))
+                    continue
+                }
+                let interval = reduceMotion ? 0.10 : revealSession.stepInterval
+                try await Task.sleep(for: .milliseconds(Int(interval * 1_000)))
                 guard !Task.isCancelled else { return }
                 withAnimation(reduceMotion ? nil : .easeOut(duration: 0.24)) {
                     revealSession.commitSweepStep()
                 }
             }
             finishReveal()
+            if reduceMotion {
+                reviewInteractionReady = true
+            } else {
+                try await Task.sleep(for: .milliseconds(450))
+                guard !Task.isCancelled else { return }
+                reviewInteractionReady = true
+            }
         } catch {
             return
+        }
+    }
+
+    private func syncPresentation() {
+        let knownIDs = Set(itemStates.map(\.id))
+        for item in presentation.resolvedItems where !knownIDs.contains(item.id) {
+            itemStates.append(BulkScanItemState(item: item))
+        }
+        reviewItems = presentation.reviewItems
+        unresolvedRegions = presentation.unresolvedRegions
+
+        for region in presentation.regions {
+            switch presentation.regionStates[region.regionId] {
+            case .pending:
+                break
+            case .loading:
+                revealSession.markLoading(region.regionId)
+            case .resolved(let item):
+                revealSession.resolve(item)
+            case .unresolved:
+                revealSession.markUnresolved(region.regionId)
+            case .none:
+                break
+            }
         }
     }
 
@@ -1270,14 +1296,15 @@ struct BulkScanResultsView: View {
         guard session.canAddSelection else { return }
         let referenceBox = unresolvedRegionIndex.flatMap { index in
             unresolvedRegions.indices.contains(index) ? unresolvedRegions[index] : nil
-        } ?? nearestKnownDetectionBox(to: normalizedPoint)
+        }
         let selection = BulkRecoverySelection(
             id: "selection-\(UUID().uuidString)",
             order: session.selectedCount,
             normalizedPoint: normalizedPoint,
             focusBox: BulkRecoveryTapPlanner.recognitionBox(
                 for: normalizedPoint.cgPoint,
-                referenceBox: referenceBox
+                referenceBox: referenceBox,
+                fallbackSize: medianDetectedFigureSize
             ),
             visualAnchor: normalizedPoint,
             unresolvedRegionIndex: unresolvedRegionIndex
@@ -1289,18 +1316,22 @@ struct BulkScanResultsView: View {
         }
     }
 
-    private func nearestKnownDetectionBox(to point: BulkRecoveryPoint) -> NormalizedBoundingBox? {
-        let candidates = itemStates.compactMap(\.item.boundingBox) + reviewItems.compactMap(\.boundingBox)
-        guard let nearest = candidates.min(by: { lhs, rhs in
-            distance(from: lhs.center, to: point) < distance(from: rhs.center, to: point)
-        }), distance(from: nearest.center, to: point) <= 0.18 else { return nil }
-        return nearest
-    }
-
-    private func distance(from point: CGPoint, to other: BulkRecoveryPoint) -> Double {
-        let dx = point.x - other.x
-        let dy = point.y - other.y
-        return (dx * dx + dy * dy).squareRoot()
+    private var medianDetectedFigureSize: CGSize {
+        let sizes = revealSession.entries.compactMap { entry -> CGSize? in
+            guard let box = entry.boundingBox, box.width > 0, box.height > 0 else { return nil }
+            return CGSize(width: box.width, height: box.height)
+        }
+        guard !sizes.isEmpty else { return CGSize(width: 0.16, height: 0.24) }
+        let sortedWidths = sizes.map(\.width).sorted()
+        let sortedHeights = sizes.map(\.height).sorted()
+        let middle = sizes.count / 2
+        let width = sizes.count.isMultiple(of: 2)
+            ? (sortedWidths[middle - 1] + sortedWidths[middle]) / 2
+            : sortedWidths[middle]
+        let height = sizes.count.isMultiple(of: 2)
+            ? (sortedHeights[middle - 1] + sortedHeights[middle]) / 2
+            : sortedHeights[middle]
+        return CGSize(width: width, height: height)
     }
 
     private func checkSelectedFigures() {
@@ -1369,7 +1400,6 @@ struct BulkScanResultsView: View {
             boundingBox: review.boundingBox
         )
         itemStates.insert(BulkScanItemState(item: item), at: 0)
-        activeResultPage = 0
         reviewItems.removeAll { $0.id == review.id }
         focusedResultID = item.id
         recoveryConfirmation = "Added \(candidate.result.name) to review"
@@ -1391,7 +1421,6 @@ struct BulkScanResultsView: View {
         }
         focusedResultID = item.id
         session.advanceAfterCandidateSelection(value: candidate.result.pricing.preferredUsedValue)
-        activeResultPage = 0
         if session.currentReviewOutcome == nil {
             finishRecovery(session)
         } else {
