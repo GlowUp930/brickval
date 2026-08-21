@@ -104,9 +104,13 @@ struct ScannerView: View {
                                 phase: store.phase,
                                 intent: store.intent,
                                 smartScanMessage: store.intent == .single ? store.smartScanMessage : nil,
-                                retryBulkScan: store.intent == .bulk ? {
-                                    Task { await store.retryBulkScan() }
-                                } : nil
+                                retry: {
+                                    if store.intent == .bulk, store.frozenImageData != nil {
+                                        Task { await store.retryBulkScan() }
+                                    } else {
+                                        Task { await store.retryCamera() }
+                                    }
+                                }
                             )
                         }
                     }
@@ -162,6 +166,7 @@ struct ScannerView: View {
                 automaticScanAvailable: store.canUseSmartScan,
                 isTorchEnabled: store.isTorchEnabled,
                 isBusy: [.capturing, .identifying].contains(store.phase),
+                isCameraReady: store.phase.allowsLiveDetection,
                 isImportingPhoto: isImportingBulkPhoto,
                 bulkPhotoItem: $selectedBulkPhoto,
                 toggleTorch: { Task { await store.toggleTorch() } },

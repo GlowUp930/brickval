@@ -53,6 +53,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
             apiClient = .live()
         }
 
+#if !DEBUG
         if let dsn = Self.configurationValue("SentryDSN") {
             SentrySDK.start { options in
                 options.dsn = dsn
@@ -65,6 +66,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
                 options.enableAutoSessionTracking = true
             }
         }
+#endif
 
         let revenueCatKey = Self.configurationValue("RevenueCatAPIKey")
         let superwallKey = Self.configurationValue("SuperwallAPIKey")

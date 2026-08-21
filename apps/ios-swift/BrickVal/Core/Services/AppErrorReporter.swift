@@ -23,6 +23,9 @@ final class NoopAppErrorReporter: AppErrorReporting {
 @MainActor
 final class SentryAppErrorReporter: AppErrorReporting {
     func capture(error: Error, context: AppErrorContext) {
+#if DEBUG
+        return
+#else
         let scope = Scope()
         scope.setTag(value: "ios", key: "runtime")
         scope.setTag(value: context.endpoint, key: "endpoint")
@@ -41,5 +44,6 @@ final class SentryAppErrorReporter: AppErrorReporting {
             userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]
         )
         SentrySDK.capture(error: nsError, scope: scope)
+#endif
     }
 }

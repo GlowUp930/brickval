@@ -12,6 +12,17 @@ struct ScanStoreLifecycleTests {
     }
 
     @Test @MainActor
+    func cameraPreparationFailureStaysOutOfHandledScanReporting() async {
+        let reporter = RecordingAppErrorReporter()
+        let store = ScanStore(errorReporter: reporter)
+
+        await store.captureManually()
+
+        #expect(store.phase == .idle)
+        #expect(reporter.contexts.isEmpty)
+    }
+
+    @Test @MainActor
     func dismissingSuccessfulResultRestartsScanner() async throws {
         let store = ScanStore(api: .successfulLookupStub)
 

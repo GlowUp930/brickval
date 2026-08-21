@@ -77,6 +77,10 @@ actor CameraService {
         sessionBox.session.stopRunning()
     }
 
+    func isRunning() -> Bool {
+        sessionBox.session.isRunning
+    }
+
     func setTorch(enabled: Bool) throws {
         guard let device = (sessionBox.session.inputs.first as? AVCaptureDeviceInput)?.device,
               device.hasTorch

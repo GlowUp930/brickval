@@ -4,7 +4,7 @@ struct ScannerStatusView: View {
     let phase: ScanPhase
     let intent: ScanIntent
     let smartScanMessage: String?
-    let retryBulkScan: (() -> Void)?
+    let retry: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 6) {
@@ -21,11 +21,11 @@ struct ScannerStatusView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
-            if case .failed = phase, intent == .bulk, let retryBulkScan {
-                Button("Try again", systemImage: "arrow.clockwise", action: retryBulkScan)
+            if case .failed = phase, let retry {
+                Button("Try again", systemImage: "arrow.clockwise", action: retry)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
-                    .accessibilityHint("Retries this bulk scan without selecting the photo again")
+                    .accessibilityHint(retryHint)
             }
         }
         .padding(.horizontal, 16)
@@ -50,5 +50,11 @@ struct ScannerStatusView: View {
             return "Frame up to 10 figures, then tap the shutter"
         }
         return phase.statusText
+    }
+
+    private var retryHint: String {
+        intent == .bulk
+            ? "Retries the current bulk scan or prepares the camera again"
+            : "Prepares the camera again"
     }
 }

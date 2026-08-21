@@ -204,6 +204,19 @@ final class ScanStore {
         isTorchEnabled = false
     }
 
+    func retryCamera() async {
+        guard case .failed = phase else { return }
+        let cameraIsRunning = await camera.isRunning()
+        frozenImageData = nil
+        frozenBulkRegions = []
+        resetDetectionState()
+        if cameraIsRunning {
+            phase = .searching
+        } else {
+            await runCameraLoop()
+        }
+    }
+
     func toggleTorch() async {
         do {
             try await camera.setTorch(enabled: !isTorchEnabled)
@@ -214,7 +227,7 @@ final class ScanStore {
     }
 
     func captureManually() async {
-        guard phase != .capturing, phase != .identifying else { return }
+        guard phase.allowsLiveDetection else { return }
         guard canBeginCurrentScan else {
             proLimitFeature = intent == .bulk ? .bulkScan : .singleScan
             return
@@ -906,6 +919,7 @@ final class ScanStore {
     }
 
     private func reportScanError(_ error: Error, statusCode: Int) {
+        guard !(error is CameraError) else { return }
         guard statusCode != 401, statusCode != 402 else { return }
         let context = AppErrorContext(
             endpoint: intent == .bulk ? "bulk minifig scan" : "minifig scan",

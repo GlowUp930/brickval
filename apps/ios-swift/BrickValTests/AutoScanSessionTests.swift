@@ -53,13 +53,13 @@ struct AutoScanSessionTests {
     }
 
     @Test @MainActor
-    func minifigureUsesAutomaticCaptureAndStillAllowsManualCapture() async {
+    func manualCaptureWaitsForCameraReadiness() async {
         let store = ScanStore(onDeviceSmartScanEnabled: true)
         #expect(store.intent == .single)
         #expect(store.canUseSmartScan)
 
         await store.captureManually()
-        #expect(store.phase != .idle)
+        #expect(store.phase == .idle)
 
         store.intent = .bulk
         #expect(!store.canUseSmartScan)
@@ -74,7 +74,7 @@ struct AutoScanSessionTests {
 
         await store.captureManually()
 
-        #expect(store.phase != .idle)
+        #expect(store.phase == .idle)
     }
 
     private func observation(

@@ -6,6 +6,7 @@ struct ScannerControlsView: View {
     let automaticScanAvailable: Bool
     let isTorchEnabled: Bool
     let isBusy: Bool
+    let isCameraReady: Bool
     let isImportingPhoto: Bool
     @Binding var bulkPhotoItem: PhotosPickerItem?
     let toggleTorch: () -> Void
@@ -17,7 +18,7 @@ struct ScannerControlsView: View {
                 .labelStyle(.iconOnly)
                 .font(.system(size: 66))
                 .foregroundStyle(.white, .tint)
-                .disabled(isBusy || isImportingPhoto)
+                .disabled(isBusy || !isCameraReady || isImportingPhoto)
                 .accessibilityHint(captureHint)
 
             HStack {
@@ -45,7 +46,7 @@ struct ScannerControlsView: View {
                     .labelStyle(.iconOnly)
                     .frame(width: 48, height: 48)
                     .buttonStyle(.bordered)
-                    .disabled(isBusy || isImportingPhoto)
+                    .disabled(isBusy || !isCameraReady || isImportingPhoto)
             }
         }
         .frame(maxWidth: .infinity, minHeight: 72)
