@@ -30,6 +30,10 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
 
         let enterRecovery = app.buttons["bulkRecovery.enter"]
         XCTAssertTrue(enterRecovery.waitForExistence(timeout: 3))
+        XCTAssertGreaterThanOrEqual(enterRecovery.frame.height, 44)
+        XCTAssertFalse(app.buttons["Skip"].exists)
+        XCTAssertFalse(app.otherElements["bulkResults.finalSummary"].exists)
+        XCTAssertFalse(app.buttons["Retake"].exists)
         enterRecovery.tap()
 
         let firstTarget = app.buttons["bulkRecovery.target.1"]

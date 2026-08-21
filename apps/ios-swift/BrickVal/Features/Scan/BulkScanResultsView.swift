@@ -36,6 +36,12 @@ enum BulkRecoveryTapPlanner {
     }
 }
 
+private enum BulkResultsPresentationPhase {
+    case compactIntro
+    case immersiveReveal
+    case completedReview
+}
+
 struct BulkScanResultsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(CollectionStore.self) private var collection
@@ -44,6 +50,8 @@ struct BulkScanResultsView: View {
     @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.brickValAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    @Namespace private var photoStageNamespace
 
     let items: [BulkScanResultItem]
     let store: ScanStore
@@ -60,9 +68,8 @@ struct BulkScanResultsView: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var revealSession: BulkRevealSession
-    @State private var revealRunID = 0
+    @State private var presentationPhase: BulkResultsPresentationPhase = .compactIntro
     @State private var didPlayRevealSound = false
-    @State private var globalCondition: CollectionCondition = .used
     @State private var sharePayload: BulkSharePayload?
     @State private var activeResultPage = 0
 
@@ -101,6 +108,45 @@ struct BulkScanResultsView: View {
     private let recoveryToken: String?
 
     var body: some View {
+        ZStack {
+            canvas.ignoresSafeArea()
+
+            reviewLayout
+                .opacity(isImmersiveReveal ? 0 : 1)
+                .allowsHitTesting(!isImmersiveReveal)
+                .zIndex(0)
+
+            if isImmersiveReveal {
+                immersiveRevealStage
+                    .transition(.opacity)
+                    .zIndex(1)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .preferredColorScheme(.dark)
+        .presentationDragIndicator(.hidden)
+        .presentationBackground(canvas)
+        .interactiveDismissDisabled(isSaving)
+        .onDisappear {
+            recoveryRequestID += 1
+            store.reset()
+        }
+        .task(id: revealKey) {
+            await runReveal()
+        }
+        .sensoryFeedback(.selection, trigger: selectedCount)
+        .sensoryFeedback(.impact(flexibility: .soft), trigger: recoveryHapticTrigger)
+        .sheet(item: $sharePayload) { payload in
+            BulkSharePreviewView(payload: payload)
+        }
+        .alert("Could not add items", isPresented: errorBinding) {
+            Button("OK", role: .cancel) { errorMessage = nil }
+        } message: {
+            Text(errorMessage ?? "Please try again.")
+        }
+    }
+
+    private var reviewLayout: some View {
         VStack(spacing: 14) {
             header
             if recoveryState.isActive {
@@ -111,41 +157,57 @@ struct BulkScanResultsView: View {
                 recoveryConfirmationBanner(recoveryConfirmation)
                     .transition(recoveryTransition)
             }
-            photoResults
+            reviewPhotoStage
                 .layoutPriority(1)
             if !currentRecoveryCandidates.isEmpty {
                 recoveryCandidateChooser(currentRecoveryCandidates)
                     .transition(recoveryTransition)
-            }
-            if revealComplete && !recoveryState.isActive {
-                finalReviewPanel
             }
             actionButtons
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
         .padding(.bottom, 10)
-        .background(canvas.ignoresSafeArea())
-        .preferredColorScheme(.dark)
-        .presentationDragIndicator(.hidden)
-        .presentationBackground(canvas)
-        .interactiveDismissDisabled(isSaving)
-            .onDisappear {
-                recoveryRequestID += 1
-                store.reset()
-            }
-            .task(id: "\(revealKey)-\(revealRunID)") {
-                await runReveal()
-            }
-            .sensoryFeedback(.selection, trigger: selectedCount)
-            .sensoryFeedback(.impact(flexibility: .soft), trigger: recoveryHapticTrigger)
-            .sheet(item: $sharePayload) { payload in
-                BulkSharePreviewView(payload: payload)
-            }
-            .alert("Could not add items", isPresented: errorBinding) {
-            Button("OK", role: .cancel) { errorMessage = nil }
-        } message: {
-            Text(errorMessage ?? "Please try again.")
+    }
+
+    private var immersiveRevealStage: some View {
+        ZStack(alignment: .topTrailing) {
+            immersivePhotoStage
+
+            Button("Close", systemImage: "xmark", action: close)
+                .labelStyle(.iconOnly)
+                .font(.title3.bold())
+                .foregroundStyle(.white)
+                .frame(width: 46, height: 46)
+                .background(BrickValStyle.ScanResult.surface.opacity(0.88), in: .circle)
+                .overlay { Circle().stroke(BrickValStyle.ScanResult.border) }
+                .padding(.top, 8)
+                .padding(.trailing, 12)
+                .safeAreaPadding(.top, 8)
+                .disabled(isSaving)
+                .accessibilityHint("Closes the bulk scan results")
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.black)
+    }
+
+    @ViewBuilder
+    private var reviewPhotoStage: some View {
+        if reduceMotion {
+            photoResults(immersive: false)
+        } else {
+            photoResults(immersive: false)
+                .matchedGeometryEffect(id: "bulk-photo-stage", in: photoStageNamespace)
+        }
+    }
+
+    @ViewBuilder
+    private var immersivePhotoStage: some View {
+        if reduceMotion {
+            photoResults(immersive: true)
+        } else {
+            photoResults(immersive: true)
+                .matchedGeometryEffect(id: "bulk-photo-stage", in: photoStageNamespace)
         }
     }
 
@@ -189,10 +251,10 @@ struct BulkScanResultsView: View {
     }
 
     @ViewBuilder
-    private var photoResults: some View {
+    private func photoResults(immersive: Bool) -> some View {
         if let capturedImage {
             GeometryReader { proxy in
-                let imageRect = aspectFillRect(imageSize: capturedImage.size, containerSize: proxy.size)
+                let imageRect = aspectFitRect(imageSize: capturedImage.size, containerSize: proxy.size)
                 ZStack {
                     Image(uiImage: capturedImage)
                         .resizable()
@@ -204,18 +266,10 @@ struct BulkScanResultsView: View {
                         recoveryPhotoContent(imageRect: imageRect, containerSize: proxy.size)
                             .transition(recoveryTransition)
                     } else {
-                        if revealComplete {
-                            if isDenseResultSet {
-                                ForEach(activePageItems) { state in
-                                    if let box = state.item.boundingBox {
-                                        detectionBox(for: state.item, box: box, imageRect: imageRect, containerSize: proxy.size)
-                                    }
-                                }
-                            } else {
-                                ForEach(itemStates) { state in
-                                    if let box = state.item.boundingBox {
-                                        detectionBox(for: state.item, box: box, imageRect: imageRect, containerSize: proxy.size)
-                                    }
+                        if presentationPhase == .completedReview {
+                            ForEach(itemStates) { state in
+                                if let box = state.item.boundingBox {
+                                    detectionBox(for: state.item, box: box, imageRect: imageRect)
                                 }
                             }
                         } else {
@@ -238,7 +292,7 @@ struct BulkScanResultsView: View {
                             }
                         }
 
-                        if revealComplete {
+                        if presentationPhase == .completedReview {
                             ForEach(reviewItems) { item in
                                 if let box = item.boundingBox {
                                     reviewBox(box, imageRect: imageRect, containerSize: proxy.size)
@@ -246,20 +300,27 @@ struct BulkScanResultsView: View {
                             }
                         }
 
-                        if revealComplete {
-                            VStack(spacing: 0) {
-                                summaryPill
-                                    .padding(.top, 14)
-                                Spacer(minLength: 150)
-                                resultCarousel
-                                    .padding(.bottom, 12)
+                        if presentationPhase == .completedReview {
+                            ZStack(alignment: .bottomTrailing) {
+                                VStack(spacing: 0) {
+                                    summaryPill
+                                        .padding(.top, 14)
+                                    Spacer(minLength: 150)
+                                    resultCarousel
+                                        .padding(.bottom, 12)
+                                }
+
+                                if canReviewMissedFigure && !recoveryState.isActive {
+                                    compactMissedFigureButton
+                                        .padding(.trailing, 12)
+                                        .padding(.bottom, 116)
+                                }
                             }
                         } else {
                             BulkRevealOverlay(
                                 entries: revealSession.entries,
                                 visibleCount: revealSession.revealedCount,
-                                revealedTotal: revealedTotal,
-                                skip: skipReveal
+                                revealedTotal: revealedTotal
                             )
                         }
                     }
@@ -269,8 +330,13 @@ struct BulkScanResultsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(.black)
-            .clipShape(.rect(cornerRadius: 18))
-            .overlay { RoundedRectangle(cornerRadius: 18).stroke(BrickValStyle.ScanResult.border) }
+            .clipShape(.rect(cornerRadius: immersive ? 0 : 18))
+            .overlay {
+                if !immersive {
+                    RoundedRectangle(cornerRadius: 18)
+                        .stroke(BrickValStyle.ScanResult.border)
+                }
+            }
         } else {
             ContentUnavailableView("Photo unavailable", systemImage: "photo.badge.exclamationmark")
                 .frame(maxWidth: .infinity, minHeight: 360)
@@ -296,76 +362,21 @@ struct BulkScanResultsView: View {
         .accessibilityValue("\(selectedTotal.formatted(.currency(code: "USD"))), \(selectedCount) selected")
     }
 
-    private var finalReviewPanel: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Lot reveal complete")
-                        .font(.headline.weight(.bold))
-                    Text(finalSummaryText)
-                        .font(.caption)
-                        .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
-                }
-                Spacer()
-                Button("Replay", systemImage: "arrow.counterclockwise", action: replayReveal)
-                    .font(.caption.weight(.semibold))
-                    .labelStyle(.titleAndIcon)
-                    .frame(minHeight: 38)
-                    .padding(.horizontal, 10)
-                    .background(BrickValStyle.ScanResult.surface, in: .capsule)
-                    .overlay { Capsule().stroke(BrickValStyle.ScanResult.border) }
-                    .accessibilityHint("Replays the lot reveal without scanning again")
-            }
-
-            HStack(spacing: 10) {
-                Text("Value as")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
-                HStack(spacing: 2) {
-                    globalConditionButton("Used", condition: .used)
-                    globalConditionButton("New", condition: .newSealed)
-                }
-                .padding(2)
-                .background(BrickValStyle.ScanResult.surface, in: .capsule)
-                Spacer(minLength: 0)
-            }
+    private var compactMissedFigureButton: some View {
+        Button(action: enterRecovery) {
+            Label("Missed", systemImage: "plus")
+                .font(.caption.weight(.semibold))
+                .labelStyle(.titleAndIcon)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12)
+                .frame(minHeight: 44)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(BrickValStyle.ScanResult.surface.opacity(0.86), in: .rect(cornerRadius: 14))
-        .overlay { RoundedRectangle(cornerRadius: 14).stroke(BrickValStyle.ScanResult.border) }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("bulkResults.finalSummary")
-    }
-
-    private func globalConditionButton(_ title: String, condition: CollectionCondition) -> some View {
-        Button(title) {
-            globalCondition = condition
-            revealSession.setCondition(condition)
-            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) {
-                for index in itemStates.indices {
-                    itemStates[index].condition = condition
-                }
-            }
-        }
-        .font(.caption.weight(.bold))
-        .foregroundStyle(globalCondition == condition ? .black : BrickValStyle.ScanResult.textSecondary)
-        .frame(minWidth: 54, minHeight: 30)
-        .background(globalCondition == condition ? accent : .clear, in: .capsule)
-        .accessibilityAddTraits(globalCondition == condition ? .isSelected : [])
-    }
-
-    private var finalSummaryText: String {
-        let valuedCount = itemStates.filter { $0.price != nil }.count
-        let needsReview = reviewItems.count
-        let unresolved = unresolvedRegions.count
-        var text = "\(valuedCount) figure\(valuedCount == 1 ? "" : "s") valued"
-        if let topFind = itemStates.max(by: { ($0.price ?? 0) < ($1.price ?? 0) }) {
-            text += " · Top find: \(topFind.item.result.name)"
-        }
-        if needsReview > 0 { text += " · \(needsReview) to review" }
-        if unresolved > 0 { text += " · \(unresolved) unresolved" }
-        return text
+        .buttonStyle(.plain)
+        .background(.black.opacity(0.78), in: .capsule)
+        .overlay { Capsule().stroke(.white.opacity(0.24)) }
+        .accessibilityLabel(recoveryActionTitle)
+        .accessibilityHint("Opens an unobstructed photo review")
+        .accessibilityIdentifier("bulkRecovery.enter")
     }
 
     @ViewBuilder
@@ -778,34 +789,14 @@ struct BulkScanResultsView: View {
     private func detectionBox(
         for item: BulkScanResultItem,
         box: NormalizedBoundingBox,
-        imageRect: CGRect,
-        containerSize: CGSize
+        imageRect: CGRect
     ) -> some View {
-        let rect = CGRect(
-            x: imageRect.minX + box.x * imageRect.width,
-            y: imageRect.minY + box.y * imageRect.height,
-            width: box.width * imageRect.width,
-            height: box.height * imageRect.height
-        )
+        let rect = imageBox(box, in: imageRect)
         let isSelected = itemStates.first { $0.id == item.id }?.isSelected ?? false
-        return ZStack {
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(isSelected ? accent : .white.opacity(0.55), lineWidth: 3)
-                .frame(width: rect.width, height: rect.height)
-                .position(x: rect.midX, y: rect.midY)
-            if let price = price(for: item) {
-                Text(price, format: .currency(code: "USD"))
-                    .font(.caption.bold())
-                    .foregroundStyle(isSelected ? .white : .black)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(isSelected ? accent : .white, in: .capsule)
-                    .position(
-                        x: min(max(rect.midX, 38), containerSize.width - 38),
-                        y: max(rect.minY, 15)
-                    )
-            }
-        }
+        return RoundedRectangle(cornerRadius: 10)
+            .stroke(isSelected ? accent : .white.opacity(0.55), lineWidth: isSelected ? 2.5 : 1.5)
+            .frame(width: rect.width, height: rect.height)
+            .position(x: rect.midX, y: rect.midY)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
@@ -817,12 +808,13 @@ struct BulkScanResultsView: View {
         containerSize: CGSize
     ) -> some View {
         let rect = imageBox(box, in: imageRect)
-        let isRevealed = revealSession.revealedCount >= entry.spatialNumber
         let isCurrent = revealSession.currentEntry?.id == entry.id
+        let isLatestRevealed = revealSession.revealedCount > 0
+            && revealSession.revealedCount == entry.spatialNumber
         let price = entry.value(for: revealSession.condition)
 
         return ZStack {
-            if isRevealed, let price {
+            if isLatestRevealed, let price {
                 Text(price, format: .currency(code: "USD"))
                     .font(.caption.bold().monospacedDigit())
                     .foregroundStyle(.white)
@@ -844,7 +836,7 @@ struct BulkScanResultsView: View {
                     .transition(.opacity)
             }
         }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.20), value: isRevealed)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.20), value: isLatestRevealed)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
@@ -883,11 +875,11 @@ struct BulkScanResultsView: View {
         )
     }
 
-    private func aspectFillRect(imageSize: CGSize, containerSize: CGSize) -> CGRect {
+    private func aspectFitRect(imageSize: CGSize, containerSize: CGSize) -> CGRect {
         guard imageSize.width > 0, imageSize.height > 0 else {
             return CGRect(origin: .zero, size: containerSize)
         }
-        let scale = max(containerSize.width / imageSize.width, containerSize.height / imageSize.height)
+        let scale = min(containerSize.width / imageSize.width, containerSize.height / imageSize.height)
         let renderedSize = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
         return CGRect(
             x: (containerSize.width - renderedSize.width) / 2,
@@ -915,31 +907,6 @@ struct BulkScanResultsView: View {
                 .buttonStyle(.plain)
                 .disabled(!revealComplete || selectedCount == 0 || isSaving)
                 .opacity(!revealComplete || selectedCount == 0 ? 0.45 : 1)
-
-                HStack(spacing: 12) {
-                    if canReviewMissedFigure {
-                        Button(action: enterRecovery) {
-                            Label(recoveryActionTitle, systemImage: recoveryActionIcon)
-                                .font(.subheadline.weight(.semibold))
-                                .lineLimit(2)
-                                .minimumScaleFactor(0.82)
-                                .frame(maxWidth: .infinity, minHeight: 56)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.orange)
-                        .foregroundStyle(.black)
-                        .accessibilityHint("Opens an unobstructed photo review")
-                        .accessibilityIdentifier("bulkRecovery.enter")
-                    }
-
-                    Button("Retake", systemImage: "camera", action: close)
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 56)
-                        .background(BrickValStyle.ScanResult.surface, in: .rect(cornerRadius: 14))
-                        .foregroundStyle(.white)
-                        .overlay { RoundedRectangle(cornerRadius: 14).stroke(BrickValStyle.ScanResult.border) }
-                        .disabled(isSaving)
-                }
             }
         }
     }
@@ -1017,6 +984,14 @@ struct BulkScanResultsView: View {
         revealSession.isComplete
     }
 
+    private var isImmersiveReveal: Bool {
+        presentationPhase == .immersiveReveal && !recoveryState.isActive
+    }
+
+    private var presentationAnimation: Animation {
+        .easeOut(duration: reduceMotion ? 0.18 : 0.45)
+    }
+
     private var revealFocusRegions: [BulkFocusRegion] {
         revealSession.entries.map { entry in
             let state: BulkFocusState
@@ -1090,11 +1065,20 @@ struct BulkScanResultsView: View {
 
     private func runReveal() async {
         guard !items.isEmpty else { return }
-        revealSession.replay()
+        revealSession.reset()
         didPlayRevealSound = false
+        presentationPhase = .compactIntro
 
         do {
             try await Task.sleep(for: .milliseconds(reduceMotion ? 120 : 360))
+            guard !Task.isCancelled else { return }
+            withAnimation(presentationAnimation) {
+                presentationPhase = .immersiveReveal
+            }
+            if !reduceMotion {
+                try await Task.sleep(for: .milliseconds(450))
+            }
+            guard !Task.isCancelled else { return }
             revealSession.begin()
             while !revealComplete {
                 guard !Task.isCancelled else { return }
@@ -1110,21 +1094,13 @@ struct BulkScanResultsView: View {
         }
     }
 
-    private func skipReveal() {
-        revealSession.skip()
-        finishReveal()
-    }
-
     private func finishReveal() {
-        revealSession.skip()
         guard !didPlayRevealSound else { return }
         didPlayRevealSound = true
         store.playBulkRevealSound()
-    }
-
-    private func replayReveal() {
-        revealSession.replay()
-        revealRunID += 1
+        withAnimation(presentationAnimation) {
+            presentationPhase = .completedReview
+        }
     }
 
     @MainActor
@@ -1147,7 +1123,7 @@ struct BulkScanResultsView: View {
             photo: photo,
             cropBox: cropBox,
             entries: entries,
-            conditionTitle: globalCondition == .used ? "Used" : "New / sealed",
+            conditionTitle: shareConditionTitle,
             pricingSourceTitle: "Sold-market data",
             reviewCount: reviewItems.count,
             unresolvedCount: unresolvedRegions.count
@@ -1179,6 +1155,14 @@ struct BulkScanResultsView: View {
     }
 
     private var selectedCount: Int { itemStates.filter(\.isSelected).count }
+
+    private var shareConditionTitle: String {
+        let selectedConditions = itemStates.filter(\.isSelected).map(\.condition)
+        guard let first = selectedConditions.first else { return "Used" }
+        return selectedConditions.allSatisfy { $0 == first }
+            ? (first == .used ? "Used" : "New / sealed")
+            : "Mixed conditions"
+    }
 
     @ViewBuilder
     private func reviewPrice(_ result: LookupResult) -> some View {

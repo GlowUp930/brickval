@@ -43,19 +43,40 @@ struct BulkRevealSessionTests {
     }
 
     @Test
-    func skipCompletesAllEntriesAndReplayResetsWithoutNetworkState() {
+    func supportedLotSizesRevealEveryEntry() {
+        for count in [1, 10, 40, 50] {
+            var session = BulkRevealSession(items: (0..<count).map { index in
+                fixture(
+                    id: "figure-\(index)",
+                    x: Double(index % 10) / 10,
+                    y: Double(index / 10) / 5,
+                    used: 1
+                )
+            })
+
+            session.begin()
+            for _ in 0..<count {
+                session.commitSweepStep()
+            }
+
+            #expect(session.isComplete)
+            #expect(session.revealedCount == count)
+        }
+    }
+
+    @Test
+    func resetStartsARevealedSessionOverWithoutNetworkState() {
         var session = BulkRevealSession(items: [
             fixture(id: "one", x: 0.1, y: 0.1, used: 2),
             fixture(id: "two", x: 0.5, y: 0.1, used: 3)
         ])
 
         session.begin()
-        session.skip()
-        #expect(session.isComplete)
-        #expect(session.revealedCount == 2)
-        #expect(session.revealedTotal == 5)
+        session.commitSweepStep()
+        #expect(session.revealedCount == 1)
+        #expect(session.revealedTotal == 2)
 
-        session.replay()
+        session.reset()
         #expect(session.phase == .preparing)
         #expect(session.revealedCount == 0)
         #expect(session.revealedTotal == 0)

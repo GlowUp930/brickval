@@ -121,12 +121,7 @@ struct BulkRevealSession: Sendable {
         commitSweepStep()
     }
 
-    mutating func skip() {
-        revealedCount = entries.count
-        phase = .finalSummary
-    }
-
-    mutating func replay() {
+    mutating func reset() {
         revealedCount = 0
         phase = .preparing
     }

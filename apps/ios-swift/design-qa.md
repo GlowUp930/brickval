@@ -50,6 +50,19 @@ final result: passed
 
 final result: passed
 
+## Immersive Bulk Reveal QA — 2026-08-21
+
+- Verified the compact intro, full-screen reveal, and completed review phases on the small iPhone and iPhone 17 Pro simulators.
+- Confirmed the reveal uses the full aspect-fit photo, keeps edge figures visible, respects the Dynamic Island safe area, and returns to the normal review layout.
+- Confirmed every detected outline remains visible after completion; the photo overlay shows only the currently revealed price callout.
+- Confirmed Skip, Replay, the lot-complete panel, the global condition selector, and completed-state Retake are absent. Per-figure New/Used controls and the single Add action remain available.
+- Confirmed the compact Missed control has a 44-point minimum touch frame and Retake remains limited to recovery states.
+- Verified Reduce Motion on the small simulator: the reveal uses a short crossfade without matched-geometry expansion, then restored the simulator setting.
+- Added regression coverage for lots containing 1, 10, 40, and 50 entries.
+- Release build `141` archived and uploaded to App Store Connect; package processing remains asynchronous.
+
+final result: passed
+
 ## Interactive Chart And Flow QA — 2026-07-15
 
 - Collection chart scrubber exposed the selected month and USD value through UI automation.

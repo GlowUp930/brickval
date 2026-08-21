@@ -120,7 +120,6 @@ struct BulkRevealOverlay: View {
     let entries: [BulkRevealEntry]
     let visibleCount: Int
     let revealedTotal: Double
-    let skip: () -> Void
 
     @Environment(\.brickValAccent) private var accent
 
@@ -134,15 +133,6 @@ struct BulkRevealOverlay: View {
                     accent: accent
                 )
                 Spacer(minLength: 10)
-                Button("Skip", systemImage: "forward.fill", action: skip)
-                    .labelStyle(.titleAndIcon)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 11)
-                    .frame(minHeight: 40)
-                    .background(.black.opacity(0.76), in: .capsule)
-                    .overlay { Capsule().stroke(.white.opacity(0.18)) }
-                    .accessibilityHint("Shows the complete bulk scan review immediately")
             }
 
             Spacer(minLength: 0)
