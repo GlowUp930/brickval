@@ -85,7 +85,7 @@ final result: passed
 - The update screen links to the App Store and has no dismiss or skip action.
 - Focused monetization tests passed. The full Swift suite passed with 125 tests (127 parameterized test runs) and zero failures on the small iPhone simulator.
 - Backend monetization and scan-gate tests passed with 8 tests, and the TypeScript type check passed.
-- Build `142` is prepared locally; no TestFlight upload was requested for this change.
+- Build `142` was archived, signed, and uploaded to App Store Connect successfully; package processing is asynchronous.
 
 final result: passed
 
