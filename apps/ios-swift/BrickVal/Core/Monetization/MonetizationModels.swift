@@ -54,6 +54,26 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
     let gates: Gates
     let limits: Limits
     let notifications: Notifications
+    let minimumAppBuild: Int?
+    let appUpdateURL: URL?
+
+    init(
+        version: Int,
+        accessExperiment: AccessExperiment?,
+        gates: Gates,
+        limits: Limits,
+        notifications: Notifications,
+        minimumAppBuild: Int? = nil,
+        appUpdateURL: URL? = nil
+    ) {
+        self.version = version
+        self.accessExperiment = accessExperiment
+        self.gates = gates
+        self.limits = limits
+        self.notifications = notifications
+        self.minimumAppBuild = minimumAppBuild
+        self.appUpdateURL = appUpdateURL
+    }
 
     static let phaseOne = MonetizationPolicy(
         version: 4,

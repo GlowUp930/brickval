@@ -11,23 +11,31 @@ final class MonetizationStore {
     private(set) var experimentSeed: Int?
     private(set) var successfulSingleScanCount: Int
     private(set) var firstSuccessfulSingleScanAt: Date?
+    private(set) var minimumSupportedBuild: Int?
+    private(set) var appUpdateURL: URL?
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let now: @Sendable () -> Date
     @ObservationIgnored private let experimentRoll: @Sendable () -> Int
+    @ObservationIgnored private let currentAppBuild: Int
 
     init(
         defaults: UserDefaults = .standard,
         now: @escaping @Sendable () -> Date = Date.init,
         experimentRoll: @escaping @Sendable () -> Int = { Int.random(in: 0..<100) },
-        initialPolicy: MonetizationPolicy? = nil
+        initialPolicy: MonetizationPolicy? = nil,
+        currentAppBuild: Int? = nil
     ) {
         self.defaults = defaults
         self.now = now
         self.experimentRoll = experimentRoll
         let cachedPolicy = Self.decode(MonetizationPolicy.self, from: defaults.data(forKey: Keys.policy))
-        policy = initialPolicy
+        let resolvedPolicy = initialPolicy
             ?? Self.currentPolicy(from: cachedPolicy)
+        policy = resolvedPolicy
+        self.currentAppBuild = currentAppBuild ?? Self.bundleBuild()
+        minimumSupportedBuild = resolvedPolicy.minimumAppBuild
+        appUpdateURL = resolvedPolicy.appUpdateURL
         usage = Self.decode(UsageSnapshot.self, from: defaults.data(forKey: Keys.serverUsage)) ?? .empty()
         accessCohort = defaults.string(forKey: Keys.accessCohort)
             .flatMap(MonetizationAccessCohort.init(rawValue:))
@@ -48,6 +56,11 @@ final class MonetizationStore {
     var collectionLimit: Int { policy.limits.collectionUniqueItems }
 
     var offerCodesEnabled: Bool { policy.gates.offerCodes }
+
+    var requiresUpdate: Bool {
+        guard let minimumSupportedBuild else { return false }
+        return currentAppBuild < minimumSupportedBuild
+    }
 
     var trialDays: Int { policy.effectiveAccessExperiment.trialDays }
 
@@ -103,6 +116,8 @@ final class MonetizationStore {
             let status = try await api.monetizationStatus()
             let currentPolicy = Self.currentPolicy(from: status.policy)
             policy = currentPolicy
+            minimumSupportedBuild = currentPolicy.minimumAppBuild
+            appUpdateURL = currentPolicy.appUpdateURL
             save(currentPolicy, forKey: Keys.policy)
             if signedIn {
                 usage = status.usage
@@ -236,6 +251,10 @@ final class MonetizationStore {
     private static func decode<T: Decodable>(_ type: T.Type, from data: Data?) -> T? {
         guard let data else { return nil }
         return try? JSONDecoder().decode(type, from: data)
+    }
+
+    private static func bundleBuild() -> Int {
+        Int(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0") ?? 0
     }
 
     private static func currentPolicy(from cachedPolicy: MonetizationPolicy?) -> MonetizationPolicy {

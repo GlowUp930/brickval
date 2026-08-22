@@ -18,7 +18,12 @@ struct AppRootView: View {
         ZStack {
             if isReady {
                 Group {
-                    if preferences.hasCompletedOnboarding && !preferences.isReplayingOnboarding {
+                    if monetization.requiresUpdate {
+                        UpdateRequiredView(
+                            minimumBuild: monetization.minimumSupportedBuild,
+                            updateURL: monetization.appUpdateURL ?? AppLinks.appStore
+                        )
+                    } else if preferences.hasCompletedOnboarding && !preferences.isReplayingOnboarding {
                         if monetization.accessCohort == .hardTrial && entitlements.isLoading && !entitlements.isPro {
                             HardAccessStatusView()
                         } else if monetization.requiresProForApp(isPro: entitlements.isPro) {
@@ -106,6 +111,53 @@ struct AppRootView: View {
         } catch {
             migrationError = "Brickvalue could not copy your Expo data yet. Nothing was deleted."
         }
+    }
+}
+
+struct UpdateRequiredView: View {
+    let minimumBuild: Int?
+    let updateURL: URL
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Image("OnboardingLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 96, height: 96)
+                .clipShape(.rect(cornerRadius: 22))
+
+            VStack(spacing: 8) {
+                Text("Update BrickValue")
+                    .font(.title2.bold())
+                Text(message)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Link(destination: updateURL) {
+                Label("Update now", systemImage: "arrow.down.app.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 54)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(AccentPreference.green.color)
+            .accessibilityIdentifier("appUpdate.open")
+        }
+        .padding(24)
+        .frame(maxWidth: 420)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(BrickValStyle.Primitive.brandInk.ignoresSafeArea())
+        .foregroundStyle(.white)
+        .preferredColorScheme(.dark)
+    }
+
+    private var message: String {
+        if let minimumBuild {
+            return "This version is no longer supported. Install the latest update to keep scanning and valuing your collection. Build \(minimumBuild) or newer is required."
+        }
+        return "This version is no longer supported. Install the latest update to keep scanning and valuing your collection."
     }
 }
 

@@ -105,12 +105,22 @@ final class AppSDKCoordinator: SuperwallDelegate {
             showsSubscriptionFallback = true
             return true
         }
-        resolveAndRegister(
-            placement: placement,
-            params: params,
-            feature: nil,
-            manualDismissal: manualDismissal
-        )
+        showsSubscriptionFallback = false
+        if placement == .subscriptionUpgrade {
+            register(
+                placement: placement,
+                params: params,
+                feature: nil,
+                manualDismissal: manualDismissal
+            )
+        } else {
+            resolveAndRegister(
+                placement: placement,
+                params: params,
+                feature: nil,
+                manualDismissal: manualDismissal
+            )
+        }
         return true
     }
 
@@ -295,20 +305,23 @@ final class AppSDKCoordinator: SuperwallDelegate {
             return
         }
 
-        guard request.placement != .subscriptionUpgrade else {
-            showsSubscriptionFallback = true
+        if request.placement == .subscriptionUpgrade {
+            register(
+                placement: request.placement,
+                params: request.params,
+                feature: request.feature,
+                manualDismissal: request.manualDismissal
+            )
             return
         }
 
         var fallbackParams = request.params ?? [:]
         fallbackParams["source_placement"] = request.placement.rawValue
-        resolve(
-            UpgradeRequest(
-                placement: .subscriptionUpgrade,
-                params: fallbackParams,
-                feature: request.feature,
-                manualDismissal: nil
-            )
+        register(
+            placement: .subscriptionUpgrade,
+            params: fallbackParams,
+            feature: request.feature,
+            manualDismissal: nil
         )
     }
 

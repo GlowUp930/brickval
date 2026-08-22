@@ -12,6 +12,8 @@ const keys = [
   "BRICKVALUE_FREE_SINGLE_SCANS_PER_DAY",
   "BRICKVALUE_FREE_BULK_SCANS",
   "BRICKVALUE_FREE_COLLECTION_ITEMS",
+  "BRICKVALUE_MINIMUM_IOS_BUILD",
+  "BRICKVALUE_IOS_UPDATE_URL",
 ] as const;
 
 function withCleanEnvironment(action: () => void) {
@@ -41,6 +43,8 @@ test("current defaults gate daily scans, repeat bulk, and ten unique collection 
     assert.equal(policy.limits.singleScansPerDay, 3);
     assert.equal(policy.limits.introductoryBulkScans, 1);
     assert.equal(policy.limits.collectionUniqueItems, 10);
+    assert.equal(policy.minimumAppBuild, null);
+    assert.equal(policy.appUpdateURL, "https://apps.apple.com/au/app/brickvalue/id6771715475");
   });
 });
 
@@ -71,5 +75,15 @@ test("invalid limits fall back to safe defaults", () => {
     const policy = getMonetizationPolicy();
     assert.equal(policy.limits.singleScansPerDay, 3);
     assert.equal(policy.limits.collectionUniqueItems, 10);
+  });
+});
+
+test("minimum iOS build can be enabled remotely", () => {
+  withCleanEnvironment(() => {
+    process.env.BRICKVALUE_MINIMUM_IOS_BUILD = "142";
+    process.env.BRICKVALUE_IOS_UPDATE_URL = "https://example.com/update";
+    const policy = getMonetizationPolicy();
+    assert.equal(policy.minimumAppBuild, 142);
+    assert.equal(policy.appUpdateURL, "https://example.com/update");
   });
 });

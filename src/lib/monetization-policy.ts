@@ -24,6 +24,8 @@ export interface MonetizationPolicy {
     trialEnding: boolean;
     accountAction: boolean;
   };
+  minimumAppBuild: number | null;
+  appUpdateURL: string;
 }
 
 function booleanValue(name: string, fallback: boolean): boolean {
@@ -36,6 +38,11 @@ function booleanValue(name: string, fallback: boolean): boolean {
 function positiveInteger(name: string, fallback: number): number {
   const value = Number.parseInt(process.env[name] ?? "", 10);
   return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function optionalPositiveInteger(name: string): number | null {
+  const value = Number.parseInt(process.env[name] ?? "", 10);
+  return Number.isFinite(value) && value > 0 ? value : null;
 }
 
 function percentage(name: string, fallback: number): number {
@@ -70,5 +77,9 @@ export function getMonetizationPolicy(): MonetizationPolicy {
       trialEnding: booleanValue("BRICKVALUE_TRIAL_REMINDER_NOTIFICATIONS_ENABLED", true),
       accountAction: booleanValue("BRICKVALUE_ACCOUNT_ALERTS_ENABLED", true),
     },
+    // Keep this unset until the replacement build is live in the App Store.
+    minimumAppBuild: optionalPositiveInteger("BRICKVALUE_MINIMUM_IOS_BUILD"),
+    appUpdateURL: process.env.BRICKVALUE_IOS_UPDATE_URL?.trim() ||
+      "https://apps.apple.com/au/app/brickvalue/id6771715475",
   };
 }

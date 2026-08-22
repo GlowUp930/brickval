@@ -57,6 +57,8 @@ struct MonetizationStoreTests {
         #expect(decoded.version == 3)
         #expect(decoded.gates.singleDaily == false)
         #expect(decoded.gates.offerCodes)
+        #expect(decoded.minimumAppBuild == nil)
+        #expect(decoded.appUpdateURL == nil)
 
         context.defaults.set(legacyJSON, forKey: "brickvalue_monetization_policy")
 
@@ -301,6 +303,25 @@ struct MonetizationStoreTests {
         #expect(disabledStore.requiresProForApp(isPro: false) == false)
     }
 
+    @Test func oldBuildIsBlockedWhenRemoteMinimumBuildIsEnabled() {
+        let context = context()
+        let minimumBuild = policy(singleDaily: true, minimumAppBuild: 142)
+        let oldStore = MonetizationStore(
+            defaults: context.defaults,
+            initialPolicy: minimumBuild,
+            currentAppBuild: 141
+        )
+        let currentStore = MonetizationStore(
+            defaults: context.defaults,
+            initialPolicy: minimumBuild,
+            currentAppBuild: 142
+        )
+
+        #expect(oldStore.requiresUpdate)
+        #expect(oldStore.minimumSupportedBuild == 142)
+        #expect(currentStore.requiresUpdate == false)
+    }
+
     private func context() -> (defaults: UserDefaults, suite: String) {
         let suite = "MonetizationStoreTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
@@ -311,7 +332,8 @@ struct MonetizationStoreTests {
     private func policy(
         singleDaily: Bool,
         hardPaywallEnabled: Bool = false,
-        offerCodes: Bool = true
+        offerCodes: Bool = true,
+        minimumAppBuild: Int? = nil
     ) -> MonetizationPolicy {
         MonetizationPolicy(
             version: hardPaywallEnabled ? 3 : 1,
@@ -338,7 +360,8 @@ struct MonetizationStoreTests {
                 scanReset: true,
                 trialEnding: true,
                 accountAction: true
-            )
+            ),
+            minimumAppBuild: minimumAppBuild
         )
     }
 }

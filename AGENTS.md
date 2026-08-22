@@ -114,6 +114,10 @@ SENTRY_DSN              ← backend/web Sentry DSN; Swift Sentry config belongs 
 # App
 NEXT_PUBLIC_APP_URL
 
+# Native iOS rollout
+BRICKVALUE_MINIMUM_IOS_BUILD       ← optional forced-update gate; set only after the replacement build is live
+BRICKVALUE_IOS_UPDATE_URL          ← optional App Store/TestFlight update URL
+
 # Legacy (not active in current flow)
 RAPIDAPI_KEY
 ```

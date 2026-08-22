@@ -77,6 +77,18 @@ final result: passed
 
 final result: passed
 
+## Paywall Routing And Update Gate QA — 2026-08-22
+
+- Upgrade actions now register the configured `brickval_upgrade` placement directly, so the normal configured release path opens the Superwall paywall without presenting the intermediate Subscription sheet.
+- Feature-specific upgrade placements still resolve eligibility first, then fall back to the direct upgrade placement when appropriate.
+- The remote minimum-build gate is fail-open while unset. After build `142` is live, set `BRICKVALUE_MINIMUM_IOS_BUILD=142` to require older builds to update.
+- The update screen links to the App Store and has no dismiss or skip action.
+- Focused monetization tests passed. The full Swift suite passed with 125 tests (127 parameterized test runs) and zero failures on the small iPhone simulator.
+- Backend monetization and scan-gate tests passed with 8 tests, and the TypeScript type check passed.
+- Build `142` is prepared locally; no TestFlight upload was requested for this change.
+
+final result: passed
+
 ## Interactive Chart And Flow QA — 2026-07-15
 
 - Collection chart scrubber exposed the selected month and USD value through UI automation.
