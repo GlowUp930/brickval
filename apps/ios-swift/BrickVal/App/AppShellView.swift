@@ -44,8 +44,15 @@ struct AppShellView: View {
                         ToolbarItem(placement: .cancellationAction) {
                             Button("Done") { coordinator?.dismissSubscriptionFallback() }
                         }
-                    }
+                }
             }
+        }
+        .alert("Upgrade unavailable", isPresented: paywallErrorBinding) {
+            Button("OK", role: .cancel) {
+                coordinator?.dismissPaywallPresentationError()
+            }
+        } message: {
+            Text(coordinator?.paywallPresentationError ?? "Please try again.")
         }
         .fullScreenCover(isPresented: proWelcomeBinding) {
             ProWelcomeView()
@@ -89,6 +96,13 @@ struct AppShellView: View {
         Binding(
             get: { coordinator?.showsSubscriptionFallback == true },
             set: { if !$0 { coordinator?.dismissSubscriptionFallback() } }
+        )
+    }
+
+    private var paywallErrorBinding: Binding<Bool> {
+        Binding(
+            get: { coordinator?.paywallPresentationError != nil },
+            set: { if !$0 { coordinator?.dismissPaywallPresentationError() } }
         )
     }
 

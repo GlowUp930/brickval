@@ -13,6 +13,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
     private(set) var purchasesConfigured = false
     private(set) var superwallConfigured = false
     private(set) var showsSubscriptionFallback = false
+    private(set) var paywallPresentationError: String?
     private(set) var offerCodeRedemptionState: OfferCodeRedemptionState = .idle
 
     var superwallSeed: Int? {
@@ -109,6 +110,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
             return true
         }
         showsSubscriptionFallback = false
+        paywallPresentationError = nil
         if placement == .subscriptionUpgrade {
             register(
                 placement: placement,
@@ -137,12 +139,22 @@ final class AppSDKCoordinator: SuperwallDelegate {
             showsSubscriptionFallback = true
             return true
         }
+        paywallPresentationError = nil
         resolveAndRegister(placement: placement, params: params, feature: feature)
         return true
     }
 
     func dismissSubscriptionFallback() {
         showsSubscriptionFallback = false
+    }
+
+    func dismissPaywallPresentationError() {
+        paywallPresentationError = nil
+    }
+
+    func handleCustomPaywallAction(withName name: String) {
+        guard name == Self.showPromoRedeemAction else { return }
+        requestOfferCodeRedemption()
     }
 
     var isOfferCodeRedemptionBusy: Bool {
@@ -341,16 +353,17 @@ final class AppSDKCoordinator: SuperwallDelegate {
         presentationHandler.onPresent { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.showsSubscriptionFallback = false
+                self?.paywallPresentationError = nil
             }
         }
         presentationHandler.onSkip { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.showsSubscriptionFallback = true
+                self?.handlePaywallPresentationFailure()
             }
         }
         presentationHandler.onError { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.showsSubscriptionFallback = true
+                self?.handlePaywallPresentationFailure()
             }
         }
 
@@ -371,11 +384,20 @@ final class AppSDKCoordinator: SuperwallDelegate {
         }
     }
 
+    private func handlePaywallPresentationFailure() {
+        pendingManualDismissal = nil
+        pendingManualDismissalPlacement = nil
+        showsSubscriptionFallback = false
+        paywallPresentationError = "We couldn't load the upgrade options. Please try again."
+    }
+
     private static func configurationValue(_ key: String) -> String? {
         guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String else { return nil }
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty || trimmed.contains("$(") ? nil : trimmed
     }
+
+    private static let showPromoRedeemAction = "showPromoRedeem"
 }
 
 private struct UpgradeRequest: @unchecked Sendable {

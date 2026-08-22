@@ -121,6 +121,17 @@ final result: passed
 
 final result: passed
 
+## Superwall Paywall And Promo Code QA — 2026-08-22
+
+- Upgrade actions now register the Superwall placement directly; Superwall skip/error callbacks no longer open the native `SubscriptionView` fallback page.
+- A genuine Superwall configuration failure remains visible as a concise retryable alert instead of a replacement subscription screen.
+- The `showPromoRedeem` custom paywall action opens the existing StoreKit offer-code redemption flow from the active app scene.
+- Configure the `showPromoRedeem` custom action on both the `brickval_upgrade` soft paywall and the `onboarding_hard_access` hard paywall in Superwall; the app delegate handles the action for either placement.
+- Added regression coverage for the promo action and unknown custom actions.
+- Full simulator test and on-device paywall verification remain required after the Superwall dashboard actions are published.
+
+final result: code complete; dashboard verification pending
+
 ## Interactive Chart And Flow QA — 2026-07-15
 
 - Collection chart scrubber exposed the selected month and USD value through UI automation.

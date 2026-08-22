@@ -83,11 +83,25 @@ struct SubscriptionView: View {
             }
         }
         .navigationTitle("Subscription")
+        .alert("Upgrade unavailable", isPresented: paywallErrorBinding) {
+            Button("OK", role: .cancel) {
+                coordinator?.dismissPaywallPresentationError()
+            }
+        } message: {
+            Text(coordinator?.paywallPresentationError ?? "Please try again.")
+        }
         .sheet(isPresented: $showAccount) {
             NavigationStack {
                 AccountView()
             }
         }
+    }
+
+    private var paywallErrorBinding: Binding<Bool> {
+        Binding(
+            get: { coordinator?.paywallPresentationError != nil },
+            set: { if !$0 { coordinator?.dismissPaywallPresentationError() } }
+        )
     }
 
     private func proFeature(_ title: String, systemImage: String) -> some View {
