@@ -244,6 +244,7 @@ final class ScanStore {
     func importBulkPhoto(_ data: Data?) async {
         guard intent == .bulk, phase != .capturing, phase != .identifying else { return }
         guard canBeginCurrentScan else {
+            phase = .failed("You've used all available bulk scans. Upgrade to continue.")
             proLimitFeature = .bulkScan
             return
         }
@@ -500,6 +501,7 @@ final class ScanStore {
             detectorModelVersion = batch.modelVersion
             detectorDetectionMilliseconds = batch.inferenceMilliseconds
             if intent == .bulk {
+                guard phase == .searching else { return }
                 bulkDetectionTracker.ingest(batch.observations, at: frame.timestamp)
                 observations = Array(bulkDetectionTracker.observations(for: frame.timestamp).prefix(10))
                 phase = .searching
@@ -847,7 +849,7 @@ final class ScanStore {
 
             monetization?.applyServerUsage(apiError.usage)
             proLimitFeature = apiError.feature
-            returnToLiveScanner()
+            phase = .failed(apiError.serverMessage ?? "You've reached the scan limit. Upgrade to continue.")
             return
         }
 

@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 import UIKit
+import XCTest
 @testable import BrickVal
 
 struct ScanStoreLifecycleTests {
@@ -430,6 +431,77 @@ struct ScanStoreLifecycleTests {
             from: Data(json.utf8)
         )
     }
+}
+
+final class ScanStorePhotoImportXCTests: XCTestCase {
+    @MainActor
+    func testBlockedBulkPhotoImportLeavesAnActionableState() async {
+        let suiteName = "ScanStorePhotoImportXCTests.bulkGate.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            XCTFail("Could not create isolated defaults")
+            return
+        }
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let monetization = MonetizationStore(
+            defaults: defaults,
+            initialPolicy: .phaseOne,
+            currentAppBuild: 142
+        )
+        monetization.applyServerUsage(UsageSnapshot(
+            isPro: false,
+            singleScan: UsageCounter(used: 0, limit: 3, remaining: 3, resetsAt: nil),
+            bulkScan: UsageCounter(used: 1, limit: 1, remaining: 0, resetsAt: nil)
+        ))
+
+        let store = ScanStore(bulkPhotoDetector: StubBulkPhotoDetector(regions: []))
+        store.configureMonetization(monetization, isPro: false)
+        store.intent = .bulk
+
+        await store.importBulkPhoto(Data("fixture".utf8))
+
+        XCTAssertEqual(store.proLimitFeature, .bulkScan)
+        XCTAssertEqual(
+            store.phase,
+            .failed("You've used all available bulk scans. Upgrade to continue.")
+        )
+    }
+
+    @MainActor
+    func testServerBulkLimitKeepsThePhotoImportFailureVisible() async {
+        var api = BrickValAPIClient.successfulLookupStub
+        api.scanBulkMinifigures = { _, _, _ in
+            throw APIError(
+                endpoint: "bulk minifig scan",
+                statusCode: 402,
+                serverMessage: "You've used all 5 free scans. Upgrade to continue.",
+                feature: .bulkScan
+            )
+        }
+
+        let store = ScanStore(
+            api: api,
+            bulkPhotoDetector: StubBulkPhotoDetector(regions: [BulkScanRegion(
+                regionId: "photo-1",
+                boundingBox: NormalizedBoundingBox(x: 0.2, y: 0.2, width: 0.3, height: 0.5)
+            )])
+        )
+        store.intent = .bulk
+        let imageData = UIGraphicsImageRenderer(size: CGSize(width: 8, height: 8)).image { _ in
+            UIColor.white.setFill()
+            UIRectFill(CGRect(x: 0, y: 0, width: 8, height: 8))
+        }.jpegData(compressionQuality: 0.8)!
+
+        await store.importBulkPhoto(imageData)
+
+        XCTAssertEqual(store.proLimitFeature, .bulkScan)
+        XCTAssertEqual(
+            store.phase,
+            .failed("You've used all 5 free scans. Upgrade to continue.")
+        )
+        XCTAssertEqual(store.frozenImageData, imageData)
+    }
+
 }
 
 private actor RecoveryConcurrencyProbe {

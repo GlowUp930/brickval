@@ -115,7 +115,15 @@ struct ScannerView: View {
                         }
                     }
                     .overlay {
-                        if [.capturing, .identifying].contains(store.phase) {
+                        if isImportingBulkPhoto && ![.capturing, .identifying].contains(store.phase) {
+                            Label("Preparing photo…", systemImage: "photo.on.rectangle")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                                .background(.regularMaterial, in: .capsule)
+                                .accessibilityIdentifier("scanner.bulkPhotoImport")
+                        } else if [.capturing, .identifying].contains(store.phase) {
                             if store.intent == .bulk {
                                 BulkProcessingOverlayView(
                                     imageData: store.frozenImageData,

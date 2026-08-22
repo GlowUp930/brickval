@@ -89,6 +89,17 @@ final result: passed
 
 final result: passed
 
+## Bulk Photo Import Recovery QA — 2026-08-22
+
+- Confirmed the supplied HEIC library photo decodes and the bundled YOLO detector returns bulk regions on the small iPhone simulator.
+- Confirmed the picker-to-scan handoff shows an immediate `Preparing photo…` state before detection and pricing begin.
+- Confirmed exhausted local bulk usage and a server `402` limit keep an actionable failure visible instead of returning silently to the searching scanner.
+- Confirmed a late live-camera detection cannot overwrite the active photo-import state.
+- The full iOS suite passed with 127 tests, including four parameterized runs, and zero failures on the small iPhone simulator.
+- Build `143` was archived and uploaded to App Store Connect; package processing remains asynchronous.
+
+final result: passed
+
 ## Interactive Chart And Flow QA — 2026-07-15
 
 - Collection chart scrubber exposed the selected month and USD value through UI automation.
