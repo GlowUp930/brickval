@@ -112,6 +112,15 @@ final result: passed
 
 final result: passed
 
+## TestFlight Build 144 QA — 2026-08-22
+
+- Release archive verified as version `1.0.5 (144)` with bundle identifier `com.brickval.app`.
+- Archive signing used the App Store distribution identity and `BrickVal App Store Build 125` profile.
+- App Store Connect accepted the upload; package processing remains asynchronous.
+- Full iOS suite passed with 128 tests, four parameterized runs, and zero failures on the small iPhone simulator before the release archive.
+
+final result: passed
+
 ## Interactive Chart And Flow QA — 2026-07-15
 
 - Collection chart scrubber exposed the selected month and USD value through UI automation.
