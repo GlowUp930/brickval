@@ -95,7 +95,6 @@ struct ScannerView: View {
                                     containerSize: cameraSize,
                                     accent: accent
                                 )
-                                BulkCameraDetectionHeader(count: store.observations.count)
                             } else {
                                 ViewfinderOverlayView()
                                 DetectionOverlayView(observations: store.observations)

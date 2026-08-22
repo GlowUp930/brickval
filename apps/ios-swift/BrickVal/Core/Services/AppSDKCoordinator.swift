@@ -36,7 +36,8 @@ final class AppSDKCoordinator: SuperwallDelegate {
     init(
         entitlementStore: EntitlementStore,
         notificationCoordinator: NotificationCoordinator = NotificationCoordinator(),
-        offerCodeClient: (any OfferCodeRedemptionClient)? = nil
+        offerCodeClient: (any OfferCodeRedemptionClient)? = nil,
+        purchaseServicesEnabled: Bool = true
     ) {
         self.entitlementStore = entitlementStore
         self.notificationCoordinator = notificationCoordinator
@@ -67,6 +68,8 @@ final class AppSDKCoordinator: SuperwallDelegate {
             }
         }
 #endif
+
+        guard purchaseServicesEnabled else { return }
 
         let revenueCatKey = Self.configurationValue("RevenueCatAPIKey")
         let superwallKey = Self.configurationValue("SuperwallAPIKey")
@@ -334,12 +337,37 @@ final class AppSDKCoordinator: SuperwallDelegate {
         pendingManualDismissal = manualDismissal
         pendingManualDismissalPlacement = manualDismissal == nil ? nil : placement
 
+        let presentationHandler = PaywallPresentationHandler()
+        presentationHandler.onPresent { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.showsSubscriptionFallback = false
+            }
+        }
+        presentationHandler.onSkip { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.showsSubscriptionFallback = true
+            }
+        }
+        presentationHandler.onError { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.showsSubscriptionFallback = true
+            }
+        }
+
         if let feature {
-            Superwall.shared.register(placement: placement.rawValue, params: params) {
+            Superwall.shared.register(
+                placement: placement.rawValue,
+                params: params,
+                handler: presentationHandler
+            ) {
                 Task { @MainActor in feature() }
             }
         } else {
-            Superwall.shared.register(placement: placement.rawValue, params: params)
+            Superwall.shared.register(
+                placement: placement.rawValue,
+                params: params,
+                handler: presentationHandler
+            )
         }
     }
 

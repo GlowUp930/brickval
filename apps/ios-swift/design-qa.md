@@ -100,6 +100,18 @@ final result: passed
 
 final result: passed
 
+## Upgrade And Bulk Status QA — 2026-08-22
+
+- Profile, Subscription, and Appearance upgrade actions now use the shared paywall coordinator without a view-level configuration guard.
+- Superwall paywall errors and skipped placements now expose the existing visible subscription fallback instead of failing silently; configured placements still open directly.
+- Removed the duplicate bulk camera detection header so framing presents one status message and one material container.
+- Added regression coverage for the unavailable purchase-services fallback path.
+- Full iOS suite passed with 128 tests, four parameterized runs, and zero failures on the small iPhone simulator.
+- Rebuilt the bulk scanner demo and confirmed the duplicate background container is absent.
+- No new TestFlight build was uploaded for this change.
+
+final result: passed
+
 ## Interactive Chart And Flow QA — 2026-07-15
 
 - Collection chart scrubber exposed the selected month and USD value through UI automation.

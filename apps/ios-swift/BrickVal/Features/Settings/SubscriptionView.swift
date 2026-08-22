@@ -32,8 +32,8 @@ struct SubscriptionView: View {
                     Button(isSignedOut ? "Sign in to upgrade" : "View upgrade options", systemImage: isSignedOut ? "person.crop.circle.badge.plus" : "sparkles") {
                         if isSignedOut {
                             showAccount = true
-                        } else if coordinator?.superwallConfigured == true {
-                            coordinator?.presentUpgrade()
+                        } else if let coordinator {
+                            coordinator.presentUpgrade()
                         } else {
                             message = "Upgrade options are not configured for this build."
                         }

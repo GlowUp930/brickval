@@ -65,10 +65,10 @@ struct AppearanceSettingsView: View {
     }
 
     private func presentUpgrade() {
-        if coordinator?.superwallConfigured == true {
-            coordinator?.presentUpgrade(placement: .appearanceAttempt)
-        } else {
+        guard let coordinator else {
             upgradeMessage = "Upgrade options are not configured for this build."
+            return
         }
+        _ = coordinator.presentUpgrade(placement: .appearanceAttempt)
     }
 }

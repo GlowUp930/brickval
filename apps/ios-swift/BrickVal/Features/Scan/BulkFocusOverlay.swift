@@ -103,26 +103,3 @@ struct BulkFocusOverlay: View {
             .opacity(reduceMotion ? 1 : 0.96)
     }
 }
-
-struct BulkCameraDetectionHeader: View {
-    let count: Int
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("What is this LEGO lot worth?")
-                .font(.headline.weight(.bold))
-            Text(count == 0 ? "Frame your figures, then tap the shutter" : "\(count) minifigure\(count == 1 ? "" : "s") in frame")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.76))
-        }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.black.opacity(0.62), in: .rect(cornerRadius: 16))
-        .padding(12)
-        .allowsHitTesting(false)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Bulk scan. \(count) minifigures in frame")
-    }
-}

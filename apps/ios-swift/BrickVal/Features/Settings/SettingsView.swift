@@ -442,11 +442,11 @@ struct SettingsView: View {
     }
 
     private func triggerPaywall(placement: ProPlacement) {
-        if coordinator?.superwallConfigured == true {
-            coordinator?.presentUpgrade(placement: placement)
-        } else {
+        guard let coordinator else {
             purchaseMessage = "Upgrade options are not configured for this build."
+            return
         }
+        _ = coordinator.presentUpgrade(placement: placement)
     }
 
     private func restorePurchases() {
