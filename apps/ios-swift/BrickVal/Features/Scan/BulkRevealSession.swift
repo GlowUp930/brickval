@@ -41,10 +41,6 @@ struct BulkRevealEntry: Identifiable, Sendable {
         condition == .used ? usedValue : newValue
     }
 
-    var confidenceTitle: String {
-        confidence >= 0.8 ? "High confidence" : "Review match"
-    }
-
     var priceSourceTitle: String {
         item?.result.pricing.dataSource == "sold"
             ? "Sold value"
@@ -76,6 +72,7 @@ struct BulkRevealSession: Sendable {
     private(set) var entries: [BulkRevealEntry]
     private(set) var phase: BulkRevealPhase = .preparing
     private(set) var revealedCount = 0
+    private(set) var lastRevealedEntryID: String?
     private(set) var condition: CollectionCondition = .used
 
     init(regions: [BulkScanRegion], items: [BulkScanResultItem] = []) {
@@ -127,6 +124,10 @@ struct BulkRevealSession: Sendable {
         revealedEntries.compactMap { $0.value(for: condition) }.reduce(0, +)
     }
 
+    var pricedCount: Int {
+        revealedEntries.filter { $0.value(for: condition) != nil }.count
+    }
+
     var stepInterval: TimeInterval { Self.stepInterval(for: entries.count) }
 
     static func stepInterval(for itemCount: Int) -> TimeInterval {
@@ -153,6 +154,7 @@ struct BulkRevealSession: Sendable {
             return
         }
         revealedCount = 0
+        lastRevealedEntryID = nil
         phase = .sweeping(index: 0)
     }
 
@@ -177,6 +179,7 @@ struct BulkRevealSession: Sendable {
               entries.indices.contains(index),
               entries[index].isTerminal
         else { return }
+        lastRevealedEntryID = entries[index].id
         revealedCount += 1
         if revealedCount >= entries.count {
             phase = .finalSummary
@@ -189,6 +192,7 @@ struct BulkRevealSession: Sendable {
 
     mutating func reset() {
         revealedCount = 0
+        lastRevealedEntryID = nil
         phase = .preparing
     }
 

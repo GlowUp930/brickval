@@ -145,6 +145,15 @@ struct ScanStoreLifecycleTests {
                     "pricing": {"hero_new_avg_usd":null, "rrp_usd":null, "gain_pct":null, "data_source":"sold", "new_sold_avg_usd":null, "used_sold_avg_usd":59.50, "new_stock_avg_usd":null, "used_stock_avg_usd":null, "bricklink_new_avg_usd":null, "bricklink_used_avg_usd":null},
                     "market_history": []
                   }
+                },
+                {
+                  "id": "sh9999",
+                  "score": 0.95,
+                  "result": {
+                    "figInfo": {"name":"Unpriced Joker", "image_url":null, "fig_number":"sh9999", "year_released":2017},
+                    "pricing": {"hero_new_avg_usd":null, "rrp_usd":null, "gain_pct":null, "data_source":"sold", "new_sold_avg_usd":null, "used_sold_avg_usd":null, "new_stock_avg_usd":null, "used_stock_avg_usd":null, "bricklink_new_avg_usd":null, "bricklink_used_avg_usd":null},
+                    "market_history": []
+                  }
                 }
               ],
               "usage": null
@@ -170,7 +179,6 @@ struct ScanStoreLifecycleTests {
         }
 
         #expect(store.presentedBulkResults?.items.count == 1)
-        #expect(store.presentedBulkResults?.reviewItems.isEmpty == true)
         #expect(store.presentedBulkResults?.items.first?.result.identifier == "sh1022")
         #expect(store.presentedBulkResults?.items.first?.confidence == 0.42)
     }

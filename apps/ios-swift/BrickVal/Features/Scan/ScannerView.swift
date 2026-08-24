@@ -246,15 +246,6 @@ struct ScannerView: View {
             switch sheet {
             case .manualLookup: ManualLookupView(store: store)
             case .partColor(let detection): PartColorSelectionView(detection: detection, store: store)
-            case .bulkResults(let imageData, let items, let reviewItems, let unresolvedRegions, let recoveryToken):
-                BulkScanResultsView(
-                    imageData: imageData,
-                    items: items,
-                    reviewItems: reviewItems,
-                    unresolvedRegions: unresolvedRegions,
-                    recoveryToken: recoveryToken,
-                    store: store
-                )
             case .result(let result): ScanResultView(result: result, reset: store.reset)
             case .review(let review): ScanReviewView(review: review, store: store)
             }

@@ -20,6 +20,8 @@ struct BulkRevealSessionTests {
         #expect(session.currentEntry?.id == "left-top")
         session.commitSweepStep()
         #expect(session.revealedCount == 1)
+        #expect(session.lastRevealedEntryID == "left-top")
+        #expect(session.pricedCount == 1)
         #expect(session.revealedTotal == 2)
         #expect(session.phase == .sweeping(index: 1))
         #expect(session.currentEntry?.id == "right-top")
@@ -136,11 +138,29 @@ struct BulkRevealSessionTests {
         #expect(session.currentEntry?.id == item.id)
     }
 
+    @Test
+    func unavailablePriceIsVisibleButExcludedFromPricedTotal() {
+        var session = BulkRevealSession(items: [
+            fixture(id: "priced", x: 0.1, y: 0.1, used: 6),
+            fixture(id: "unavailable", x: 0.5, y: 0.1, used: nil, new: nil)
+        ])
+
+        session.begin()
+        session.commitSweepStep()
+        session.commitSweepStep()
+
+        #expect(session.isComplete)
+        #expect(session.lastRevealedEntryID == "unavailable")
+        #expect(session.pricedCount == 1)
+        #expect(session.revealedTotal == 6)
+        #expect(session.entries.last?.value(for: .used) == nil)
+    }
+
     private func fixture(
         id: String,
         x: Double,
         y: Double,
-        used: Double,
+        used: Double?,
         new: Double? = nil
     ) -> BulkScanResultItem {
         let result = LookupResult(

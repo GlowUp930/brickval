@@ -47,4 +47,23 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         XCTAssertTrue(check.waitForExistence(timeout: 3))
         XCTAssertEqual(check.label, "Check 2 figures")
     }
+
+    func testBulkRevealUsesOneTotalAndThenOneCompletedSummary() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-showBulkRecoveryDemo"]
+        app.launch()
+
+        let revealTotal = app.descendants(matching: .any).matching(identifier: "bulkReveal.total")
+        XCTAssertTrue(revealTotal.firstMatch.waitForExistence(timeout: 8))
+        XCTAssertEqual(revealTotal.count, 1)
+        XCTAssertEqual(
+            app.descendants(matching: .any).matching(identifier: "bulkResults.summary").count,
+            0
+        )
+
+        let completedSummary = app.descendants(matching: .any).matching(identifier: "bulkResults.summary")
+        XCTAssertTrue(completedSummary.firstMatch.waitForExistence(timeout: 8))
+        XCTAssertEqual(completedSummary.count, 1)
+        XCTAssertFalse(revealTotal.firstMatch.exists)
+    }
 }

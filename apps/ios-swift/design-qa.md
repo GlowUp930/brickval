@@ -24,13 +24,13 @@
 - Sold-data provenance is visible without presenting a non-functional external link.
 - Collection quantity and New/Used save actions remain available in the result flow.
 - Primary green action uses black text for accessible contrast.
-- Missing pricing renders as `No data`, not a false zero value.
+- Missing pricing renders as `Price unavailable`, not a false zero value.
 
 ## Comparison History
 
 1. Initial capture opened at the lower scroll position; top-state QA was repeated after returning to the image.
 2. Primary-button contrast was corrected from white text to black text.
-3. Missing-price behavior was corrected from `$0` to `No data`.
+3. Missing-price behavior was corrected from `$0` to `Price unavailable`.
 4. Final top and lower states were compared with both supplied references in one contact sheet.
 
 final result: passed
@@ -153,5 +153,18 @@ final result: code and Superwall dashboard configuration complete; device verifi
 - Replay onboarding remained active after the legacy-migration conflict was isolated with session replay state.
 - Five-stage onboarding entry and first transition were exercised in Simulator.
 - Final build succeeded; 18 tests passed with zero failures.
+
+final result: passed
+
+## Simplified Bulk Price Reveal QA — 2026-08-24
+
+- Compatibility responses with `status: review` now auto-accept the highest-scoring candidate with genuine pricing; the normal review rail and Review badge are removed.
+- Resolved figures use one display-price rule across the reveal callout, running total, and rail. Numeric prices are shown in USD; missing market data shows `Price unavailable` and is excluded from the priced count.
+- Reveal mode uses `BulkFocusOverlay` as the only target outline. Unresolved completed regions retain a neutral outline for recovery without orange dashed overlays.
+- The returning phase keeps the reveal total and last price callout stable while the photo contracts; the completed summary appears only after that transition finishes.
+- Added unit coverage for last-revealed identity, unavailable-price handling, and priced totals. Added a UI regression asserting one reveal total followed by one completed summary.
+- Full Swift and UI suites passed on the BrickVal Small iPhone simulator: 127 unit tests plus 3 UI tests, zero failures.
+- The single-total reveal/completed-summary UI smoke test also passed on the BrickVal iPhone 17 Pro simulator.
+- No TestFlight build was uploaded for this change.
 
 final result: passed

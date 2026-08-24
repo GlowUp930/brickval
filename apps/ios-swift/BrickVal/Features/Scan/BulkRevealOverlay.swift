@@ -2,7 +2,7 @@ import SwiftUI
 
 struct BulkSweepTotalPill: View {
     let total: Double
-    let valuedCount: Int
+    let pricedCount: Int
     let itemCount: Int
     let accent: Color
 
@@ -13,7 +13,7 @@ struct BulkSweepTotalPill: View {
                 .contentTransition(.numericText())
             Text("·")
                 .foregroundStyle(.gray)
-            Text("\(valuedCount) of \(itemCount) valued")
+            Text("\(pricedCount) of \(itemCount) priced")
                 .foregroundStyle(.gray)
                 .monospacedDigit()
         }
@@ -22,31 +22,33 @@ struct BulkSweepTotalPill: View {
         .frame(minHeight: 52)
         .background(.white, in: .capsule)
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("bulkReveal.total")
         .accessibilityLabel("Lot value")
-        .accessibilityValue("\(total.formatted(.currency(code: "USD"))), \(valuedCount) of \(itemCount) valued")
+        .accessibilityValue("\(total.formatted(.currency(code: "USD"))), \(pricedCount) of \(itemCount) priced")
     }
 }
 
 struct BulkSweepProgress: View {
-    let valuedCount: Int
+    let checkedCount: Int
     let itemCount: Int
 
     var body: some View {
-        Text("\(min(valuedCount, itemCount)) of \(itemCount)")
+        Text("\(min(checkedCount, itemCount)) of \(itemCount)")
             .font(.caption.weight(.bold).monospacedDigit())
             .foregroundStyle(.white)
             .padding(.horizontal, 12)
             .frame(minHeight: 34)
             .background(.black.opacity(0.76), in: .capsule)
-            .overlay { Capsule().stroke(.white.opacity(0.18)) }
-            .accessibilityLabel("Bulk scan progress")
-            .accessibilityValue("\(valuedCount) of \(itemCount) figures valued")
+        .overlay { Capsule().stroke(.white.opacity(0.18)) }
+        .accessibilityLabel("Bulk scan progress")
+            .accessibilityValue("\(checkedCount) of \(itemCount) figures checked")
     }
 }
 
 struct BulkSweepResultCarousel: View {
     let entries: [BulkRevealEntry]
     let revealedCount: Int
+    let condition: CollectionCondition
     let accent: Color
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -98,12 +100,12 @@ struct BulkSweepResultCarousel: View {
                     Text(item.result.identifier)
                         .font(.caption2.bold())
                         .lineLimit(1)
-                    if let usedValue = entry.usedValue {
-                        Text(usedValue, format: .currency(code: "USD"))
+                    if let displayValue = entry.value(for: condition) {
+                        Text(displayValue, format: .currency(code: "USD"))
                             .font(.caption.bold().monospacedDigit())
                             .foregroundStyle(accent)
                     } else {
-                        Text("No price")
+                        Text("Price unavailable")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.58))
                     }
@@ -114,7 +116,7 @@ struct BulkSweepResultCarousel: View {
             .background(.black.opacity(0.78), in: .rect(cornerRadius: 11))
             .overlay { RoundedRectangle(cornerRadius: 11).stroke(accent.opacity(0.52)) }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(item.result.name), \(entry.usedValue?.formatted(.currency(code: "USD")) ?? "no price")")
+            .accessibilityLabel("\(item.result.name), \(entry.value(for: condition)?.formatted(.currency(code: "USD")) ?? "Price unavailable")")
         }
     }
 }
@@ -124,6 +126,7 @@ struct BulkRevealOverlay: View {
     let visibleCount: Int
     let revealedTotal: Double
     let currentStatus: String?
+    let condition: CollectionCondition
 
     @Environment(\.brickValAccent) private var accent
 
@@ -132,7 +135,7 @@ struct BulkRevealOverlay: View {
             HStack(alignment: .top) {
                 BulkSweepTotalPill(
                     total: revealedTotal,
-                    valuedCount: entries.prefix(visibleCount).filter(\.isResolved).count,
+                    pricedCount: entries.prefix(visibleCount).filter { $0.value(for: condition) != nil }.count,
                     itemCount: entries.count,
                     accent: accent
                 )
@@ -151,10 +154,11 @@ struct BulkRevealOverlay: View {
                 BulkSweepResultCarousel(
                     entries: entries,
                     revealedCount: visibleCount,
+                    condition: condition,
                     accent: accent
                 )
                 BulkSweepProgress(
-                    valuedCount: entries.prefix(visibleCount).filter(\.isResolved).count,
+                    checkedCount: visibleCount,
                     itemCount: entries.count
                 )
             }

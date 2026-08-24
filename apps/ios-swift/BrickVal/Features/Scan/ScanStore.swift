@@ -123,7 +123,6 @@ final class ScanStore {
         presentedBulkResults = BulkScanPresentation(
             imageData: imageData,
             items: BulkRecoveryDemoFixture.items,
-            reviewItems: [],
             unresolvedRegions: BulkRecoveryDemoFixture.unresolvedRegions,
             recoveryToken: "debug-recovery-token",
             source: .camera
@@ -611,7 +610,6 @@ final class ScanStore {
             presentedBulkResults = BulkScanPresentation(
                 imageData: frozenImageData,
                 items: items,
-                reviewItems: response.reviewItems.map(\.normalized),
                 unresolvedRegions: response.unresolvedRegions.map(\.boundingBox),
                 recoveryToken: response.recoveryToken,
                 source: bulkSource

@@ -18,7 +18,6 @@ struct BulkSharePayload: Identifiable {
     let entries: [BulkShareEntry]
     let conditionTitle: String
     let pricingSourceTitle: String
-    let reviewCount: Int
     let unresolvedCount: Int
 
     init(
@@ -27,7 +26,6 @@ struct BulkSharePayload: Identifiable {
         entries: [BulkShareEntry],
         conditionTitle: String = "Used",
         pricingSourceTitle: String = "Sold-market data",
-        reviewCount: Int = 0,
         unresolvedCount: Int = 0
     ) {
         self.photo = photo
@@ -35,7 +33,6 @@ struct BulkSharePayload: Identifiable {
         self.entries = entries
         self.conditionTitle = conditionTitle
         self.pricingSourceTitle = pricingSourceTitle
-        self.reviewCount = reviewCount
         self.unresolvedCount = unresolvedCount
     }
 
@@ -228,10 +225,6 @@ struct BulkShareCardView: View {
                 Text(payload.conditionTitle)
                 Text("·")
                 Text(payload.pricingSourceTitle)
-                if payload.reviewCount > 0 {
-                    Text("·")
-                    Text("\(payload.reviewCount) to review")
-                }
                 if payload.unresolvedCount > 0 {
                     Text("·")
                     Text("\(payload.unresolvedCount) unresolved")

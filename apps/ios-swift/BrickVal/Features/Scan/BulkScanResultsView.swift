@@ -41,6 +41,7 @@ enum BulkRecoveryTapPlanner {
 private enum BulkResultsPresentationPhase {
     case compactIntro
     case immersiveReveal
+    case returningToReview
     case completedReview
 }
 
@@ -58,10 +59,8 @@ struct BulkScanResultsView: View {
 
     let presentation: BulkScanPresentation
     let store: ScanStore
-    private var source: BulkScanSource { presentation.source }
 
     @State private var itemStates: [BulkScanItemState]
-    @State private var reviewItems: [BulkScanReviewItem]
     @State private var unresolvedRegions: [NormalizedBoundingBox]
     @State private var recoveryState: BulkRecoveryState = .idle
     @State private var recoveryRequestID = 0
@@ -84,34 +83,11 @@ struct BulkScanResultsView: View {
         self.store = store
         capturedImage = UIImage(data: presentation.imageData)
         _itemStates = State(initialValue: presentation.resolvedItems.map { BulkScanItemState(item: $0) })
-        _reviewItems = State(initialValue: presentation.reviewItems)
         _unresolvedRegions = State(initialValue: presentation.unresolvedRegions)
         _revealSession = State(initialValue: BulkRevealSession(
             regions: presentation.regions,
             items: presentation.resolvedItems
         ))
-    }
-
-    init(
-        imageData: Data,
-        items: [BulkScanResultItem],
-        reviewItems: [BulkScanReviewItem] = [],
-        unresolvedRegions: [NormalizedBoundingBox] = [],
-        recoveryToken: String? = nil,
-        source: BulkScanSource = .camera,
-        store: ScanStore
-    ) {
-        self.init(
-            presentation: BulkScanPresentation(
-                imageData: imageData,
-                items: items,
-                reviewItems: reviewItems,
-                unresolvedRegions: unresolvedRegions,
-                recoveryToken: recoveryToken,
-                source: source
-            ),
-            store: store
-        )
     }
 
     private var imageData: Data { presentation.imageData }
@@ -223,12 +199,15 @@ struct BulkScanResultsView: View {
 
     @ViewBuilder
     private var reviewPhotoStage: some View {
-        if reduceMotion {
-            photoResults(immersive: false)
-        } else {
-            photoResults(immersive: false)
-                .matchedGeometryEffect(id: "bulk-photo-stage", in: photoStageNamespace)
+        Group {
+            if reduceMotion {
+                photoResults(immersive: false, showsAnalysis: !isImmersiveReveal)
+            } else {
+                photoResults(immersive: false, showsAnalysis: !isImmersiveReveal)
+                    .matchedGeometryEffect(id: "bulk-photo-stage", in: photoStageNamespace)
+            }
         }
+        .accessibilityHidden(isImmersiveReveal)
     }
 
     @ViewBuilder
@@ -281,7 +260,7 @@ struct BulkScanResultsView: View {
     }
 
     @ViewBuilder
-    private func photoResults(immersive: Bool) -> some View {
+    private func photoResults(immersive: Bool, showsAnalysis: Bool = true) -> some View {
         if let capturedImage {
             GeometryReader { proxy in
                 let imageRect = aspectFitRect(imageSize: capturedImage.size, containerSize: proxy.size)
@@ -292,7 +271,9 @@ struct BulkScanResultsView: View {
                         .position(x: imageRect.midX, y: imageRect.midY)
                         .accessibilityLabel("Bulk scan photo with \(itemStates.count) identified minifigures")
 
-                    if recoveryState.isActive {
+                    if !showsAnalysis {
+                        EmptyView()
+                    } else if recoveryState.isActive {
                         recoveryPhotoContent(imageRect: imageRect, containerSize: proxy.size)
                             .transition(recoveryTransition)
                     } else {
@@ -301,6 +282,12 @@ struct BulkScanResultsView: View {
                                 if let box = state.item.boundingBox {
                                     detectionBox(for: state.item, box: box, imageRect: imageRect)
                                 }
+                            }
+                            ForEach(unresolvedRegions.indices, id: \.self) { index in
+                                unresolvedDetectionBox(
+                                    unresolvedRegions[index],
+                                    imageRect: imageRect
+                                )
                             }
                         } else {
                             BulkFocusOverlay(
@@ -319,16 +306,6 @@ struct BulkScanResultsView: View {
                                         containerSize: proxy.size
                                     )
                                 }
-                            }
-                        }
-
-                        if presentationPhase == .completedReview {
-                            ForEach(unresolvedRegions.indices, id: \.self) { index in
-                                reviewBox(
-                                    unresolvedRegions[index],
-                                    imageRect: imageRect,
-                                    containerSize: proxy.size
-                                )
                             }
                         }
 
@@ -356,7 +333,8 @@ struct BulkScanResultsView: View {
                                 entries: revealSession.entries,
                                 visibleCount: revealSession.revealedCount,
                                 revealedTotal: revealedTotal,
-                                currentStatus: revealStatusTitle
+                                currentStatus: revealStatusTitle,
+                                condition: revealSession.condition
                             )
                         }
                     }
@@ -394,6 +372,7 @@ struct BulkScanResultsView: View {
         .frame(minHeight: 54)
         .background(.white, in: .capsule)
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("bulkResults.summary")
         .accessibilityLabel("Selected value")
         .accessibilityValue("\(selectedTotal.formatted(.currency(code: "USD"))), \(selectedCount) selected")
     }
@@ -645,11 +624,6 @@ struct BulkScanResultsView: View {
                         resultCard($state)
                             .id(state.id)
                     }
-                    ForEach(reviewItems) { review in
-                        ForEach(review.candidates) { candidate in
-                            reviewCandidateCard(candidate, review: review)
-                        }
-                    }
                     .padding(.horizontal, 12)
                 }
             }
@@ -667,25 +641,11 @@ struct BulkScanResultsView: View {
         }
     }
 
-    private func reviewCandidateCard(
-        _ candidate: BulkScanReviewCandidate,
-        review: BulkScanReviewItem
-    ) -> some View {
-        Button {
-            choose(candidate, for: review)
-        } label: {
-            candidateCard(candidate, badge: "Review")
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Review candidate \(candidate.result.name)")
-        .accessibilityHint("Double tap to use this match")
-    }
-
     private func recoveryCandidateCard(_ candidate: BulkScanReviewCandidate) -> some View {
         Button {
             acceptRecovery(candidate)
         } label: {
-            candidateCard(candidate, badge: nil)
+            candidateCard(candidate)
                 .frame(
                     width: CGFloat(BulkRecoveryLayout.candidateCardWidth),
                     height: CGFloat(BulkRecoveryLayout.candidateCardHeight)
@@ -696,10 +656,7 @@ struct BulkScanResultsView: View {
         .accessibilityHint("Double tap to add this match")
     }
 
-    private func candidateCard(
-        _ candidate: BulkScanReviewCandidate,
-        badge: String?
-    ) -> some View {
+    private func candidateCard(_ candidate: BulkScanReviewCandidate) -> some View {
         VStack(spacing: 5) {
             MinifigureThumbnail(
                 imageURL: candidate.result.imageURL,
@@ -717,17 +674,6 @@ struct BulkScanResultsView: View {
         .foregroundStyle(.white)
         .padding(8)
         .background(.black.opacity(0.78), in: .rect(cornerRadius: 12))
-        .overlay(alignment: .topLeading) {
-            if let badge {
-                Text(badge)
-                    .font(.caption2.bold())
-                    .foregroundStyle(.black)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(.orange, in: .capsule)
-                    .offset(x: 5, y: -8)
-            }
-        }
     }
 
     private func resultCard(_ state: Binding<BulkScanItemState>) -> some View {
@@ -776,7 +722,7 @@ struct BulkScanResultsView: View {
                     if let price = price(for: item) {
                         Text(price, format: .currency(code: "USD"))
                     } else {
-                        Text("No data")
+                        Text("Price unavailable")
                     }
                 }
                 .font(.caption.bold().monospacedDigit())
@@ -833,6 +779,19 @@ struct BulkScanResultsView: View {
         .accessibilityHidden(true)
     }
 
+    private func unresolvedDetectionBox(
+        _ box: NormalizedBoundingBox,
+        imageRect: CGRect
+    ) -> some View {
+        let rect = imageBox(box, in: imageRect)
+        return RoundedRectangle(cornerRadius: 10)
+            .stroke(.white.opacity(0.55), lineWidth: 1.5)
+            .frame(width: rect.width, height: rect.height)
+            .position(x: rect.midX, y: rect.midY)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
     private func sweepDetectionBox(
         for entry: BulkRevealEntry,
         box: NormalizedBoundingBox,
@@ -840,60 +799,31 @@ struct BulkScanResultsView: View {
         containerSize: CGSize
     ) -> some View {
         let rect = imageBox(box, in: imageRect)
-        let isCurrent = revealSession.currentEntry?.id == entry.id
-        let isLatestRevealed = revealSession.revealedCount > 0
-            && revealSession.revealedCount == entry.spatialNumber
+        let isLatestRevealed = revealSession.lastRevealedEntryID == entry.id
         let price = entry.value(for: revealSession.condition)
 
         return ZStack {
-            if isLatestRevealed, let price {
-                Text(price, format: .currency(code: "USD"))
+            if isLatestRevealed {
+                Group {
+                    if let price {
+                        Text(price, format: .currency(code: "USD"))
+                    } else {
+                        Text("Price unavailable")
+                    }
+                }
                     .font(.caption.bold().monospacedDigit())
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 5)
-                    .background(accent, in: .capsule)
+                    .background(price == nil ? .white.opacity(0.22) : accent, in: .capsule)
                     .position(
                         x: min(max(rect.midX, 40), containerSize.width - 40),
                         y: max(rect.minY, 18)
                     )
                     .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.86)))
             }
-
-            if isCurrent, !reduceMotion {
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(accent.opacity(0.72), lineWidth: 2)
-                    .frame(width: rect.width + 8, height: rect.height + 8)
-                    .position(x: rect.midX, y: rect.midY)
-                    .transition(.opacity)
-            }
         }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.20), value: isLatestRevealed)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-
-    private func reviewBox(
-        _ box: NormalizedBoundingBox,
-        imageRect: CGRect,
-        containerSize: CGSize
-    ) -> some View {
-        let rect = imageBox(box, in: imageRect)
-        return reviewOutline(rect: rect, symbol: "?")
-    }
-
-    private func reviewOutline(rect: CGRect, symbol: String) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(.orange, style: StrokeStyle(lineWidth: 3, dash: [8, 6]))
-                .frame(width: rect.width, height: rect.height)
-            Image(systemName: symbol)
-                .font(.headline.bold())
-                .foregroundStyle(.black)
-                .frame(width: 28, height: 28)
-                .background(.orange, in: .circle)
-        }
-        .position(x: rect.midX, y: rect.midY)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
@@ -1085,11 +1015,17 @@ struct BulkScanResultsView: View {
             }
             finishReveal()
             if reduceMotion {
-                reviewInteractionReady = true
+                withAnimation(presentationAnimation) {
+                    presentationPhase = .completedReview
+                    reviewInteractionReady = true
+                }
             } else {
                 try await Task.sleep(for: .milliseconds(450))
                 guard !Task.isCancelled else { return }
-                reviewInteractionReady = true
+                withAnimation(presentationAnimation) {
+                    presentationPhase = .completedReview
+                    reviewInteractionReady = true
+                }
             }
         } catch {
             return
@@ -1101,7 +1037,6 @@ struct BulkScanResultsView: View {
         for item in presentation.resolvedItems where !knownIDs.contains(item.id) {
             itemStates.append(BulkScanItemState(item: item))
         }
-        reviewItems = presentation.reviewItems
         unresolvedRegions = presentation.unresolvedRegions
 
         for region in presentation.regions {
@@ -1125,7 +1060,7 @@ struct BulkScanResultsView: View {
         didPlayRevealSound = true
         store.playBulkRevealSound()
         withAnimation(presentationAnimation) {
-            presentationPhase = .completedReview
+            presentationPhase = .returningToReview
         }
     }
 
@@ -1151,7 +1086,6 @@ struct BulkScanResultsView: View {
             entries: entries,
             conditionTitle: shareConditionTitle,
             pricingSourceTitle: "Sold-market data",
-            reviewCount: reviewItems.count,
             unresolvedCount: unresolvedRegions.count
         )
     }
@@ -1196,7 +1130,7 @@ struct BulkScanResultsView: View {
             Text(price, format: .currency(code: "USD"))
                 .font(.caption2)
         } else {
-            Text("No price")
+            Text("Price unavailable")
                 .font(.caption2)
         }
     }
@@ -1391,18 +1325,6 @@ struct BulkScanResultsView: View {
     private func retryRecovery(session: BulkRecoverySession) {
         recoveryState = .selecting(session)
         checkSelectedFigures()
-    }
-
-    private func choose(_ candidate: BulkScanReviewCandidate, for review: BulkScanReviewItem) {
-        let item = BulkScanResultItem(
-            id: review.id,
-            result: candidate.result,
-            boundingBox: review.boundingBox
-        )
-        itemStates.insert(BulkScanItemState(item: item), at: 0)
-        reviewItems.removeAll { $0.id == review.id }
-        focusedResultID = item.id
-        recoveryConfirmation = "Added \(candidate.result.name) to review"
     }
 
     private func acceptRecovery(_ candidate: BulkScanReviewCandidate) {

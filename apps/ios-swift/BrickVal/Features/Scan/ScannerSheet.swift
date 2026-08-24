@@ -4,13 +4,6 @@ import Observation
 enum ScannerSheet: Identifiable {
     case manualLookup
     case partColor(IdentificationDetection)
-    case bulkResults(
-        imageData: Data,
-        items: [BulkScanResultItem],
-        reviewItems: [BulkScanReviewItem],
-        unresolvedRegions: [NormalizedBoundingBox],
-        recoveryToken: String?
-    )
     case result(LookupResult)
     case review(ScanReview)
 
@@ -18,8 +11,6 @@ enum ScannerSheet: Identifiable {
         switch self {
         case .manualLookup: "manual-lookup"
         case .partColor(let detection): "part-color-\(detection.id)"
-        case .bulkResults(_, let items, let reviewItems, _, _):
-            "bulk-\((items.map(\.id) + reviewItems.map(\.id)).joined(separator: ","))"
         case .result(let result): "result-\(result.id)"
         case .review(let review): "review-\(review.id.uuidString)"
         }
@@ -49,7 +40,6 @@ final class BulkScanPresentation: Identifiable {
     let source: BulkScanSource
     let sessionToken: String?
     var recoveryToken: String?
-    private(set) var reviewItems: [BulkScanReviewItem]
     private(set) var regionStates: [String: BulkRegionProgressState]
     private(set) var revision = 0
     var terminalError: String?
@@ -66,23 +56,18 @@ final class BulkScanPresentation: Identifiable {
         self.recoveryToken = recoveryToken
         self.source = source
         self.sessionToken = sessionToken
-        reviewItems = []
         regionStates = Dictionary(uniqueKeysWithValues: regions.map { ($0.regionId, .pending) })
     }
 
     convenience init(
         imageData: Data,
         items: [BulkScanResultItem],
-        reviewItems: [BulkScanReviewItem],
         unresolvedRegions: [NormalizedBoundingBox],
         recoveryToken: String?,
         source: BulkScanSource
     ) {
         let emptyBox = NormalizedBoundingBox(x: 0, y: 0, width: 0, height: 0)
         var regions = items.map { BulkScanRegion(regionId: $0.id, boundingBox: $0.boundingBox ?? emptyBox) }
-        for review in reviewItems where !regions.contains(where: { $0.regionId == review.id }) {
-            regions.append(BulkScanRegion(regionId: review.id, boundingBox: review.boundingBox ?? emptyBox))
-        }
         for (index, box) in unresolvedRegions.enumerated() {
             let regionID = "unresolved-\(index)"
             guard !regions.contains(where: { $0.regionId == regionID }) else { continue }
@@ -94,12 +79,8 @@ final class BulkScanPresentation: Identifiable {
             recoveryToken: recoveryToken,
             source: source
         )
-        self.reviewItems = reviewItems
         for item in items {
             regionStates[item.id] = .resolved(item)
-        }
-        for review in reviewItems {
-            regionStates[review.id] = .unresolved
         }
         for index in unresolvedRegions.indices {
             regionStates["unresolved-\(index)"] = .unresolved
@@ -152,12 +133,6 @@ final class BulkScanPresentation: Identifiable {
         regionStates[regionID] = .unresolved
         revision += 1
     }
-}
-
-struct BulkScanReviewItem: Identifiable, Sendable {
-    let id: String
-    let boundingBox: NormalizedBoundingBox?
-    let candidates: [BulkScanReviewCandidate]
 }
 
 struct BulkScanReviewCandidate: Identifiable, Sendable {

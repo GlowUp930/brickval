@@ -29,7 +29,7 @@ struct BulkMinifigScanPayload: Decodable, Sendable {
         let candidates: [Candidate]
 
         var bestResultItem: BulkScanResultItem? {
-            guard let candidate = candidates.max(by: { $0.score < $1.score }) else { return nil }
+            guard let candidate = bestCandidate else { return nil }
             return BulkScanResultItem(
                 id: detection.regionID ?? detection.id,
                 result: candidate.result.normalized,
@@ -38,22 +38,18 @@ struct BulkMinifigScanPayload: Decodable, Sendable {
             )
         }
 
+        private var bestCandidate: Candidate? {
+            let priced = candidates.filter {
+                let pricing = $0.result.pricing
+                return pricing.preferredUsedValue != nil || pricing.preferredNewValue != nil
+            }
+            return (priced.isEmpty ? candidates : priced).max(by: { $0.score < $1.score })
+        }
+
         struct Candidate: Decodable, Sendable {
             let id: String
             let score: Double
             let result: MinifigLookupPayload
-
-            var normalized: BulkScanReviewCandidate {
-                BulkScanReviewCandidate(identifier: id, score: score, result: result.normalized)
-            }
-        }
-
-        var normalized: BulkScanReviewItem {
-            BulkScanReviewItem(
-                id: detection.regionID ?? detection.id,
-                boundingBox: detection.boundingBox?.normalized,
-                candidates: candidates.map(\.normalized)
-            )
         }
     }
 
@@ -133,7 +129,11 @@ struct BulkRegionIdentificationPayload: Decodable, Sendable {
     }
 
     var bestCandidate: Candidate? {
-        candidates.max(by: { $0.score < $1.score })
+        let priced = candidates.filter {
+            let pricing = $0.result.pricing
+            return pricing.preferredUsedValue != nil || pricing.preferredNewValue != nil
+        }
+        return (priced.isEmpty ? candidates : priced).max(by: { $0.score < $1.score })
     }
 
     enum CodingKeys: String, CodingKey {
