@@ -121,6 +121,15 @@ final result: passed
 
 final result: passed
 
+## TestFlight Build 145 QA — 2026-08-24
+
+- Release archive verified as version `1.0.5 (145)` with bundle identifier `com.brickval.app`.
+- Archive signing used the App Store distribution identity and `BrickVal App Store Build 125` profile.
+- The full Swift suite passed with 126 unit tests and zero failures on the small iPhone simulator; both UI tests also passed.
+- App Store Connect accepted the upload; package processing remains asynchronous.
+
+final result: passed
+
 ## Superwall Paywall And Promo Code QA — 2026-08-22
 
 - Upgrade actions now register the Superwall placement directly; Superwall skip/error callbacks no longer open the native `SubscriptionView` fallback page.
