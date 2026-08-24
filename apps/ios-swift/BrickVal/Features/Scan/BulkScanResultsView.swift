@@ -274,21 +274,12 @@ struct BulkScanResultsView: View {
                     if !showsAnalysis {
                         EmptyView()
                     } else if recoveryState.isActive {
+                        completedDetectionOverlays(imageRect: imageRect)
                         recoveryPhotoContent(imageRect: imageRect, containerSize: proxy.size)
                             .transition(recoveryTransition)
                     } else {
                         if presentationPhase == .completedReview {
-                            ForEach(itemStates) { state in
-                                if let box = state.item.boundingBox {
-                                    detectionBox(for: state.item, box: box, imageRect: imageRect)
-                                }
-                            }
-                            ForEach(unresolvedRegions.indices, id: \.self) { index in
-                                unresolvedDetectionBox(
-                                    unresolvedRegions[index],
-                                    imageRect: imageRect
-                                )
-                            }
+                            completedDetectionOverlays(imageRect: imageRect)
                         } else {
                             BulkFocusOverlay(
                                 regions: revealFocusRegions,
@@ -355,6 +346,21 @@ struct BulkScanResultsView: View {
             ContentUnavailableView("Photo unavailable", systemImage: "photo.badge.exclamationmark")
                 .frame(maxWidth: .infinity, minHeight: 360)
                 .background(BrickValStyle.ScanResult.surface, in: .rect(cornerRadius: 18))
+        }
+    }
+
+    @ViewBuilder
+    private func completedDetectionOverlays(imageRect: CGRect) -> some View {
+        ForEach(itemStates) { state in
+            if let box = state.item.boundingBox {
+                detectionBox(for: state.item, box: box, imageRect: imageRect)
+            }
+        }
+        ForEach(unresolvedRegions.indices, id: \.self) { index in
+            unresolvedDetectionBox(
+                unresolvedRegions[index],
+                imageRect: imageRect
+            )
         }
     }
 

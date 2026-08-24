@@ -168,3 +168,12 @@ final result: passed
 - Build `146` was archived and uploaded to App Store Connect after the simplified bulk reveal regression suite passed; package processing is asynchronous.
 
 final result: passed
+
+## Bulk Recovery Frame Persistence QA — 2026-08-24
+
+- Missed-figure recovery now layers its tap targets and selection highlights over the completed detection overlay, so existing result frames remain visible throughout recovery.
+- Resolved and unresolved detection regions continue to use the same completed-state frame layer before and after recovery begins.
+- The focused recovery UI test and the full iOS suite passed on the BrickVal Small iPhone simulator: 127 unit tests plus 3 UI tests, zero failures.
+- No TestFlight build was uploaded for this presentation-only fix.
+
+final result: passed
