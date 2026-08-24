@@ -41,12 +41,14 @@ A controlled new-user experiment protects the established user experience and pr
 
 ## Current Configuration
 
-Verified on 2026-08-12:
+Initial verification on 2026-08-12; production campaign verification updated on 2026-08-24:
 
 - App Store Connect scheduled the annual price at AUD 79.99 and a monthly price adjustment to AUD 9.99 in 158 affected territories, effective 2026-08-12. Apple will lower renewals for existing subscribers paying the higher monthly price in those territories.
 - The annual product has a one-week free introductory trial in all 175 territories. The monthly product has no introductory offer.
 - RevenueCat's current `default` offering contains `$rc_annual` (`com.brickval.app.pro.yearly`) and `$rc_monthly` (`com.brickval.app.pro.monthly`).
-- Superwall campaigns `101303` (`onboarding_hard_access`) and `86740` (`brickval_upgrade`) both use active paywall `223721` (`Paywall test 1`). The previous paywall `254889` is archived, leaving one active paywall design while preserving separate hard-access and contextual-upgrade campaign attribution.
+- Superwall campaign `101303` (`onboarding_hard_access`) uses active paywall `257172` (`hardpaywall`) for users with no active entitlements and `user.seed < 50`.
+- Superwall campaign `86740` (`brickval_upgrade`) uses active paywall `223721` (`Paywall test 1`) for every user with no active entitlements, at 100 percent treatment. Removing the accidental `user.seed >= 50` filter restores Profile and contextual upgrade access for the other cohort and for legacy users without a seed. Both active paywalls retain the `showPromoRedeem` offer-code callback.
+- The previous paywall `254889` is archived. The live static configuration was checked against build 145's app key on 2026-08-24 and returned both placements, three products per paywall, and the expected entitlement rules.
 - A clean Debug simulator install with the hard-access demo verified that the treatment blocks the scanner and automatically presents the mapped BrickValue paywall. StoreKit loaded the monthly and annual products and cached introductory eligibility without errors.
 - Production is enabled at a guarded 10 percent hard-access allocation and 90 percent metered control until native build `125` is live: `BRICKVALUE_HARD_PAYWALL_EXPERIMENT_ENABLED=true`, `BRICKVALUE_HARD_PAYWALL_PERCENT=10`, and `BRICKVALUE_PRO_TRIAL_DAYS=7`. After the build is live, change `BRICKVALUE_HARD_PAYWALL_PERCENT` to `50`. The live policy response confirms the trial length and baseline limits of three single scans per day, one introductory bulk scan, and 10 unique collection items.
 - The production deployment was verified on `brickvalue.live` on 2026-08-12. Keep the 10 percent ramp for the initial 72-hour smoke period before considering a larger allocation.
