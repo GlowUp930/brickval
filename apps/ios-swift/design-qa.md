@@ -165,6 +165,6 @@ final result: passed
 - Added unit coverage for last-revealed identity, unavailable-price handling, and priced totals. Added a UI regression asserting one reveal total followed by one completed summary.
 - Full Swift and UI suites passed on the BrickVal Small iPhone simulator: 127 unit tests plus 3 UI tests, zero failures.
 - The single-total reveal/completed-summary UI smoke test also passed on the BrickVal iPhone 17 Pro simulator.
-- No TestFlight build was uploaded for this change.
+- Build `146` was archived and uploaded to App Store Connect after the simplified bulk reveal regression suite passed; package processing is asynchronous.
 
 final result: passed
