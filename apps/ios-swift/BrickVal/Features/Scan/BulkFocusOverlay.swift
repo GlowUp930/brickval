@@ -4,6 +4,7 @@ enum BulkFocusState: Equatable, Sendable {
     case active
     case completed
     case pending
+    case topFind
 }
 
 struct BulkFocusRegion: Identifiable, Sendable {
@@ -13,11 +14,35 @@ struct BulkFocusRegion: Identifiable, Sendable {
     let state: BulkFocusState
 }
 
+struct BulkFocusCallout: Equatable, Sendable {
+    let box: NormalizedBoundingBox
+    let text: String
+    let isUnavailable: Bool
+}
+
 struct BulkFocusOverlay: View {
     let regions: [BulkFocusRegion]
     let imageRect: CGRect
     let containerSize: CGSize
     let accent: Color
+    let beamProgress: Double?
+    let callout: BulkFocusCallout?
+
+    init(
+        regions: [BulkFocusRegion],
+        imageRect: CGRect,
+        containerSize: CGSize,
+        accent: Color,
+        beamProgress: Double? = nil,
+        callout: BulkFocusCallout? = nil
+    ) {
+        self.regions = regions
+        self.imageRect = imageRect
+        self.containerSize = containerSize
+        self.accent = accent
+        self.beamProgress = beamProgress
+        self.callout = callout
+    }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -27,7 +52,7 @@ struct BulkFocusOverlay: View {
             Color.clear
         } else {
             ZStack {
-                Color.black.opacity(0.64)
+                Color.black.opacity(0.70)
                     .mask {
                         ZStack {
                             Rectangle().fill(.white)
@@ -45,6 +70,10 @@ struct BulkFocusOverlay: View {
                         }
                     }
 
+                if let beamProgress, !reduceMotion {
+                    scanBeam(at: beamProgress)
+                }
+
                 ForEach(regions) { region in
                     if let box = region.box {
                         let rect = CGRect(
@@ -54,7 +83,10 @@ struct BulkFocusOverlay: View {
                             height: box.height * imageRect.height
                         )
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(strokeColor(for: region.state), lineWidth: region.state == .active ? 3 : 1.5)
+                            .stroke(
+                                strokeColor(for: region.state),
+                                lineWidth: region.state == .active || region.state == .topFind ? 3 : 1.5
+                            )
                             .frame(width: rect.width, height: rect.height)
                             .position(x: rect.midX, y: rect.midY)
                         numberBadge(region.number, state: region.state)
@@ -64,6 +96,10 @@ struct BulkFocusOverlay: View {
                             )
                     }
                 }
+
+                if let callout {
+                    priceCallout(callout)
+                }
             }
             .allowsHitTesting(false)
             .accessibilityHidden(true)
@@ -72,15 +108,16 @@ struct BulkFocusOverlay: View {
 
     private func maskOpacity(for state: BulkFocusState) -> Double {
         switch state {
-        case .active: 1
+        case .active, .topFind: 1
         case .completed: 0.94
-        case .pending: 0.84
+        case .pending: 0.80
         }
     }
 
     private func strokeColor(for state: BulkFocusState) -> Color {
         switch state {
         case .active: accent
+        case .topFind: topFindColor
         case .completed: accent.opacity(0.72)
         case .pending: .white.opacity(0.46)
         }
@@ -88,7 +125,10 @@ struct BulkFocusOverlay: View {
 
     private func numberBadge(_ number: Int, state: BulkFocusState) -> some View {
         Group {
-            if state == .completed {
+            if state == .topFind {
+                Image(systemName: "star.fill")
+                    .font(.caption2.bold())
+            } else if state == .completed {
                 Image(systemName: "checkmark")
                     .font(.caption2.bold())
             } else {
@@ -96,10 +136,69 @@ struct BulkFocusOverlay: View {
                     .font(.caption2.bold().monospacedDigit())
             }
         }
-            .foregroundStyle(state == .active ? .black : .white)
+            .foregroundStyle(state == .active || state == .topFind ? .black : .white)
             .frame(width: 24, height: 24)
-            .background(state == .active ? accent : .black.opacity(0.70), in: .circle)
-            .overlay { Circle().stroke(.white.opacity(state == .active ? 0.2 : 0.45)) }
+            .background(
+                state == .active ? accent : state == .topFind ? topFindColor : .black.opacity(0.70),
+                in: .circle
+            )
+            .overlay {
+                Circle().stroke(.white.opacity(state == .active || state == .topFind ? 0.2 : 0.45))
+            }
             .opacity(reduceMotion ? 1 : 0.96)
+    }
+
+    private func scanBeam(at progress: Double) -> some View {
+        let y = imageRect.minY + min(max(progress, 0), 1) * imageRect.height
+        return ZStack {
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [.clear, accent.opacity(0.35), .white, accent.opacity(0.35), .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(width: imageRect.width, height: 2)
+            Rectangle()
+                .fill(.white.opacity(0.82))
+                .frame(width: imageRect.width * 0.34, height: 1)
+                .blur(radius: 4)
+        }
+        .position(x: imageRect.midX, y: y)
+    }
+
+    private func priceCallout(_ callout: BulkFocusCallout) -> some View {
+        let rect = imageBox(callout.box)
+        let isNearTop = rect.minY < imageRect.minY + 38
+        let y = isNearTop ? rect.maxY + 16 : rect.minY - 16
+        return Text(callout.text)
+            .font(.caption.weight(.bold).monospacedDigit())
+            .foregroundStyle(callout.isUnavailable ? .white : .black)
+            .lineLimit(1)
+            .minimumScaleFactor(0.78)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(callout.isUnavailable ? .white.opacity(0.24) : accent, in: .capsule)
+            .overlay { Capsule().stroke(.white.opacity(callout.isUnavailable ? 0.32 : 0.18)) }
+            .position(
+                x: min(max(rect.midX, 58), containerSize.width - 58),
+                y: min(max(y, 22), containerSize.height - 22)
+            )
+            .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.88)))
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.22), value: callout)
+    }
+
+    private func imageBox(_ box: NormalizedBoundingBox) -> CGRect {
+        CGRect(
+            x: imageRect.minX + box.x * imageRect.width,
+            y: imageRect.minY + box.y * imageRect.height,
+            width: box.width * imageRect.width,
+            height: box.height * imageRect.height
+        )
+    }
+
+    private var topFindColor: Color {
+        Color(red: 1.0, green: 0.78, blue: 0.24)
     }
 }

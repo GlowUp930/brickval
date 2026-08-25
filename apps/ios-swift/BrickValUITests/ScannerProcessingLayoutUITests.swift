@@ -61,6 +61,10 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
             0
         )
 
+        let jackpot = app.descendants(matching: .any).matching(identifier: "bulkReveal.jackpotTotal")
+        XCTAssertTrue(jackpot.firstMatch.waitForExistence(timeout: 8))
+        XCTAssertEqual(jackpot.count, 1)
+
         let completedSummary = app.descendants(matching: .any).matching(identifier: "bulkResults.summary")
         XCTAssertTrue(completedSummary.firstMatch.waitForExistence(timeout: 8))
         XCTAssertEqual(completedSummary.count, 1)

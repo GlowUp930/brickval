@@ -177,3 +177,17 @@ final result: passed
 - No TestFlight build was uploaded for this presentation-only fix.
 
 final result: passed
+
+## Social-First Bulk Value Reveal QA — 2026-08-25
+
+- The reveal now opens with an aspect-fit full-screen hook showing the detected figure count, then uses one continuous top-to-bottom beam over the darkened photo.
+- The active figure receives one crisp green frame and one price callout above it. Completed figures settle into quieter green frames; unavailable prices display `Price unavailable` and do not increase the priced count.
+- The reveal HUD is compact and dark, the live rail shows only the latest few results during the sweep, and the existing scrollable result rail returns after completion.
+- The final reward is rendered directly over the photo: the total counts up, the highest-value figure receives the only gold treatment, the existing completion sound and success haptic fire once, and the reveal holds before returning to review. No duplicate total container or extra summary card is introduced.
+- Pending lookups hold the beam on the ordered target with a checking status. Existing four-request concurrency, spatial ordering, missed recovery, selection, condition controls, and collection actions remain unchanged.
+- Missed recovery keeps the completed detection frames visible so processed and unresolved figures remain distinguishable.
+- Reduce Motion removes beam travel and uses short crossfades while preserving frames, prices, progress, and the final total.
+- The small iPhone simulator visual check confirmed the hook, sweep HUD, aspect-fit photo, single frame layer, compact rail, and completed review layout. Jackpot presence is covered by the bulk reveal UI regression.
+- The Swift suite passed with 129 unit tests and the UI suite passed with 3 tests on the BrickVal Small iPhone simulator. No TestFlight build was uploaded for this presentation-only change.
+
+final result: passed

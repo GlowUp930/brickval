@@ -71,8 +71,12 @@ struct BulkScanResultsView: View {
     @State private var errorMessage: String?
     @State private var revealSession: BulkRevealSession
     @State private var presentationPhase: BulkResultsPresentationPhase = .compactIntro
+    @State private var revealStage: BulkRevealVisualStage = .hook
+    @State private var jackpotTotal = 0.0
+    @State private var jackpotTopFindID: String?
     @State private var reviewInteractionReady = false
     @State private var didPlayRevealSound = false
+    @State private var revealHapticTrigger = 0
     @State private var sharePayload: BulkSharePayload?
 
     private let capturedImage: UIImage?
@@ -132,6 +136,7 @@ struct BulkScanResultsView: View {
         }
         .sensoryFeedback(.selection, trigger: selectedCount)
         .sensoryFeedback(.impact(flexibility: .soft), trigger: recoveryHapticTrigger)
+        .sensoryFeedback(.success, trigger: revealHapticTrigger)
         .sheet(item: $sharePayload) { payload in
             BulkSharePreviewView(payload: payload)
         }
@@ -285,19 +290,10 @@ struct BulkScanResultsView: View {
                                 regions: revealFocusRegions,
                                 imageRect: imageRect,
                                 containerSize: proxy.size,
-                                accent: accent
+                                accent: accent,
+                                beamProgress: revealBeamProgress,
+                                callout: revealCallout
                             )
-
-                            ForEach(revealSession.entries) { entry in
-                                if let box = entry.boundingBox {
-                                    sweepDetectionBox(
-                                        for: entry,
-                                        box: box,
-                                        imageRect: imageRect,
-                                        containerSize: proxy.size
-                                    )
-                                }
-                            }
                         }
 
                         if presentationPhase == .completedReview {
@@ -325,7 +321,10 @@ struct BulkScanResultsView: View {
                                 visibleCount: revealSession.revealedCount,
                                 revealedTotal: revealedTotal,
                                 currentStatus: revealStatusTitle,
-                                condition: revealSession.condition
+                                condition: revealSession.condition,
+                                stage: revealStage,
+                                jackpotTotal: jackpotTotal,
+                                topFind: revealSession.entries.first { $0.id == jackpotTopFindID }
                             )
                         }
                     }
@@ -798,42 +797,6 @@ struct BulkScanResultsView: View {
             .accessibilityHidden(true)
     }
 
-    private func sweepDetectionBox(
-        for entry: BulkRevealEntry,
-        box: NormalizedBoundingBox,
-        imageRect: CGRect,
-        containerSize: CGSize
-    ) -> some View {
-        let rect = imageBox(box, in: imageRect)
-        let isLatestRevealed = revealSession.lastRevealedEntryID == entry.id
-        let price = entry.value(for: revealSession.condition)
-
-        return ZStack {
-            if isLatestRevealed {
-                Group {
-                    if let price {
-                        Text(price, format: .currency(code: "USD"))
-                    } else {
-                        Text("Price unavailable")
-                    }
-                }
-                    .font(.caption.bold().monospacedDigit())
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(price == nil ? .white.opacity(0.22) : accent, in: .capsule)
-                    .position(
-                        x: min(max(rect.midX, 40), containerSize.width - 40),
-                        y: max(rect.minY, 18)
-                    )
-                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.86)))
-            }
-        }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.20), value: isLatestRevealed)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-
     private func imageBox(_ box: NormalizedBoundingBox, in imageRect: CGRect) -> CGRect {
         CGRect(
             x: imageRect.minX + box.x * imageRect.width,
@@ -959,7 +922,9 @@ struct BulkScanResultsView: View {
     private var revealFocusRegions: [BulkFocusRegion] {
         revealSession.entries.map { entry in
             let state: BulkFocusState
-            if let currentEntry = revealSession.currentEntry, currentEntry.id == entry.id {
+            if revealStage == .jackpot, entry.id == jackpotTopFindID {
+                state = .topFind
+            } else if let currentEntry = revealSession.currentEntry, currentEntry.id == entry.id {
                 state = .active
             } else if revealSession.revealedCount > entry.spatialNumber - 1 {
                 state = .completed
@@ -975,13 +940,33 @@ struct BulkScanResultsView: View {
         }
     }
 
+    private var revealBeamProgress: Double? {
+        guard presentationPhase != .completedReview, !reduceMotion else { return nil }
+        return revealSession.beamProgress
+    }
+
+    private var revealCallout: BulkFocusCallout? {
+        guard presentationPhase != .completedReview,
+              revealStage == .sweeping || revealStage == .waiting,
+              let entry = revealSession.lastRevealedEntry,
+              let box = entry.boundingBox
+        else { return nil }
+
+        let price = entry.value(for: revealSession.condition)
+        return BulkFocusCallout(
+            box: box,
+            text: price?.formatted(.currency(code: "USD")) ?? "Price unavailable",
+            isUnavailable: price == nil
+        )
+    }
+
     private var revealedTotal: Double {
         revealSession.revealedTotal
     }
 
     private var revealStatusTitle: String? {
         guard let entry = revealSession.currentEntry else { return nil }
-        if entry.isResolved {
+        if entry.isTerminal && revealStage != .waiting {
             return "Figure \(entry.spatialNumber) of \(revealSession.entries.count)"
         }
         return "Checking figure \(entry.spatialNumber) of \(revealSession.entries.count)"
@@ -992,46 +977,79 @@ struct BulkScanResultsView: View {
         syncPresentation()
         reviewInteractionReady = false
         didPlayRevealSound = false
+        revealHapticTrigger = 0
+        jackpotTotal = 0
+        jackpotTopFindID = nil
+        revealStage = .hook
         presentationPhase = .compactIntro
 
         do {
-            try await Task.sleep(for: .milliseconds(reduceMotion ? 120 : 360))
+            try await Task.sleep(for: .milliseconds(reduceMotion ? 80 : 160))
             guard !Task.isCancelled else { return }
             withAnimation(presentationAnimation) {
                 presentationPhase = .immersiveReveal
             }
-            if !reduceMotion {
-                try await Task.sleep(for: .milliseconds(450))
-            }
+            try await Task.sleep(
+                for: .milliseconds(
+                    Int((reduceMotion ? 0.18 : BulkRevealSession.hookDuration) * 1_000)
+                )
+            )
             guard !Task.isCancelled else { return }
             revealSession.begin()
+            revealStage = .sweeping
             while !revealSession.isComplete {
                 guard !Task.isCancelled else { return }
                 if !revealSession.canAdvanceCurrentEntry {
+                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
+                        revealStage = .waiting
+                    }
                     syncPresentation()
                     try await Task.sleep(for: .milliseconds(100))
                     continue
                 }
                 let interval = reduceMotion ? 0.10 : revealSession.stepInterval
+                let beamTarget = revealSession.currentEntry?.beamProgress ?? revealSession.beamProgress
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: interval)) {
+                    revealStage = .sweeping
+                    revealSession.setBeamProgress(beamTarget)
+                }
                 try await Task.sleep(for: .milliseconds(Int(interval * 1_000)))
                 guard !Task.isCancelled else { return }
                 withAnimation(reduceMotion ? nil : .easeOut(duration: 0.24)) {
                     revealSession.commitSweepStep()
                 }
             }
-            finishReveal()
-            if reduceMotion {
-                withAnimation(presentationAnimation) {
-                    presentationPhase = .completedReview
-                    reviewInteractionReady = true
-                }
-            } else {
-                try await Task.sleep(for: .milliseconds(450))
+
+            if revealSession.revealedCount > 0 {
+                let finalCalloutInterval = reduceMotion ? 0.10 : revealSession.stepInterval
+                try await Task.sleep(for: .milliseconds(Int(finalCalloutInterval * 1_000)))
                 guard !Task.isCancelled else { return }
-                withAnimation(presentationAnimation) {
-                    presentationPhase = .completedReview
-                    reviewInteractionReady = true
-                }
+            }
+
+            jackpotTotal = revealSession.revealedTotal
+            jackpotTopFindID = revealSession.topPricedEntry?.id
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.35)) {
+                revealSession.setBeamProgress(1)
+                revealStage = .jackpot
+            }
+            finishReveal()
+            try await Task.sleep(
+                for: .milliseconds(
+                    Int((reduceMotion ? 0.80 : BulkRevealSession.jackpotDuration) * 1_000)
+                )
+            )
+            guard !Task.isCancelled else { return }
+            withAnimation(presentationAnimation) {
+                presentationPhase = .returningToReview
+            }
+            if !reduceMotion {
+                try await Task.sleep(for: .milliseconds(Int(BulkRevealSession.returnDuration * 1_000)))
+            }
+            guard !Task.isCancelled else { return }
+            withAnimation(reduceMotion ? nil : presentationAnimation) {
+                presentationPhase = .completedReview
+                revealStage = .completed
+                reviewInteractionReady = true
             }
         } catch {
             return
@@ -1065,9 +1083,7 @@ struct BulkScanResultsView: View {
         guard !didPlayRevealSound else { return }
         didPlayRevealSound = true
         store.playBulkRevealSound()
-        withAnimation(presentationAnimation) {
-            presentationPhase = .returningToReview
-        }
+        revealHapticTrigger += 1
     }
 
     @MainActor

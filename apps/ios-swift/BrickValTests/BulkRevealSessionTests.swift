@@ -29,19 +29,40 @@ struct BulkRevealSessionTests {
 
     @Test
     func sweepCadenceScalesForDenseLots() {
-        #expect(BulkRevealSession.stepInterval(for: 3) == 0.70)
-        #expect(BulkRevealSession.stepInterval(for: 10) == 0.60)
-        #expect(BulkRevealSession.stepInterval(for: 40) == 0.50)
+        #expect(BulkRevealSession.stepInterval(for: 3) == BulkRevealSession.maximumStepInterval)
+        #expect(BulkRevealSession.stepInterval(for: 10) == BulkRevealSession.maximumStepInterval)
+        #expect(BulkRevealSession.stepInterval(for: 40) == 0.225)
+        #expect(BulkRevealSession.stepInterval(for: 50) == 0.22)
 
         var session = BulkRevealSession(items: (0..<40).map { index in
             fixture(id: "figure-\(index)", x: Double(index % 8) / 8, y: Double(index / 8) / 5, used: 1)
         })
         #expect(session.duration <= BulkRevealSession.maximumDuration)
         session.begin()
+        #expect(session.beamProgress == 0)
         for _ in 0..<40 { session.commitSweepStep() }
         #expect(session.isComplete)
         #expect(session.revealedCount == 40)
         #expect(session.revealedTotal == 40)
+    }
+
+    @Test
+    func beamProgressTracksTheCurrentSpatialTargetAndCanFinishAtThePhotoEdge() {
+        var session = BulkRevealSession(items: [
+            fixture(id: "top", x: 0.1, y: 0.1, used: 2),
+            fixture(id: "bottom", x: 0.1, y: 0.7, used: 4)
+        ])
+
+        session.begin()
+        session.setBeamProgress(session.currentEntry?.beamProgress ?? 0)
+        #expect(session.beamProgress == 0.25)
+
+        session.commitSweepStep()
+        session.setBeamProgress(session.currentEntry?.beamProgress ?? 0)
+        #expect(session.beamProgress == 0.85)
+
+        session.setBeamProgress(1)
+        #expect(session.beamProgress == 1)
     }
 
     @Test
@@ -154,6 +175,21 @@ struct BulkRevealSessionTests {
         #expect(session.pricedCount == 1)
         #expect(session.revealedTotal == 6)
         #expect(session.entries.last?.value(for: .used) == nil)
+    }
+
+    @Test
+    func topPricedEntryIsTheHighestValueResolvedFigure() {
+        var session = BulkRevealSession(items: [
+            fixture(id: "small", x: 0.1, y: 0.1, used: 3),
+            fixture(id: "large", x: 0.5, y: 0.1, used: 12),
+            fixture(id: "unavailable", x: 0.8, y: 0.1, used: nil, new: nil)
+        ])
+
+        session.begin()
+        for _ in 0..<3 { session.commitSweepStep() }
+
+        #expect(session.topPricedEntry?.id == "large")
+        #expect(session.topPricedEntry?.value(for: .used) == 12)
     }
 
     private func fixture(

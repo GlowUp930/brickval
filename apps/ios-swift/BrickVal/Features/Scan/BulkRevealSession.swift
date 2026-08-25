@@ -6,6 +6,14 @@ enum BulkRevealPhase: Equatable, Sendable {
     case finalSummary
 }
 
+enum BulkRevealVisualStage: Equatable, Sendable {
+    case hook
+    case sweeping
+    case waiting
+    case jackpot
+    case completed
+}
+
 struct BulkRevealEntry: Identifiable, Sendable {
     let id: String
     let boundingBox: NormalizedBoundingBox?
@@ -37,6 +45,11 @@ struct BulkRevealEntry: Identifiable, Sendable {
     var isTerminal: Bool { item != nil || isUnresolved }
     var isResolved: Bool { item != nil }
 
+    var beamProgress: Double {
+        guard let boundingBox else { return 0 }
+        return min(max(boundingBox.y + boundingBox.height / 2, 0), 1)
+    }
+
     func value(for condition: CollectionCondition) -> Double? {
         condition == .used ? usedValue : newValue
     }
@@ -66,6 +79,12 @@ struct BulkRevealEntry: Identifiable, Sendable {
 }
 
 struct BulkRevealSession: Sendable {
+    static let hookDuration: TimeInterval = 0.80
+    static let targetSweepDuration: TimeInterval = 9.0
+    static let jackpotDuration: TimeInterval = 1.40
+    static let returnDuration: TimeInterval = 0.45
+    static let minimumStepInterval: TimeInterval = 0.22
+    static let maximumStepInterval: TimeInterval = 0.56
     static let minimumDuration: TimeInterval = 3.0
     static let maximumDuration: TimeInterval = 30.0
 
@@ -73,6 +92,7 @@ struct BulkRevealSession: Sendable {
     private(set) var phase: BulkRevealPhase = .preparing
     private(set) var revealedCount = 0
     private(set) var lastRevealedEntryID: String?
+    private(set) var beamProgress = 0.0
     private(set) var condition: CollectionCondition = .used
 
     init(regions: [BulkScanRegion], items: [BulkScanResultItem] = []) {
@@ -124,6 +144,20 @@ struct BulkRevealSession: Sendable {
         revealedEntries.compactMap { $0.value(for: condition) }.reduce(0, +)
     }
 
+    var lastRevealedEntry: BulkRevealEntry? {
+        guard let lastRevealedEntryID else { return nil }
+        return entries.first { $0.id == lastRevealedEntryID }
+    }
+
+    var topPricedEntry: BulkRevealEntry? {
+        revealedEntries
+            .compactMap { entry -> (BulkRevealEntry, Double)? in
+                guard let value = entry.value(for: condition) else { return nil }
+                return (entry, value)
+            }
+            .max { $0.1 < $1.1 }?.0
+    }
+
     var pricedCount: Int {
         revealedEntries.filter { $0.value(for: condition) != nil }.count
     }
@@ -131,20 +165,20 @@ struct BulkRevealSession: Sendable {
     var stepInterval: TimeInterval { Self.stepInterval(for: entries.count) }
 
     static func stepInterval(for itemCount: Int) -> TimeInterval {
-        switch itemCount {
-        case 0...5: 0.70
-        case 6...20: 0.60
-        default: 0.50
-        }
+        guard itemCount > 0 else { return maximumStepInterval }
+        return min(
+            maximumStepInterval,
+            max(minimumStepInterval, targetSweepDuration / Double(itemCount))
+        )
     }
 
     var duration: TimeInterval {
         guard !entries.isEmpty else { return Self.minimumDuration }
-        let intro = 0.42
-        let outro = 0.45
+        let intro = Self.hookDuration
+        let outro = Self.jackpotDuration + Self.returnDuration
         return min(
             Self.maximumDuration,
-            max(Self.minimumDuration, intro + stepInterval * Double(entries.count) + outro)
+            max(Self.minimumDuration, intro + stepInterval * Double(entries.count + 1) + outro)
         )
     }
 
@@ -155,7 +189,12 @@ struct BulkRevealSession: Sendable {
         }
         revealedCount = 0
         lastRevealedEntryID = nil
+        beamProgress = 0
         phase = .sweeping(index: 0)
+    }
+
+    mutating func setBeamProgress(_ progress: Double) {
+        beamProgress = min(max(progress, 0), 1)
     }
 
     mutating func markLoading(_ id: String) {
@@ -193,6 +232,7 @@ struct BulkRevealSession: Sendable {
     mutating func reset() {
         revealedCount = 0
         lastRevealedEntryID = nil
+        beamProgress = 0
         phase = .preparing
     }
 

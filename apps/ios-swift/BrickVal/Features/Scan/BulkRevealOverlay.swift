@@ -1,30 +1,33 @@
 import SwiftUI
 
-struct BulkSweepTotalPill: View {
+struct BulkSweepTotalHUD: View {
     let total: Double
     let pricedCount: Int
     let itemCount: Int
     let accent: Color
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 7) {
             Text(total, format: .currency(code: "USD"))
                 .foregroundStyle(accent)
                 .contentTransition(.numericText())
             Text("·")
-                .foregroundStyle(.gray)
-            Text("\(pricedCount) of \(itemCount) priced")
-                .foregroundStyle(.gray)
+                .foregroundStyle(.white.opacity(0.46))
+            Text("\(pricedCount)/\(itemCount)")
+                .foregroundStyle(.white.opacity(0.72))
                 .monospacedDigit()
         }
         .font(.headline.weight(.bold))
-        .padding(.horizontal, 18)
-        .frame(minHeight: 52)
-        .background(.white, in: .capsule)
+        .padding(.horizontal, 14)
+        .frame(minHeight: 42)
+        .background(.black.opacity(0.74), in: .capsule)
+        .overlay { Capsule().stroke(.white.opacity(0.20)) }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("bulkReveal.total")
         .accessibilityLabel("Lot value")
-        .accessibilityValue("\(total.formatted(.currency(code: "USD"))), \(pricedCount) of \(itemCount) priced")
+        .accessibilityValue(
+            "\(total.formatted(.currency(code: "USD"))), \(pricedCount) of \(itemCount) figures priced"
+        )
     }
 }
 
@@ -35,12 +38,12 @@ struct BulkSweepProgress: View {
     var body: some View {
         Text("\(min(checkedCount, itemCount)) of \(itemCount)")
             .font(.caption.weight(.bold).monospacedDigit())
-            .foregroundStyle(.white)
-            .padding(.horizontal, 12)
-            .frame(minHeight: 34)
-            .background(.black.opacity(0.76), in: .capsule)
-        .overlay { Capsule().stroke(.white.opacity(0.18)) }
-        .accessibilityLabel("Bulk scan progress")
+            .foregroundStyle(.white.opacity(0.82))
+            .padding(.horizontal, 11)
+            .frame(minHeight: 30)
+            .background(.black.opacity(0.72), in: .capsule)
+            .overlay { Capsule().stroke(.white.opacity(0.18)) }
+            .accessibilityLabel("Bulk scan progress")
             .accessibilityValue("\(checkedCount) of \(itemCount) figures checked")
     }
 }
@@ -54,19 +57,19 @@ struct BulkSweepResultCarousel: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var revealedEntries: [BulkRevealEntry] {
-        Array(entries.prefix(revealedCount))
+        Array(entries.prefix(revealedCount).suffix(4))
     }
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal) {
-                LazyHStack(spacing: 8) {
+                LazyHStack(spacing: 7) {
                     ForEach(revealedEntries) { entry in
                         compactCard(entry)
                             .id(entry.id)
                     }
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 10)
             }
             .scrollIndicators(.hidden)
             .onChange(of: revealedCount) { _, _ in
@@ -76,47 +79,50 @@ struct BulkSweepResultCarousel: View {
                 }
             }
         }
-        .frame(height: 86)
+        .frame(height: 68)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Valued figures")
+        .accessibilityLabel("Recent valued figures")
     }
 
     @ViewBuilder
     private func compactCard(_ entry: BulkRevealEntry) -> some View {
         if let item = entry.item {
-            HStack(spacing: 7) {
+            HStack(spacing: 6) {
                 MinifigureThumbnail(
                     imageURL: item.result.imageURL,
                     identifier: item.result.identifier,
                     accent: accent
                 )
-                .frame(width: 48, height: 58)
-                .background(.white, in: .rect(cornerRadius: 8))
+                .frame(width: 40, height: 52)
+                .background(.white, in: .rect(cornerRadius: 7))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.caption.bold())
+                        .font(.caption2.bold())
                         .foregroundStyle(accent)
                     Text(item.result.identifier)
                         .font(.caption2.bold())
                         .lineLimit(1)
                     if let displayValue = entry.value(for: condition) {
                         Text(displayValue, format: .currency(code: "USD"))
-                            .font(.caption.bold().monospacedDigit())
+                            .font(.caption2.bold().monospacedDigit())
                             .foregroundStyle(accent)
                     } else {
                         Text("Price unavailable")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.white.opacity(0.58))
+                            .lineLimit(1)
                     }
                 }
                 .foregroundStyle(.white)
             }
-            .padding(6)
-            .background(.black.opacity(0.78), in: .rect(cornerRadius: 11))
-            .overlay { RoundedRectangle(cornerRadius: 11).stroke(accent.opacity(0.52)) }
+            .padding(5)
+            .background(.black.opacity(0.80), in: .rect(cornerRadius: 10))
+            .overlay { RoundedRectangle(cornerRadius: 10).stroke(accent.opacity(0.46)) }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(item.result.name), \(entry.value(for: condition)?.formatted(.currency(code: "USD")) ?? "Price unavailable")")
+            .accessibilityLabel(
+                "\(item.result.name), \(entry.value(for: condition)?.formatted(.currency(code: "USD")) ?? "Price unavailable")"
+            )
         }
     }
 }
@@ -127,28 +133,88 @@ struct BulkRevealOverlay: View {
     let revealedTotal: Double
     let currentStatus: String?
     let condition: CollectionCondition
+    let stage: BulkRevealVisualStage
+    let jackpotTotal: Double
+    let topFind: BulkRevealEntry?
 
     @Environment(\.brickValAccent) private var accent
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var animatedJackpotTotal = 0.0
 
     var body: some View {
+        ZStack {
+            if stage == .jackpot {
+                Color.black.opacity(0.24)
+            }
+
+            switch stage {
+            case .hook:
+                hookContent
+            case .sweeping, .waiting:
+                sweepContent
+            case .jackpot:
+                jackpotContent
+            case .completed:
+                EmptyView()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.24), value: stage)
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Bulk lot valuation reveal")
+        .onChange(of: stage) { _, newStage in
+            guard newStage == .jackpot else {
+                animatedJackpotTotal = 0
+                return
+            }
+            guard !reduceMotion else {
+                animatedJackpotTotal = jackpotTotal
+                return
+            }
+            animatedJackpotTotal = 0
+            withAnimation(.easeOut(duration: 0.90)) {
+                animatedJackpotTotal = jackpotTotal
+            }
+        }
+    }
+
+    private var hookContent: some View {
+        VStack(spacing: 8) {
+            Spacer()
+            Text("\(entries.count) figures found")
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+            Text("Finding the value in your lot")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.70))
+            Spacer()
+        }
+        .padding(.horizontal, 24)
+        .safeAreaPadding(.top, 56)
+        .safeAreaPadding(.bottom, 80)
+    }
+
+    private var sweepContent: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .top) {
-                BulkSweepTotalPill(
+            HStack {
+                BulkSweepTotalHUD(
                     total: revealedTotal,
                     pricedCount: entries.prefix(visibleCount).filter { $0.value(for: condition) != nil }.count,
                     itemCount: entries.count,
                     accent: accent
                 )
-                Spacer(minLength: 10)
+                Spacer(minLength: 8)
             }
 
             Spacer(minLength: 0)
 
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 if let currentStatus {
                     Text(currentStatus)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.72))
+                        .foregroundStyle(.white.opacity(0.76))
                         .accessibilityLabel(currentStatus)
                 }
                 BulkSweepResultCarousel(
@@ -166,8 +232,33 @@ struct BulkRevealOverlay: View {
         }
         .padding(.horizontal, 12)
         .padding(.top, 14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Bulk lot valuation sweep")
+        .safeAreaPadding(.top, 10)
+        .safeAreaPadding(.bottom, 8)
+    }
+
+    private var jackpotContent: some View {
+        VStack(spacing: 8) {
+            Spacer()
+            Text(animatedJackpotTotal, format: .currency(code: "USD"))
+                .font(.system(size: 54, weight: .heavy, design: .rounded))
+                .foregroundStyle(accent)
+                .contentTransition(.numericText())
+                .accessibilityIdentifier("bulkReveal.jackpotTotal")
+            Text("\(entries.filter { $0.value(for: condition) != nil }.count) figures valued")
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.white)
+            if let topFind, let topValue = topFind.value(for: condition) {
+                Label(
+                    "Top find \(topValue.formatted(.currency(code: "USD")))",
+                    systemImage: "star.fill"
+                )
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .foregroundStyle(Color(red: 1.0, green: 0.78, blue: 0.24))
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 24)
+        .safeAreaPadding(.top, 48)
+        .safeAreaPadding(.bottom, 72)
     }
 }
