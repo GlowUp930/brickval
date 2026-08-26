@@ -47,6 +47,15 @@ final result: passed
 
 final result: passed
 
+## TestFlight Build 153 QA - 2026-08-26
+
+- Release archive verified as version `1.0.5 (153)` with bundle identifier `com.brickval.app`.
+- Archive signing used the Apple Distribution identity and `BrickVal App Store Build 125` profile.
+- The staged bulk scan and value-transfer reveal is included in the uploaded native build.
+- App Store Connect accepted the upload and reports that package processing has started.
+
+final result: passed
+
 ## TestFlight Build 150 QA - 2026-08-26 (superseded)
 
 - Build `150` replaced only the bulk detector with the seed-29 YOLOv8n Core ML export at 1024px; single-figure detection and identification were unchanged.
