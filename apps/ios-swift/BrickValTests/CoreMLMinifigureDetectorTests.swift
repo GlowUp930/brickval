@@ -1,3 +1,4 @@
+import CoreML
 import CoreVideo
 import Testing
 @testable import BrickVal
@@ -37,6 +38,17 @@ struct CoreMLMinifigureDetectorTests {
 
         #expect(result.modelVersion == CoreMLMinifigureDetector.modelVersion)
         #expect(result.inferenceMilliseconds >= 0)
+    }
+
+    @Test func bundledBulkModelUsesVisionObjectDetectionContract() throws {
+        let contract = try CoreMLMinifigureDetector.bundledBulkModelContract()
+
+        #expect(contract.inputs.isSuperset(of: [
+            "image",
+            "iouThreshold",
+            "confidenceThreshold"
+        ]))
+        #expect(contract.outputs.isSuperset(of: ["coordinates", "confidence"]))
     }
 
     @Test func bulkModelLoadsForBulkFrames() async throws {

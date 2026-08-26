@@ -35,12 +35,23 @@
 
 final result: passed
 
-## TestFlight Build 150 QA - 2026-08-26
+## TestFlight Build 150 QA - 2026-08-26 (superseded)
 
-- Build `150` replaces only the bulk detector with the seed-29 YOLOv8n Core ML export at 1024px; single-figure detection and identification are unchanged.
-- The new model is embedded as `BulkMinifigureDetector.mlmodelc` and reports `yolo-v8-seed29-bulk-1024` from the native detector.
+- Build `150` replaced only the bulk detector with the seed-29 YOLOv8n Core ML export at 1024px; single-figure detection and identification were unchanged.
+- A post-upload contract check found that this export exposed a raw tensor rather than Vision object observations, so photo-library detection returned no local regions and could reach the whole-photo compatibility result.
+- Build `151` supersedes this package with the NMS-enabled, Vision-compatible export and a runtime contract guard.
 - The small-iPhone native test suite passed with zero failures before archiving.
 - The signed archive was uploaded to App Store Connect; package processing is asynchronous before the build appears in TestFlight.
+
+final result: superseded
+
+## TestFlight Build 151 QA - 2026-08-26
+
+- Build `151` keeps the seed-29 YOLOv8n weights and corrects the Core ML export contract by enabling NMS, producing the `image`, `iouThreshold`, and `confidenceThreshold` inputs plus `coordinates` and `confidence` outputs required by Vision.
+- The native detector now rejects an incompatible bulk package at load time instead of allowing an empty local region list to reach the whole-photo compatibility path.
+- The deterministic dense-photo harness returned 63 `VNRecognizedObjectObservation` results from build 151; the broken build-150 package returned one raw tensor and zero recognized observations.
+- The small-iPhone native suite passed before archiving. The signed archive contains the corrected compiled bulk model and reports build `1.0.5 (151)`.
+- App Store Connect accepted the upload; package processing is asynchronous before the build appears in TestFlight.
 
 final result: passed
 

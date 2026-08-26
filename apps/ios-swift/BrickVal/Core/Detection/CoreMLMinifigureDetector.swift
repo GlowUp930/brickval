@@ -6,9 +6,19 @@ import Vision
 
 actor CoreMLMinifigureDetector: MinifigureDetecting, BulkFrameDetecting, BulkPhotoDetecting {
     static let modelVersion = "coreml-v3-500"
-    static let bulkModelVersion = "yolo-v8-seed29-bulk-1024"
+    static let bulkModelVersion = "yolo-v8-seed29-nms-bulk-1024"
     static let minimumConfidence = 0.30
     static let frameEdgeMargin = 0.03
+
+    private static let bulkModelRequiredInputs: Set<String> = [
+        "image",
+        "iouThreshold",
+        "confidenceThreshold"
+    ]
+    private static let bulkModelRequiredOutputs: Set<String> = [
+        "coordinates",
+        "confidence"
+    ]
 
     private var visionModel: VNCoreMLModel?
     private var bulkVisionModel: VNCoreMLModel?
@@ -152,9 +162,36 @@ actor CoreMLMinifigureDetector: MinifigureDetecting, BulkFrameDetecting, BulkPho
         }
         let configuration = MLModelConfiguration()
         configuration.computeUnits = .all
-        let loaded = try VNCoreMLModel(for: MLModel(contentsOf: modelURL, configuration: configuration))
+        let loadedModel = try MLModel(contentsOf: modelURL, configuration: configuration)
+        try Self.validateBulkModelContract(loadedModel)
+        let loaded = try VNCoreMLModel(for: loadedModel)
         bulkVisionModel = loaded
         return loaded
+    }
+
+    static func bundledBulkModelContract() throws -> (inputs: Set<String>, outputs: Set<String>) {
+        guard let modelURL = Bundle(for: ModelBundleToken.self).url(
+            forResource: "BulkMinifigureDetector",
+            withExtension: "mlmodelc"
+        ) else {
+            throw MinifigureDetectorError.modelMissing
+        }
+        let configuration = MLModelConfiguration()
+        configuration.computeUnits = .all
+        let loadedModel = try MLModel(contentsOf: modelURL, configuration: configuration)
+        return (
+            Set(loadedModel.modelDescription.inputDescriptionsByName.keys),
+            Set(loadedModel.modelDescription.outputDescriptionsByName.keys)
+        )
+    }
+
+    static func validateBulkModelContract(_ model: MLModel) throws {
+        let inputs = Set(model.modelDescription.inputDescriptionsByName.keys)
+        let outputs = Set(model.modelDescription.outputDescriptionsByName.keys)
+        guard bulkModelRequiredInputs.isSubset(of: inputs),
+              bulkModelRequiredOutputs.isSubset(of: outputs) else {
+            throw MinifigureDetectorError.incompatibleModel
+        }
     }
 
     private func normalizedImage(from data: Data) -> UIImage? {
@@ -239,6 +276,7 @@ private final class ModelBundleToken {}
 enum MinifigureDetectorError: LocalizedError {
     case modelMissing
     case invalidImage
+    case incompatibleModel
 
     var errorDescription: String? {
         "The on-device minifigure detector is unavailable."

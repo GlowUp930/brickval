@@ -1,7 +1,7 @@
 # Bulk Minifigure Detector v8 Candidate
 
 Date: 2026-08-26
-Status: Candidate evaluated; production model retained
+Status: Candidate evaluated; Vision-compatible export released in TestFlight build 151
 
 ## Scope
 
@@ -9,10 +9,12 @@ This iteration trained a fresh pretrained YOLOv8n bulk detector using the suppli
 88-image export: 60 new images plus the previous 28-image dataset. The existing
 single-figure detector and identification flow were not changed.
 
-The current production model remains `yolo-v7-stock-bulk-1024` in
-`apps/ios-swift/BrickVal/Resources/Models/BulkMinifigureDetector.mlpackage`.
-No Core ML export, app replacement, or TestFlight build was made because the
-protected phone-camera holdout was not present in the supplied files.
+The candidate was originally evaluated with the protected phone-camera holdout
+missing, so the performance release gate remained incomplete. The approved
+build-151 correction uses the same seed-29 weights, exported with Core ML NMS
+enabled so Vision receives object-detection observations. This fixes the build-
+150 one-result regression; it does not claim that the missing phone-camera
+holdout has passed.
 
 ## Dataset Review
 
@@ -76,11 +78,13 @@ holdout now.
 
 ## Release Decision
 
-**Do not replace the production model.** The candidate passes the available
-cleaned dense holdout and materially reduces duplicate detections, but the full
-release gate requires both protected holdouts at at least 90% precision and recall.
-The independent 19-photo / 38-box phone-camera holdout is missing, and the tall
-subset is below 90% recall.
+The original performance gate remained incomplete because the independent
+19-photo / 38-box phone-camera holdout was missing and the tall subset was below
+90% recall. The separate build-151 compatibility fix was approved because build
+150 could not consume the exported model at all: its package exposed a raw
+`var_981` tensor, so Vision returned zero recognized regions and the app fell
+back to one whole-photo result. The corrected package exposes the prior
+Vision-compatible NMS pipeline contract and is now the bulk model in build 151.
 
 The next data needed is:
 
@@ -91,5 +95,7 @@ The next data needed is:
 3. Several negative scenes containing accessories, vehicles, animals, loose parts,
    and empty/background regions with no labels on those non-figures.
 
-Once those assets are available, rerun the exact tiled benchmark before exporting
-Core ML. Until then, keep `yolo-v7-stock-bulk-1024` in the app.
+Once those assets are available, rerun the exact tiled benchmark before making a
+future performance claim or changing the detector weights. Build 151 keeps the
+seed-29 weights in production while that protected performance validation
+remains outstanding.
