@@ -35,6 +35,15 @@
 
 final result: passed
 
+## TestFlight Build 150 QA - 2026-08-26
+
+- Build `150` replaces only the bulk detector with the seed-29 YOLOv8n Core ML export at 1024px; single-figure detection and identification are unchanged.
+- The new model is embedded as `BulkMinifigureDetector.mlmodelc` and reports `yolo-v8-seed29-bulk-1024` from the native detector.
+- The small-iPhone native test suite passed with zero failures before archiving.
+- The signed archive was uploaded to App Store Connect; package processing is asynchronous before the build appears in TestFlight.
+
+final result: passed
+
 ## TestFlight Build 149 QA - 2026-08-26
 
 - Build `149` was generated from the native SwiftUI source with the distribution certificate and App Store provisioning profile.

@@ -6,7 +6,7 @@ import Vision
 
 actor CoreMLMinifigureDetector: MinifigureDetecting, BulkFrameDetecting, BulkPhotoDetecting {
     static let modelVersion = "coreml-v3-500"
-    static let bulkModelVersion = "yolo-v7-stock-bulk-1024"
+    static let bulkModelVersion = "yolo-v8-seed29-bulk-1024"
     static let minimumConfidence = 0.30
     static let frameEdgeMargin = 0.03
 
