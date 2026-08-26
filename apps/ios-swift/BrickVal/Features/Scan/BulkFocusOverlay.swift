@@ -18,6 +18,7 @@ struct BulkFocusRegion: Identifiable, Sendable {
 struct BulkFocusCallout: Equatable, Sendable {
     let box: NormalizedBoundingBox
     let text: String
+    let isLoading: Bool
     let isUnavailable: Bool
 }
 
@@ -178,21 +179,35 @@ struct BulkFocusOverlay: View {
         let rect = imageBox(callout.box)
         let isNearTop = rect.minY < imageRect.minY + 38
         let y = isNearTop ? rect.maxY + 16 : rect.minY - 16
-        return Text(callout.text)
-            .font(.caption.weight(.bold).monospacedDigit())
-            .foregroundStyle(callout.isUnavailable ? .white : .black)
-            .lineLimit(1)
-            .minimumScaleFactor(0.78)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(callout.isUnavailable ? .white.opacity(0.24) : accent, in: .capsule)
-            .overlay { Capsule().stroke(.white.opacity(callout.isUnavailable ? 0.32 : 0.18)) }
-            .position(
-                x: min(max(rect.midX, 58), containerSize.width - 58),
-                y: min(max(y, 22), containerSize.height - 22)
-            )
-            .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.88)))
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.22), value: callout)
+        return Group {
+            if callout.isLoading {
+                HStack(spacing: 7) {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(.white)
+                    Text(callout.text)
+                        .font(.caption.weight(.bold))
+                }
+                .foregroundStyle(.white)
+                .accessibilityLabel("Checking price")
+            } else {
+                Text(callout.text)
+                    .font(.caption.weight(.bold).monospacedDigit())
+                    .foregroundStyle(callout.isUnavailable ? .white : .black)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+            }
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .background(callout.isLoading ? .black.opacity(0.76) : callout.isUnavailable ? .white.opacity(0.24) : accent, in: .capsule)
+        .overlay { Capsule().stroke(.white.opacity(callout.isLoading || callout.isUnavailable ? 0.32 : 0.18)) }
+        .position(
+            x: min(max(rect.midX, 58), containerSize.width - 58),
+            y: min(max(y, 22), containerSize.height - 22)
+        )
+        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.88)))
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.22), value: callout)
     }
 
     private func imageBox(_ box: NormalizedBoundingBox) -> CGRect {

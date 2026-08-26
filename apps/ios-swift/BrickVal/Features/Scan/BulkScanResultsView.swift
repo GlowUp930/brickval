@@ -671,10 +671,12 @@ struct BulkScanResultsView: View {
               let box = entry.boundingBox
         else { return nil }
 
+        let isLoading = entry.isLoading
         let price = entry.value(for: revealSession.condition)
         return BulkFocusCallout(
             box: box,
-            text: price?.formatted(.currency(code: "USD")) ?? "Price unavailable",
+            text: isLoading ? "Checking price" : price?.formatted(.currency(code: "USD")) ?? "Price unavailable",
+            isLoading: isLoading,
             isUnavailable: price == nil
         )
     }
