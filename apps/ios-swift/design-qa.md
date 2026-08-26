@@ -35,6 +35,14 @@
 
 final result: passed
 
+## TestFlight Build 149 QA - 2026-08-26
+
+- Build `149` was generated from the native SwiftUI source with the distribution certificate and App Store provisioning profile.
+- The small-iPhone native test suite passed with zero failures before archiving.
+- App Store Connect accepted the upload; package processing is asynchronous before the build appears in TestFlight.
+
+final result: passed
+
 ## TestFlight Build 148 QA - 2026-08-26
 
 - Release archive verified as version `1.0.5 (148)` with bundle identifier `com.brickval.app`.
