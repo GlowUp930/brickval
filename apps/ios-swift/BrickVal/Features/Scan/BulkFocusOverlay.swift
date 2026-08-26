@@ -2,6 +2,7 @@ import SwiftUI
 
 enum BulkFocusState: Equatable, Sendable {
     case active
+    case scanned
     case completed
     case pending
     case unresolved
@@ -22,12 +23,13 @@ struct BulkFocusCallout: Equatable, Sendable {
     let isUnavailable: Bool
 }
 
-struct BulkFocusOverlay: View {
+struct BulkFocusOverlay: View, Animatable {
     let regions: [BulkFocusRegion]
     let imageRect: CGRect
     let containerSize: CGSize
     let accent: Color
-    let beamProgress: Double?
+    let isScanning: Bool
+    var beamProgress: Double?
     let callout: BulkFocusCallout?
 
     init(
@@ -35,6 +37,7 @@ struct BulkFocusOverlay: View {
         imageRect: CGRect,
         containerSize: CGSize,
         accent: Color,
+        isScanning: Bool = false,
         beamProgress: Double? = nil,
         callout: BulkFocusCallout? = nil
     ) {
@@ -42,11 +45,17 @@ struct BulkFocusOverlay: View {
         self.imageRect = imageRect
         self.containerSize = containerSize
         self.accent = accent
+        self.isScanning = isScanning
         self.beamProgress = beamProgress
         self.callout = callout
     }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var animatableData: Double {
+        get { beamProgress ?? 0 }
+        set { beamProgress = newValue }
+    }
 
     @ViewBuilder
     var body: some View {
@@ -61,7 +70,7 @@ struct BulkFocusOverlay: View {
                             ForEach(regions) { region in
                                 if let box = region.box {
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(.black.opacity(maskOpacity(for: region.state)))
+                                        .fill(.black.opacity(maskOpacity(for: displayedState(for: region))))
                                         .frame(width: box.width * imageRect.width, height: box.height * imageRect.height)
                                         .position(
                                             x: imageRect.minX + (box.x + box.width / 2) * imageRect.width,
@@ -72,12 +81,13 @@ struct BulkFocusOverlay: View {
                         }
                     }
 
-                if let beamProgress, !reduceMotion {
+                if isScanning, let beamProgress, !reduceMotion {
                     scanBeam(at: beamProgress)
                 }
 
                 ForEach(regions) { region in
                     if let box = region.box {
+                        let state = displayedState(for: region)
                         let rect = CGRect(
                             x: imageRect.minX + box.x * imageRect.width,
                             y: imageRect.minY + box.y * imageRect.height,
@@ -86,12 +96,12 @@ struct BulkFocusOverlay: View {
                         )
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(
-                                strokeColor(for: region.state),
-                                lineWidth: region.state == .active || region.state == .topFind ? 3 : 1.5
+                                strokeColor(for: state),
+                                lineWidth: state == .active || state == .topFind ? 3 : 1.5
                             )
                             .frame(width: rect.width, height: rect.height)
                             .position(x: rect.midX, y: rect.midY)
-                        numberBadge(region.number, state: region.state)
+                        numberBadge(region.number, state: state)
                             .position(
                                 x: min(max(rect.midX, 18), containerSize.width - 18),
                                 y: max(rect.minY, 18)
@@ -108,10 +118,20 @@ struct BulkFocusOverlay: View {
         }
     }
 
+    private func displayedState(for region: BulkFocusRegion) -> BulkFocusState {
+        guard isScanning,
+              region.state == .pending,
+              let beamProgress,
+              let box = region.box
+        else { return region.state }
+        return box.y + box.height / 2 <= beamProgress ? .scanned : .pending
+    }
+
     private func maskOpacity(for state: BulkFocusState) -> Double {
         switch state {
         case .active, .topFind: 1
         case .completed: 0.94
+        case .scanned: 0.92
         case .pending: 0.80
         case .unresolved: 0.86
         }
@@ -122,6 +142,7 @@ struct BulkFocusOverlay: View {
         case .active: accent
         case .topFind: topFindColor
         case .completed: accent.opacity(0.72)
+        case .scanned: .white.opacity(0.70)
         case .pending: .white.opacity(0.46)
         case .unresolved: .white.opacity(0.66)
         }

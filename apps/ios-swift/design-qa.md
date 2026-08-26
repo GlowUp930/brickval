@@ -35,6 +35,18 @@
 
 final result: passed
 
+## Staged Bulk Scan And Value Transfer QA - 2026-08-26
+
+- The result view now begins with a distinct 1.6-second top-to-bottom scan pass immediately after the photo expands to the immersive aspect-fit stage.
+- Lookup and pricing work starts with the existing bounded four-request pipeline while the scan pass is visible. The beam does not repeat during the ordered value reveal.
+- Ordered results use a `clamp(16.8 / figureCount, 0.42, 0.75)` cadence. A ready 40-figure lot targets approximately 20-21 seconds including the scan, jackpot hold, and return transition.
+- Each priced figure holds its USD callout, then sends one compact `+USD X.XX` token from the detected figure to the centered lot-value HUD. The authoritative total advances when the token arrives; unavailable prices hold briefly without changing the total.
+- The lot-value HUD is positioned from the fitted photo geometry, with a safe-area fallback when the photo has insufficient top letterbox space. The recent-result rail remains bottom aligned and the final jackpot remains a single overlay.
+- Reduce Motion removes beam travel and the flying token, retaining scan progress, price text, result frames, and the final total through short crossfades.
+- Added session cadence coverage for 1, 10, 40, and 50-item lots, including the 20.25-second 40-item target duration and the 0.75-second small-lot cap. The full Swift suite passed with 131 unit tests and the UI suite passed with 3 tests on the BrickVal Small iPhone simulator.
+
+final result: passed
+
 ## TestFlight Build 150 QA - 2026-08-26 (superseded)
 
 - Build `150` replaced only the bulk detector with the seed-29 YOLOv8n Core ML export at 1024px; single-figure detection and identification were unchanged.

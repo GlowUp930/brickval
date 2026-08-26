@@ -7,9 +7,10 @@ enum BulkRevealPhase: Equatable, Sendable {
 }
 
 enum BulkRevealVisualStage: Equatable, Sendable {
-    case hook
-    case sweeping
+    case scanning
     case waiting
+    case presentingValue
+    case transferringValue
     case jackpot
     case completed
 }
@@ -79,12 +80,14 @@ struct BulkRevealEntry: Identifiable, Sendable {
 }
 
 struct BulkRevealSession: Sendable {
-    static let hookDuration: TimeInterval = 0.80
-    static let targetSweepDuration: TimeInterval = 9.0
+    static let scanPassDuration: TimeInterval = 1.60
+    static let targetValueRevealDuration: TimeInterval = 16.80
     static let jackpotDuration: TimeInterval = 1.40
     static let returnDuration: TimeInterval = 0.45
-    static let minimumStepInterval: TimeInterval = 0.22
-    static let maximumStepInterval: TimeInterval = 0.56
+    static let unavailableHoldDuration: TimeInterval = 0.55
+    static let valueTransferDuration: TimeInterval = 0.42
+    static let minimumStepInterval: TimeInterval = 0.42
+    static let maximumStepInterval: TimeInterval = 0.75
     static let minimumDuration: TimeInterval = 3.0
     static let maximumDuration: TimeInterval = 30.0
 
@@ -168,17 +171,17 @@ struct BulkRevealSession: Sendable {
         guard itemCount > 0 else { return maximumStepInterval }
         return min(
             maximumStepInterval,
-            max(minimumStepInterval, targetSweepDuration / Double(itemCount))
+            max(minimumStepInterval, targetValueRevealDuration / Double(itemCount))
         )
     }
 
     var duration: TimeInterval {
         guard !entries.isEmpty else { return Self.minimumDuration }
-        let intro = Self.hookDuration
+        let scan = Self.scanPassDuration
         let outro = Self.jackpotDuration + Self.returnDuration
         return min(
             Self.maximumDuration,
-            max(Self.minimumDuration, intro + stepInterval * Double(entries.count + 1) + outro)
+            max(Self.minimumDuration, scan + stepInterval * Double(entries.count) + outro)
         )
     }
 

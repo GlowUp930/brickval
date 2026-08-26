@@ -4,6 +4,14 @@ import Testing
 
 struct BulkRevealSessionTests {
     @Test
+    func stagedRevealTimingUsesThePlannedPassAndTransferDurations() {
+        #expect(abs(BulkRevealSession.scanPassDuration - 1.60) < 0.001)
+        #expect(abs(BulkRevealSession.unavailableHoldDuration - 0.55) < 0.001)
+        #expect(abs(BulkRevealSession.valueTransferDuration - 0.42) < 0.001)
+        #expect(abs(BulkRevealSession.stepInterval(for: 10) - 0.75) < 0.001)
+    }
+
+    @Test
     func ordersFiguresSpatiallyAndRevealsTheirUsedValue() {
         let items = [
             fixture(id: "right-top", x: 0.60, y: 0.10, used: 4.0),
@@ -31,12 +39,13 @@ struct BulkRevealSessionTests {
     func sweepCadenceScalesForDenseLots() {
         #expect(BulkRevealSession.stepInterval(for: 3) == BulkRevealSession.maximumStepInterval)
         #expect(BulkRevealSession.stepInterval(for: 10) == BulkRevealSession.maximumStepInterval)
-        #expect(BulkRevealSession.stepInterval(for: 40) == 0.225)
-        #expect(BulkRevealSession.stepInterval(for: 50) == 0.22)
+        #expect(abs(BulkRevealSession.stepInterval(for: 40) - 0.42) < 0.001)
+        #expect(abs(BulkRevealSession.stepInterval(for: 50) - 0.42) < 0.001)
 
         var session = BulkRevealSession(items: (0..<40).map { index in
             fixture(id: "figure-\(index)", x: Double(index % 8) / 8, y: Double(index / 8) / 5, used: 1)
         })
+        #expect(abs(session.duration - 20.25) < 0.001)
         #expect(session.duration <= BulkRevealSession.maximumDuration)
         session.begin()
         #expect(session.beamProgress == 0)

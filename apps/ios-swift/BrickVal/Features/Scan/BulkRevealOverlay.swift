@@ -5,12 +5,10 @@ struct BulkSweepTotalHUD: View {
     let pricedCount: Int
     let itemCount: Int
     let accent: Color
-    let latestValue: Double?
-    let revealKey: String?
+    let totalUpdateKey: String?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isValueArriving = false
-    @State private var visibleAddition: Double?
 
     var body: some View {
         VStack(spacing: 2) {
@@ -32,16 +30,10 @@ struct BulkSweepTotalHUD: View {
                     .foregroundStyle(.white.opacity(0.82))
                     .frame(minWidth: 54, alignment: .trailing)
             }
-
-            Text(visibleAddition.map { "+\($0.formatted(.currency(code: "USD")))" } ?? " ")
-                .font(.caption.weight(.bold).monospacedDigit())
-                .foregroundStyle(accent)
-                .frame(height: 16)
-                .opacity(visibleAddition == nil ? 0 : 1)
         }
         .padding(.horizontal, 18)
-        .padding(.vertical, 9)
-        .frame(minWidth: 214, minHeight: 68)
+        .padding(.vertical, 10)
+        .frame(minWidth: 214, minHeight: 64)
         .background(.black.opacity(0.84), in: .capsule)
         .overlay { Capsule().stroke(accent.opacity(isValueArriving ? 0.72 : 0.34), lineWidth: isValueArriving ? 1.5 : 1) }
         .shadow(
@@ -51,17 +43,15 @@ struct BulkSweepTotalHUD: View {
         )
         .scaleEffect(isValueArriving && !reduceMotion ? 1.035 : 1)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isValueArriving)
-        .task(id: revealKey) {
-            guard revealKey != nil, let latestValue else {
+        .task(id: totalUpdateKey) {
+            guard totalUpdateKey != nil else {
                 withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) {
-                    visibleAddition = nil
                     isValueArriving = false
                 }
                 return
             }
 
             withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) {
-                visibleAddition = latestValue
                 isValueArriving = !reduceMotion
             }
 
@@ -73,7 +63,6 @@ struct BulkSweepTotalHUD: View {
             guard !Task.isCancelled else { return }
 
             withAnimation(reduceMotion ? nil : .easeOut(duration: 0.22)) {
-                visibleAddition = nil
                 isValueArriving = false
             }
         }
@@ -182,19 +171,50 @@ struct BulkSweepResultCarousel: View {
     }
 }
 
+private struct BulkValueFlightEffect: GeometryEffect {
+    var progress: CGFloat
+    let delta: CGSize
+    let arcHeight: CGFloat
+
+    var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func effectValue(size: CGSize) -> ProjectionTransform {
+        let clampedProgress = min(max(progress, 0), 1)
+        let arc = sin(clampedProgress * .pi) * arcHeight
+        let scale = 1 + sin(clampedProgress * .pi) * 0.06
+        var transform = CGAffineTransform(
+            translationX: delta.width * clampedProgress,
+            y: delta.height * clampedProgress - arc
+        )
+        transform = transform.scaledBy(x: scale, y: scale)
+        return ProjectionTransform(transform)
+    }
+}
+
 struct BulkRevealOverlay: View {
     let entries: [BulkRevealEntry]
     let visibleCount: Int
-    let revealedTotal: Double
+    let displayedTotal: Double
+    let displayedPricedCount: Int
     let currentStatus: String?
     let condition: CollectionCondition
     let stage: BulkRevealVisualStage
     let jackpotTotal: Double
     let topFind: BulkRevealEntry?
+    let imageRect: CGRect
+    let containerSize: CGSize
+    let safeAreaInsets: EdgeInsets
+    let transferEntry: BulkRevealEntry?
+    let transferValue: Double?
+    let totalUpdateKey: String?
 
     @Environment(\.brickValAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var animatedJackpotTotal = 0.0
+    @State private var transferProgress = 1.0
 
     var body: some View {
         ZStack {
@@ -203,9 +223,9 @@ struct BulkRevealOverlay: View {
             }
 
             switch stage {
-            case .hook:
-                hookContent
-            case .sweeping, .waiting:
+            case .scanning:
+                scanningContent
+            case .waiting, .presentingValue, .transferringValue:
                 sweepContent
             case .jackpot:
                 jackpotContent
@@ -232,43 +252,46 @@ struct BulkRevealOverlay: View {
                 animatedJackpotTotal = jackpotTotal
             }
         }
+        .onChange(of: transferEntry?.id) { _, newID in
+            transferProgress = newID == nil || reduceMotion ? 1 : 0
+            guard newID != nil, !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: BulkRevealSession.valueTransferDuration)) {
+                transferProgress = 1
+            }
+        }
     }
 
-    private var hookContent: some View {
-        VStack(spacing: 8) {
+    private var scanningContent: some View {
+        VStack(spacing: 7) {
             Spacer()
             Text("\(entries.count) figures found")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .font(.system(.title2, design: .rounded).weight(.bold))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-            Text("Finding the value in your lot")
+            Text("Scanning your lot")
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.70))
+                .foregroundStyle(.white.opacity(0.72))
             Spacer()
+                .frame(height: 84)
         }
         .padding(.horizontal, 24)
         .safeAreaPadding(.top, 56)
-        .safeAreaPadding(.bottom, 80)
+        .safeAreaPadding(.bottom, 24)
     }
 
     private var sweepContent: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Spacer(minLength: 0)
-                BulkSweepTotalHUD(
-                    total: revealedTotal,
-                    pricedCount: entries.prefix(visibleCount).filter { $0.value(for: condition) != nil }.count,
-                    itemCount: entries.count,
-                    accent: accent,
-                    latestValue: entries.prefix(visibleCount).last?.value(for: condition),
-                    revealKey: entries.prefix(visibleCount).last?.id
-                )
-                Spacer(minLength: 0)
-            }
-
-            Spacer(minLength: 0)
+        ZStack {
+            BulkSweepTotalHUD(
+                total: displayedTotal,
+                pricedCount: displayedPricedCount,
+                itemCount: entries.count,
+                accent: accent,
+                totalUpdateKey: totalUpdateKey
+            )
+            .position(hudAnchor)
 
             VStack(spacing: 6) {
+                Spacer(minLength: 0)
                 if let currentStatus {
                     Text(currentStatus)
                         .font(.caption.weight(.semibold))
@@ -286,12 +309,44 @@ struct BulkRevealOverlay: View {
                     itemCount: entries.count
                 )
             }
+            .padding(.horizontal, 12)
             .padding(.bottom, 12)
+            .safeAreaPadding(.bottom, 8)
+
+            transferToken
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 14)
-        .safeAreaPadding(.top, 10)
-        .safeAreaPadding(.bottom, 8)
+    }
+
+    @ViewBuilder
+    private var transferToken: some View {
+        if let transferEntry,
+           let transferValue,
+           let box = transferEntry.boundingBox,
+           !reduceMotion {
+            let start = imagePoint(for: box)
+            let delta = CGSize(
+                width: hudAnchor.x - start.x,
+                height: hudAnchor.y - start.y
+            )
+            Text("+\(transferValue.formatted(.currency(code: "USD")))")
+                .font(.caption.weight(.bold).monospacedDigit())
+                .foregroundStyle(.black)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(accent, in: .capsule)
+                .overlay { Capsule().stroke(.white.opacity(0.24)) }
+                .shadow(color: accent.opacity(0.35), radius: 8, y: 3)
+                .position(start)
+                .modifier(
+                    BulkValueFlightEffect(
+                        progress: transferProgress,
+                        delta: delta,
+                        arcHeight: min(max(imageRect.width * 0.08, 24), 64)
+                    )
+                )
+                .opacity(max(0, 1 - transferProgress))
+                .accessibilityHidden(true)
+        }
     }
 
     private var jackpotContent: some View {
@@ -302,7 +357,7 @@ struct BulkRevealOverlay: View {
                 .foregroundStyle(accent)
                 .contentTransition(.numericText())
                 .accessibilityIdentifier("bulkReveal.jackpotTotal")
-            Text("\(entries.filter { $0.value(for: condition) != nil }.count) figures valued")
+            Text("\(displayedPricedCount) figures valued")
                 .font(.headline.weight(.semibold))
                 .foregroundStyle(.white)
             if let topFind, let topValue = topFind.value(for: condition) {
@@ -318,5 +373,23 @@ struct BulkRevealOverlay: View {
         .padding(.horizontal, 24)
         .safeAreaPadding(.top, 48)
         .safeAreaPadding(.bottom, 72)
+    }
+
+    private var hudAnchor: CGPoint {
+        let hudHalfHeight: CGFloat = 32
+        let desiredY = imageRect.minY - 11 - hudHalfHeight
+        let minimumY = safeAreaInsets.top + 44 + hudHalfHeight
+        let maximumY = max(minimumY, containerSize.height - safeAreaInsets.bottom - 44 - hudHalfHeight)
+        return CGPoint(
+            x: containerSize.width / 2,
+            y: min(max(desiredY, minimumY), maximumY)
+        )
+    }
+
+    private func imagePoint(for box: NormalizedBoundingBox) -> CGPoint {
+        CGPoint(
+            x: imageRect.minX + (box.x + box.width / 2) * imageRect.width,
+            y: imageRect.minY + (box.y + box.height / 2) * imageRect.height
+        )
     }
 }
