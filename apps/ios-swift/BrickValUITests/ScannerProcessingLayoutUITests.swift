@@ -57,6 +57,12 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         XCTAssertTrue(revealTotal.firstMatch.waitForExistence(timeout: 8))
         XCTAssertEqual(revealTotal.count, 1)
         XCTAssertEqual(
+            revealTotal.firstMatch.frame.midX,
+            app.windows.firstMatch.frame.midX,
+            accuracy: 28
+        )
+        XCTAssertGreaterThanOrEqual(revealTotal.firstMatch.frame.height, 54)
+        XCTAssertEqual(
             app.descendants(matching: .any).matching(identifier: "bulkResults.summary").count,
             0
         )

@@ -45,6 +45,16 @@ final result: passed
 
 final result: passed
 
+## Bulk Reveal Total HUD QA - 2026-08-26
+
+- The live lot value HUD is centered in the upper reveal safe area instead of being pinned to the leading edge.
+- The hierarchy now presents `LOT VALUE`, a larger USD total, and the priced-figure progress as one stable control surface.
+- Each priced figure briefly shows its incremental `+USD` contribution while the total uses the native numeric transition; the reserved contribution row prevents layout movement.
+- The HUD uses a restrained green border/shadow pulse to show which result changed. Reduce Motion keeps the value update and uses an immediate state change without scale motion.
+- The UI regression confirmed one centered `bulkReveal.total` element with a minimum 54-point height. Full verification passed with 129 unit tests and 3 UI tests on the BrickVal Small iPhone simulator.
+
+final result: passed
+
 ## Scan Processing Motion QA — 2026-08-06
 
 - Verified the identifying animation on the iPhone 17 Pro and compact iPhone Simulators.

@@ -5,23 +5,75 @@ struct BulkSweepTotalHUD: View {
     let pricedCount: Int
     let itemCount: Int
     let accent: Color
+    let latestValue: Double?
+    let revealKey: String?
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isValueArriving = false
+    @State private var visibleAddition: Double?
 
     var body: some View {
-        HStack(spacing: 7) {
-            Text(total, format: .currency(code: "USD"))
+        VStack(spacing: 2) {
+            Text("LOT VALUE")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white.opacity(0.62))
+                .tracking(0.8)
+
+            HStack(spacing: 8) {
+                Text(total, format: .currency(code: "USD"))
+                    .font(.title3.weight(.heavy).monospacedDigit())
+                    .foregroundStyle(accent)
+                    .contentTransition(.numericText())
+                Text("·")
+                    .foregroundStyle(.white.opacity(0.46))
+                Text("\(pricedCount)/\(itemCount)")
+                    .font(.headline.weight(.bold).monospacedDigit())
+                    .foregroundStyle(.white.opacity(0.82))
+            }
+
+            Text(visibleAddition.map { "+\($0.formatted(.currency(code: "USD")))" } ?? " ")
+                .font(.caption.weight(.bold).monospacedDigit())
                 .foregroundStyle(accent)
-                .contentTransition(.numericText())
-            Text("·")
-                .foregroundStyle(.white.opacity(0.46))
-            Text("\(pricedCount)/\(itemCount)")
-                .foregroundStyle(.white.opacity(0.72))
-                .monospacedDigit()
+                .frame(height: 16)
+                .opacity(visibleAddition == nil ? 0 : 1)
         }
-        .font(.headline.weight(.bold))
-        .padding(.horizontal, 14)
-        .frame(minHeight: 42)
-        .background(.black.opacity(0.74), in: .capsule)
-        .overlay { Capsule().stroke(.white.opacity(0.20)) }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 9)
+        .background(.black.opacity(0.84), in: .capsule)
+        .overlay { Capsule().stroke(accent.opacity(isValueArriving ? 0.72 : 0.34), lineWidth: isValueArriving ? 1.5 : 1) }
+        .shadow(
+            color: accent.opacity(isValueArriving ? 0.34 : 0.12),
+            radius: isValueArriving ? 14 : 7,
+            y: 3
+        )
+        .scaleEffect(isValueArriving && !reduceMotion ? 1.035 : 1)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isValueArriving)
+        .task(id: revealKey) {
+            guard revealKey != nil, let latestValue else {
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) {
+                    visibleAddition = nil
+                    isValueArriving = false
+                }
+                return
+            }
+
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) {
+                visibleAddition = latestValue
+                isValueArriving = !reduceMotion
+            }
+
+            do {
+                try await Task.sleep(for: .milliseconds(reduceMotion ? 220 : 280))
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.22)) {
+                visibleAddition = nil
+                isValueArriving = false
+            }
+        }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("bulkReveal.total")
         .accessibilityLabel("Lot value")
@@ -199,13 +251,16 @@ struct BulkRevealOverlay: View {
     private var sweepContent: some View {
         VStack(spacing: 0) {
             HStack {
+                Spacer(minLength: 0)
                 BulkSweepTotalHUD(
                     total: revealedTotal,
                     pricedCount: entries.prefix(visibleCount).filter { $0.value(for: condition) != nil }.count,
                     itemCount: entries.count,
-                    accent: accent
+                    accent: accent,
+                    latestValue: entries.prefix(visibleCount).last?.value(for: condition),
+                    revealKey: entries.prefix(visibleCount).last?.id
                 )
-                Spacer(minLength: 8)
+                Spacer(minLength: 0)
             }
 
             Spacer(minLength: 0)
