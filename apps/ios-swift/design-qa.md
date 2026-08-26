@@ -35,6 +35,16 @@
 
 final result: passed
 
+## TestFlight Build 148 QA - 2026-08-26
+
+- Release archive verified as version `1.0.5 (148)` with bundle identifier `com.brickval.app`.
+- Archive signing used the Apple Distribution identity and `BrickVal App Store Build 125` profile.
+- Full native verification passed on the BrickVal Small iPhone simulator: 129 unit tests and 3 UI tests, zero failures.
+- App Store Connect accepted the upload; package processing is asynchronous.
+- Build 148 includes the Social-First Bulk Value Reveal presentation: hook, scan beam, price callouts, jackpot, and completed review flow.
+
+final result: passed
+
 ## Scan Processing Motion QA — 2026-08-06
 
 - Verified the identifying animation on the iPhone 17 Pro and compact iPhone Simulators.
