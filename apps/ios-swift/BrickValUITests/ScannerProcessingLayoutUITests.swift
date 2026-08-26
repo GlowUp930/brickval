@@ -23,29 +23,31 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         XCTAssertEqual(cameraStage.frame.height / cameraStage.frame.width, 4.0 / 3.0, accuracy: 0.03)
     }
 
-    func testBulkRecoverySelectsMultipleFiguresBeforeChecking() {
+    func testBulkCorrectionUsesDetectedFigureContext() {
         let app = XCUIApplication()
         app.launchArguments = ["-showBulkRecoveryDemo"]
         app.launch()
 
-        let enterRecovery = app.buttons["bulkRecovery.enter"]
-        XCTAssertTrue(enterRecovery.waitForExistence(timeout: 8))
-        XCTAssertGreaterThanOrEqual(enterRecovery.frame.height, 44)
+        let completedSummary = app.descendants(matching: .any).matching(identifier: "bulkResults.summary").firstMatch
+        XCTAssertTrue(completedSummary.waitForExistence(timeout: 12))
+        XCTAssertFalse(app.buttons["bulkRecovery.enter"].exists)
+        XCTAssertFalse(app.buttons["Missed"].exists)
         XCTAssertFalse(app.buttons["Skip"].exists)
-        XCTAssertFalse(app.otherElements["bulkResults.finalSummary"].exists)
         XCTAssertFalse(app.buttons["Retake"].exists)
-        enterRecovery.tap()
 
-        let firstTarget = app.buttons["bulkRecovery.target.1"]
-        let secondTarget = app.buttons["bulkRecovery.target.2"]
-        XCTAssertTrue(firstTarget.waitForExistence(timeout: 3))
-        XCTAssertTrue(secondTarget.waitForExistence(timeout: 3))
-        firstTarget.tap()
-        secondTarget.tap()
+        let detectedFigure = app.buttons["bulkMatch.region.demo-existing"]
+        XCTAssertTrue(detectedFigure.waitForExistence(timeout: 3))
+        XCTAssertGreaterThanOrEqual(detectedFigure.frame.width, 44)
+        detectedFigure.tap()
 
-        let check = app.buttons["bulkRecovery.check"]
-        XCTAssertTrue(check.waitForExistence(timeout: 3))
-        XCTAssertEqual(check.label, "Check 2 figures")
+        XCTAssertTrue(app.otherElements["bulkMatch.sheet"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["bulkMatch.noneMatch"].exists)
+        app.buttons["Done"].tap()
+
+        let resultCard = app.buttons["Change match for Spider-Man"]
+        XCTAssertTrue(resultCard.waitForExistence(timeout: 3))
+        resultCard.tap()
+        XCTAssertTrue(app.otherElements["bulkMatch.sheet"].waitForExistence(timeout: 3))
     }
 
     func testBulkRevealUsesOneTotalAndThenOneCompletedSummary() {

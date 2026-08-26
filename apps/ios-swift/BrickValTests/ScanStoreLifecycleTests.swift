@@ -181,6 +181,7 @@ struct ScanStoreLifecycleTests {
         #expect(store.presentedBulkResults?.items.count == 1)
         #expect(store.presentedBulkResults?.items.first?.result.identifier == "sh1022")
         #expect(store.presentedBulkResults?.items.first?.confidence == 0.42)
+        #expect(store.presentedBulkResults?.items.first?.orderedCandidates.map(\.identifier) == ["sh1022", "sh0133", "sh9999"])
     }
 
     @Test @MainActor

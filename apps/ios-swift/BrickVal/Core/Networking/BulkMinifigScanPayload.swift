@@ -15,11 +15,17 @@ struct BulkMinifigScanPayload: Decodable, Sendable {
         let result: MinifigLookupPayload
 
         var normalized: BulkScanResultItem {
-            BulkScanResultItem(
+            let normalizedResult = result.normalized
+            return BulkScanResultItem(
                 id: detection.regionID ?? detection.id,
-                result: result.normalized,
+                result: normalizedResult,
                 boundingBox: detection.boundingBox?.normalized,
-                confidence: detection.score
+                confidence: detection.score,
+                candidates: [BulkScanReviewCandidate(
+                    identifier: normalizedResult.identifier,
+                    score: detection.score,
+                    result: normalizedResult
+                )]
             )
         }
     }
@@ -30,11 +36,20 @@ struct BulkMinifigScanPayload: Decodable, Sendable {
 
         var bestResultItem: BulkScanResultItem? {
             guard let candidate = bestCandidate else { return nil }
+            let result = candidate.result.normalized
             return BulkScanResultItem(
                 id: detection.regionID ?? detection.id,
-                result: candidate.result.normalized,
+                result: result,
                 boundingBox: detection.boundingBox?.normalized,
-                confidence: candidate.score
+                confidence: candidate.score,
+                candidates: candidates.map { candidate in
+                    let result = candidate.result.normalized
+                    return BulkScanReviewCandidate(
+                        identifier: candidate.id,
+                        score: candidate.score,
+                        result: result
+                    )
+                }
             )
         }
 

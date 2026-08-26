@@ -198,7 +198,7 @@ final result: passed
 
 final result: passed
 
-## Social-First Bulk Value Reveal QA — 2026-08-25
+## Social-First Bulk Value Reveal QA - 2026-08-25
 
 - The reveal now opens with an aspect-fit full-screen hook showing the detected figure count, then uses one continuous top-to-bottom beam over the darkened photo.
 - The active figure receives one crisp green frame and one price callout above it. Completed figures settle into quieter green frames; unavailable prices display `Price unavailable` and do not increase the priced count.
@@ -209,5 +209,18 @@ final result: passed
 - Reduce Motion removes beam travel and uses short crossfades while preserving frames, prices, progress, and the final total.
 - The small iPhone simulator visual check confirmed the hook, sweep HUD, aspect-fit photo, single frame layer, compact rail, and completed review layout. Jackpot presence is covered by the bulk reveal UI regression.
 - The Swift suite passed with 129 unit tests and the UI suite passed with 3 tests on the BrickVal Small iPhone simulator. No TestFlight build was uploaded for this presentation-only change.
+
+final result: passed
+
+## Contextual Bulk Match Correction QA - 2026-08-26
+
+- Removed the persistent `+ Missed` control and the multi-figure recovery interaction from the bulk results presentation. Backend recovery types remain for older builds and exact-region retry compatibility.
+- Tapping any detected frame or a result-card match control opens one compact match sheet. The current match is first and cached alternatives are limited to three total candidates.
+- Identified selected frames are green, identified deselected frames are quiet grey, and unidentified detections remain visible with a neutral dashed frame and question mark.
+- `None of these` removes the region from the identified count, running total, top-find calculation, and collection payload without hiding its detection frame.
+- A cached correction does not make another network request. An unidentified region can retry exactly once using its original detection box; no free-tap or nearest-figure crop is used.
+- The centered reveal HUD keeps a stable numeric layout and briefly emphasizes each genuine priced addition. `Price unavailable` remains explicit and does not increment the priced count.
+- Correction logging contains metadata only and excludes images and crops. Research rationale and final interaction rules are recorded in `docs/research/bulk-match-correction-flow-2026-08-26.md`.
+- The compact iPhone UI regression covers removal of the old recovery entry point and correction from both a detected frame and a result card. Full Swift and UI verification passed with 134 tests on both the BrickVal Small iPhone and BrickVal iPhone 17 Pro simulators, with zero failures. A manual compact-simulator screenshot confirmed a single summary, one result rail, persistent unresolved frames, and no `+ Missed` control.
 
 final result: passed

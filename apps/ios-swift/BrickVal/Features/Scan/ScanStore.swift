@@ -761,14 +761,19 @@ final class ScanStore {
                     guard payload.status != .unresolved,
                           let candidate = payload.bestCandidate
                     else {
-                        presentation.markUnresolved(region.regionId)
+                        presentation.markUnresolved(
+                            region.regionId,
+                            candidates: payload.candidates.map(\.normalized)
+                        )
                         continue
                     }
+                    let result = candidate.result.normalized
                     presentation.markResolved(BulkScanResultItem(
                         id: region.regionId,
-                        result: candidate.result.normalized,
+                        result: result,
                         boundingBox: region.boundingBox,
-                        confidence: candidate.score
+                        confidence: candidate.score,
+                        candidates: payload.candidates.map(\.normalized)
                     ))
                 case .failed(let region, let error):
                     sawProLimit = sawProLimit || error?.isProLimit == true

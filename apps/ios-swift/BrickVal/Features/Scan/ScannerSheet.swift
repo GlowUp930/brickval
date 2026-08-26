@@ -21,7 +21,7 @@ enum BulkRegionProgressState: Sendable {
     case pending
     case loading
     case resolved(BulkScanResultItem)
-    case unresolved
+    case unresolved(candidates: [BulkScanReviewCandidate])
 
     var isTerminal: Bool {
         switch self {
@@ -83,7 +83,7 @@ final class BulkScanPresentation: Identifiable {
             regionStates[item.id] = .resolved(item)
         }
         for index in unresolvedRegions.indices {
-            regionStates["unresolved-\(index)"] = .unresolved
+            regionStates["unresolved-\(index)"] = .unresolved(candidates: [])
         }
         revision += 1
     }
@@ -128,10 +128,18 @@ final class BulkScanPresentation: Identifiable {
         revision += 1
     }
 
-    func markUnresolved(_ regionID: String) {
+    func markUnresolved(_ regionID: String, candidates: [BulkScanReviewCandidate] = []) {
         guard regionStates[regionID] != nil else { return }
-        regionStates[regionID] = .unresolved
+        regionStates[regionID] = .unresolved(candidates: Array(candidates.prefix(3)))
         revision += 1
+    }
+
+    func candidates(for regionID: String) -> [BulkScanReviewCandidate] {
+        switch regionStates[regionID] {
+        case .resolved(let item): item.candidates
+        case .unresolved(let candidates): candidates
+        case .pending, .loading, .none: []
+        }
     }
 }
 
@@ -148,17 +156,33 @@ struct BulkScanResultItem: Identifiable, Sendable {
     let result: LookupResult
     let boundingBox: NormalizedBoundingBox?
     let confidence: Double
+    let candidates: [BulkScanReviewCandidate]
 
     init(
         id: String,
         result: LookupResult,
         boundingBox: NormalizedBoundingBox?,
-        confidence: Double = 0
+        confidence: Double = 0,
+        candidates: [BulkScanReviewCandidate] = []
     ) {
         self.id = id
         self.result = result
         self.boundingBox = boundingBox
         self.confidence = confidence
+        self.candidates = Array(candidates.prefix(3))
+    }
+
+    var orderedCandidates: [BulkScanReviewCandidate] {
+        let current = BulkScanReviewCandidate(
+            identifier: result.identifier,
+            score: confidence,
+            result: result
+        )
+        var ordered = [current]
+        for candidate in candidates where !ordered.contains(where: { $0.id == candidate.id }) {
+            ordered.append(candidate)
+        }
+        return Array(ordered.prefix(3))
     }
 
     private struct Candidate {
@@ -215,7 +239,12 @@ struct BulkScanResultItem: Identifiable, Sendable {
                 id: candidate.detection.regionID ?? "\(candidate.detection.id)-\(candidate.index)",
                 result: candidate.result,
                 boundingBox: candidate.boundingBox,
-                confidence: candidate.detection.score
+                confidence: candidate.detection.score,
+                candidates: [BulkScanReviewCandidate(
+                    identifier: candidate.result.identifier,
+                    score: candidate.detection.score,
+                    result: candidate.result
+                )]
             )
         }
     }

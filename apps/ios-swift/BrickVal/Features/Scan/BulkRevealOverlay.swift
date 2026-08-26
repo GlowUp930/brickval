@@ -24,11 +24,13 @@ struct BulkSweepTotalHUD: View {
                     .font(.title3.weight(.heavy).monospacedDigit())
                     .foregroundStyle(accent)
                     .contentTransition(.numericText())
+                    .frame(minWidth: 112, alignment: .trailing)
                 Text("·")
                     .foregroundStyle(.white.opacity(0.46))
                 Text("\(pricedCount)/\(itemCount)")
                     .font(.headline.weight(.bold).monospacedDigit())
                     .foregroundStyle(.white.opacity(0.82))
+                    .frame(minWidth: 54, alignment: .trailing)
             }
 
             Text(visibleAddition.map { "+\($0.formatted(.currency(code: "USD")))" } ?? " ")
@@ -39,6 +41,7 @@ struct BulkSweepTotalHUD: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 9)
+        .frame(minWidth: 214, minHeight: 68)
         .background(.black.opacity(0.84), in: .capsule)
         .overlay { Capsule().stroke(accent.opacity(isValueArriving ? 0.72 : 0.34), lineWidth: isValueArriving ? 1.5 : 1) }
         .shadow(

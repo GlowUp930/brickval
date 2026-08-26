@@ -1,4 +1,5 @@
 import SwiftUI
+import OSLog
 
 enum BulkRecoveryLayout {
     static let candidateRowHeight: Double = 176
@@ -62,11 +63,10 @@ struct BulkScanResultsView: View {
 
     @State private var itemStates: [BulkScanItemState]
     @State private var unresolvedRegions: [NormalizedBoundingBox]
-    @State private var recoveryState: BulkRecoveryState = .idle
-    @State private var recoveryRequestID = 0
-    @State private var recoveryHapticTrigger = 0
-    @State private var recoveryConfirmation: String?
     @State private var focusedResultID: String?
+    @State private var selectedMatchTarget: BulkMatchTarget?
+    @State private var correctionRequestID = 0
+    @State private var retriedRegionIDs: Set<String> = []
     @State private var isSaving = false
     @State private var errorMessage: String?
     @State private var revealSession: BulkRevealSession
@@ -81,6 +81,11 @@ struct BulkScanResultsView: View {
 
     private let capturedImage: UIImage?
     private let canvas = BrickValStyle.ScanResult.canvas
+
+    private static let correctionLogger = Logger(
+        subsystem: "com.brickval.app",
+        category: "BulkMatchCorrection"
+    )
 
     init(presentation: BulkScanPresentation, store: ScanStore) {
         self.presentation = presentation
@@ -119,7 +124,7 @@ struct BulkScanResultsView: View {
         .presentationBackground(canvas)
         .interactiveDismissDisabled(isSaving)
         .onDisappear {
-            recoveryRequestID += 1
+            correctionRequestID += 1
             store.reset()
         }
         .task {
@@ -135,8 +140,20 @@ struct BulkScanResultsView: View {
             syncPresentation()
         }
         .sensoryFeedback(.selection, trigger: selectedCount)
-        .sensoryFeedback(.impact(flexibility: .soft), trigger: recoveryHapticTrigger)
         .sensoryFeedback(.success, trigger: revealHapticTrigger)
+        .sheet(item: $selectedMatchTarget) { target in
+            BulkMatchCorrectionSheet(
+                target: target,
+                accent: accent,
+                onRetry: { await retryUnresolvedRegion(target.regionID) },
+                onSelect: { candidate in
+                    replaceMatch(for: target.regionID, with: candidate, candidates: target.candidates)
+                },
+                onNoneMatch: {
+                    clearMatch(for: target.regionID, candidates: target.candidates)
+                }
+            )
+        }
         .sheet(item: $sharePayload) { payload in
             BulkSharePreviewView(payload: payload)
         }
@@ -159,21 +176,9 @@ struct BulkScanResultsView: View {
                     .padding(.vertical, 10)
                     .background(.orange.opacity(0.12), in: .rect(cornerRadius: 12))
             }
-            if recoveryState.isActive {
-                recoveryStatusPanel
-                    .transition(recoveryTransition)
-            }
-            if let recoveryConfirmation, !recoveryState.isActive {
-                recoveryConfirmationBanner(recoveryConfirmation)
-                    .transition(recoveryTransition)
-            }
             reviewPhotoStage
                 .frame(maxWidth: .infinity, minHeight: 360, maxHeight: 620)
             .layoutPriority(1)
-            if !currentRecoveryCandidates.isEmpty {
-                recoveryCandidateChooser(currentRecoveryCandidates)
-                    .transition(recoveryTransition)
-            }
             actionButtons
         }
         .padding(.horizontal, 16)
@@ -235,6 +240,8 @@ struct BulkScanResultsView: View {
                 .accessibilityHidden(true)
             Text("BrickVal")
                 .font(.title2.bold())
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
             Text("Bulk scan")
                 .font(.headline)
                 .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
@@ -278,10 +285,6 @@ struct BulkScanResultsView: View {
 
                     if !showsAnalysis {
                         EmptyView()
-                    } else if recoveryState.isActive {
-                        completedDetectionOverlays(imageRect: imageRect)
-                        recoveryPhotoContent(imageRect: imageRect, containerSize: proxy.size)
-                            .transition(recoveryTransition)
                     } else {
                         if presentationPhase == .completedReview {
                             completedDetectionOverlays(imageRect: imageRect)
@@ -298,6 +301,11 @@ struct BulkScanResultsView: View {
 
                         if presentationPhase == .completedReview {
                             ZStack {
+                                completedMatchHitTargets(
+                                    imageRect: imageRect,
+                                    containerSize: proxy.size
+                                )
+
                                 VStack(spacing: 0) {
                                     summaryPill
                                         .padding(.top, 14)
@@ -308,13 +316,6 @@ struct BulkScanResultsView: View {
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .overlay(alignment: .bottomTrailing) {
-                                if canReviewMissedFigure && !recoveryState.isActive && reviewInteractionReady {
-                                    compactMissedFigureButton
-                                        .padding(.trailing, 12)
-                                        .padding(.bottom, 136)
-                                }
-                            }
                         } else {
                             BulkRevealOverlay(
                                 entries: revealSession.entries,
@@ -363,262 +364,60 @@ struct BulkScanResultsView: View {
         }
     }
 
+    @ViewBuilder
+    private func completedMatchHitTargets(imageRect: CGRect, containerSize: CGSize) -> some View {
+        ForEach(presentation.regions, id: \.regionId) { region in
+            completedMatchHitTarget(
+                region: region,
+                imageRect: imageRect,
+                containerSize: containerSize
+            )
+        }
+    }
+
+    private func completedMatchHitTarget(
+        region: BulkScanRegion,
+        imageRect: CGRect,
+        containerSize: CGSize
+    ) -> some View {
+        let targetRect = imageBox(region.boundingBox, in: imageRect)
+        let hitWidth = max(targetRect.width, 44)
+        let hitHeight = max(targetRect.height, 44)
+        let regionID = region.regionId
+        return Button {
+            openMatch(for: regionID)
+        } label: {
+            Color.clear
+                .contentShape(Rectangle())
+                .frame(width: hitWidth, height: hitHeight)
+        }
+        .buttonStyle(.plain)
+        .position(
+            x: min(max(targetRect.midX, hitWidth / 2), containerSize.width - hitWidth / 2),
+            y: min(max(targetRect.midY, hitHeight / 2), containerSize.height - hitHeight / 2)
+        )
+        .accessibilityLabel(matchTargetLabel(for: regionID))
+        .accessibilityHint("Opens possible matches for this figure")
+        .accessibilityIdentifier("bulkMatch.region.\(regionID)")
+    }
+
     private var summaryPill: some View {
-            HStack(spacing: 9) {
+        HStack(spacing: 9) {
             Text(selectedTotal, format: .currency(code: "USD"))
                 .foregroundStyle(accent)
             Text("·")
                 .foregroundStyle(.gray)
-                Text("\(selectedCount) selected")
-                    .foregroundStyle(.gray)
-            }
+            Text("\(identifiedCount) identified")
+                .foregroundStyle(.gray)
+        }
         .font(.title3.bold())
         .padding(.horizontal, 20)
         .frame(minHeight: 54)
         .background(.white, in: .capsule)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("bulkResults.summary")
-        .accessibilityLabel("Selected value")
-        .accessibilityValue("\(selectedTotal.formatted(.currency(code: "USD"))), \(selectedCount) selected")
-    }
-
-    private var compactMissedFigureButton: some View {
-        Button(action: enterRecovery) {
-            Label("Missed", systemImage: "plus")
-                .font(.caption.weight(.semibold))
-                .labelStyle(.titleAndIcon)
-                .foregroundStyle(.white)
-                .frame(width: 112, height: 44)
-        }
-        .buttonStyle(.plain)
-        .contentShape(Rectangle())
-        .background(.black.opacity(0.78), in: .capsule)
-        .overlay { Capsule().stroke(.white.opacity(0.24)) }
-        .zIndex(2)
-        .accessibilityLabel(recoveryActionTitle)
-        .accessibilityHint("Opens an unobstructed photo review")
-        .accessibilityIdentifier("bulkRecovery.enter")
-    }
-
-    @ViewBuilder
-    private func recoveryPhotoContent(imageRect: CGRect, containerSize: CGSize) -> some View {
-        if isRecoverySelecting {
-            Color.clear
-                .contentShape(Rectangle())
-                .gesture(
-                    SpatialTapGesture()
-                        .onEnded { value in
-                            beginRecovery(at: value.location, imageRect: imageRect)
-                        }
-                )
-                .accessibilityHidden(true)
-
-            ForEach(Array(unresolvedRegions.enumerated()), id: \.offset) { index, box in
-                recoveryTargetButton(
-                    box: box,
-                    index: index,
-                    imageRect: imageRect,
-                    containerSize: containerSize
-                )
-            }
-        }
-
-        if let session = recoveryState.session {
-            ForEach(Array(session.selections.enumerated()), id: \.element.id) { index, selection in
-                recoverySelectionOverlay(
-                    selection: selection,
-                    number: index + 1,
-                    isFocused: selection.id == recoveryState.currentSelection?.id,
-                    imageRect: imageRect,
-                    containerSize: containerSize
-                )
-            }
-        }
-    }
-
-    private var recoveryStatusPanel: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Label(recoveryTitle, systemImage: recoveryIcon)
-                .font(.headline.weight(.bold))
-            Text(recoverySubtitle)
-                .font(.subheadline)
-                .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .foregroundStyle(.white)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
-        .background(BrickValStyle.ScanResult.surface, in: .rect(cornerRadius: 14))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(BrickValStyle.ScanResult.border)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(recoveryTitle). \(recoverySubtitle)")
-    }
-
-    private func recoveryConfirmationBanner(_ message: String) -> some View {
-        Label {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(message)
-                    .font(.subheadline.weight(.semibold))
-                Text("Review the updated card below before saving.")
-                    .font(.caption)
-                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
-            }
-        } icon: {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(accent)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(BrickValStyle.ScanResult.surface, in: .rect(cornerRadius: 14))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(BrickValStyle.ScanResult.border)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(message). Review the updated card below before saving.")
-    }
-
-    private var isRecoverySelecting: Bool {
-        if case .selecting = recoveryState { true } else { false }
-    }
-
-    private var recoveryTransition: AnyTransition {
-        reduceMotion
-            ? .opacity
-            : .opacity.combined(with: .scale(scale: 0.98))
-    }
-
-    private var recoveryTitle: String {
-        switch recoveryState {
-        case .idle: "Find a missed figure"
-        case .selecting: "Tap each missed minifigure"
-        case .processing(let session): "Checking \(session.completedCount) of \(session.totalCount) figures"
-        case .reviewing(let session):
-            "Match \(min(session.reviewIndex + 1, max(session.reviewableOutcomes.count, 1))) of \(max(session.reviewableOutcomes.count, 1))"
-        case .failed: "Couldn’t finish checking"
-        case .completed: "Recovery complete"
-        }
-    }
-
-    private var recoveryIcon: String {
-        switch recoveryState {
-        case .idle, .selecting: "hand.tap.fill"
-        case .processing: "hourglass"
-        case .reviewing: "checkmark.circle.fill"
-        case .failed: "exclamationmark.triangle.fill"
-        case .completed: "checkmark.circle.fill"
-        }
-    }
-
-    private var recoverySubtitle: String {
-        switch recoveryState {
-        case .idle: "Tap near the center for the best match."
-        case .selecting(let session):
-            session.selectedCount == 0
-                ? "Tap the center of each figure. Tap a number again to remove it."
-                : "\(session.selectedCount) selected. Tap another figure or check them together."
-        case .processing: "Recognition is running in the background. You can cancel."
-        case .reviewing: "Choose the card that matches the highlighted figure."
-        case .failed(_, let message): message
-        case .completed(let addedCount, let skippedCount):
-            "Added \(addedCount) figures · \(skippedCount) couldn’t be matched"
-        }
-    }
-
-    private func recoveryTargetButton(
-        box: NormalizedBoundingBox,
-        index: Int,
-        imageRect: CGRect,
-        containerSize: CGSize
-    ) -> some View {
-        let isSelected = recoveryState.session?.selections.contains {
-            $0.unresolvedRegionIndex == index || $0.focusBox.contains(BulkRecoveryPoint(box.center))
-        } == true
-        let targetRect = imageBox(box, in: imageRect)
-        let hitWidth = max(targetRect.width, 44)
-        let hitHeight = max(targetRect.height, 44)
-        let center = CGPoint(
-            x: min(max(targetRect.midX, hitWidth / 2), containerSize.width - hitWidth / 2),
-            y: min(max(targetRect.midY, hitHeight / 2), containerSize.height - hitHeight / 2)
-        )
-
-        return Button {
-            toggleRecovery(at: box.center, unresolvedRegionIndex: index)
-        } label: {
-            // Keep the known recovery regions accessible without drawing a box
-            // that could suggest the user should tap empty space.
-            Color.clear
-                .contentShape(Rectangle())
-                .frame(width: hitWidth, height: hitHeight)
-        }
-        .buttonStyle(.plain)
-        .position(center)
-        .accessibilityLabel("Missed figure \(index + 1)")
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
-        .accessibilityHint(isSelected ? "Double tap to remove this figure" : "Double tap to select this figure")
-        .accessibilityIdentifier("bulkRecovery.target.\(index + 1)")
-    }
-
-    private func recoverySelectionOverlay(
-        selection: BulkRecoverySelection,
-        number: Int,
-        isFocused: Bool,
-        imageRect: CGRect,
-        containerSize: CGSize
-    ) -> some View {
-        let targetRect = imageBox(selection.recognitionBox, in: imageRect)
-        let anchor = CGPoint(
-            x: imageRect.minX + selection.visualAnchor.x * imageRect.width,
-            y: imageRect.minY + selection.visualAnchor.y * imageRect.height
-        )
-        let center = CGPoint(
-            x: min(max(anchor.x, 40), containerSize.width - 40),
-            y: min(max(anchor.y, 40), containerSize.height - 40)
-        )
-
-        return RecoverySelectionOverlay(
-            targetRect: targetRect,
-            center: center,
-            containerSize: containerSize,
-            number: number,
-            accent: accent,
-            isFocused: isFocused,
-            confirmedValue: recoveryState.session?.confirmedValues[selection.id]
-        )
-        .id(selection.id)
-    }
-
-    private func recoveryCandidateChooser(_ candidates: [BulkScanReviewCandidate]) -> some View {
-        VStack(spacing: 8) {
-            ScrollView(.horizontal) {
-                LazyHStack(spacing: 10) {
-                    ForEach(candidates.prefix(3)) { candidate in
-                        recoveryCandidateCard(candidate)
-                    }
-                }
-                .padding(.horizontal, 2)
-            }
-            .scrollIndicators(.hidden)
-
-            Button("None match", systemImage: "questionmark") {
-                skipCurrentRecoveryMatch()
-            }
-            .font(.subheadline.weight(.semibold))
-            .frame(maxWidth: .infinity, minHeight: 42)
-            .background(BrickValStyle.ScanResult.surface, in: .rect(cornerRadius: 12))
-            .foregroundStyle(.white)
-            .overlay { RoundedRectangle(cornerRadius: 12).stroke(BrickValStyle.ScanResult.border) }
-            .accessibilityIdentifier("bulkRecovery.noneMatch")
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: CGFloat(recoveryState.candidateChooserHeight), alignment: .top)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Possible matches for the highlighted figure")
+        .accessibilityLabel("Identified value")
+        .accessibilityValue("\(selectedTotal.formatted(.currency(code: "USD"))), \(identifiedCount) identified")
     }
 
     private var resultCarousel: some View {
@@ -644,41 +443,6 @@ struct BulkScanResultsView: View {
                 }
             }
         }
-    }
-
-    private func recoveryCandidateCard(_ candidate: BulkScanReviewCandidate) -> some View {
-        Button {
-            acceptRecovery(candidate)
-        } label: {
-            candidateCard(candidate)
-                .frame(
-                    width: CGFloat(BulkRecoveryLayout.candidateCardWidth),
-                    height: CGFloat(BulkRecoveryLayout.candidateCardHeight)
-                )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Recovered candidate \(candidate.result.name)")
-        .accessibilityHint("Double tap to add this match")
-    }
-
-    private func candidateCard(_ candidate: BulkScanReviewCandidate) -> some View {
-        VStack(spacing: 5) {
-            MinifigureThumbnail(
-                imageURL: candidate.result.imageURL,
-                identifier: candidate.result.identifier,
-                accent: accent
-            )
-            .frame(width: 82, height: 64)
-            .background(.white)
-            .clipShape(.rect(cornerRadius: 9))
-            Text(candidate.result.identifier)
-                .font(.caption.bold())
-                .lineLimit(1)
-            reviewPrice(candidate.result)
-        }
-        .foregroundStyle(.white)
-        .padding(8)
-        .background(.black.opacity(0.78), in: .rect(cornerRadius: 12))
     }
 
     private func resultCard(_ state: Binding<BulkScanItemState>) -> some View {
@@ -718,20 +482,31 @@ struct BulkScanResultsView: View {
             .accessibilityHint("Double tap to toggle selection")
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.result.identifier)
-                    .font(.caption2.bold())
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                Button {
+                    openMatch(for: item.id)
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(item.result.identifier)
+                            .font(.caption2.bold())
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
 
-                Group {
-                    if let price = price(for: item) {
-                        Text(price, format: .currency(code: "USD"))
-                    } else {
-                        Text("Price unavailable")
+                        Group {
+                            if let price = price(for: item) {
+                                Text(price, format: .currency(code: "USD"))
+                            } else {
+                                Text("Price unavailable")
+                            }
+                        }
+                        .font(.caption.bold().monospacedDigit())
+                        .foregroundStyle(isSelected ? accent : .gray)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .font(.caption.bold().monospacedDigit())
-                .foregroundStyle(isSelected ? accent : .gray)
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .accessibilityLabel("Change match for \(item.result.name)")
+                .accessibilityHint("Shows possible matches for this figure")
 
                 conditionControl(state: state, selection: condition)
             }
@@ -789,10 +564,23 @@ struct BulkScanResultsView: View {
         imageRect: CGRect
     ) -> some View {
         let rect = imageBox(box, in: imageRect)
-        return RoundedRectangle(cornerRadius: 10)
-            .stroke(.white.opacity(0.55), lineWidth: 1.5)
-            .frame(width: rect.width, height: rect.height)
-            .position(x: rect.midX, y: rect.midY)
+        return ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(
+                    .white.opacity(0.62),
+                    style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])
+                )
+                .frame(width: rect.width, height: rect.height)
+
+            Image(systemName: "questionmark")
+                .font(.caption2.bold())
+                .foregroundStyle(.black)
+                .frame(width: 22, height: 22)
+                .background(.white.opacity(0.86), in: .circle)
+                .offset(x: min(max(0, rect.width / 2 - 11), max(0, rect.width - 22)), y: -11)
+        }
+        .frame(width: rect.width, height: rect.height, alignment: .topLeading)
+        .position(x: rect.midX, y: rect.midY)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -821,90 +609,19 @@ struct BulkScanResultsView: View {
     }
 
     private var actionButtons: some View {
-        VStack(spacing: 12) {
-            if recoveryState.isActive {
-                recoveryBottomActions
-            } else {
-                Button(action: saveSelected) {
-                    Label(
-                        isSaving ? "Adding…" : "Add \(selectedCount) to Collection",
-                        systemImage: isSaving ? "hourglass" : "plus.circle.fill"
-                    )
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, minHeight: 58)
-                    .background(accent, in: .rect(cornerRadius: 14))
-                    .foregroundStyle(.black)
-                }
-                .buttonStyle(.plain)
-                .disabled(!revealComplete || selectedCount == 0 || isSaving)
-                .opacity(!revealComplete || selectedCount == 0 ? 0.45 : 1)
-            }
+        Button(action: saveSelected) {
+            Label(
+                isSaving ? "Adding…" : "Add \(selectedCount) to Collection",
+                systemImage: isSaving ? "hourglass" : "plus.circle.fill"
+            )
+            .font(.headline)
+            .frame(maxWidth: .infinity, minHeight: 58)
+            .background(accent, in: .rect(cornerRadius: 14))
+            .foregroundStyle(.black)
         }
-    }
-
-    private var recoveryBottomActions: some View {
-        VStack(spacing: 10) {
-            switch recoveryState {
-            case .selecting(let session):
-                Button(action: checkSelectedFigures) {
-                    Label("Check \(session.selectedCount) figures", systemImage: "sparkles")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, minHeight: 58)
-                        .background(accent, in: .rect(cornerRadius: 14))
-                        .foregroundStyle(.black)
-                }
-                .buttonStyle(.plain)
-                .disabled(session.selectedCount == 0)
-                .opacity(session.selectedCount == 0 ? 0.45 : 1)
-                .accessibilityIdentifier("bulkRecovery.check")
-
-            case .processing:
-                ProgressView()
-                    .tint(accent)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .accessibilityLabel(recoveryTitle)
-
-            case .reviewing:
-                EmptyView()
-
-            case .failed(let session, _):
-                Button("Retry", systemImage: "arrow.clockwise") {
-                    retryRecovery(session: session)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(accent)
-                .foregroundStyle(.black)
-                .frame(maxWidth: .infinity, minHeight: 48)
-                .accessibilityIdentifier("bulkRecovery.retry")
-
-            case .idle, .completed:
-                EmptyView()
-            }
-
-            HStack(spacing: 12) {
-                Button("Retake", systemImage: "camera", action: close)
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 54)
-                    .background(BrickValStyle.ScanResult.surface, in: .rect(cornerRadius: 14))
-                    .foregroundStyle(.white)
-                    .disabled(isSaving)
-                    .accessibilityIdentifier("bulkRecovery.retake")
-
-                Button("Cancel", systemImage: "xmark") {
-                    cancelRecovery()
-                }
-                .font(.subheadline.weight(.semibold))
-                .frame(maxWidth: .infinity, minHeight: 54)
-                .background(BrickValStyle.ScanResult.surface, in: .rect(cornerRadius: 14))
-                .foregroundStyle(.white)
-                .disabled(isSaving)
-                .accessibilityIdentifier("bulkRecovery.cancel")
-            }
-        }
-    }
-
-    private var canReviewMissedFigure: Bool {
-        recoveryToken != nil
+        .buttonStyle(.plain)
+        .disabled(!revealComplete || selectedCount == 0 || isSaving)
+        .opacity(!revealComplete || selectedCount == 0 ? 0.45 : 1)
     }
 
     private var revealComplete: Bool {
@@ -912,7 +629,7 @@ struct BulkScanResultsView: View {
     }
 
     private var isImmersiveReveal: Bool {
-        presentationPhase == .immersiveReveal && !recoveryState.isActive
+        presentationPhase == .immersiveReveal
     }
 
     private var presentationAnimation: Animation {
@@ -924,6 +641,8 @@ struct BulkScanResultsView: View {
             let state: BulkFocusState
             if revealStage == .jackpot, entry.id == jackpotTopFindID {
                 state = .topFind
+            } else if entry.isUnresolved && revealSession.revealedCount > entry.spatialNumber - 1 {
+                state = .unresolved
             } else if let currentEntry = revealSession.currentEntry, currentEntry.id == entry.id {
                 state = .active
             } else if revealSession.revealedCount > entry.spatialNumber - 1 {
@@ -948,7 +667,7 @@ struct BulkScanResultsView: View {
     private var revealCallout: BulkFocusCallout? {
         guard presentationPhase != .completedReview,
               revealStage == .sweeping || revealStage == .waiting,
-              let entry = revealSession.lastRevealedEntry,
+              let entry = revealSession.currentEntry ?? revealSession.lastRevealedEntry,
               let box = entry.boundingBox
         else { return nil }
 
@@ -1112,22 +831,6 @@ struct BulkScanResultsView: View {
         )
     }
 
-    private var currentRecoveryCandidates: [BulkScanReviewCandidate] {
-        guard case .reviewing(let session) = recoveryState else { return [] }
-        return session.currentReviewOutcome?.candidates ?? []
-    }
-
-    private var recoveryActionTitle: String {
-        let count = unresolvedRegions.count
-        if count == 1 { return "Review missed figure" }
-        if count > 1 { return "Review \(count) missed figures" }
-        return "Add missed figure"
-    }
-
-    private var recoveryActionIcon: String {
-        unresolvedRegions.isEmpty ? "plus" : "hand.tap"
-    }
-
     private var selectedTotal: Double {
         itemStates.filter(\.isSelected).reduce(0) { $0 + ($1.price ?? 0) }
     }
@@ -1137,6 +840,7 @@ struct BulkScanResultsView: View {
     }
 
     private var selectedCount: Int { itemStates.filter(\.isSelected).count }
+    private var identifiedCount: Int { itemStates.count }
 
     private var shareConditionTitle: String {
         let selectedConditions = itemStates.filter(\.isSelected).map(\.condition)
@@ -1144,17 +848,6 @@ struct BulkScanResultsView: View {
         return selectedConditions.allSatisfy { $0 == first }
             ? (first == .used ? "Used" : "New / sealed")
             : "Mixed conditions"
-    }
-
-    @ViewBuilder
-    private func reviewPrice(_ result: LookupResult) -> some View {
-        if let price = result.pricing.preferredUsedValue {
-            Text(price, format: .currency(code: "USD"))
-                .font(.caption2)
-        } else {
-            Text("Price unavailable")
-                .font(.caption2)
-        }
     }
 
     private var errorBinding: Binding<Bool> {
@@ -1199,274 +892,349 @@ struct BulkScanResultsView: View {
     }
 
     private func close() {
-        recoveryRequestID += 1
+        correctionRequestID += 1
         store.reset()
         dismiss()
     }
 
-    private func beginRecovery(at location: CGPoint, imageRect: CGRect) {
-        guard isRecoverySelecting, recoveryToken != nil else { return }
-        let x = min(max((location.x - imageRect.minX) / imageRect.width, 0), 1)
-        let y = min(max((location.y - imageRect.minY) / imageRect.height, 0), 1)
-        let point = CGPoint(x: x, y: y)
-        let regionIndex = unresolvedRegions.firstIndex { region in
-            point.x >= region.x && point.x <= region.x + region.width
-                && point.y >= region.y && point.y <= region.y + region.height
+    private func matchTargetLabel(for regionID: String) -> String {
+        guard presentation.regions.contains(where: { $0.regionId == regionID }) else {
+            return "Detected figure"
         }
-        toggleRecovery(at: point, unresolvedRegionIndex: regionIndex)
-    }
-
-    private func enterRecovery() {
-        recoveryConfirmation = nil
-        withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86)) {
-            recoveryState = .selecting(BulkRecoverySession())
+        let number = revealSession.entries.first(where: { $0.id == regionID })?.spatialNumber
+        switch presentation.regionStates[regionID] {
+        case .resolved(let item):
+            return "Figure \(number.map(String.init) ?? ""), \(item.result.name)"
+        case .unresolved:
+            return "Figure \(number.map(String.init) ?? ""), unidentified"
+        case .pending, .loading, .none:
+            return "Detected figure \(number.map(String.init) ?? "")"
         }
     }
 
-    private func cancelRecovery() {
-        recoveryRequestID += 1
-        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
-            switch recoveryState {
-            case .processing(let session):
-                // Keep the numbered selections so the user can adjust and retry.
-                recoveryState = .selecting(session)
-            case .selecting, .reviewing, .failed:
-                // Leaving an active review returns to the unchanged result list.
-                recoveryState = .idle
-            case .idle, .completed:
-                break
-            }
-        }
-    }
-
-    private func toggleRecovery(at point: CGPoint, unresolvedRegionIndex: Int?) {
-        guard case .selecting(var session) = recoveryState else { return }
-        let normalizedPoint = BulkRecoveryPoint(point)
-
-        if session.removeSelection(near: normalizedPoint) {
-            recoveryHapticTrigger += 1
-            recoveryState = .selecting(session)
-            return
-        }
-
-        guard session.canAddSelection else { return }
-        let referenceBox = unresolvedRegionIndex.flatMap { index in
-            unresolvedRegions.indices.contains(index) ? unresolvedRegions[index] : nil
-        }
-        let selection = BulkRecoverySelection(
-            id: "selection-\(UUID().uuidString)",
-            order: session.selectedCount,
-            normalizedPoint: normalizedPoint,
-            focusBox: BulkRecoveryTapPlanner.recognitionBox(
-                for: normalizedPoint.cgPoint,
-                referenceBox: referenceBox,
-                fallbackSize: medianDetectedFigureSize
-            ),
-            visualAnchor: normalizedPoint,
-            unresolvedRegionIndex: unresolvedRegionIndex
-        )
-        session.toggle(selection)
-        recoveryHapticTrigger += 1
-        withAnimation(reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.84)) {
-            recoveryState = .selecting(session)
-        }
-    }
-
-    private var medianDetectedFigureSize: CGSize {
-        let sizes = revealSession.entries.compactMap { entry -> CGSize? in
-            guard let box = entry.boundingBox, box.width > 0, box.height > 0 else { return nil }
-            return CGSize(width: box.width, height: box.height)
-        }
-        guard !sizes.isEmpty else { return CGSize(width: 0.16, height: 0.24) }
-        let sortedWidths = sizes.map(\.width).sorted()
-        let sortedHeights = sizes.map(\.height).sorted()
-        let middle = sizes.count / 2
-        let width = sizes.count.isMultiple(of: 2)
-            ? (sortedWidths[middle - 1] + sortedWidths[middle]) / 2
-            : sortedWidths[middle]
-        let height = sizes.count.isMultiple(of: 2)
-            ? (sortedHeights[middle - 1] + sortedHeights[middle]) / 2
-            : sortedHeights[middle]
-        return CGSize(width: width, height: height)
-    }
-
-    private func checkSelectedFigures() {
-        guard case .selecting(var session) = recoveryState else { return }
-        guard let recoveryToken else {
-            recoveryState = .failed(session, message: "Recovery expired. Retake the photo to try again.")
-            return
-        }
-
-        session.beginProcessing()
-        recoveryRequestID += 1
-        let requestID = recoveryRequestID
-        recoveryState = .processing(session)
-
-        Task { [imageData, store] in
-            let outcomes = await store.recoverBulkMinifigures(
-                imageData: imageData,
-                selections: session.selections,
-                recoveryToken: recoveryToken,
-                onProgress: { completed, _ in
-                    guard requestID == recoveryRequestID,
-                          case .processing(var progressSession) = recoveryState
-                    else { return }
-                    progressSession.updateProgress(completed)
-                    recoveryState = .processing(progressSession)
-                }
-            )
-
-            guard requestID == recoveryRequestID else { return }
-            var completedSession = session
-            completedSession.record(outcomes)
-
-            withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.86)) {
-                if completedSession.reviewableOutcomes.isEmpty {
-                    let allExpired = !outcomes.isEmpty && outcomes.allSatisfy {
-                        if case .skipped(_, .expired) = $0 { return true }
-                        return false
-                    }
-                    let allUnavailable = !outcomes.isEmpty && outcomes.allSatisfy {
-                        if case .skipped(_, .unavailable) = $0 { return true }
-                        return false
-                    }
-                    if allExpired {
-                        recoveryState = .failed(completedSession, message: "Recovery expired. Retake the photo to try again.")
-                    } else if allUnavailable {
-                        recoveryState = .failed(completedSession, message: "Couldn’t check these figures. Check your connection and try again.")
-                    } else {
-                        finishRecovery(completedSession)
-                    }
-                } else {
-                    recoveryState = .reviewing(completedSession)
-                }
-            }
-        }
-    }
-
-    private func retryRecovery(session: BulkRecoverySession) {
-        recoveryState = .selecting(session)
-        checkSelectedFigures()
-    }
-
-    private func acceptRecovery(_ candidate: BulkScanReviewCandidate) {
-        guard case .reviewing(var session) = recoveryState,
-              case .matched(let selection, _) = session.currentReviewOutcome
+    private func openMatch(for regionID: String) {
+        guard presentationPhase == .completedReview,
+              reviewInteractionReady,
+              let region = presentation.regions.first(where: { $0.regionId == regionID })
         else { return }
-        let item = BulkScanResultItem(
-            id: "recovered-\(selection.id)",
-            result: candidate.result,
-            boundingBox: selection.recognitionBox
+
+        let target: BulkMatchTarget?
+        switch presentation.regionStates[regionID] {
+        case .resolved(let item):
+            target = BulkMatchTarget(
+                regionID: regionID,
+                box: region.boundingBox,
+                currentIdentifier: item.result.identifier,
+                candidates: candidates(for: item),
+                isUnresolved: false,
+                canRetry: false
+            )
+        case .unresolved(let candidates):
+            target = BulkMatchTarget(
+                regionID: regionID,
+                box: region.boundingBox,
+                currentIdentifier: nil,
+                candidates: Array(candidates.prefix(3)),
+                isUnresolved: true,
+                canRetry: recoveryToken != nil && !retriedRegionIDs.contains(regionID)
+            )
+        case .pending, .loading, .none:
+            target = nil
+        }
+        guard let target else { return }
+        selectedMatchTarget = target
+        let state = target.isUnresolved ? "unresolved" : "resolved"
+        Self.correctionLogger.info(
+            "bulk_match_opened region_state=\(state, privacy: .public) candidate_count=\(target.candidates.count, privacy: .public) detected_count=\(presentation.regions.count, privacy: .public) identified_count=\(itemStates.count, privacy: .public) corrected_count=0"
         )
-        itemStates.insert(BulkScanItemState(item: item), at: 0)
-        unresolvedRegions.removeAll { region in
-            selection.normalizedPoint.x >= region.x && selection.normalizedPoint.x <= region.x + region.width
-                && selection.normalizedPoint.y >= region.y && selection.normalizedPoint.y <= region.y + region.height
-        }
-        focusedResultID = item.id
-        session.advanceAfterCandidateSelection(value: candidate.result.pricing.preferredUsedValue)
-        if session.currentReviewOutcome == nil {
-            finishRecovery(session)
-        } else {
-            recoveryState = .reviewing(session)
+    }
+
+    private func candidates(for item: BulkScanResultItem) -> [BulkScanReviewCandidate] {
+        item.orderedCandidates
+    }
+
+    private func retryUnresolvedRegion(_ regionID: String) async -> [BulkScanReviewCandidate] {
+        guard let recoveryToken,
+              let region = presentation.regions.first(where: { $0.regionId == regionID }),
+              !retriedRegionIDs.contains(regionID)
+        else { return presentation.candidates(for: regionID) }
+
+        retriedRegionIDs.insert(regionID)
+        correctionRequestID += 1
+        let requestID = correctionRequestID
+        do {
+            let candidates = try await store.recoverBulkMinifigure(
+                imageData: imageData,
+                focusBox: region.boundingBox,
+                recoveryToken: recoveryToken
+            )
+            guard requestID == correctionRequestID else { return [] }
+            presentation.markUnresolved(regionID, candidates: candidates)
+            Self.correctionLogger.info(
+                "bulk_match_retry outcome=matched candidate_count=\(candidates.count, privacy: .public) detected_count=\(presentation.regions.count, privacy: .public) identified_count=\(itemStates.count, privacy: .public)"
+            )
+            return Array(candidates.prefix(3))
+        } catch is CancellationError {
+            return []
+        } catch let error as APIError where error.statusCode == 401 {
+            errorMessage = "This scan’s correction link has expired. Retake the photo to try again."
+            Self.correctionLogger.info("bulk_match_retry outcome=expired")
+            return []
+        } catch {
+            errorMessage = "Couldn’t check this figure. Check your connection and try again."
+            Self.correctionLogger.info("bulk_match_retry outcome=unavailable")
+            return []
         }
     }
 
-    private func skipCurrentRecoveryMatch() {
-        guard case .reviewing(var session) = recoveryState else { return }
-        session.skipCurrentCandidate()
-        if session.currentReviewOutcome == nil {
-            finishRecovery(session)
+    private func replaceMatch(
+        for regionID: String,
+        with candidate: BulkScanReviewCandidate,
+        candidates: [BulkScanReviewCandidate]
+    ) {
+        guard let region = presentation.regions.first(where: { $0.regionId == regionID }) else { return }
+        var allCandidates = [candidate]
+        allCandidates.append(contentsOf: candidates.filter { $0.id != candidate.id })
+        let item = BulkScanResultItem(
+            id: regionID,
+            result: candidate.result,
+            boundingBox: region.boundingBox,
+            confidence: candidate.score,
+            candidates: allCandidates
+        )
+        presentation.markResolved(item)
+        if let index = itemStates.firstIndex(where: { $0.id == regionID }) {
+            itemStates[index].item = item
         } else {
-            recoveryState = .reviewing(session)
+            itemStates.append(BulkScanItemState(item: item))
         }
+        unresolvedRegions = presentation.unresolvedRegions
+        focusedResultID = regionID
+        selectedMatchTarget = nil
+        jackpotTopFindID = topFindID
+        Self.correctionLogger.info(
+            "bulk_match_changed candidate_rank=\(allCandidates.firstIndex(where: { $0.id == candidate.id }).map { $0 + 1 } ?? 1, privacy: .public) detected_count=\(presentation.regions.count, privacy: .public) identified_count=\(itemStates.count, privacy: .public) corrected_count=1"
+        )
     }
 
-    private func finishRecovery(_ session: BulkRecoverySession) {
-        let skipped = session.skippedCount
-        recoveryConfirmation = skipped == 0
-            ? "Added \(session.acceptedCount) figures"
-            : "Added \(session.acceptedCount) figures · \(skipped) couldn’t be matched"
-        recoveryHapticTrigger += 1
-        recoveryState = .idle
+    private func clearMatch(for regionID: String, candidates: [BulkScanReviewCandidate]) {
+        presentation.markUnresolved(regionID, candidates: candidates)
+        itemStates.removeAll { $0.id == regionID }
+        unresolvedRegions = presentation.unresolvedRegions
+        selectedMatchTarget = nil
+        jackpotTopFindID = topFindID
+        Self.correctionLogger.info(
+            "bulk_match_changed outcome=none_match detected_count=\(presentation.regions.count, privacy: .public) identified_count=\(itemStates.count, privacy: .public) corrected_count=0"
+        )
+    }
+
+    private var topFindID: String? {
+        itemStates
+            .compactMap { state in state.price.map { (state.id, $0) } }
+            .max { $0.1 < $1.1 }?.0
     }
 }
 
-private struct RecoverySelectionOverlay: View {
-    let targetRect: CGRect
-    let center: CGPoint
-    let containerSize: CGSize
-    let number: Int
-    let accent: Color
-    let isFocused: Bool
-    let confirmedValue: Double?
+private struct BulkMatchTarget: Identifiable {
+    let regionID: String
+    let box: NormalizedBoundingBox
+    let currentIdentifier: String?
+    let candidates: [BulkScanReviewCandidate]
+    let isUnresolved: Bool
+    let canRetry: Bool
 
+    var id: String { regionID }
+}
+
+private struct BulkMatchCorrectionSheet: View {
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var glowSize: CGFloat {
-        min(max(max(targetRect.width, targetRect.height) * 0.34, 46), 92)
-    }
+    let target: BulkMatchTarget
+    let accent: Color
+    let onRetry: @MainActor () async -> [BulkScanReviewCandidate]
+    let onSelect: (BulkScanReviewCandidate) -> Void
+    let onNoneMatch: () -> Void
 
-    private var clampedCenter: CGPoint {
-        let inset = glowSize / 2 + 8
-        return CGPoint(
-            x: min(max(center.x, inset), containerSize.width - inset),
-            y: min(max(center.y, inset), containerSize.height - inset)
-        )
+    @State private var candidates: [BulkScanReviewCandidate]
+    @State private var isRetrying = false
+    @State private var retryFinished = false
+
+    init(
+        target: BulkMatchTarget,
+        accent: Color,
+        onRetry: @escaping @MainActor () async -> [BulkScanReviewCandidate],
+        onSelect: @escaping (BulkScanReviewCandidate) -> Void,
+        onNoneMatch: @escaping () -> Void
+    ) {
+        self.target = target
+        self.accent = accent
+        self.onRetry = onRetry
+        self.onSelect = onSelect
+        self.onNoneMatch = onNoneMatch
+        _candidates = State(initialValue: Array(target.candidates.prefix(3)))
     }
 
     var body: some View {
-        VStack(spacing: 3) {
-            ZStack(alignment: .topTrailing) {
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                accent.opacity(isFocused ? 0.72 : 0.38),
-                                accent.opacity(isFocused ? 0.22 : 0.10),
-                                .clear,
-                            ],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: glowSize / 2
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label(
+                            target.isUnresolved ? "Figure not identified" : "Check this match",
+                            systemImage: target.isUnresolved ? "questionmark.circle" : "checkmark.circle"
                         )
-                    )
-                    .frame(width: glowSize, height: glowSize)
-                    .overlay {
-                        Circle()
-                            .stroke(accent.opacity(isFocused ? 0.72 : 0.34), lineWidth: 1.5)
-                            .padding(glowSize * 0.18)
-                    }
-                Text("\(number)")
-                    .font(.caption2.bold().monospacedDigit())
-                    .foregroundStyle(.black)
-                    .frame(minWidth: 24, minHeight: 24)
-                    .background(accent, in: .circle)
-                    .offset(x: 3, y: -3)
-            }
+                        .font(.headline.weight(.bold))
 
-            if let confirmedValue {
-                Text(confirmedValue, format: .currency(code: "USD"))
-                    .font(.caption2.bold().monospacedDigit())
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(.black.opacity(0.78), in: .capsule)
+                        Text(
+                            target.isUnresolved
+                                ? "Choose a possible match for the highlighted figure."
+                                : "Choose a different match if this result is not the same figure."
+                        )
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    }
+
+                    if candidates.isEmpty {
+                        emptyMatchContent
+                    } else {
+                        LazyVStack(spacing: 10) {
+                            ForEach(candidates) { candidate in
+                                candidateRow(candidate)
+                            }
+                        }
+                    }
+
+                    Button("None of these", systemImage: "questionmark") {
+                        onNoneMatch()
+                        dismiss()
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .background(BrickValStyle.ScanResult.surface, in: .rect(cornerRadius: 12))
+                    .foregroundStyle(.primary)
+                    .overlay { RoundedRectangle(cornerRadius: 12).stroke(BrickValStyle.ScanResult.border) }
+                    .accessibilityIdentifier("bulkMatch.noneMatch")
+                }
+                .padding(20)
+            }
+            .navigationTitle("Figure match")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
             }
         }
-        .frame(minWidth: 44, minHeight: 44)
-        .shadow(color: accent.opacity(isFocused ? 0.36 : 0.14), radius: isFocused ? 16 : 8)
-        .opacity(isFocused || confirmedValue != nil ? 1 : 0.82)
-        .scaleEffect(reduceMotion ? 1 : (isFocused ? 1.06 : 1))
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.22), value: isFocused)
-        .position(clampedCenter)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .accessibilityIdentifier("bulkMatch.sheet")
+    }
+
+    private var emptyMatchContent: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "person.crop.rectangle.badge.questionmark")
+                .font(.largeTitle)
+                .foregroundStyle(.secondary)
+            Text(retryFinished ? "No match found" : "No saved alternatives")
+                .font(.headline)
+            Text(
+                retryFinished
+                    ? "This figure will stay out of the total until it can be identified."
+                    : "We can check this exact detected region once more."
+            )
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+
+            if target.canRetry && !retryFinished {
+                Button {
+                    Task { await retry() }
+                } label: {
+                    Label(isRetrying ? "Checking…" : "Check this figure", systemImage: "arrow.triangle.2.circlepath")
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(accent)
+                .foregroundStyle(.black)
+                .disabled(isRetrying)
+                .accessibilityIdentifier("bulkMatch.retry")
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 18)
+    }
+
+    private func retry() async {
+        guard !isRetrying else { return }
+        isRetrying = true
+        let newCandidates = await onRetry()
+        guard !Task.isCancelled else { return }
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
+            candidates = Array(newCandidates.prefix(3))
+            retryFinished = true
+            isRetrying = false
+        }
+    }
+
+    private func candidateRow(_ candidate: BulkScanReviewCandidate) -> some View {
+        Button {
+            onSelect(candidate)
+            dismiss()
+        } label: {
+            HStack(spacing: 12) {
+                MinifigureThumbnail(
+                    imageURL: candidate.result.imageURL,
+                    identifier: candidate.result.identifier,
+                    accent: accent
+                )
+                .frame(width: 64, height: 72)
+                .background(.white, in: .rect(cornerRadius: 10))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(candidate.result.name)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    Text(candidate.result.identifier)
+                        .font(.caption.bold().monospacedDigit())
+                        .foregroundStyle(.secondary)
+                    if let price = candidate.result.pricing.preferredUsedValue {
+                        Text(price, format: .currency(code: "USD"))
+                            .font(.caption.bold().monospacedDigit())
+                            .foregroundStyle(accent)
+                    } else {
+                        Text("Price unavailable")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer(minLength: 0)
+                Image(systemName: candidate.identifier.caseInsensitiveCompare(target.currentIdentifier ?? "") == .orderedSame ? "checkmark.circle.fill" : "chevron.right")
+                    .foregroundStyle(candidate.identifier.caseInsensitiveCompare(target.currentIdentifier ?? "") == .orderedSame ? accent : .secondary)
+            }
+            .foregroundStyle(.primary)
+            .padding(10)
+            .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
+            .background(BrickValStyle.ScanResult.surface, in: .rect(cornerRadius: 14))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(
+                        candidate.identifier.caseInsensitiveCompare(target.currentIdentifier ?? "") == .orderedSame
+                            ? accent.opacity(0.7)
+                            : BrickValStyle.ScanResult.border
+                    )
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Use \(candidate.result.name), \(candidate.result.identifier)")
+        .accessibilityHint("Replaces the current figure match")
     }
 }
 
 private struct BulkScanItemState: Identifiable {
-    let item: BulkScanResultItem
+    var item: BulkScanResultItem
     var isSelected = true
     var condition: CollectionCondition = .used
 
