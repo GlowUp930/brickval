@@ -1,9 +1,4 @@
-import {
-  MAX_CAMERA_BULK_REGIONS,
-  MAX_LIBRARY_BULK_REGIONS,
-  parseBulkRegions,
-  type BulkManifestRegion,
-} from "./bulk-identify";
+import { parseBulkRegions, type BulkManifestRegion } from "./bulk-identify";
 
 export type BulkScanInputSource = "camera" | "photoLibrary";
 
@@ -32,10 +27,7 @@ export function parseBulkScanInput(formData: FormData): BulkScanInputResult {
     : "camera";
   const regionValue = formData.get("regions");
   const regionCount = countRegionEntries(regionValue);
-  const regionLimit = scanSource === "photoLibrary"
-    ? MAX_LIBRARY_BULK_REGIONS
-    : MAX_CAMERA_BULK_REGIONS;
-  const regions = parseBulkRegions(regionValue, regionLimit);
+  const regions = parseBulkRegions(regionValue);
 
   if (!(image instanceof File)) {
     return {
@@ -55,7 +47,7 @@ export function parseBulkScanInput(formData: FormData): BulkScanInputResult {
       ok: false,
       error: {
         code: "invalid_regions",
-        message: `The scan included an invalid region list. ${scanSource === "photoLibrary" ? "Photo-library scans support up to 40 figures." : "Camera scans support up to 10 figures."}`,
+        message: "The scan included an invalid region list.",
         status: 400,
         scanSource,
         regionCount,

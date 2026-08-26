@@ -259,7 +259,7 @@ final class ScanStore {
             frozenBulkSource = .photoLibrary
             let detection = try await bulkPhotoDetector.detectBulkRegions(
                 in: data,
-                limit: 40
+                limit: .max
             )
             frozenBulkRegions = detection.regions
             bulkProcessingRegions = detection.regions.map(\.boundingBox)
@@ -502,7 +502,7 @@ final class ScanStore {
             if intent == .bulk {
                 guard phase == .searching else { return }
                 bulkDetectionTracker.ingest(batch.observations, at: frame.timestamp)
-                observations = Array(bulkDetectionTracker.observations(for: frame.timestamp).prefix(10))
+                observations = bulkDetectionTracker.observations(for: frame.timestamp)
                 phase = .searching
                 return
             }
@@ -570,8 +570,7 @@ final class ScanStore {
                let startBulkScan = api.startBulkScan,
                api.identifyBulkRegion != nil {
                 let start = try await startBulkScan(image, bulkRegions, bulkSource)
-                let regionLimit = bulkSource == .photoLibrary ? 40 : 10
-                let regions = Array(start.regions.prefix(regionLimit))
+                let regions = start.regions
                 guard !regions.isEmpty else {
                     phase = .failed("No minifigures were found. Try a brighter photo with the figures separated and facing forward.")
                     return
@@ -601,8 +600,7 @@ final class ScanStore {
                   !items.isEmpty || !response.reviewItems.isEmpty || !response.unresolvedRegions.isEmpty
             else {
                 self.frozenImageData = nil
-                let limit = bulkSource == .photoLibrary ? 40 : 10
-                phase = .failed("No priced minifigures were found. Try a brighter photo with up to \(limit) figures separated and facing forward.")
+                phase = .failed("No priced minifigures were found. Try a brighter photo with the figures separated and facing forward.")
                 return
             }
             monetization?.recordSuccessfulBulk(serverUsage: response.usage)

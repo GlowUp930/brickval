@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
       mergedRegions = mergeBulkRegionProposals(
         regions,
         proposals,
-        scanSource === "photoLibrary" ? 40 : 10,
+        Number.MAX_SAFE_INTEGER,
       );
     } catch (error) {
       // Cloud proposal assistance is optional. The local detector remains the

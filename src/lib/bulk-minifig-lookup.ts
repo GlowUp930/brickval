@@ -26,7 +26,7 @@ async function lookupOneMinifig(figNumber: string): Promise<BulkMinifigLookupRow
 export async function lookupBulkMinifigures(
   identifiers: unknown[],
   concurrency = 5,
-  limit = 40
+  limit = Number.MAX_SAFE_INTEGER
 ): Promise<BulkMinifigLookupRow[]> {
   const figNumbers = sanitizeBulkMinifigNumbers(identifiers, limit);
   const rows: BulkMinifigLookupRow[] = [];

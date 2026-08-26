@@ -83,7 +83,7 @@ struct ScannerView: View {
                         if ![.capturing, .identifying].contains(store.phase) {
                             if store.intent == .bulk {
                                 BulkFocusOverlay(
-                                    regions: store.observations.prefix(10).enumerated().map { index, observation in
+                                    regions: store.observations.enumerated().map { index, observation in
                                         BulkFocusRegion(
                                             id: observation.id,
                                             box: observation.boundingBox,
@@ -479,7 +479,7 @@ private struct ScanTipsCallout: View {
             )
             tipRow(
                 "square.stack.3d.up",
-                title: "Bulk · up to 10 figures",
+                title: "Bulk · frame your figures",
                 detail: "Place front-facing figures apart from each other, then tap the shutter. Boxes help confirm they are visible."
             )
 

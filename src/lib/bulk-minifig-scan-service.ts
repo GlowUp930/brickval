@@ -57,7 +57,7 @@ export async function runBulkMinifigScan(
   const imageHeight = source.bitmap.height;
   const guided = options.guided !== false;
   const scanSource = options.source ?? "camera";
-  const regionLimit = scanSource === "photoLibrary" ? 40 : 10;
+  const regionLimit = Number.MAX_SAFE_INTEGER;
   const perRegionCrops = guided && regions.length
     ? planPerRegionRecognitionCrops(regions, regionLimit)
     : [];

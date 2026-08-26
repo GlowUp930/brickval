@@ -70,8 +70,7 @@ extension BrickValAPIClient {
                 var form = MultipartFormData()
                 form.append(name: "image", filename: "bulk-scan.jpg", contentType: "image/jpeg", fileData: imageData)
                 let encoder = JSONEncoder()
-                let regionLimit = source == .photoLibrary ? 40 : 10
-                let regionData = try encoder.encode(Array(regions.prefix(regionLimit)))
+                let regionData = try encoder.encode(regions)
                 guard let regionJSON = String(data: regionData, encoding: .utf8) else {
                     throw APIError(endpoint: "bulk minifig scan", statusCode: 0, serverMessage: "The scan regions could not be prepared.")
                 }
@@ -98,7 +97,7 @@ extension BrickValAPIClient {
                 var form = MultipartFormData()
                 form.append(name: "image", filename: "bulk-scan.jpg", contentType: "image/jpeg", fileData: imageData)
                 let encoder = JSONEncoder()
-                let regionData = try encoder.encode(Array(regions.prefix(source == .photoLibrary ? 40 : 10)))
+                let regionData = try encoder.encode(regions)
                 guard let regionJSON = String(data: regionData, encoding: .utf8) else {
                     throw APIError(endpoint: "bulk minifig scan start", statusCode: 0, serverMessage: "The scan regions could not be prepared.")
                 }
@@ -200,7 +199,7 @@ extension BrickValAPIClient {
             bulkLookupMinifigures: { identifiers, source in
                 let body = try JSONEncoder().encode(BulkMinifigLookupRequest(
                     mode: "minifig",
-                    figNumbers: Array(identifiers.prefix(40)),
+                    figNumbers: identifiers,
                     source: source.rawValue
                 ))
                 let request = try await request(

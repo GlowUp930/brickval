@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No set numbers provided" }, { status: 400 });
   }
 
-  // Sanitize sets independently; minifigure pricing supports up to 40 unique IDs.
+  // Sanitize sets independently; minifigure pricing follows the detected regions.
   const seen = new Set<string>();
   const rawSetNumbers = Array.isArray(body.setNumbers) ? body.setNumbers : [];
   const setNumbers: string[] = rawSetNumbers

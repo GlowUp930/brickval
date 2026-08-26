@@ -120,7 +120,6 @@ actor CoreMLMinifigureDetector: MinifigureDetecting, BulkFrameDetecting, BulkPho
         }
 
         let merged = mergeBulkPhotoObservations(observations)
-            .prefix(max(0, limit))
             .enumerated()
             .map { index, observation in
                 BulkScanRegion(

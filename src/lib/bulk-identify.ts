@@ -1,9 +1,11 @@
 import type { NonSetDetection } from "./identify-nonset";
 
 export const MAX_GUIDED_BULK_IMAGES = 4;
-export const MAX_CAMERA_BULK_REGIONS = 10;
-export const MAX_LIBRARY_BULK_REGIONS = 40;
-export const MAX_GUIDED_BULK_REGIONS = MAX_LIBRARY_BULK_REGIONS;
+// Region count is determined by the detector. Keep guided image/crop budgets
+// separate because they protect upstream request volume, not result count.
+export const MAX_CAMERA_BULK_REGIONS = Number.MAX_SAFE_INTEGER;
+export const MAX_LIBRARY_BULK_REGIONS = Number.MAX_SAFE_INTEGER;
+export const MAX_GUIDED_BULK_REGIONS = Number.MAX_SAFE_INTEGER;
 export const MAX_GUIDED_REGIONS_PER_IMAGE = 10;
 export const MAX_GUIDED_BULK_CROPS = 8;
 export const MAX_GUIDED_REGIONS_PER_CROP = 5;
@@ -86,7 +88,7 @@ export function parseBulkRegionManifest(value: unknown): BulkRegionManifest | nu
 
 export function parseBulkRegions(
   value: unknown,
-  maxRegions = MAX_CAMERA_BULK_REGIONS
+  maxRegions = Number.MAX_SAFE_INTEGER
 ): BulkManifestRegion[] | null {
   if (typeof value !== "string") return null;
   let raw: unknown;
@@ -148,7 +150,7 @@ export function planGuidedBulkCrops(
     });
   if (!validRegions.length) return fallbackQuadrants();
 
-  const maxCrops = maxRegions > MAX_CAMERA_BULK_REGIONS ? MAX_GUIDED_BULK_CROPS : MAX_GUIDED_BULK_IMAGES;
+  const maxCrops = MAX_GUIDED_BULK_CROPS;
   const groupCount = Math.min(maxCrops, Math.ceil(validRegions.length / MAX_GUIDED_REGIONS_PER_CROP));
   const groupSize = Math.ceil(validRegions.length / groupCount);
   const groups = Array.from(
@@ -168,7 +170,7 @@ export function planGuidedBulkCrops(
  */
 export function planPerRegionRecognitionCrops(
   regions: BulkManifestRegion[],
-  maxRegions = MAX_CAMERA_BULK_REGIONS,
+  maxRegions = Number.MAX_SAFE_INTEGER,
   contextRatio = 0.25
 ): GuidedBulkCrop[] {
   return regions
@@ -207,7 +209,7 @@ export function planPhotoLibraryFallbackCrops(): NormalizedRegionBox[] {
 
 export function mergeBulkDetections(
   detections: NonSetDetection[],
-  maxRegions = MAX_CAMERA_BULK_REGIONS
+  maxRegions = Number.MAX_SAFE_INTEGER
 ): NonSetDetection[] {
   const kept: NonSetDetection[] = [];
   for (const candidate of [...detections].sort((a, b) => {
