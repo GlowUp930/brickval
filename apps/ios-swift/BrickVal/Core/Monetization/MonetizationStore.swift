@@ -13,6 +13,8 @@ final class MonetizationStore {
     private(set) var firstSuccessfulSingleScanAt: Date?
     private(set) var minimumSupportedBuild: Int?
     private(set) var appUpdateURL: URL?
+    private(set) var referralStatus: ReferralStatus?
+    private(set) var hasGrandfatheredBulkCredit: Bool
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let now: @Sendable () -> Date
@@ -42,6 +44,13 @@ final class MonetizationStore {
         experimentSeed = defaults.object(forKey: Keys.experimentSeed) as? Int
         successfulSingleScanCount = defaults.integer(forKey: Keys.successfulSingleScanCount)
         firstSuccessfulSingleScanAt = defaults.object(forKey: Keys.firstSuccessfulSingleScanAt) as? Date
+        referralStatus = nil
+        if defaults.object(forKey: Keys.bulkIntroGrandfathered) != nil {
+            hasGrandfatheredBulkCredit = defaults.bool(forKey: Keys.bulkIntroGrandfathered)
+        } else {
+            hasGrandfatheredBulkCredit = defaults.bool(forKey: Keys.onboardingCompleted)
+            defaults.set(hasGrandfatheredBulkCredit, forKey: Keys.bulkIntroGrandfathered)
+        }
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-showHardAccessDemo") {
             accessCohort = .hardTrial
@@ -66,6 +75,8 @@ final class MonetizationStore {
 
     func protectExistingUserIfNeeded(hasCompletedOnboarding: Bool) {
         guard accessCohort == nil, hasCompletedOnboarding else { return }
+        hasGrandfatheredBulkCredit = true
+        defaults.set(true, forKey: Keys.bulkIntroGrandfathered)
         setAccessCohort(.legacySoft)
     }
 
@@ -78,7 +89,10 @@ final class MonetizationStore {
         let cohort: MonetizationAccessCohort = experiment.enabled && roll < experiment.hardPaywallPercent
             ? .hardTrial
             : .experimentSoft
+        hasGrandfatheredBulkCredit = false
+        defaults.set(false, forKey: Keys.bulkIntroGrandfathered)
         setAccessCohort(cohort)
+        applyGuestUsage()
     }
 
     func requiresProForApp(isPro: Bool) -> Bool {
@@ -87,7 +101,8 @@ final class MonetizationStore {
             return !isPro
         }
 #endif
-        return policy.effectiveAccessExperiment.enabled && accessCohort == .hardTrial && !isPro
+        let hasReferralCredits = (referralStatus?.bulkCreditsRemaining ?? 0) > 0
+        return policy.effectiveAccessExperiment.enabled && accessCohort == .hardTrial && !isPro && !hasReferralCredits
     }
 
     func requiresProForScanning(isPro: Bool) -> Bool {
@@ -113,6 +128,9 @@ final class MonetizationStore {
     func refresh(using api: BrickValAPIClient, signedIn: Bool) async {
         isSignedIn = signedIn
         do {
+            if signedIn && hasGrandfatheredBulkCredit && usage.bulkScan.remaining > 0 {
+                _ = try? await api.syncLegacyBulkCredit(InstallationIdentity.current())
+            }
             let status = try await api.monetizationStatus()
             let currentPolicy = Self.currentPolicy(from: status.policy)
             policy = currentPolicy
@@ -122,8 +140,10 @@ final class MonetizationStore {
             if signedIn {
                 usage = status.usage
                 save(status.usage, forKey: Keys.serverUsage)
+                referralStatus = try? await api.referralStatus()
             } else {
                 applyGuestUsage()
+                referralStatus = nil
             }
         } catch {
             if !signedIn { applyGuestUsage() }
@@ -133,7 +153,10 @@ final class MonetizationStore {
     func configure(signedIn: Bool) {
         guard isSignedIn != signedIn else { return }
         isSignedIn = signedIn
-        if !signedIn { applyGuestUsage() }
+        if !signedIn {
+            applyGuestUsage()
+            referralStatus = nil
+        }
     }
 
     func recordSuccessfulSingle(serverUsage: UsageSnapshot?) {
@@ -168,8 +191,22 @@ final class MonetizationStore {
         apply(snapshot)
     }
 
+    func applyReferralStatus(_ status: ReferralStatus) {
+        referralStatus = status
+    }
+
     func canUseBulk(isPro: Bool) -> Bool {
-        !policy.gates.bulkRepeat || isPro || usage.bulkScan.remaining > 0
+        !policy.gates.bulkRepeat || isPro || usage.bulkScan.remaining > 0 ||
+            (referralStatus?.bulkCreditsRemaining ?? 0) > 0 || shouldUseLockedBulkPreview(isPro: isPro)
+    }
+
+    func shouldUseLockedBulkPreview(isPro: Bool) -> Bool {
+        policy.lockedBulkPreview &&
+            accessCohort == .experimentSoft &&
+            !isPro &&
+            !hasGrandfatheredBulkCredit &&
+            (referralStatus?.bulkCreditsRemaining ?? 0) == 0 &&
+            usage.bulkScan.remaining == 0
     }
 
     func canUseSingle(isPro: Bool) -> Bool {
@@ -197,6 +234,9 @@ final class MonetizationStore {
         resetGuestSingleIfNeeded()
         let singleUsed = defaults.integer(forKey: Keys.guestSingleUsed)
         let bulkUsed = defaults.integer(forKey: Keys.guestBulkUsed)
+        let bulkLimit = hasGrandfatheredBulkCredit || accessCohort != .experimentSoft
+            ? policy.limits.introductoryBulkScans
+            : 0
         usage = UsageSnapshot(
             isPro: false,
             singleScan: counter(
@@ -206,7 +246,7 @@ final class MonetizationStore {
             ),
             bulkScan: counter(
                 used: bulkUsed,
-                limit: policy.limits.introductoryBulkScans,
+                limit: bulkLimit,
                 resetsAt: nil
             )
         )
@@ -286,5 +326,6 @@ final class MonetizationStore {
         static let softAccessIntroPresented = "brickvalue_soft_access_intro_presented"
         static let successfulSingleScanCount = "brickvalue_successful_single_scan_count"
         static let firstSuccessfulSingleScanAt = "brickvalue_first_successful_single_scan_at"
+        static let bulkIntroGrandfathered = "brickvalue_bulk_intro_grandfathered"
     }
 }

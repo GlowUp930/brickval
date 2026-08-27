@@ -105,6 +105,110 @@ struct ScanStoreLifecycleTests {
     }
 
     @Test @MainActor
+    func importedPhotoCapsRegionsBeforeStartingBulkSession() async throws {
+        let detectedRegions = (0..<61).map { index in
+            BulkScanRegion(
+                regionId: "photo-\(index + 1)",
+                boundingBox: NormalizedBoundingBox(
+                    x: Double(index % 10) * 0.08,
+                    y: Double(index / 10) * 0.12,
+                    width: 0.06,
+                    height: 0.08
+                )
+            )
+        }
+        var api = BrickValAPIClient.successfulLookupStub
+        api.startBulkScan = { _, regions, source in
+            #expect(source == .photoLibrary)
+            #expect(regions.count == 60)
+            return BulkScanStartPayload(
+                scanSource: source,
+                regions: regions,
+                sessionToken: "photo-library-session",
+                recoveryToken: nil,
+                proposalSource: "test"
+            )
+        }
+        api.identifyBulkRegion = { _, _, _ in
+            throw ScanStoreLifecycleTestError.unusedEndpoint
+        }
+
+        let store = ScanStore(
+            api: api,
+            bulkPhotoDetector: StubBulkPhotoDetector(regions: detectedRegions)
+        )
+        store.intent = .bulk
+
+        await store.importBulkPhoto(try recoveryImageData())
+
+        #expect(store.phase == .review)
+        #expect(store.presentedBulkResults?.regions.count == 60)
+    }
+
+    @Test @MainActor
+    func newSoftPhotoPreviewDoesNotCallBulkBackend() async throws {
+        let suite = "ScanStoreLifecycleTests.lockedPreview.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let monetization = MonetizationStore(
+            defaults: defaults,
+            initialPolicy: MonetizationPolicy(
+                version: 5,
+                accessExperiment: .init(enabled: false, hardPaywallPercent: 50, trialDays: 7),
+                gates: .init(
+                    singleDaily: true,
+                    bulkRepeat: true,
+                    collectionCapacity: true,
+                    marketHistory: false,
+                    appearance: true,
+                    offerCodes: true
+                ),
+                limits: .init(
+                    singleScansPerDay: 3,
+                    introductoryBulkScans: 1,
+                    collectionUniqueItems: 10
+                ),
+                lockedBulkPreview: true,
+                notifications: .init(enabled: true, scanReset: true, trialEnding: true, accountAction: true)
+            )
+        )
+        monetization.enrollNewUserIfNeeded(seed: 50)
+        let probe = BackendCallProbe()
+        var api = BrickValAPIClient.successfulLookupStub
+        api.startBulkScan = { _, _, _ in
+            await probe.record()
+            throw ScanStoreLifecycleTestError.unusedEndpoint
+        }
+        api.identifyBulkRegion = { _, _, _ in
+            await probe.record()
+            throw ScanStoreLifecycleTestError.unusedEndpoint
+        }
+        api.scanBulkMinifigures = { _, _, _ in
+            await probe.record()
+            throw ScanStoreLifecycleTestError.unusedEndpoint
+        }
+
+        let regions = [BulkScanRegion(
+            regionId: "preview-1",
+            boundingBox: NormalizedBoundingBox(x: 0.2, y: 0.2, width: 0.3, height: 0.5)
+        )]
+        let store = ScanStore(
+            api: api,
+            bulkPhotoDetector: StubBulkPhotoDetector(regions: regions)
+        )
+        store.configureMonetization(monetization, isPro: false)
+        store.intent = .bulk
+
+        await store.importBulkPhoto(try recoveryImageData())
+
+        let presentation = try #require(store.presentedBulkResults)
+        #expect(presentation.accessMode == .lockedPreview)
+        #expect(presentation.regions.count == regions.count)
+        #expect(await probe.value() == 0)
+    }
+
+    @Test @MainActor
     func lowConfidenceBulkMatchUsesBestPricedCandidateWithoutReview() async throws {
         var api = BrickValAPIClient.successfulLookupStub
         api.startBulkScan = { _, regions, source in
@@ -527,6 +631,16 @@ private actor RecoveryConcurrencyProbe {
     }
 
     func maximumInFlight() -> Int { maximum }
+}
+
+private actor BackendCallProbe {
+    private var count = 0
+
+    func record() {
+        count += 1
+    }
+
+    func value() -> Int { count }
 }
 
 private struct StubBulkPhotoDetector: BulkPhotoDetecting {

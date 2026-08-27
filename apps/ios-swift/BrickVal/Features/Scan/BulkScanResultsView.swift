@@ -83,6 +83,8 @@ struct BulkScanResultsView: View {
     @State private var didPlayRevealSound = false
     @State private var revealHapticTrigger = 0
     @State private var sharePayload: BulkSharePayload?
+    @State private var isPreviewOfferVisible = false
+    @State private var showReferral = false
 
     private let capturedImage: UIImage?
     private let canvas = BrickValStyle.ScanResult.canvas
@@ -111,16 +113,21 @@ struct BulkScanResultsView: View {
         ZStack {
             canvas.ignoresSafeArea()
 
-            reviewLayout
-                .opacity(isImmersiveReveal ? 0 : 1)
-                .allowsHitTesting(!isImmersiveReveal && reviewInteractionReady)
-                .accessibilityHidden(isImmersiveReveal || !reviewInteractionReady)
-                .zIndex(0)
-
-            if isImmersiveReveal {
-                immersiveRevealStage
-                    .transition(.opacity)
+            if presentation.accessMode == .lockedPreview {
+                lockedPreviewLayout
                     .zIndex(1)
+            } else {
+                reviewLayout
+                    .opacity(isImmersiveReveal ? 0 : 1)
+                    .allowsHitTesting(!isImmersiveReveal && reviewInteractionReady)
+                    .accessibilityHidden(isImmersiveReveal || !reviewInteractionReady)
+                    .zIndex(0)
+
+                if isImmersiveReveal {
+                    immersiveRevealStage
+                        .transition(.opacity)
+                        .zIndex(1)
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -136,6 +143,7 @@ struct BulkScanResultsView: View {
             await runRevealProgressively()
         }
         .task(id: presentation.id) {
+            guard presentation.accessMode == .real else { return }
             await store.processBulkPresentation(presentation)
         }
         .onChange(of: presentation.revision) { _, _ in
@@ -161,6 +169,21 @@ struct BulkScanResultsView: View {
         }
         .sheet(item: $sharePayload) { payload in
             BulkSharePreviewView(payload: payload)
+        }
+        .sheet(isPresented: $showReferral) {
+            NavigationStack {
+                ReferralView()
+            }
+        }
+        .onChange(of: entitlements.isPro) { _, isPro in
+            guard presentation.accessMode == .lockedPreview, isPro else { return }
+            dismissPreviewForRescan()
+        }
+        .onChange(of: monetization.referralStatus) { _, status in
+            guard presentation.accessMode == .lockedPreview,
+                  (status?.bulkCreditsRemaining ?? 0) > 0
+            else { return }
+            dismissPreviewForRescan()
         }
         .alert("Could not add items", isPresented: errorBinding) {
             Button("OK", role: .cancel) { errorMessage = nil }
@@ -210,6 +233,86 @@ struct BulkScanResultsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.black)
+    }
+
+    private var lockedPreviewLayout: some View {
+        ZStack(alignment: .topTrailing) {
+            photoResults(immersive: true)
+
+            Button("Close", systemImage: "xmark", action: close)
+                .labelStyle(.iconOnly)
+                .font(.title3.bold())
+                .foregroundStyle(.white)
+                .frame(width: 46, height: 46)
+                .background(BrickValStyle.ScanResult.surface.opacity(0.88), in: .circle)
+                .overlay { Circle().stroke(BrickValStyle.ScanResult.border) }
+                .padding(.top, 8)
+                .padding(.trailing, 12)
+                .safeAreaPadding(.top, 8)
+                .disabled(isSaving)
+                .accessibilityHint("Closes this preview without saving the photo")
+
+            if isPreviewOfferVisible {
+                VStack {
+                    Spacer()
+                    lockedPreviewOffer
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.black)
+        .accessibilityIdentifier("bulkPreview.locked")
+    }
+
+    private var lockedPreviewOffer: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("\(presentation.regions.count) figures detected. Unlock identification and prices.")
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.white)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                coordinator?.analytics.capture(PostHogEvent.bulkPreviewSubscribeTapped)
+                let presented = coordinator?.presentProFeature(
+                    placement: .bulkScanAttempt,
+                    params: ["source": "locked_bulk_preview"]
+                ) {
+                    dismissPreviewForRescan()
+                } ?? false
+                if !presented {
+                    errorMessage = "Upgrade options are temporarily unavailable. Try again shortly."
+                }
+            } label: {
+                Text("Subscribe to unlock")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(accent, in: .capsule)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the BrickVal Pro subscription paywall")
+
+            Button {
+                coordinator?.analytics.capture(PostHogEvent.bulkPreviewReferralTapped)
+                showReferral = true
+            } label: {
+                Label("Invite 3 friends", systemImage: "person.2")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.bordered)
+            .tint(.white)
+        }
+        .padding(16)
+        .background(.ultraThinMaterial, in: .rect(cornerRadius: 18))
+        .overlay { RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.18)) }
+        .padding(.horizontal, 16)
+        .safeAreaPadding(.bottom, 18)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("bulkPreview.unlockOffer")
     }
 
     @ViewBuilder
@@ -286,7 +389,11 @@ struct BulkScanResultsView: View {
                         .resizable()
                         .frame(width: imageRect.width, height: imageRect.height)
                         .position(x: imageRect.midX, y: imageRect.midY)
-                        .accessibilityLabel("Bulk scan photo with \(itemStates.count) identified minifigures")
+                        .accessibilityLabel(
+                            presentation.accessMode == .lockedPreview
+                                ? "Bulk scan photo with \(presentation.regions.count) detected minifigures; identification and prices are locked"
+                                : "Bulk scan photo with \(itemStates.count) identified minifigures"
+                        )
 
                     if !showsAnalysis {
                         EmptyView()
@@ -295,6 +402,15 @@ struct BulkScanResultsView: View {
                             EmptyView()
                         } else if presentationPhase == .completedReview {
                             completedDetectionOverlays(imageRect: imageRect)
+                        } else if presentation.accessMode == .lockedPreview {
+                            BulkFocusOverlay(
+                                regions: revealFocusRegions,
+                                imageRect: imageRect,
+                                containerSize: proxy.size,
+                                accent: accent,
+                                isScanning: revealStage == .scanning,
+                                beamProgress: revealBeamProgress
+                            )
                         } else {
                             BulkFocusOverlay(
                                 regions: revealFocusRegions,
@@ -307,7 +423,9 @@ struct BulkScanResultsView: View {
                             )
                         }
 
-                        if presentationPhase == .completedReview {
+                        if presentation.accessMode == .lockedPreview {
+                            EmptyView()
+                        } else if presentationPhase == .completedReview {
                             ZStack {
                                 completedMatchHitTargets(
                                     imageRect: imageRect,
@@ -656,6 +774,11 @@ struct BulkScanResultsView: View {
             let state: BulkFocusState
             if revealStage == .scanning {
                 state = reduceMotion ? .scanned : .pending
+            } else if entry.isPreviewOnly {
+                state = revealSession.revealedCount > entry.spatialNumber - 1 ||
+                    revealSession.currentEntry?.id == entry.id
+                    ? .preview
+                    : .scanned
             } else if revealStage == .jackpot, entry.id == jackpotTopFindID {
                 state = .topFind
             } else if entry.isUnresolved && revealSession.revealedCount > entry.spatialNumber - 1 {
@@ -685,7 +808,8 @@ struct BulkScanResultsView: View {
     }
 
     private var revealCallout: BulkFocusCallout? {
-        guard presentationPhase != .completedReview,
+        guard presentation.accessMode == .real,
+              presentationPhase != .completedReview,
               revealStage == .waiting || revealStage == .presentingValue || revealStage == .transferringValue,
               let entry = revealSession.currentEntry,
               let box = entry.boundingBox
@@ -708,7 +832,12 @@ struct BulkScanResultsView: View {
 
     private var revealStatusTitle: String? {
         if revealStage == .scanning {
-            return "Scanning your lot"
+            return presentation.accessMode == .lockedPreview
+                ? "\(presentation.regions.count) figures found"
+                : "Scanning your lot"
+        }
+        if presentation.accessMode == .lockedPreview {
+            return isPreviewOfferVisible ? nil : "Preparing your preview"
         }
         guard let entry = revealSession.currentEntry else { return nil }
         if revealStage == .waiting || !entry.isTerminal {
@@ -738,6 +867,7 @@ struct BulkScanResultsView: View {
         totalUpdateKey = nil
         revealStage = .scanning
         presentationPhase = .compactIntro
+        isPreviewOfferVisible = false
 
         do {
             try await Task.sleep(for: .milliseconds(reduceMotion ? 80 : 160))
@@ -751,8 +881,21 @@ struct BulkScanResultsView: View {
                 )
             )
             guard !Task.isCancelled else { return }
-            revealSession.begin()
+            if presentation.accessMode == .lockedPreview {
+                revealSession.beginPreview()
+            } else {
+                revealSession.begin()
+            }
             guard !revealSession.isComplete else {
+                if presentation.accessMode == .lockedPreview {
+                    revealStage = .completed
+                    isPreviewOfferVisible = true
+                    coordinator?.analytics.capture(
+                        PostHogEvent.bulkPreviewCompleted,
+                        properties: ["detected_count": presentation.regions.count]
+                    )
+                    return
+                }
                 jackpotTotal = 0
                 revealStage = .jackpot
                 finishReveal()
@@ -769,6 +912,29 @@ struct BulkScanResultsView: View {
                 )
             )
             guard !Task.isCancelled else { return }
+
+            if presentation.accessMode == .lockedPreview {
+                revealStage = .presentingValue
+                while !revealSession.isComplete {
+                    guard !Task.isCancelled else { return }
+                    revealSession.commitSweepStep()
+                    if !reduceMotion {
+                        try await Task.sleep(for: .milliseconds(70))
+                    } else {
+                        await Task.yield()
+                    }
+                }
+                guard !Task.isCancelled else { return }
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.24)) {
+                    revealStage = .completed
+                    isPreviewOfferVisible = true
+                }
+                coordinator?.analytics.capture(
+                    PostHogEvent.bulkPreviewCompleted,
+                    properties: ["detected_count": presentation.regions.count]
+                )
+                return
+            }
 
             while !revealSession.isComplete {
                 guard !Task.isCancelled else { return }
@@ -962,6 +1128,13 @@ struct BulkScanResultsView: View {
                     freeLimit: monetization.collectionLimit
                 )
                 store.completeBulkSave(count: collectionItems.count)
+                coordinator?.analytics.capture(
+                    PostHogEvent.itemsAddedToCollection,
+                    properties: [
+                        "item_count": collectionItems.count,
+                        "scan_type": ScanIntent.bulk.rawValue,
+                    ]
+                )
                 dismiss()
             } catch is CollectionStoreError {
                 let presented = coordinator?.presentProFeature(
@@ -984,6 +1157,13 @@ struct BulkScanResultsView: View {
 
     private func close() {
         correctionRequestID += 1
+        store.reset()
+        dismiss()
+    }
+
+    private func dismissPreviewForRescan() {
+        guard presentation.accessMode == .lockedPreview else { return }
+        coordinator?.analytics.capture(PostHogEvent.bulkPreviewRescanRequired)
         store.reset()
         dismiss()
     }

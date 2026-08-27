@@ -9,6 +9,7 @@ const keys = [
   "BRICKVALUE_COLLECTION_GATE_ENABLED",
   "BRICKVALUE_MARKET_HISTORY_GATE_ENABLED",
   "BRICKVALUE_OFFER_CODES_ENABLED",
+  "BRICKVALUE_LOCKED_BULK_PREVIEW_ENABLED",
   "BRICKVALUE_FREE_SINGLE_SCANS_PER_DAY",
   "BRICKVALUE_FREE_BULK_SCANS",
   "BRICKVALUE_FREE_COLLECTION_ITEMS",
@@ -33,13 +34,14 @@ function withCleanEnvironment(action: () => void) {
 test("current defaults gate daily scans, repeat bulk, and ten unique collection items", () => {
   withCleanEnvironment(() => {
     const policy = getMonetizationPolicy();
-    assert.equal(policy.version, 4);
+    assert.equal(policy.version, 5);
     assert.equal(policy.gates.singleDaily, true);
     assert.equal(policy.gates.bulkRepeat, true);
     assert.equal(policy.gates.collectionCapacity, true);
     assert.equal(policy.gates.marketHistory, false);
     assert.equal(policy.gates.appearance, true);
     assert.equal(policy.gates.offerCodes, true);
+    assert.equal(policy.lockedBulkPreview, false);
     assert.equal(policy.limits.singleScansPerDay, 3);
     assert.equal(policy.limits.introductoryBulkScans, 1);
     assert.equal(policy.limits.collectionUniqueItems, 10);
@@ -53,6 +55,14 @@ test("offer code redemption follows its remote kill switch", () => {
     process.env.BRICKVALUE_OFFER_CODES_ENABLED = "false";
     const policy = getMonetizationPolicy();
     assert.equal(policy.gates.offerCodes, false);
+  });
+});
+
+test("locked bulk previews follow their remote kill switch", () => {
+  withCleanEnvironment(() => {
+    process.env.BRICKVALUE_LOCKED_BULK_PREVIEW_ENABLED = "false";
+    const policy = getMonetizationPolicy();
+    assert.equal(policy.lockedBulkPreview, false);
   });
 });
 

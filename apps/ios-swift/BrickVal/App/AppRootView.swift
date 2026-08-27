@@ -7,6 +7,8 @@ struct AppRootView: View {
     @Environment(EntitlementStore.self) private var entitlements
     @Environment(MonetizationStore.self) private var monetization
     @Environment(\.appSDKCoordinator) private var coordinator
+    @Environment(\.brickValAPIClient) private var api
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var migration = LegacyExpoMigration()
     @State private var isReady = false
@@ -48,6 +50,23 @@ struct AppRootView: View {
         }
         .task {
             await prepare()
+        }
+        .task(id: "\(scenePhase)-\(coordinator?.clerk?.user?.id ?? "signed-out")-\(preferences.referralOnboardingCompletionPending)") {
+            guard scenePhase == .active,
+                  preferences.referralOnboardingCompletionPending,
+                  coordinator?.clerk?.user != nil
+            else { return }
+            do {
+                let response = try await api.completeReferralOnboarding()
+                preferences.referralOnboardingCompletionPending = false
+                monetization.applyReferralStatus(response.referral)
+                coordinator?.analytics.capture(
+                    PostHogEvent.referralOnboardingCompleted,
+                    properties: ["qualified": response.qualified, "reward_granted": response.rewardGranted]
+                )
+            } catch {
+                // Keep the flag set so a later app activation retries the acknowledgement.
+            }
         }
         .alert("Data migration needs another try", isPresented: migrationErrorBinding) {
             Button("Retry") { Task { await migrate() } }

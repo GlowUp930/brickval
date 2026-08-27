@@ -56,6 +56,7 @@ final class ScanStore {
     @ObservationIgnored private let bulkPhotoDetector: any BulkPhotoDetecting
     @ObservationIgnored private let soundEffects: SoundEffectPlayer
     @ObservationIgnored private let errorReporter: any AppErrorReporting
+    @ObservationIgnored private var analytics: PostHogAnalytics?
     @ObservationIgnored private var monetization: MonetizationStore?
     @ObservationIgnored private var isProSubscriber = false
     @ObservationIgnored private var frozenBulkRegions: [BulkScanRegion] = []
@@ -139,6 +140,10 @@ final class ScanStore {
         isProSubscriber = isPro
     }
 
+    func configureAnalytics(_ analytics: PostHogAnalytics?) {
+        self.analytics = analytics
+    }
+
     func updateProStatus(_ isPro: Bool) {
         isProSubscriber = isPro
     }
@@ -211,8 +216,20 @@ final class ScanStore {
         guard phase.allowsLiveDetection else { return }
         guard canBeginCurrentScan else {
             proLimitFeature = intent == .bulk ? .bulkScan : .singleScan
+            analytics?.capture(
+                PostHogEvent.scanBlocked,
+                properties: ["scan_type": intent.rawValue, "source": "camera"]
+            )
             return
         }
+        analytics?.capture(
+            PostHogEvent.scanStarted,
+            properties: [
+                "scan_type": intent.rawValue,
+                "source": "camera",
+                "capture_mode": "manual",
+            ]
+        )
         do {
             phase = .capturing
             let captureStartedAt = Date.now
@@ -245,10 +262,26 @@ final class ScanStore {
         guard canBeginCurrentScan else {
             phase = .failed("You've used all available bulk scans. Upgrade to continue.")
             proLimitFeature = .bulkScan
+            analytics?.capture(
+                PostHogEvent.scanBlocked,
+                properties: ["scan_type": ScanIntent.bulk.rawValue, "source": "photo_library"]
+            )
             return
         }
+        analytics?.capture(
+            PostHogEvent.scanStarted,
+            properties: [
+                "scan_type": ScanIntent.bulk.rawValue,
+                "source": "photo_library",
+                "capture_mode": "import",
+            ]
+        )
         guard let data else {
             phase = .failed("We couldn't read that photo. Choose another image and try again.")
+            analytics?.capture(
+                PostHogEvent.scanFailed,
+                properties: ["scan_type": ScanIntent.bulk.rawValue, "source": "photo_library"]
+            )
             return
         }
 
@@ -259,7 +292,7 @@ final class ScanStore {
             frozenBulkSource = .photoLibrary
             let detection = try await bulkPhotoDetector.detectBulkRegions(
                 in: data,
-                limit: .max
+                limit: BulkScanSource.maximumRegionCount
             )
             frozenBulkRegions = detection.regions
             bulkProcessingRegions = detection.regions.map(\.boundingBox)
@@ -283,6 +316,10 @@ final class ScanStore {
     func importBulkPhotoLoadFailed() async {
         guard intent == .bulk else { return }
         phase = .failed("We couldn't load that photo. Check your Photos permission and choose another image.")
+        analytics?.capture(
+            PostHogEvent.scanFailed,
+            properties: ["scan_type": ScanIntent.bulk.rawValue, "source": "photo_library"]
+        )
     }
 
     func retryBulkScan() async {
@@ -313,11 +350,19 @@ final class ScanStore {
     }
 
     func manualLookup(identifier: String, type: ItemType, colorID: Int?) async throws {
+        analytics?.capture(
+            PostHogEvent.manualLookupStarted,
+            properties: ["item_type": type.rawValue]
+        )
         phase = .identifying
         let result = try await api.lookup(identifier, type, colorID)
         phase = .result
         presentedSheet = .result(result)
         soundEffects.play(.cashRegister)
+        analytics?.capture(
+            PostHogEvent.manualLookupCompleted,
+            properties: ["item_type": type.rawValue]
+        )
     }
 
     func selectDetection(_ detection: IdentificationDetection) async {
@@ -331,6 +376,10 @@ final class ScanStore {
             phase = .result
             presentedSheet = .result(result)
             soundEffects.play(.cashRegister)
+            analytics?.capture(
+                PostHogEvent.scanCompleted,
+                properties: ["scan_type": intent.rawValue, "outcome": "matched"]
+            )
         } catch {
             phase = .failed(error.localizedDescription)
         }
@@ -355,6 +404,10 @@ final class ScanStore {
             phase = .result
             presentedSheet = .result(result)
             soundEffects.play(.cashRegister)
+            analytics?.capture(
+                PostHogEvent.scanCompleted,
+                properties: ["scan_type": intent.rawValue, "outcome": "matched"]
+            )
         } catch {
             phase = .failed(error.localizedDescription)
         }
@@ -502,7 +555,7 @@ final class ScanStore {
             if intent == .bulk {
                 guard phase == .searching else { return }
                 bulkDetectionTracker.ingest(batch.observations, at: frame.timestamp)
-                observations = bulkDetectionTracker.observations(for: frame.timestamp)
+                observations = Array(bulkDetectionTracker.observations(for: frame.timestamp).prefix(BulkScanSource.maximumRegionCount))
                 phase = .searching
                 return
             }
@@ -535,6 +588,14 @@ final class ScanStore {
             phase = .searching
             return
         }
+        analytics?.capture(
+            PostHogEvent.scanStarted,
+            properties: [
+                "scan_type": ScanIntent.single.rawValue,
+                "source": "camera",
+                "capture_mode": "automatic",
+            ]
+        )
         do {
             let captureStartedAt = Date.now
             let data = try await camera.jpegData(for: frame)
@@ -560,6 +621,55 @@ final class ScanStore {
         phase = .identifying
         frozenImageData = imageData
         if mode == .minifig, intent == .bulk {
+            if let monetization,
+               monetization.shouldUseLockedBulkPreview(isPro: isProSubscriber) {
+                var previewRegions = Array(bulkRegions.prefix(BulkScanSource.maximumRegionCount))
+                if previewRegions.isEmpty {
+                    let detection = try await bulkPhotoDetector.detectBulkRegions(
+                        in: imageData,
+                        limit: BulkScanSource.maximumRegionCount
+                    )
+                    previewRegions = Array(detection.regions.prefix(BulkScanSource.maximumRegionCount))
+                    detectorModelVersion = detection.modelVersion
+                    detectorDetectionMilliseconds = detection.inferenceMilliseconds
+                }
+                guard !previewRegions.isEmpty else {
+                    phase = .failed("No minifigures were found. Try a brighter photo with the figures separated and facing forward.")
+                    analytics?.capture(
+                        PostHogEvent.bulkPreviewCompleted,
+                        properties: [
+                            "source": bulkSource == .photoLibrary ? "photo_library" : "camera",
+                            "detected_count": 0,
+                            "outcome": "empty",
+                        ]
+                    )
+                    return
+                }
+
+                frozenBulkRegions = previewRegions
+                frozenBulkSource = bulkSource
+                bulkProcessingRegions = previewRegions.map(\.boundingBox)
+                bulkProcessingSource = bulkSource
+                bulkProcessingCompleted = 0
+                bulkProcessingTotal = previewRegions.count
+                phase = .review
+                presentedBulkResults = BulkScanPresentation(
+                    imageData: imageData,
+                    regions: previewRegions,
+                    recoveryToken: nil,
+                    source: bulkSource,
+                    accessMode: .lockedPreview
+                )
+                analytics?.capture(
+                    PostHogEvent.bulkPreviewStarted,
+                    properties: [
+                        "source": bulkSource == .photoLibrary ? "photo_library" : "camera",
+                        "detected_count": previewRegions.count,
+                    ]
+                )
+                return
+            }
+
             let image = try await imageProcessor.bulkScanImage(from: imageData)
 
             // New builds use the session contract when the local detector has
@@ -570,7 +680,7 @@ final class ScanStore {
                let startBulkScan = api.startBulkScan,
                api.identifyBulkRegion != nil {
                 let start = try await startBulkScan(image, bulkRegions, bulkSource)
-                let regions = start.regions
+                let regions = Array(start.regions.prefix(BulkScanSource.maximumRegionCount))
                 guard !regions.isEmpty else {
                     phase = .failed("No minifigures were found. Try a brighter photo with the figures separated and facing forward.")
                     return
@@ -588,6 +698,14 @@ final class ScanStore {
                     recoveryToken: start.recoveryToken,
                     source: bulkSource,
                     sessionToken: start.sessionToken
+                )
+                analytics?.capture(
+                    PostHogEvent.scanCompleted,
+                    properties: [
+                        "scan_type": ScanIntent.bulk.rawValue,
+                        "source": bulkSource == .photoLibrary ? "photo_library" : "camera",
+                        "outcome": "results_ready",
+                    ]
                 )
                 return
             }
@@ -613,6 +731,15 @@ final class ScanStore {
                 source: bulkSource
             )
             logBulkResult(response, startedAt: startedAt)
+            analytics?.capture(
+                PostHogEvent.scanCompleted,
+                properties: [
+                    "scan_type": ScanIntent.bulk.rawValue,
+                    "source": bulkSource == .photoLibrary ? "photo_library" : "camera",
+                    "outcome": "results_ready",
+                    "result_count": items.count,
+                ]
+            )
             return
         }
 
@@ -632,6 +759,10 @@ final class ScanStore {
                     brickognizeScore: identification.score,
                     startedAt: startedAt,
                     timings: timings
+                )
+                analytics?.capture(
+                    PostHogEvent.scanCompleted,
+                    properties: ["scan_type": ScanIntent.single.rawValue, "outcome": "matched"]
                 )
             case .review(let detections, let timings, let usage):
                 let candidates = ScanReviewCandidate.make(from: detections)
@@ -659,6 +790,10 @@ final class ScanStore {
                     brickognizeScore: detections.first?.score,
                     startedAt: startedAt,
                     timings: timings
+                )
+                analytics?.capture(
+                    PostHogEvent.scanCompleted,
+                    properties: ["scan_type": ScanIntent.single.rawValue, "outcome": "needs_review"]
                 )
             case .notFound(let timings):
                 phase = .failed("No minifigure match was found. Try a closer, brighter photo.")
@@ -690,12 +825,17 @@ final class ScanStore {
         phase = .result
         presentedSheet = .result(result)
         soundEffects.play(.cashRegister)
+        analytics?.capture(
+            PostHogEvent.scanCompleted,
+            properties: ["scan_type": intent.rawValue, "outcome": "matched"]
+        )
     }
 
     /// Resolves bulk regions in a bounded window while the results screen is visible.
     /// The view owns the task lifecycle, so dismissing the screen cancels this work.
     func processBulkPresentation(_ presentation: BulkScanPresentation) async {
-        guard presentedBulkResults?.id == presentation.id,
+        guard presentation.accessMode == .real,
+              presentedBulkResults?.id == presentation.id,
               let identifyBulkRegion = api.identifyBulkRegion,
               let sessionToken = presentation.sessionToken
         else { return }
@@ -791,6 +931,10 @@ final class ScanStore {
             presentation.terminalError = "We couldn't identify any figures. Try a brighter photo with the figures separated and facing forward."
         } else {
             monetization?.recordSuccessfulBulk(serverUsage: usage)
+            if monetization?.isSignedIn == true,
+               let referralStatus = try? await api.referralStatus() {
+                monetization?.applyReferralStatus(referralStatus)
+            }
         }
     }
 
@@ -851,12 +995,23 @@ final class ScanStore {
             monetization?.applyServerUsage(apiError.usage)
             proLimitFeature = apiError.feature
             phase = .failed(apiError.serverMessage ?? "You've reached the scan limit. Upgrade to continue.")
+            analytics?.capture(
+                PostHogEvent.scanBlocked,
+                properties: [
+                    "scan_type": intent.rawValue,
+                    "status_code": apiError.statusCode,
+                ]
+            )
             return
         }
 
         let statusCode = (error as? APIError)?.statusCode ?? 0
         reportScanError(error, statusCode: statusCode)
         phase = .failed(error.localizedDescription)
+        analytics?.capture(
+            PostHogEvent.scanFailed,
+            properties: ["scan_type": intent.rawValue, "status_code": statusCode]
+        )
     }
 
     private func reportScanError(_ error: Error, statusCode: Int) {

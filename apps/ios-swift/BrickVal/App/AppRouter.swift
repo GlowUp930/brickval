@@ -9,6 +9,7 @@ final class AppRouter {
     var collectionPath: [AppRoute] = []
     var scanPath: [AppRoute] = []
     var settingsPath: [AppRoute] = []
+    var pendingReferralCode: String?
 
     init() {
 #if DEBUG
@@ -27,14 +28,39 @@ final class AppRouter {
     }
 
     func handle(url: URL) {
-        guard url.scheme == "brickval" else { return }
-        switch url.host {
-        case "scan": selectedTab = .scan
-        case "collection": selectedTab = .collection
-        case "settings":
-            selectedTab = .settings
-            settingsPath = [.subscription]
-        default: break
+        if url.scheme == "brickval" {
+            switch url.host {
+            case "scan": selectedTab = .scan
+            case "collection": selectedTab = .collection
+            case "settings":
+                selectedTab = .settings
+                settingsPath = [.subscription]
+            case "referral":
+                guard url.pathComponents.count == 2 else { return }
+                let code = url.pathComponents[1].uppercased()
+                guard code.range(of: "^[A-Z0-9]{8}$", options: .regularExpression) != nil else { return }
+                pendingReferralCode = code
+                selectedTab = .settings
+                settingsPath = [.referral]
+            default: break
+            }
+            return
         }
+
+        guard url.scheme == "https",
+              (url.host == "brickvalue.live" || url.host == "www.brickvalue.live"),
+              url.pathComponents.count == 3,
+              url.pathComponents[1] == "r"
+        else { return }
+
+        let code = url.pathComponents[2].uppercased()
+        guard code.range(of: "^[A-Z0-9]{8}$", options: .regularExpression) != nil else { return }
+        pendingReferralCode = code
+        selectedTab = .settings
+        settingsPath = [.referral]
+    }
+
+    func clearPendingReferral() {
+        pendingReferralCode = nil
     }
 }

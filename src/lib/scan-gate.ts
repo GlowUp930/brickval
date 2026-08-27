@@ -1,4 +1,7 @@
+import { createHash } from "node:crypto";
+
 import { getMonetizationPolicy, type MonetizationPolicy } from "./monetization-policy";
+import { consumeReferralBulkCredit, hasReferralBulkCredit } from "./referrals";
 import { fetchRevenueCatProEntitlement } from "./revenuecat-entitlement";
 import { supabase } from "./supabase";
 
@@ -119,6 +122,19 @@ export async function refreshProEntitlement(
   return isPro;
 }
 
+export async function grandfatherBulkIntroductoryCredit(
+  userId: string,
+  installationID: string,
+): Promise<boolean> {
+  const installationHash = createHash("sha256").update(installationID).digest("hex");
+  const { data, error } = await supabase.rpc("claim_bulk_intro_grandfathering", {
+    p_user_id: userId,
+    p_installation_hash: installationHash,
+  });
+  if (error) throw error;
+  return data === true;
+}
+
 export async function getMonetizationStatus(
   userId: string | null,
   now = new Date()
@@ -129,10 +145,13 @@ export async function getMonetizationStatus(
   try {
     const { data: user } = await supabase
       .from("users")
-      .select("is_pro")
+      .select("is_pro, bulk_intro_grandfathered")
       .eq("id", userId)
       .maybeSingle();
     const isPro = Boolean(user?.is_pro);
+    const bulkLimit = user?.bulk_intro_grandfathered
+      ? policy.limits.introductoryBulkScans
+      : 0;
     const day = utcDay(now);
     const { data: rows, error } = await supabase
       .from("user_feature_usage")
@@ -153,7 +172,7 @@ export async function getMonetizationStatus(
       usage: {
         isPro,
         singleScan: counter(singleUsed, policy.limits.singleScansPerDay, nextUtcDay(now)),
-        bulkScan: counter(bulkUsed, policy.limits.introductoryBulkScans, null),
+        bulkScan: counter(bulkUsed, bulkLimit, null),
       },
     };
   } catch (error) {
@@ -173,7 +192,8 @@ export async function checkFeatureAccess(
     : status.policy.gates.bulkRepeat;
   const usage = feature === "single_scan" ? status.usage.singleScan : status.usage.bulkScan;
   let resolvedStatus = status;
-  let allowed = !enabled || status.usage.isPro || usage.remaining > 0;
+  const hasReferralCredit = feature === "bulk_scan" && await hasReferralBulkCredit(userId);
+  let allowed = !enabled || status.usage.isPro || usage.remaining > 0 || hasReferralCredit;
   if (!allowed) {
     resolvedStatus = await reconcileDeniedProStatus(userId, status);
     allowed = resolvedStatus.usage.isPro;
@@ -216,6 +236,13 @@ export async function consumeFeatureUsage(
 
     const status = await getMonetizationStatus(userId, now);
     if (Boolean(data.allowed)) return { allowed: true, usage: status.usage };
+
+    // Consume the grandfathered introductory allowance first. Referral credits
+    // are the fallback once the server confirms that allowance is exhausted.
+    if (feature === "bulk_scan" && await consumeReferralBulkCredit(userId)) {
+      const updatedStatus = await getMonetizationStatus(userId, now);
+      return { allowed: true, usage: updatedStatus.usage };
+    }
 
     const repairedStatus = await reconcileDeniedProStatus(userId, status);
     return {

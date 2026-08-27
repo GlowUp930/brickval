@@ -7,6 +7,7 @@ struct AppDestinationModifier: ViewModifier {
             case .collectionItem(let item): ItemDetailView(item: item)
             case .appearance: AppearanceSettingsView()
             case .subscription: SubscriptionView()
+            case .referral: ReferralView()
             }
         }
     }

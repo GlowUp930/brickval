@@ -35,15 +35,29 @@
 
 final result: passed
 
+## Referral-Aware Onboarding And Locked Bulk Preview QA - 2026-08-27
+
+- First-run onboarding now offers optional invite-code entry after account setup. Apply requires sign-in, Skip remains available after network errors, and Universal Links prefill the code.
+- A referral qualifies only when a claimed invitee completes onboarding. The server enforces one qualifying account and one installation using a hash of the Keychain-backed installation UUID; scans do not qualify referrals.
+- Hard-cohort users receive a final Subscribe or Invite 3 friends choice. Three qualified onboarding completions grant three bulk-scan credits once; credits are atomic and never grant Pro entitlement.
+- New soft users receive unlimited local locked previews with zero identification, pricing, or scan-consumption requests. The preview shows the real detected count and frames, never fake prices, and requires a fresh scan after an unlock.
+- Existing users retain their unused introductory bulk allowance. Referral credits are the fallback only after that allowance is consumed.
+- If an existing anonymous installation later signs in, the app syncs its unused introductory allowance once through the authenticated monetization endpoint; the server stores only an installation hash and rejects reuse by another account.
+- PostHog captures referral entry/claim/completion and preview/upgrade/rescan metadata only; invite codes, photos, crops, tokens, and scan payloads are excluded.
+- Accessibility coverage includes 44pt controls, Dynamic Type, VoiceOver locked-state language, Reduce Motion crossfades, and Reduce Transparency-safe placeholders.
+- The native suite and targeted backend tests passed after implementation. The feature flag defaults off until the database migration and backend deployment are complete; no TestFlight build was uploaded for this implementation task.
+
+final result: passed
+
 ## Staged Bulk Scan And Value Transfer QA - 2026-08-26
 
 - The result view now begins with a distinct 1.6-second top-to-bottom scan pass immediately after the photo expands to the immersive aspect-fit stage.
 - Lookup and pricing work starts with the existing bounded four-request pipeline while the scan pass is visible. The beam does not repeat during the ordered value reveal.
-- Ordered results use a `clamp(16.8 / figureCount, 0.42, 0.75)` cadence. A ready 40-figure lot targets approximately 20-21 seconds including the scan, jackpot hold, and return transition.
+- Ordered results use a `clamp(16.8 / figureCount, 0.42, 0.75)` cadence. A ready 60-figure lot targets approximately 28.65 seconds including the scan, jackpot hold, and return transition.
 - Each priced figure holds its USD callout, then sends one compact `+USD X.XX` token from the detected figure to the centered lot-value HUD. The authoritative total advances when the token arrives; unavailable prices hold briefly without changing the total.
 - The lot-value HUD is positioned from the fitted photo geometry, with a safe-area fallback when the photo has insufficient top letterbox space. The recent-result rail remains bottom aligned and the final jackpot remains a single overlay.
 - Reduce Motion removes beam travel and the flying token, retaining scan progress, price text, result frames, and the final total through short crossfades.
-- Added session cadence coverage for 1, 10, 40, and 50-item lots, including the 20.25-second 40-item target duration and the 0.75-second small-lot cap. The full Swift suite passed with 131 unit tests and the UI suite passed with 3 tests on the BrickVal Small iPhone simulator.
+- Added session cadence coverage for 1, 10, 40, 50, and 60-item lots, including the 28.65-second 60-item duration and the 0.75-second small-lot cap. The full Swift suite passed with 131 unit tests and the UI suite passed with 3 tests on the BrickVal Small iPhone simulator.
 
 final result: passed
 
@@ -127,7 +141,7 @@ final result: passed
 - Confirmed Skip, Replay, the lot-complete panel, the global condition selector, and completed-state Retake are absent. Per-figure New/Used controls and the single Add action remain available.
 - Confirmed the compact Missed control has a 44-point minimum touch frame and Retake remains limited to recovery states.
 - Verified Reduce Motion on the small simulator: the reveal uses a short crossfade without matched-geometry expansion, then restored the simulator setting.
-- Added regression coverage for lots containing 1, 10, 40, and 50 entries.
+- Added regression coverage for lots containing 1, 10, 40, 50, and 60 entries.
 - Release build `141` archived and uploaded to App Store Connect; package processing remains asynchronous.
 
 final result: passed

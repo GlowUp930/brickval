@@ -10,6 +10,7 @@ import SuperwallKit
 final class AppSDKCoordinator: SuperwallDelegate {
     let clerk: Clerk?
     let apiClient: BrickValAPIClient
+    let analytics: PostHogAnalytics
     private(set) var purchasesConfigured = false
     private(set) var superwallConfigured = false
     private(set) var showsSubscriptionFallback = false
@@ -43,6 +44,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
         self.entitlementStore = entitlementStore
         self.notificationCoordinator = notificationCoordinator
         self.offerCodeClient = offerCodeClient
+        analytics = PostHogAnalytics(apiKey: Self.configurationValue("PostHogAPIKey"))
         let clerkKey = Self.configurationValue("ClerkPublishableKey")
         if let clerkKey {
             Clerk.configure(publishableKey: clerkKey)
@@ -105,6 +107,10 @@ final class AppSDKCoordinator: SuperwallDelegate {
         params: [String: Any]? = nil,
         manualDismissal: (@MainActor () -> Void)? = nil
     ) -> Bool {
+        analytics.capture(
+            PostHogEvent.upgradeRequested,
+            properties: ["placement": placement.rawValue]
+        )
         guard superwallConfigured else {
             showsSubscriptionFallback = true
             return true
@@ -150,6 +156,14 @@ final class AppSDKCoordinator: SuperwallDelegate {
 
     func dismissPaywallPresentationError() {
         paywallPresentationError = nil
+    }
+
+    func isFeatureEnabled(_ key: String) -> Bool {
+        analytics.isFeatureEnabled(key)
+    }
+
+    func reloadFeatureFlags() {
+        analytics.reloadFeatureFlags()
     }
 
     func handleCustomPaywallAction(withName name: String) {
@@ -255,6 +269,11 @@ final class AppSDKCoordinator: SuperwallDelegate {
 
     func synchronizeIdentity(userID: String?) async {
         notificationCoordinator.setSubscriberID(userID)
+        if let userID {
+            analytics.identify(userID: userID, isPro: entitlementStore.isPro)
+        } else {
+            analytics.reset()
+        }
         guard purchasesConfigured else { return }
         if let userID {
             if Purchases.shared.appUserID != userID {

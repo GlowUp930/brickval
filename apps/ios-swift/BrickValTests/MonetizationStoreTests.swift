@@ -14,7 +14,7 @@ struct MonetizationStoreTests {
 
         let store = MonetizationStore(defaults: context.defaults)
 
-        #expect(store.policy.version == 4)
+        #expect(store.policy.version == 5)
         #expect(store.policy.gates.singleDaily)
         #expect(store.scanReminder(isPro: false) == "3 free scans left today")
     }
@@ -64,7 +64,7 @@ struct MonetizationStoreTests {
 
         let store = MonetizationStore(defaults: context.defaults)
 
-        #expect(store.policy.version == 4)
+        #expect(store.policy.version == 5)
         #expect(store.policy.gates.singleDaily)
         #expect(store.policy.gates.offerCodes)
     }
@@ -204,6 +204,77 @@ struct MonetizationStoreTests {
         #expect(store.requiresProForApp(isPro: false) == false)
     }
 
+    @Test func newSoftUserHasLockedPreviewInsteadOfARealBulkCredit() {
+        let context = context()
+        let store = MonetizationStore(
+            defaults: context.defaults,
+            initialPolicy: policy(singleDaily: true, lockedBulkPreview: true)
+        )
+
+        store.enrollNewUserIfNeeded(seed: 50)
+
+        #expect(store.accessCohort == .experimentSoft)
+        #expect(store.usage.bulkScan.limit == 0)
+        #expect(store.usage.bulkScan.remaining == 0)
+        #expect(store.shouldUseLockedBulkPreview(isPro: false))
+        #expect(store.canUseBulk(isPro: false))
+        #expect(store.shouldUseLockedBulkPreview(isPro: true) == false)
+    }
+
+    @Test func existingUserKeepsTheIntroductoryBulkCredit() {
+        let context = context()
+        context.defaults.set(true, forKey: "has_completed_onboarding")
+
+        let store = MonetizationStore(
+            defaults: context.defaults,
+            initialPolicy: .phaseOne
+        )
+
+        #expect(store.hasGrandfatheredBulkCredit)
+        #expect(store.usage.bulkScan.limit == 1)
+        #expect(store.usage.bulkScan.remaining == 1)
+        #expect(store.shouldUseLockedBulkPreview(isPro: false) == false)
+    }
+
+    @Test func signedInExistingUserSyncsUnusedIntroductoryCredit() async {
+        let context = context()
+        context.defaults.set(true, forKey: "has_completed_onboarding")
+        let store = MonetizationStore(defaults: context.defaults, initialPolicy: .phaseOne)
+        let probe = LegacyCreditSyncProbe()
+        var api = BrickValAPIClient.testStub
+        api.syncLegacyBulkCredit = { installationID in
+            await probe.record(installationID)
+            return true
+        }
+
+        await store.refresh(using: api, signedIn: true)
+
+        #expect(await probe.count == 1)
+        #expect(await probe.lastInstallationID != nil)
+    }
+
+    @Test func referralCreditsDisableTheLockedPreview() {
+        let context = context()
+        let store = MonetizationStore(
+            defaults: context.defaults,
+            initialPolicy: policy(singleDaily: true, lockedBulkPreview: true)
+        )
+        store.enrollNewUserIfNeeded(seed: 50)
+        store.applyReferralStatus(
+            ReferralStatus(
+                code: "BRICKVAL",
+                qualifiedCount: 3,
+                goal: 3,
+                bonusBulkScans: 3,
+                bulkCreditsRemaining: 3,
+                rewardGranted: true
+            )
+        )
+
+        #expect(store.shouldUseLockedBulkPreview(isPro: false) == false)
+        #expect(store.canUseBulk(isPro: false))
+    }
+
     @Test(arguments: [0, 49])
     func hardAccessUsesTheFirstHalfOfTheRollout(roll: Int) {
         let context = context()
@@ -333,6 +404,7 @@ struct MonetizationStoreTests {
         singleDaily: Bool,
         hardPaywallEnabled: Bool = false,
         offerCodes: Bool = true,
+        lockedBulkPreview: Bool = false,
         minimumAppBuild: Int? = nil
     ) -> MonetizationPolicy {
         MonetizationPolicy(
@@ -355,6 +427,7 @@ struct MonetizationStoreTests {
                 introductoryBulkScans: 1,
                 collectionUniqueItems: 10
             ),
+            lockedBulkPreview: lockedBulkPreview,
             notifications: .init(
                 enabled: true,
                 scanReset: true,
@@ -364,4 +437,39 @@ struct MonetizationStoreTests {
             minimumAppBuild: minimumAppBuild
         )
     }
+}
+
+private actor LegacyCreditSyncProbe {
+    private(set) var count = 0
+    private(set) var lastInstallationID: String?
+
+    func record(_ installationID: String) {
+        count += 1
+        lastInstallationID = installationID
+    }
+}
+
+private extension BrickValAPIClient {
+    static let testStub = BrickValAPIClient(
+        scanMinifigure: { _ in throw MonetizationStoreTestError.unusedEndpoint },
+        scanBulkMinifigures: { _, _, _ in throw MonetizationStoreTestError.unusedEndpoint },
+        recoverBulkMinifigure: { _, _ in throw MonetizationStoreTestError.unusedEndpoint },
+        identify: { _, _, _ in throw MonetizationStoreTestError.unusedEndpoint },
+        lookup: { _, _, _ in throw MonetizationStoreTestError.unusedEndpoint },
+        bulkLookupMinifigures: { _, _ in throw MonetizationStoreTestError.unusedEndpoint },
+        monetizationStatus: {
+            MonetizationStatus(policy: .phaseOne, usage: .empty(policy: .phaseOne))
+        },
+        syncSubscription: { throw MonetizationStoreTestError.unusedEndpoint },
+        partColors: { throw MonetizationStoreTestError.unusedEndpoint },
+        submitFeedback: { _ in throw MonetizationStoreTestError.unusedEndpoint },
+        submitProductFeedback: { _ in throw MonetizationStoreTestError.unusedEndpoint },
+        deleteAccount: { throw MonetizationStoreTestError.unusedEndpoint },
+        registerNotificationDevice: { _ in throw MonetizationStoreTestError.unusedEndpoint },
+        unregisterNotificationDevice: { _ in throw MonetizationStoreTestError.unusedEndpoint }
+    )
+}
+
+private enum MonetizationStoreTestError: Error {
+    case unusedEndpoint
 }

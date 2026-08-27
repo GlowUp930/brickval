@@ -3,6 +3,8 @@ import Foundation
 enum BulkScanSource: String, Codable, Sendable {
     case camera
     case photoLibrary
+
+    static let maximumRegionCount = 60
 }
 
 struct BrickValAPIClient: Sendable {
@@ -22,6 +24,16 @@ struct BrickValAPIClient: Sendable {
     var deleteAccount: @Sendable () async throws -> Void
     var registerNotificationDevice: @Sendable (BrickValNotificationDeviceRegistration) async throws -> Void
     var unregisterNotificationDevice: @Sendable (String) async throws -> Void
+    var referralStatus: @Sendable () async throws -> ReferralStatus = {
+        throw APIError(endpoint: "referrals", statusCode: 0, serverMessage: "Referral service is unavailable.")
+    }
+    var syncLegacyBulkCredit: @Sendable (String) async throws -> Bool = { _ in false }
+    var claimReferralCode: @Sendable (String, String?) async throws -> ReferralClaimResponse = { _, _ in
+        throw APIError(endpoint: "referrals", statusCode: 0, serverMessage: "Referral service is unavailable.")
+    }
+    var completeReferralOnboarding: @Sendable () async throws -> ReferralOnboardingCompletionResponse = {
+        throw APIError(endpoint: "referrals", statusCode: 0, serverMessage: "Referral service is unavailable.")
+    }
 }
 
 extension BrickValAPIClient {
@@ -70,7 +82,7 @@ extension BrickValAPIClient {
                 var form = MultipartFormData()
                 form.append(name: "image", filename: "bulk-scan.jpg", contentType: "image/jpeg", fileData: imageData)
                 let encoder = JSONEncoder()
-                let regionData = try encoder.encode(regions)
+                let regionData = try encoder.encode(Array(regions.prefix(BulkScanSource.maximumRegionCount)))
                 guard let regionJSON = String(data: regionData, encoding: .utf8) else {
                     throw APIError(endpoint: "bulk minifig scan", statusCode: 0, serverMessage: "The scan regions could not be prepared.")
                 }
@@ -97,7 +109,7 @@ extension BrickValAPIClient {
                 var form = MultipartFormData()
                 form.append(name: "image", filename: "bulk-scan.jpg", contentType: "image/jpeg", fileData: imageData)
                 let encoder = JSONEncoder()
-                let regionData = try encoder.encode(regions)
+                let regionData = try encoder.encode(Array(regions.prefix(BulkScanSource.maximumRegionCount)))
                 guard let regionJSON = String(data: regionData, encoding: .utf8) else {
                     throw APIError(endpoint: "bulk minifig scan start", statusCode: 0, serverMessage: "The scan regions could not be prepared.")
                 }
@@ -335,9 +347,88 @@ extension BrickValAPIClient {
                 )
                 let (data, response) = try await session.data(for: request)
                 try validate(response: response, data: data, endpoint: "notification device removal")
+            },
+            referralStatus: {
+                let request = try await request(
+                    baseURL: configuration.baseURL,
+                    path: "/api/mobile/referrals",
+                    method: "GET",
+                    token: authToken()
+                )
+                let (data, response) = try await session.data(for: request)
+                return try decodeResponse(data: data, response: response, endpoint: "referral status")
+            },
+            syncLegacyBulkCredit: { installationID in
+                let body = try JSONEncoder().encode(
+                    LegacyBulkCreditRequest(action: "grandfather_bulk_credit", installationID: installationID)
+                )
+                let request = try await request(
+                    baseURL: configuration.baseURL,
+                    path: "/api/mobile/monetization",
+                    method: "POST",
+                    body: body,
+                    contentType: "application/json",
+                    token: authToken()
+                )
+                let (data, response) = try await session.data(for: request)
+                let payload: LegacyBulkCreditResponse = try decodeResponse(
+                    data: data,
+                    response: response,
+                    endpoint: "legacy bulk credit"
+                )
+                return payload.grandfathered
+            },
+            claimReferralCode: { code, installationID in
+                let body = try JSONEncoder().encode(
+                    ReferralClaimRequest(action: "claim", code: code, installationID: installationID)
+                )
+                let request = try await request(
+                    baseURL: configuration.baseURL,
+                    path: "/api/mobile/referrals",
+                    method: "POST",
+                    body: body,
+                    contentType: "application/json",
+                    token: authToken()
+                )
+                let (data, response) = try await session.data(for: request)
+                return try decodeResponse(data: data, response: response, endpoint: "referral code")
+            },
+            completeReferralOnboarding: {
+                let body = try JSONEncoder().encode(
+                    ReferralCompletionRequest(action: "complete_onboarding")
+                )
+                let request = try await request(
+                    baseURL: configuration.baseURL,
+                    path: "/api/mobile/referrals",
+                    method: "POST",
+                    body: body,
+                    contentType: "application/json",
+                    token: authToken()
+                )
+                let (data, response) = try await session.data(for: request)
+                return try decodeResponse(data: data, response: response, endpoint: "referral onboarding")
             }
         )
     }
+}
+
+private struct ReferralClaimRequest: Encodable, Sendable {
+    let action: String
+    let code: String
+    let installationID: String?
+}
+
+private struct ReferralCompletionRequest: Encodable, Sendable {
+    let action: String
+}
+
+private struct LegacyBulkCreditRequest: Encodable, Sendable {
+    let action: String
+    let installationID: String
+}
+
+private struct LegacyBulkCreditResponse: Decodable, Sendable {
+    let grandfathered: Bool
 }
 
 struct SubscriptionSyncResult: Decodable, Sendable {

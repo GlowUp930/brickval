@@ -31,6 +31,11 @@ enum BulkRegionProgressState: Sendable {
     }
 }
 
+enum BulkScanAccessMode: String, Sendable, Equatable {
+    case real
+    case lockedPreview
+}
+
 @Observable
 @MainActor
 final class BulkScanPresentation: Identifiable {
@@ -38,6 +43,7 @@ final class BulkScanPresentation: Identifiable {
     let imageData: Data
     let regions: [BulkScanRegion]
     let source: BulkScanSource
+    let accessMode: BulkScanAccessMode
     let sessionToken: String?
     var recoveryToken: String?
     private(set) var regionStates: [String: BulkRegionProgressState]
@@ -49,13 +55,15 @@ final class BulkScanPresentation: Identifiable {
         regions: [BulkScanRegion],
         recoveryToken: String?,
         source: BulkScanSource,
-        sessionToken: String? = nil
+        sessionToken: String? = nil,
+        accessMode: BulkScanAccessMode = .real
     ) {
         self.imageData = imageData
         self.regions = regions
         self.recoveryToken = recoveryToken
         self.source = source
         self.sessionToken = sessionToken
+        self.accessMode = accessMode
         regionStates = Dictionary(uniqueKeysWithValues: regions.map { ($0.regionId, .pending) })
     }
 

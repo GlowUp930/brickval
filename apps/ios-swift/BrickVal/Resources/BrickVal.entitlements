@@ -10,6 +10,7 @@
 	</array>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
+		<string>applinks:brickvalue.live</string>
 		<string>webcredentials:brickvalue.live</string>
 	</array>
 </dict>

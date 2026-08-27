@@ -6,6 +6,7 @@ enum BulkFocusState: Equatable, Sendable {
     case completed
     case pending
     case unresolved
+    case preview
     case topFind
 }
 
@@ -134,6 +135,7 @@ struct BulkFocusOverlay: View, Animatable {
         case .scanned: 0.92
         case .pending: 0.80
         case .unresolved: 0.86
+        case .preview: 0.78
         }
     }
 
@@ -145,6 +147,7 @@ struct BulkFocusOverlay: View, Animatable {
         case .scanned: .white.opacity(0.70)
         case .pending: .white.opacity(0.46)
         case .unresolved: .white.opacity(0.66)
+        case .preview: .white.opacity(0.72)
         }
     }
 
@@ -159,6 +162,9 @@ struct BulkFocusOverlay: View, Animatable {
             } else if state == .completed {
                 Image(systemName: "checkmark")
                     .font(.caption2.bold())
+            } else if state == .preview {
+                Image(systemName: "lock.fill")
+                    .font(.caption2.bold())
             } else {
                 Text("\(number)")
                     .font(.caption2.bold().monospacedDigit())
@@ -167,7 +173,7 @@ struct BulkFocusOverlay: View, Animatable {
             .foregroundStyle(state == .active || state == .topFind ? .black : .white)
             .frame(width: 24, height: 24)
             .background(
-                state == .active ? accent : state == .topFind ? topFindColor : .black.opacity(0.70),
+                state == .active ? accent : state == .topFind ? topFindColor : state == .preview ? .black.opacity(0.56) : .black.opacity(0.70),
                 in: .circle
             )
             .overlay {

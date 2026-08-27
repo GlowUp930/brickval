@@ -41,18 +41,19 @@ struct BulkRevealSessionTests {
         #expect(BulkRevealSession.stepInterval(for: 10) == BulkRevealSession.maximumStepInterval)
         #expect(abs(BulkRevealSession.stepInterval(for: 40) - 0.42) < 0.001)
         #expect(abs(BulkRevealSession.stepInterval(for: 50) - 0.42) < 0.001)
+        #expect(abs(BulkRevealSession.stepInterval(for: 60) - 0.42) < 0.001)
 
-        var session = BulkRevealSession(items: (0..<40).map { index in
-            fixture(id: "figure-\(index)", x: Double(index % 8) / 8, y: Double(index / 8) / 5, used: 1)
+        var session = BulkRevealSession(items: (0..<60).map { index in
+            fixture(id: "figure-\(index)", x: Double(index % 10) / 10, y: Double(index / 10) / 6, used: 1)
         })
-        #expect(abs(session.duration - 20.25) < 0.001)
+        #expect(abs(session.duration - 28.65) < 0.001)
         #expect(session.duration <= BulkRevealSession.maximumDuration)
         session.begin()
         #expect(session.beamProgress == 0)
-        for _ in 0..<40 { session.commitSweepStep() }
+        for _ in 0..<60 { session.commitSweepStep() }
         #expect(session.isComplete)
-        #expect(session.revealedCount == 40)
-        #expect(session.revealedTotal == 40)
+        #expect(session.revealedCount == 60)
+        #expect(session.revealedTotal == 60)
     }
 
     @Test
@@ -76,7 +77,7 @@ struct BulkRevealSessionTests {
 
     @Test
     func supportedLotSizesRevealEveryEntry() {
-        for count in [1, 10, 40, 50] {
+        for count in [1, 10, 40, 50, 60] {
             var session = BulkRevealSession(items: (0..<count).map { index in
                 fixture(
                     id: "figure-\(index)",
@@ -184,6 +185,33 @@ struct BulkRevealSessionTests {
         #expect(session.pricedCount == 1)
         #expect(session.revealedTotal == 6)
         #expect(session.entries.last?.value(for: .used) == nil)
+    }
+
+    @Test
+    func lockedPreviewRepresentsEveryDetectedRegionWithoutValue() {
+        var session = BulkRevealSession(regions: [
+            BulkScanRegion(
+                regionId: "one",
+                boundingBox: NormalizedBoundingBox(x: 0.1, y: 0.1, width: 0.2, height: 0.3)
+            ),
+            BulkScanRegion(
+                regionId: "two",
+                boundingBox: NormalizedBoundingBox(x: 0.5, y: 0.1, width: 0.2, height: 0.3)
+            )
+        ])
+
+        session.beginPreview()
+
+        #expect(session.entries.allSatisfy { $0.isPreviewOnly })
+        #expect(session.revealedTotal == 0)
+        #expect(session.pricedCount == 0)
+
+        session.commitSweepStep()
+        session.commitSweepStep()
+
+        #expect(session.isComplete)
+        #expect(session.revealedCount == 2)
+        #expect(session.revealedTotal == 0)
     }
 
     @Test

@@ -9,7 +9,7 @@ import { hasActiveProEntitlement } from "../src/lib/revenuecat-entitlement";
 
 const freeStatus: MonetizationStatus = {
   policy: {
-    version: 4,
+    version: 5,
     accessExperiment: { enabled: false, hardPaywallPercent: 50, trialDays: 7 },
     gates: {
       singleDaily: true,
@@ -24,6 +24,7 @@ const freeStatus: MonetizationStatus = {
       introductoryBulkScans: 1,
       collectionUniqueItems: 10,
     },
+    lockedBulkPreview: false,
     notifications: {
       enabled: true,
       scanReset: true,

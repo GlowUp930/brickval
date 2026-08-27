@@ -15,7 +15,7 @@ The target is reliable recognition of dense lots at low operating cost. Camera s
 Use a session-based, one-region recognition pipeline:
 
 1. Core ML proposes regions locally. Photo-library imports use a full-image pass and overlapping 3x3, 4x4, and 5x5 tiled passes. Overlapping proposals are merged while spatially separate duplicates remain separate.
-2. The native client sends a source-aware manifest to `/api/minifig/bulk-scan/start`. Camera manifests are capped at 10 regions; photo-library manifests are capped at 40.
+2. The native client sends a manifest of up to 60 regions to `/api/minifig/bulk-scan/start` for either camera or photo-library scans.
 3. The server issues a signed ten-minute session. The native client crops each region with 25% context, upscales within the image processor, and sends one crop at a time to `/api/minifig/bulk-scan/identify-region`.
 4. Four recognition requests may run concurrently. A weak result may receive one 40%-context retry. Results are associated with stable region IDs and remain ordered spatially, even when requests finish out of order.
 5. Each region returns up to three priced candidates. The normal bulk path selects the highest-scoring priced candidate locally, regardless of the provider status; unresolved regions are disclosed but excluded from totals. Candidate review remains available only for user-initiated missed-figure recovery.
@@ -26,7 +26,7 @@ Google Vision object localization is an optional proposal source, disabled by de
 
 - Recognition continues to use the existing Brickognize integration; no new paid recognition provider is added.
 - One imported bulk operation consumes one existing bulk allowance, not one allowance per region.
-- The signed session is rate-limited to 80 region calls per ten minutes, covering 40 figures and one retry each. Manual recovery retains its separate 20-call budget.
+- The signed session is rate-limited to 120 region calls per ten minutes, covering 60 figures and one retry each. Manual recovery retains its separate 20-call budget.
 - Photos, crops, provider payloads, authentication tokens, and collection contents are never logged or sent to Sentry.
 - Provider credentials and the optional Google Vision key remain server-only.
 
@@ -39,4 +39,4 @@ Google Vision object localization is an optional proposal source, disabled by de
 
 ## Consequences
 
-This increases request count for dense photos, but it fixes the core one-provider-image mismatch and keeps cost bounded by the 40-region cap plus one retry. The initial native implementation presents the completed region results through the existing rapid reveal/review screen; request-level responses are collected before that presentation so the current collection, recovery, pagination, and atomic-save behavior remain intact.
+This increases request count for dense photos, but it fixes the core one-provider-image mismatch and keeps cost bounded by the 60-region cap plus one retry. The initial native implementation presents the completed region results through the existing rapid reveal/review screen; request-level responses are collected before that presentation so the current collection, recovery, pagination, and atomic-save behavior remain intact.

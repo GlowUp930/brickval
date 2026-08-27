@@ -18,6 +18,7 @@ export interface MonetizationPolicy {
     introductoryBulkScans: number;
     collectionUniqueItems: number;
   };
+  lockedBulkPreview: boolean;
   notifications: {
     enabled: boolean;
     scanReset: boolean;
@@ -52,7 +53,7 @@ function percentage(name: string, fallback: number): number {
 
 export function getMonetizationPolicy(): MonetizationPolicy {
   return {
-    version: 4,
+    version: 5,
     accessExperiment: {
       enabled: booleanValue("BRICKVALUE_HARD_PAYWALL_EXPERIMENT_ENABLED", false),
       hardPaywallPercent: percentage("BRICKVALUE_HARD_PAYWALL_PERCENT", 50),
@@ -71,6 +72,8 @@ export function getMonetizationPolicy(): MonetizationPolicy {
       introductoryBulkScans: positiveInteger("BRICKVALUE_FREE_BULK_SCANS", 1),
       collectionUniqueItems: positiveInteger("BRICKVALUE_FREE_COLLECTION_ITEMS", 10),
     },
+    // Enable only after the referral/grandfathering migration is deployed.
+    lockedBulkPreview: booleanValue("BRICKVALUE_LOCKED_BULK_PREVIEW_ENABLED", false),
     notifications: {
       enabled: booleanValue("BRICKVALUE_NOTIFICATIONS_ENABLED", true),
       scanReset: booleanValue("BRICKVALUE_SCAN_RESET_NOTIFICATIONS_ENABLED", true),

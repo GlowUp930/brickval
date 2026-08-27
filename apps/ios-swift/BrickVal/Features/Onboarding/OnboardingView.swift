@@ -13,12 +13,19 @@ struct OnboardingView: View {
     @Environment(PreferencesStore.self) private var preferences
     @Environment(MonetizationStore.self) private var monetization
     @Environment(\.appSDKCoordinator) private var coordinator
+    @Environment(\.brickValAPIClient) private var api
+    @Environment(AppRouter.self) private var router
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var step: OnboardingStep = .brand
     @State private var goal: PrimaryGoal?
     @State private var presentedSheet: OnboardingSheet?
     @State private var authenticatingProvider: OnboardingAuthProvider?
     @State private var alertMessage: String?
+    @State private var didCaptureAnalytics = false
+    @State private var referralCode = ""
+    @State private var referralMessage: String?
+    @State private var isClaimingReferral = false
+    @State private var didFinishOnboarding = false
     private let onFinish: () -> Void
 
     init(
@@ -66,12 +73,27 @@ struct OnboardingView: View {
                 back: showReviewStep,
                 signInWithApple: { authenticate(with: .apple) },
                 signInWithGoogle: { authenticate(with: .google) },
-                skip: finishOnboarding
+                skip: continueFromAccount
             )
             .opacity(step == .account ? 1 : 0)
             .scaleEffect(reduceMotion || step == .account ? 1 : 0.985)
             .allowsHitTesting(step == .account)
             .accessibilityHidden(step != .account)
+
+            OnboardingReferralScreen(
+                code: $referralCode,
+                message: referralMessage,
+                isClaiming: isClaimingReferral,
+                isSignedIn: coordinator?.clerk?.user != nil,
+                back: showAccountStep,
+                apply: applyReferralCode,
+                signIn: presentSignIn,
+                skip: finishOnboarding
+            )
+            .opacity(step == .referral ? 1 : 0)
+            .scaleEffect(reduceMotion || step == .referral ? 1 : 0.985)
+            .allowsHitTesting(step == .referral)
+            .accessibilityHidden(step != .referral)
 
             OnboardingBrandScreen()
                 .opacity(step == .brand ? 1 : 0)
@@ -81,6 +103,14 @@ struct OnboardingView: View {
         }
         .preferredColorScheme(.light)
         .interactiveDismissDisabled()
+        .onAppear {
+            guard !didCaptureAnalytics else { return }
+            didCaptureAnalytics = true
+            coordinator?.analytics.capture(
+                PostHogEvent.onboardingStarted,
+                properties: ["is_replay": preferences.isReplayingOnboarding]
+            )
+        }
         .task(id: step) {
             guard step == .brand else { return }
             if !reduceMotion {
@@ -102,7 +132,21 @@ struct OnboardingView: View {
         }
         .onChange(of: presentedSheet) { previous, current in
             guard previous == .auth, current == nil, coordinator?.clerk?.user != nil else { return }
-            finishOnboarding()
+            if step == .referral, referralCode.count == 8 {
+                Task { await claimReferralCode() }
+            } else {
+                continueFromAccount()
+            }
+        }
+        .onChange(of: router.pendingReferralCode) { _, newCode in
+            guard let newCode, step == .referral else { return }
+            referralCode = newCode
+        }
+        .task(id: step) {
+            guard step == .referral else { return }
+            if let pendingReferralCode = router.pendingReferralCode {
+                referralCode = pendingReferralCode
+            }
         }
         .alert("Couldn’t sign in", isPresented: alertBinding) {
             Button("OK", role: .cancel) {}
@@ -138,6 +182,22 @@ struct OnboardingView: View {
         }
     }
 
+    private func showAccountStep() {
+        withAnimation(reduceMotion ? nil : .timingCurve(0.22, 1, 0.36, 1, duration: 0.38)) {
+            step = .account
+        }
+    }
+
+    private func continueFromAccount() {
+        guard !preferences.isReplayingOnboarding else {
+            finishOnboarding()
+            return
+        }
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.28)) {
+            step = .referral
+        }
+    }
+
     private func advanceDetailStep() {
         let nextStep: OnboardingStep? = switch step {
         case .value: .scanReveal
@@ -170,7 +230,11 @@ struct OnboardingView: View {
                 }
                 authenticatingProvider = nil
                 if clerk.user != nil {
-                    finishOnboarding()
+                    coordinator?.analytics.capture(
+                        PostHogEvent.signInCompleted,
+                        properties: ["provider": provider.rawValue]
+                    )
+                    continueFromAccount()
                 } else {
                     presentedSheet = .auth
                 }
@@ -193,6 +257,8 @@ struct OnboardingView: View {
     }
 
     private func finishOnboarding() {
+        guard !didFinishOnboarding else { return }
+        didFinishOnboarding = true
         let isReplay = preferences.isReplayingOnboarding
         preferences.primaryGoal = goal
         preferences.isReplayingOnboarding = false
@@ -202,7 +268,70 @@ struct OnboardingView: View {
             monetization.enrollNewUserIfNeeded(seed: coordinator?.superwallSeed)
         }
         coordinator?.setMonetizationCohort(monetization.accessCohort)
+        coordinator?.analytics.capture(
+            PostHogEvent.onboardingCompleted,
+            properties: [
+                "signed_in": coordinator?.clerk?.user != nil,
+                "goal": goal?.rawValue ?? "not_set",
+            ]
+        )
+        if !isReplay, coordinator?.clerk?.user != nil {
+            preferences.referralOnboardingCompletionPending = true
+            Task { await completeReferralOnboardingIfPossible() }
+        }
         onFinish()
+    }
+
+    private func applyReferralCode() {
+        guard referralCode.count == 8 else {
+            referralMessage = "Enter the 8-character invite code."
+            return
+        }
+        guard coordinator?.clerk?.user != nil else {
+            referralMessage = "Sign in to apply your invite code."
+            presentSignIn()
+            return
+        }
+        Task { await claimReferralCode() }
+    }
+
+    private func claimReferralCode() async {
+        let normalizedCode = referralCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard normalizedCode.count == 8 else { return }
+        isClaimingReferral = true
+        referralMessage = nil
+        coordinator?.analytics.capture(PostHogEvent.referralClaimAttempted, properties: ["source": "onboarding"])
+        defer { isClaimingReferral = false }
+
+        do {
+            let response = try await api.claimReferralCode(
+                normalizedCode,
+                InstallationIdentity.current()
+            )
+            monetization.applyReferralStatus(response.referral)
+            router.clearPendingReferral()
+            coordinator?.analytics.capture(PostHogEvent.referralClaimed, properties: ["source": "onboarding"])
+            finishOnboarding()
+        } catch let error as APIError where error.statusCode == 422 || error.statusCode == 409 {
+            referralMessage = error.serverMessage ?? "That invite code could not be applied."
+        } catch {
+            referralMessage = "We couldn't apply the invite code. You can skip and try again from Profile."
+        }
+    }
+
+    private func completeReferralOnboardingIfPossible() async {
+        guard coordinator?.clerk?.user != nil else { return }
+        do {
+            let response = try await api.completeReferralOnboarding()
+            preferences.referralOnboardingCompletionPending = false
+            monetization.applyReferralStatus(response.referral)
+            coordinator?.analytics.capture(
+                PostHogEvent.referralOnboardingCompleted,
+                properties: ["qualified": response.qualified, "reward_granted": response.rewardGranted]
+            )
+        } catch {
+            // The pending flag is retried on the next signed-in app activation.
+        }
     }
 }
 
@@ -215,6 +344,7 @@ private enum OnboardingStep: Int, CaseIterable, Identifiable {
     case trust
     case review
     case account
+    case referral
 
     var id: Self { self }
 
@@ -233,12 +363,13 @@ private enum OnboardingStep: Int, CaseIterable, Identifiable {
         case .trust: 3
         case .review: 4
         case .account: 5
+        case .referral: 6
         default: nil
         }
     }
 }
 
-private enum OnboardingAuthProvider: Hashable {
+private enum OnboardingAuthProvider: String, Hashable {
     case apple
     case google
 }
@@ -410,7 +541,7 @@ private struct OnboardingProgressBar: View {
     @Environment(\.brickValAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let currentIndex: Int
-    private let stepCount = 6
+    private let stepCount = 7
 
     var body: some View {
         HStack(spacing: BrickValStyle.Primitive.space8) {
@@ -785,6 +916,100 @@ private struct OnboardingAccountScreen: View {
             }
             .accessibilityHidden(true)
         }
+    }
+}
+
+private struct OnboardingReferralScreen: View {
+    @Environment(\.brickValAccent) private var accent
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Binding var code: String
+    let message: String?
+    let isClaiming: Bool
+    let isSignedIn: Bool
+    let back: () -> Void
+    let apply: () -> Void
+    let signIn: () -> Void
+    let skip: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space16) {
+            HStack(spacing: BrickValStyle.Primitive.space16) {
+                Button(action: back) {
+                    Image(systemName: "chevron.left")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.black)
+                        .frame(width: 44, height: 44)
+                        .background(Color(uiColor: .secondarySystemBackground), in: Circle())
+                }
+                .accessibilityLabel("Back to account setup")
+
+                OnboardingProgressBar(currentIndex: OnboardingStep.referral.progressIndex ?? 6)
+            }
+
+            Text("Have an invite code?")
+                .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                .foregroundStyle(.black)
+                .accessibilityAddTraits(.isHeader)
+
+            Text("Enter a friend's code to support their BrickValue rewards. You can also skip this step.")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 12)
+
+            VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space12) {
+                TextField("8-character code", text: $code)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .font(.title3.weight(.semibold).monospaced())
+                    .padding(.horizontal, 16)
+                    .frame(minHeight: 56)
+                    .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(code.isEmpty ? Color.black.opacity(0.12) : accent, lineWidth: 1.5)
+                    }
+                    .onChange(of: code) { _, newValue in
+                        code = String(newValue.uppercased().filter { $0.isLetter || $0.isNumber }.prefix(8))
+                    }
+
+                if let message {
+                    Text(message)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                }
+
+                Button(action: apply) {
+                    HStack {
+                        if isClaiming {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text(isSignedIn ? "Apply code" : "Sign in to apply")
+                                .font(.headline.weight(.semibold))
+                        }
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: 54)
+                    .background(accent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .disabled(isClaiming || code.count != 8)
+                .accessibilityHint(isSignedIn ? "Attaches this invite to your account" : "Opens sign-in before applying the invite")
+
+                Button("Skip", action: skip)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, BrickValStyle.Primitive.space24)
+        .padding(.top, BrickValStyle.Primitive.space12)
+        .padding(.bottom, BrickValStyle.Primitive.space24)
+        .accessibilityIdentifier("onboarding.referral")
     }
 }
 

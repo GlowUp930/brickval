@@ -274,6 +274,14 @@ struct ScanResultView: View {
                     preferences.hasRequestedReview = true
                     requestReview()
                 }
+                coordinator?.analytics.capture(
+                    PostHogEvent.itemAddedToCollection,
+                    properties: [
+                        "item_type": result.itemType.rawValue,
+                        "condition": condition.rawValue,
+                        "quantity": quantity,
+                    ]
+                )
                 Task {
                     try? await Task.sleep(for: .seconds(1.8))
                     await MainActor.run {

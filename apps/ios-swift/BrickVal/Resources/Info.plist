@@ -60,5 +60,7 @@
 	<string>$(SUPERWALL_API_KEY)</string>
 	<key>SentryDSN</key>
 	<string>$(SENTRY_DSN)</string>
+	<key>PostHogAPIKey</key>
+	<string>$(POSTHOG_API_KEY)</string>
 </dict>
 </plist>

@@ -47,7 +47,7 @@ struct ScannerStatusView: View {
 
     private var statusText: String {
         if intent == .bulk, phase == .searching {
-            return "Frame your figures, then tap the shutter"
+            return "Frame up to 60 figures, then tap the shutter"
         }
         return phase.statusText
     }

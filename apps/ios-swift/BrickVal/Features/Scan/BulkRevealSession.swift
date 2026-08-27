@@ -22,6 +22,7 @@ struct BulkRevealEntry: Identifiable, Sendable {
     private(set) var item: BulkScanResultItem?
     private(set) var isLoading = false
     private(set) var isUnresolved = false
+    private(set) var isPreviewOnly = false
 
     var confidence: Double { item?.confidence ?? 0 }
     var usedValue: Double? { item?.result.pricing.preferredUsedValue }
@@ -43,7 +44,7 @@ struct BulkRevealEntry: Identifiable, Sendable {
         self.init(id: id, boundingBox: item.boundingBox, spatialNumber: spatialNumber, item: item)
     }
 
-    var isTerminal: Bool { item != nil || isUnresolved }
+    var isTerminal: Bool { item != nil || isUnresolved || isPreviewOnly }
     var isResolved: Bool { item != nil }
 
     var beamProgress: Double {
@@ -62,6 +63,7 @@ struct BulkRevealEntry: Identifiable, Sendable {
     }
 
     mutating func markLoading() {
+        isPreviewOnly = false
         isLoading = true
         isUnresolved = false
     }
@@ -70,12 +72,25 @@ struct BulkRevealEntry: Identifiable, Sendable {
         self.item = item
         isLoading = false
         isUnresolved = false
+        isPreviewOnly = false
     }
 
     mutating func markUnresolved() {
         item = nil
         isLoading = false
         isUnresolved = true
+        isPreviewOnly = false
+    }
+
+    mutating func markPreviewOnly() {
+        item = nil
+        isLoading = false
+        isUnresolved = false
+        isPreviewOnly = true
+    }
+
+    mutating func clearPreviewOnly() {
+        isPreviewOnly = false
     }
 }
 
@@ -97,6 +112,7 @@ struct BulkRevealSession: Sendable {
     private(set) var lastRevealedEntryID: String?
     private(set) var beamProgress = 0.0
     private(set) var condition: CollectionCondition = .used
+    private(set) var isPreviewOnly = false
 
     init(regions: [BulkScanRegion], items: [BulkScanResultItem] = []) {
         let orderedRegions = regions.sorted { lhs, rhs in
@@ -196,6 +212,14 @@ struct BulkRevealSession: Sendable {
         phase = .sweeping(index: 0)
     }
 
+    mutating func beginPreview() {
+        isPreviewOnly = true
+        for index in entries.indices {
+            entries[index].markPreviewOnly()
+        }
+        begin()
+    }
+
     mutating func setBeamProgress(_ progress: Double) {
         beamProgress = min(max(progress, 0), 1)
     }
@@ -236,6 +260,10 @@ struct BulkRevealSession: Sendable {
         revealedCount = 0
         lastRevealedEntryID = nil
         beamProgress = 0
+        isPreviewOnly = false
+        for index in entries.indices {
+            entries[index].clearPreviewOnly()
+        }
         phase = .preparing
     }
 

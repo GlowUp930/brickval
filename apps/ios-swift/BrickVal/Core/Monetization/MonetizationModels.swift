@@ -53,6 +53,7 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
     let accessExperiment: AccessExperiment?
     let gates: Gates
     let limits: Limits
+    let lockedBulkPreview: Bool
     let notifications: Notifications
     let minimumAppBuild: Int?
     let appUpdateURL: URL?
@@ -62,6 +63,7 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
         accessExperiment: AccessExperiment?,
         gates: Gates,
         limits: Limits,
+        lockedBulkPreview: Bool = false,
         notifications: Notifications,
         minimumAppBuild: Int? = nil,
         appUpdateURL: URL? = nil
@@ -70,13 +72,14 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
         self.accessExperiment = accessExperiment
         self.gates = gates
         self.limits = limits
+        self.lockedBulkPreview = lockedBulkPreview
         self.notifications = notifications
         self.minimumAppBuild = minimumAppBuild
         self.appUpdateURL = appUpdateURL
     }
 
     static let phaseOne = MonetizationPolicy(
-        version: 4,
+        version: 5,
         accessExperiment: AccessExperiment(
             enabled: false,
             hardPaywallPercent: 50,
@@ -95,6 +98,7 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
             introductoryBulkScans: 1,
             collectionUniqueItems: 10
         ),
+        lockedBulkPreview: false,
         notifications: Notifications(
             enabled: true,
             scanReset: true,
@@ -109,6 +113,29 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
             hardPaywallPercent: 0,
             trialDays: 7
         )
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case version
+        case accessExperiment
+        case gates
+        case limits
+        case lockedBulkPreview
+        case notifications
+        case minimumAppBuild
+        case appUpdateURL
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decode(Int.self, forKey: .version)
+        accessExperiment = try container.decodeIfPresent(AccessExperiment.self, forKey: .accessExperiment)
+        gates = try container.decode(Gates.self, forKey: .gates)
+        limits = try container.decode(Limits.self, forKey: .limits)
+        lockedBulkPreview = try container.decodeIfPresent(Bool.self, forKey: .lockedBulkPreview) ?? false
+        notifications = try container.decode(Notifications.self, forKey: .notifications)
+        minimumAppBuild = try container.decodeIfPresent(Int.self, forKey: .minimumAppBuild)
+        appUpdateURL = try container.decodeIfPresent(URL.self, forKey: .appUpdateURL)
     }
 }
 
@@ -173,6 +200,27 @@ struct UsageSnapshot: Codable, Equatable, Sendable {
 struct MonetizationStatus: Codable, Equatable, Sendable {
     let policy: MonetizationPolicy
     let usage: UsageSnapshot
+}
+
+struct ReferralStatus: Codable, Equatable, Sendable {
+    let code: String
+    let qualifiedCount: Int
+    let goal: Int
+    let bonusBulkScans: Int
+    let bulkCreditsRemaining: Int
+    let rewardGranted: Bool
+}
+
+struct ReferralClaimResponse: Codable, Sendable {
+    let claimed: Bool
+    let status: String
+    let referral: ReferralStatus
+}
+
+struct ReferralOnboardingCompletionResponse: Codable, Sendable {
+    let qualified: Bool
+    let rewardGranted: Bool
+    let referral: ReferralStatus
 }
 
 struct BulkMinifigLookupResult: Sendable {

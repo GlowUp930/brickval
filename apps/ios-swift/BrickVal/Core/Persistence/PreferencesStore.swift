@@ -20,6 +20,7 @@ final class PreferencesStore {
     var hasSeenScanTips: Bool { didSet { save(hasSeenScanTips, for: Keys.scanTips) } }
     var guestScansUsed: Int { didSet { save(guestScansUsed, for: Keys.guestScans) } }
     var hasRequestedReview: Bool { didSet { save(hasRequestedReview, for: Keys.reviewRequested) } }
+    var referralOnboardingCompletionPending: Bool { didSet { save(referralOnboardingCompletionPending, for: Keys.referralOnboardingCompletionPending) } }
 
     @ObservationIgnored private let defaults: UserDefaults
 
@@ -38,6 +39,7 @@ final class PreferencesStore {
         hasSeenScanTips = defaults.bool(forKey: Keys.scanTips)
         guestScansUsed = defaults.integer(forKey: Keys.guestScans)
         hasRequestedReview = defaults.bool(forKey: Keys.reviewRequested)
+        referralOnboardingCompletionPending = defaults.bool(forKey: Keys.referralOnboardingCompletionPending)
     }
 
     func applyLegacy(_ values: LegacyPreferenceValues) {
@@ -75,6 +77,7 @@ final class PreferencesStore {
         static let scanTips = "brickval_scan_tips_seen"
         static let guestScans = "guest_scan_lookups_used"
         static let reviewRequested = "brickval_review_requested"
+        static let referralOnboardingCompletionPending = "brickvalue_referral_onboarding_completion_pending"
     }
 
     var avatarBackgroundColor: Color {

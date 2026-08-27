@@ -4,4 +4,5 @@ enum AppRoute: Hashable {
     case collectionItem(CollectionItem)
     case appearance
     case subscription
+    case referral
 }

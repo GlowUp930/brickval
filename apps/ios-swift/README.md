@@ -29,6 +29,10 @@ xcodegen generate
 
 `project.yml` is the edit source for project structure. `BrickVal.xcodeproj` is committed so the app opens directly in Xcode, but regenerate it after project file changes.
 
+## PostHog analytics
+
+PostHog is configured during `BrickValApp` initialization with lifecycle and screen-view capture enabled. Add the `phc_...` project key to the ignored `Configuration/Secrets.xcconfig` as `POSTHOG_API_KEY`; copy the blank entry from `Configuration/Secrets.example.xcconfig` if needed. The app uses the Clerk user ID for identity, resets analytics on logout, and exposes feature-flag reads through `AppSDKCoordinator`.
+
 Run unit tests from this folder:
 
 ```bash

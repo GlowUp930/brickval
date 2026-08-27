@@ -22,10 +22,10 @@ struct HardAccessStatusView: View {
 
 struct HardScanAccessView: View {
     @Environment(MonetizationStore.self) private var monetization
-    @Environment(PreferencesStore.self) private var preferences
     @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var contentVisible = false
+    @State private var showReferral = false
 
     var body: some View {
         ZStack {
@@ -63,6 +63,11 @@ struct HardScanAccessView: View {
                 }
             }
         }
+        .sheet(isPresented: $showReferral) {
+            NavigationStack {
+                ReferralView()
+            }
+        }
         .alert("Upgrade unavailable", isPresented: paywallErrorBinding) {
             Button("OK", role: .cancel) {
                 coordinator?.dismissPaywallPresentationError()
@@ -72,9 +77,6 @@ struct HardScanAccessView: View {
         }
         .task {
             reveal()
-            guard monetization.shouldPresentHardAccessIntro else { return }
-            monetization.markHardAccessIntroPresented()
-            presentPaywall(source: "onboarding_complete")
         }
     }
 
@@ -128,12 +130,23 @@ struct HardScanAccessView: View {
             Button {
                 presentPaywall(source: "scanner_gate")
             } label: {
-                Text("View Pro options")
+                Text("Subscribe")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity, minHeight: isCompact ? 50 : 56)
                     .background(BrickValStyle.Semantic.builderYellow, in: Capsule())
             }
+
+            Button {
+                showReferral = true
+            } label: {
+                Label("Invite 3 friends", systemImage: "person.2")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: isCompact ? 44 : 48)
+            }
+            .buttonStyle(.bordered)
+            .tint(.white)
 
             if monetization.offerCodesEnabled {
                 Button {
@@ -185,14 +198,6 @@ struct HardScanAccessView: View {
     }
 
     private func presentPaywall(source: String) {
-        var manualDismissal: (@MainActor () -> Void)?
-        if source == "onboarding_complete" {
-            manualDismissal = { @MainActor in
-                preferences.shouldReturnToOnboardingAccount = true
-                preferences.isReplayingOnboarding = true
-            }
-        }
-
         coordinator?.presentUpgrade(
             placement: .onboardingHardAccess,
             params: [
@@ -200,7 +205,6 @@ struct HardScanAccessView: View {
                 "source": source,
                 "trial_days": monetization.trialDays,
             ],
-            manualDismissal: manualDismissal
         )
     }
 

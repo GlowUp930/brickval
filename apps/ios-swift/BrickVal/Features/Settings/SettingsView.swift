@@ -215,6 +215,16 @@ struct SettingsView: View {
                 }
             }
             .buttonStyle(.plain)
+
+            NavigationLink(value: AppRoute.referral) {
+                profileRow(
+                    icon: "person.2",
+                    title: "Invite friends",
+                    subtitle: "Earn bonus bulk scans",
+                    trailing: "Open"
+                )
+            }
+            .buttonStyle(.plain)
         }
         .padding(BrickValStyle.Primitive.space16)
         .profileCardStyle()

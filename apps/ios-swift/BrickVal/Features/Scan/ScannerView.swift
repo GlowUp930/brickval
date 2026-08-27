@@ -61,6 +61,7 @@ struct ScannerView: View {
                 policy: monetization.policy,
                 usage: monetization.usage,
                 isPro: entitlements.isPro,
+                lockedBulkPreviewAvailable: monetization.shouldUseLockedBulkPreview(isPro: entitlements.isPro),
                 notifyWhenReset: {
                     guard let resetDate = monetization.usage.singleScan.resetsAt.flatMap(ISO8601DateFormatter().date(from:)) else { return }
                     Task { await notifications.requestScanResetReminder(resetDate: resetDate) }
@@ -83,7 +84,7 @@ struct ScannerView: View {
                         if ![.capturing, .identifying].contains(store.phase) {
                             if store.intent == .bulk {
                                 BulkFocusOverlay(
-                                    regions: store.observations.enumerated().map { index, observation in
+                                    regions: store.observations.prefix(BulkScanSource.maximumRegionCount).enumerated().map { index, observation in
                                         BulkFocusRegion(
                                             id: observation.id,
                                             box: observation.boundingBox,
@@ -199,6 +200,7 @@ struct ScannerView: View {
         }
         .task {
             store.configureMonetization(monetization, isPro: entitlements.isPro)
+            store.configureAnalytics(coordinator?.analytics)
             monetization.configure(signedIn: coordinator?.clerk?.user != nil)
         }
         .onChange(of: entitlements.isPro) { _, isPro in
@@ -334,6 +336,7 @@ private struct ScannerAllowanceView: View {
     let policy: MonetizationPolicy
     let usage: UsageSnapshot
     let isPro: Bool
+    let lockedBulkPreviewAvailable: Bool
     let notifyWhenReset: () -> Void
     let isResetReminderEnabled: Bool
 
@@ -392,6 +395,7 @@ private struct ScannerAllowanceView: View {
             return "\(remaining) free \(remaining == 1 ? "scan" : "scans") left today"
         case .bulk:
             if isPro { return "Unlimited bulk scans" }
+            if lockedBulkPreviewAvailable { return "Preview available · unlock to value" }
             let remaining = usage.bulkScan.remaining
             return remaining > 0 ? "1 free try" : "Bulk scanning requires Pro"
         }
@@ -479,7 +483,7 @@ private struct ScanTipsCallout: View {
             )
             tipRow(
                 "square.stack.3d.up",
-                title: "Bulk · frame your figures",
+                title: "Bulk · up to 60 figures",
                 detail: "Place front-facing figures apart from each other, then tap the shutter. Boxes help confirm they are visible."
             )
 

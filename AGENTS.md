@@ -49,7 +49,7 @@ The existing Next.js app remains the hosted API/web backend at `brickvalue.live`
 ## Tech Stack
 - SwiftUI native iOS app in `apps/ios-swift`
 - Xcode project generated from `apps/ios-swift/project.yml`
-- Clerk iOS SDK, RevenueCat, Superwall, and Sentry
+- Clerk iOS SDK, RevenueCat, Superwall, Sentry, and PostHog
 - Next.js hosted backend at `brickvalue.live` for server-side API calls and web fallback screens
 - Codex Sonnet Vision API for set identification
 - eBay API, BrickLink API, Brickset API, Frankfurter API, Supabase cache, Clerk, and Stripe remain backend concerns
@@ -111,12 +111,16 @@ SUPABASE_SERVICE_ROLE_KEY           ← server-only, never expose to client
 # Sentry Error Tracking
 SENTRY_DSN              ← backend/web Sentry DSN; Swift Sentry config belongs in the iOS app configuration
 
+# Product analytics
+POSTHOG_API_KEY         ← PostHog project key beginning with phc_; keep it in the ignored native Secrets.xcconfig
+
 # App
 NEXT_PUBLIC_APP_URL
 
 # Native iOS rollout
 BRICKVALUE_MINIMUM_IOS_BUILD       ← optional forced-update gate; set only after the replacement build is live
 BRICKVALUE_IOS_UPDATE_URL          ← optional App Store/TestFlight update URL
+BRICKVALUE_LOCKED_BULK_PREVIEW_ENABLED ← optional locked soft-paywall preview flag; keep off until the referral/grandfathering migration is deployed
 
 # Legacy (not active in current flow)
 RAPIDAPI_KEY
@@ -254,6 +258,7 @@ This is not optional — it is in the success criteria.
 - Native app: Swift iOS project lives in `apps/ios-swift/`.
 - Native paywall: RevenueCat and Superwall are Swift Package dependencies in `apps/ios-swift/project.yml`.
 - Native auth/error tracking: Clerk and Sentry are Swift Package dependencies in `apps/ios-swift/project.yml`.
+- Native product analytics: PostHog is a Swift Package dependency in `apps/ios-swift/project.yml`; it starts during native app initialization, captures lifecycle/screen events, identifies Clerk users by stable ID, and resets on logout. The project key is local-only in `Configuration/Secrets.xcconfig`.
 - Previous Expo app: kept at `apps/expo-previous/` for reference only.
 - Backend scan gate: `src/lib/scan-gate.ts` is STUBBED — returns `allowed: true` for all users.
   Real backend scan limits + Stripe paywall still need final wiring.
@@ -278,6 +283,7 @@ This is not optional — it is in the success criteria.
 ## Key File Locations
 - `apps/ios-swift/BrickVal/App` — Swift app shell, tabs, and routing
 - `apps/ios-swift/BrickVal/Core` — camera, models, persistence, and design system
+- `apps/ios-swift/BrickVal/Core/Analytics/PostHogAnalytics.swift` — PostHog setup, identity/reset, events, and feature flags
 - `apps/ios-swift/BrickVal/Features` — collection, scan, onboarding, and settings UI
 - `apps/ios-swift/BrickVal/Resources` — iOS assets, Info.plist, and launch screen
 - `apps/ios-swift/BrickValTests` — Swift unit tests

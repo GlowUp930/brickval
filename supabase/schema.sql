@@ -10,8 +10,83 @@ CREATE TABLE IF NOT EXISTS users (
   scans_used      int DEFAULT 0 NOT NULL,
   is_pro          boolean DEFAULT false NOT NULL,
   hit_paywall_at  timestamp,               -- first time user hit the 5-scan gate
+  bulk_intro_grandfathered boolean DEFAULT false NOT NULL,
+  bulk_intro_installation_hash text,
   created_at      timestamp DEFAULT now() NOT NULL
 );
+
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS bulk_intro_grandfathered boolean NOT NULL DEFAULT false;
+
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS bulk_intro_installation_hash text;
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_bulk_intro_installation_hash_idx
+  ON users (bulk_intro_installation_hash)
+  WHERE bulk_intro_installation_hash IS NOT NULL;
+
+UPDATE users
+SET bulk_intro_grandfathered = true
+WHERE bulk_intro_grandfathered = false
+  AND created_at < now();
+
+CREATE TABLE IF NOT EXISTS referral_codes (
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  referrer_user_id  text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code              text NOT NULL UNIQUE,
+  active            boolean NOT NULL DEFAULT true,
+  created_at        timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS referral_codes_referrer_idx
+  ON referral_codes (referrer_user_id, active);
+
+CREATE UNIQUE INDEX IF NOT EXISTS referral_codes_one_active_per_referrer_idx
+  ON referral_codes (referrer_user_id)
+  WHERE active = true;
+
+CREATE TABLE IF NOT EXISTS referral_attributions (
+  id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  referral_code_id     uuid NOT NULL REFERENCES referral_codes(id) ON DELETE CASCADE,
+  referrer_user_id     text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  referred_user_id     text NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  status               text NOT NULL CHECK (status IN ('claimed', 'qualified', 'rejected')),
+  claimed_at           timestamptz NOT NULL DEFAULT now(),
+  qualified_at         timestamptz,
+  qualification_reason text,
+  installation_hash    text
+);
+
+ALTER TABLE referral_attributions
+  ADD COLUMN IF NOT EXISTS installation_hash text;
+
+CREATE INDEX IF NOT EXISTS referral_attributions_referrer_idx
+  ON referral_attributions (referrer_user_id, status);
+
+CREATE UNIQUE INDEX IF NOT EXISTS referral_attributions_installation_idx
+  ON referral_attributions (installation_hash)
+  WHERE installation_hash IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS referral_rewards (
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  referrer_user_id  text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  milestone         text NOT NULL,
+  quantity          integer NOT NULL CHECK (quantity > 0),
+  granted_at        timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (referrer_user_id, milestone)
+);
+
+CREATE TABLE IF NOT EXISTS referral_credit_ledger (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id             text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  amount              integer NOT NULL CHECK (amount <> 0),
+  reason              text NOT NULL,
+  source_referral_id  uuid REFERENCES referral_attributions(id) ON DELETE SET NULL,
+  created_at          timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS referral_credit_ledger_user_idx
+  ON referral_credit_ledger (user_id, created_at);
 
 CREATE TABLE IF NOT EXISTS notification_devices (
   device_id               text PRIMARY KEY,
@@ -142,6 +217,10 @@ ALTER TABLE market_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE service_monthly_usage ENABLE ROW LEVEL SECURITY;
 ALTER TABLE service_rate_limits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE scan_feedback ENABLE ROW LEVEL SECURITY;
+ALTER TABLE referral_codes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE referral_attributions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE referral_rewards ENABLE ROW LEVEL SECURITY;
+ALTER TABLE referral_credit_ledger ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION consume_monthly_service_quota(
   p_service text,
@@ -277,9 +356,12 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
   v_is_pro boolean;
+  v_bulk_intro_grandfathered boolean;
   v_uses int;
+  v_effective_limit int := p_free_limit;
 BEGIN
-  SELECT is_pro INTO v_is_pro
+  SELECT is_pro, bulk_intro_grandfathered
+  INTO v_is_pro, v_bulk_intro_grandfathered
   FROM users
   WHERE id = p_user_id
   FOR UPDATE;
@@ -292,6 +374,10 @@ BEGIN
     RETURN jsonb_build_object('allowed', true, 'used', 0, 'is_pro', true);
   END IF;
 
+  IF p_feature = 'bulk_scan' AND NOT COALESCE(v_bulk_intro_grandfathered, false) THEN
+    v_effective_limit := 0;
+  END IF;
+
   INSERT INTO user_feature_usage (user_id, feature, period_key, uses)
   VALUES (p_user_id, p_feature, p_period_key, 0)
   ON CONFLICT (user_id, feature, period_key) DO NOTHING;
@@ -301,7 +387,7 @@ BEGIN
   WHERE user_id = p_user_id
     AND feature = p_feature
     AND period_key = p_period_key
-    AND uses < p_free_limit
+    AND uses < v_effective_limit
   RETURNING uses INTO v_uses;
 
   IF NOT FOUND THEN
@@ -314,5 +400,283 @@ BEGIN
   END IF;
 
   RETURN jsonb_build_object('allowed', true, 'used', v_uses, 'is_pro', false);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION claim_bulk_intro_grandfathering(
+  p_user_id text,
+  p_installation_hash text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_grandfathered boolean;
+  v_existing_hash text;
+  v_bulk_uses integer;
+BEGIN
+  IF p_installation_hash IS NULL OR length(trim(p_installation_hash)) = 0 THEN
+    RETURN false;
+  END IF;
+
+  INSERT INTO users (id)
+  VALUES (p_user_id)
+  ON CONFLICT (id) DO NOTHING;
+
+  SELECT bulk_intro_grandfathered, bulk_intro_installation_hash
+  INTO v_grandfathered, v_existing_hash
+  FROM users
+  WHERE id = p_user_id
+  FOR UPDATE;
+
+  IF v_grandfathered THEN
+    RETURN true;
+  END IF;
+
+  IF v_existing_hash IS NOT NULL THEN
+    RETURN false;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM users
+    WHERE bulk_intro_installation_hash = p_installation_hash
+  ) THEN
+    RETURN false;
+  END IF;
+
+  SELECT COALESCE(uses, 0)
+  INTO v_bulk_uses
+  FROM user_feature_usage
+  WHERE user_id = p_user_id
+    AND feature = 'bulk_scan'
+    AND period_key = 'lifetime';
+
+  IF COALESCE(v_bulk_uses, 0) > 0 THEN
+    RETURN false;
+  END IF;
+
+  UPDATE users
+  SET bulk_intro_grandfathered = true,
+      bulk_intro_installation_hash = p_installation_hash
+  WHERE id = p_user_id;
+
+  RETURN true;
+EXCEPTION
+  WHEN unique_violation THEN
+    RETURN false;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION claim_referral_code(
+  p_referred_user_id text,
+  p_code text,
+  p_installation_hash text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_code_id uuid;
+  v_referrer_user_id text;
+  v_existing_status text;
+  v_inserted integer;
+BEGIN
+  SELECT status
+  INTO v_existing_status
+  FROM referral_attributions
+  WHERE referred_user_id = p_referred_user_id;
+
+  IF FOUND THEN
+    RETURN jsonb_build_object(
+      'claimed', false,
+      'status', COALESCE(v_existing_status, 'already_claimed')
+    );
+  END IF;
+
+  IF p_installation_hash IS NOT NULL
+     AND EXISTS (
+       SELECT 1
+       FROM referral_attributions
+       WHERE installation_hash = p_installation_hash
+     ) THEN
+    RETURN jsonb_build_object('claimed', false, 'status', 'installation_already_used');
+  END IF;
+
+  SELECT id, referrer_user_id
+  INTO v_code_id, v_referrer_user_id
+  FROM referral_codes
+  WHERE code = upper(trim(p_code))
+    AND active = true
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('claimed', false, 'status', 'invalid');
+  END IF;
+
+  IF v_referrer_user_id = p_referred_user_id THEN
+    RETURN jsonb_build_object('claimed', false, 'status', 'self_referral');
+  END IF;
+
+  INSERT INTO users (id)
+  VALUES (p_referred_user_id)
+  ON CONFLICT (id) DO NOTHING;
+
+  INSERT INTO referral_attributions (
+    referral_code_id,
+    referrer_user_id,
+    referred_user_id,
+    status,
+    installation_hash
+  )
+  VALUES (v_code_id, v_referrer_user_id, p_referred_user_id, 'claimed', p_installation_hash);
+
+  GET DIAGNOSTICS v_inserted = ROW_COUNT;
+  IF v_inserted = 0 THEN
+    SELECT status
+    INTO v_existing_status
+    FROM referral_attributions
+    WHERE referred_user_id = p_referred_user_id;
+    RETURN jsonb_build_object(
+      'claimed', false,
+      'status', COALESCE(v_existing_status, 'already_claimed')
+    );
+  END IF;
+
+  RETURN jsonb_build_object('claimed', true, 'status', 'claimed');
+EXCEPTION
+  WHEN unique_violation THEN
+    IF p_installation_hash IS NOT NULL
+       AND EXISTS (
+         SELECT 1
+         FROM referral_attributions
+         WHERE installation_hash = p_installation_hash
+       ) THEN
+      RETURN jsonb_build_object('claimed', false, 'status', 'installation_already_used');
+    END IF;
+    RETURN jsonb_build_object('claimed', false, 'status', 'already_claimed');
+END;
+$$;
+
+-- Keep the old RPC signature usable without making the three-argument
+-- overload ambiguous for SQL callers.
+CREATE OR REPLACE FUNCTION claim_referral_code(
+  p_referred_user_id text,
+  p_code text
+)
+RETURNS jsonb
+LANGUAGE sql
+AS $$
+  SELECT claim_referral_code($1, $2, NULL::text);
+$$;
+
+CREATE OR REPLACE FUNCTION qualify_referral(
+  p_referred_user_id text,
+  p_reason text,
+  p_goal integer DEFAULT 3,
+  p_bonus_quantity integer DEFAULT 3
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_attribution referral_attributions%ROWTYPE;
+  v_qualified_count integer;
+  v_reward_rows integer;
+BEGIN
+  SELECT *
+  INTO v_attribution
+  FROM referral_attributions
+  WHERE referred_user_id = p_referred_user_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('qualified', false, 'status', 'not_claimed');
+  END IF;
+
+  IF v_attribution.status = 'qualified' THEN
+    SELECT count(*)::integer
+    INTO v_qualified_count
+    FROM referral_attributions
+    WHERE referrer_user_id = v_attribution.referrer_user_id
+      AND status = 'qualified';
+    RETURN jsonb_build_object(
+      'qualified', true,
+      'already_qualified', true,
+      'qualified_count', v_qualified_count,
+      'reward_granted', false
+    );
+  END IF;
+
+  IF v_attribution.status <> 'claimed' THEN
+    RETURN jsonb_build_object('qualified', false, 'status', v_attribution.status);
+  END IF;
+
+  UPDATE referral_attributions
+  SET status = 'qualified',
+      qualified_at = now(),
+      qualification_reason = p_reason
+  WHERE id = v_attribution.id;
+
+  SELECT count(*)::integer
+  INTO v_qualified_count
+  FROM referral_attributions
+  WHERE referrer_user_id = v_attribution.referrer_user_id
+    AND status = 'qualified';
+
+  INSERT INTO referral_rewards (referrer_user_id, milestone, quantity)
+  SELECT v_attribution.referrer_user_id, '3_qualified', p_bonus_quantity
+  WHERE v_qualified_count >= p_goal
+  ON CONFLICT (referrer_user_id, milestone) DO NOTHING;
+
+  GET DIAGNOSTICS v_reward_rows = ROW_COUNT;
+  IF v_reward_rows = 1 THEN
+    INSERT INTO referral_credit_ledger (
+      user_id,
+      amount,
+      reason,
+      source_referral_id
+    )
+    VALUES (
+      v_attribution.referrer_user_id,
+      p_bonus_quantity,
+      'referral_reward_3_qualified',
+      v_attribution.id
+    );
+  END IF;
+
+  RETURN jsonb_build_object(
+    'qualified', true,
+    'already_qualified', false,
+    'qualified_count', v_qualified_count,
+    'reward_granted', v_reward_rows = 1
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION consume_referral_bulk_credit(p_user_id text)
+RETURNS boolean
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_balance integer;
+BEGIN
+  PERFORM 1 FROM users WHERE id = p_user_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN false;
+  END IF;
+
+  SELECT COALESCE(sum(amount), 0)::integer
+  INTO v_balance
+  FROM referral_credit_ledger
+  WHERE user_id = p_user_id;
+
+  IF v_balance <= 0 THEN
+    RETURN false;
+  END IF;
+
+  INSERT INTO referral_credit_ledger (user_id, amount, reason)
+  VALUES (p_user_id, -1, 'referral_bulk_scan');
+  RETURN true;
 END;
 $$;

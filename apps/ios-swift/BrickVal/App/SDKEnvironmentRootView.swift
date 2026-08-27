@@ -111,6 +111,7 @@ struct SDKEnvironmentRootView: View {
             coordinator.dismissOfferCodeRedemptionPresentation()
         }
         .onChange(of: entitlements.isPro) { _, isPro in
+            coordinator.analytics.updatePlan(isPro: isPro)
             guard isPro else { return }
             Task { await coordinator.synchronizeServerEntitlement() }
         }
