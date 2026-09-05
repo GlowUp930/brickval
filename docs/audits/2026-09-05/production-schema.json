@@ -1,0 +1,82 @@
+{
+  "production_matches_local_supabase": true,
+  "referral_attributions": {
+    "status": 400,
+    "code": "42703",
+    "message": "column referral_attributions.installation_hash does not exist"
+  },
+  "users": {
+    "status": 400,
+    "code": "42703",
+    "message": "column users.bulk_intro_grandfathered does not exist"
+  },
+  "notification_devices": {
+    "status": 400,
+    "code": "42703",
+    "message": "column notification_devices.language_code does not exist"
+  },
+  "referral_rpc_schemas": {
+    "/rpc/claim_referral_code": [
+      {
+        "in": "body",
+        "name": "args",
+        "required": true,
+        "schema": {
+          "properties": {
+            "p_code": {
+              "format": "text",
+              "type": "string"
+            },
+            "p_referred_user_id": {
+              "format": "text",
+              "type": "string"
+            }
+          },
+          "required": [
+            "p_referred_user_id",
+            "p_code"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "$ref": "#/parameters/preferParams"
+      }
+    ],
+    "/rpc/qualify_referral": [
+      {
+        "in": "body",
+        "name": "args",
+        "required": true,
+        "schema": {
+          "properties": {
+            "p_bonus_quantity": {
+              "format": "integer",
+              "type": "integer"
+            },
+            "p_goal": {
+              "format": "integer",
+              "type": "integer"
+            },
+            "p_reason": {
+              "format": "text",
+              "type": "string"
+            },
+            "p_referred_user_id": {
+              "format": "text",
+              "type": "string"
+            }
+          },
+          "required": [
+            "p_referred_user_id",
+            "p_reason"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "$ref": "#/parameters/preferParams"
+      }
+    ]
+  }
+}

@@ -1,5 +1,11 @@
 # Scan Result Card Visual QA
 
+## Whole-app audit follow-up — 2026-09-05
+
+**Visual sign-off withheld for build 167.** The bulk white summary has very pale secondary labels, and the largest accessibility text size clips prices, condition controls, and the Add action on the small iPhone. [Report and screenshots](../../docs/audits/2026-09-05-whole-app.md#f11--p1-bulk-summary-contrast-and-accessibility-layout-fail) record the failures. Existing element-existence UI tests passed and did not detect these readability problems.
+
+The full native suites passed on both simulator sizes (186 Swift tests, 2 XCTest photo-import tests, 11 UI tests each). Localization catalogs passed for 13 languages. This does not certify VoiceOver, all translated layouts, real-camera performance, TestFlight referrals, or Apple purchases. Those untested journeys remain explicit gaps in the report. No visual or product fixes were made in this audit; previous implementation/upload notes below remain historical records.
+
 ## Inputs
 
 - Reference iOS: `/Users/holamchan/Downloads/IMG_9890.PNG`

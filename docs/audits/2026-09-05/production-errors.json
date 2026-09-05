@@ -1,0 +1,13 @@
+{
+  "requested_window": "7d",
+  "returned_error_rows": 6,
+  "routes": {
+    "/api/mobile/notifications/devices": 6
+  },
+  "statuses": {
+    "500": 6
+  },
+  "error_signals": [
+    "Could not find the 'language_code' column of 'notification_devices' in the schema cache\""
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "product_change_revokes_active_pro": true,
+  "billing_issue_revokes_without_checking_grace": true,
+  "older_renewal_overwrites_newer_expiration": true,
+  "stripe_database_failure_http_status": 200,
+  "ebay_only_set_payload": {
+    "rrp_usd": 80,
+    "gain_pct": 25,
+    "exchange_rate_stale": false,
+    "ebay_new_sales": [
+      {
+        "price_usd": 100
+      }
+    ],
+    "ebay_used_sales": [],
+    "ebay_new_avg_usd": 100,
+    "ebay_used_avg_usd": null,
+    "data_source": "sold",
+    "bricklink_new_avg_usd": null,
+    "bricklink_new_min_usd": null,
+    "bricklink_new_max_usd": null,
+    "bricklink_new_qty": null,
+    "bricklink_used_avg_usd": null,
+    "bricklink_used_min_usd": null,
+    "bricklink_used_max_usd": null,
+    "bricklink_used_qty": null,
+    "bricklink_stock_new_avg_usd": null,
+    "bricklink_stock_new_qty": null,
+    "bricklink_stock_used_avg_usd": null,
+    "bricklink_stock_used_qty": null,
+    "bricklink_sold_new_details": [],
+    "bricklink_sold_used_details": [],
+    "bricklink_stock_new_details": [],
+    "bricklink_stock_used_details": []
+  },
+  "bricklink_sold_price_labeled_as": "listing",
+  "anonymous_start": {
+    "status": 200,
+    "sessionIssued": true,
+    "gateCalls": 0
+  },
+  "anonymous_priced_region": {
+    "status": 200,
+    "debitCalls": 0
+  },
+  "denied_session_followup": {
+    "firstStatus": 402,
+    "secondStatus": 200,
+    "secondBody": {
+      "regionId": "r1",
+      "status": "matched",
+      "candidates": [
+        {
+          "id": "fig1",
+          "score": 0.99,
+          "result": {
+            "name": "audit figure",
+            "pricing": {
+              "hero_new_avg_usd": 12
+            }
+          }
+        }
+      ]
+    },
+    "debitCalls": 1
+  },
+  "database_outage_allows_bulk": true,
+  "failed_cache_write_resolves_without_warning": true,
+  "concurrent_code_creation_results": [
+    "fulfilled",
+    "rejected"
+  ]
+}

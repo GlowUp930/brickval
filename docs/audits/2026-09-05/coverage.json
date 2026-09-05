@@ -1,0 +1,566 @@
+{
+  "target": "BrickVal.app",
+  "lineCoverage": 0.4799938819210768,
+  "files": [
+    {
+      "name": "BrickValueAuthView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "ScanStore.swift",
+      "lineCoverage": 0.5943251533742331
+    },
+    {
+      "name": "AppDestinationModifier.swift",
+      "lineCoverage": 0.5789473684210527
+    },
+    {
+      "name": "BulkRecoverySession.swift",
+      "lineCoverage": 0.7119565217391305
+    },
+    {
+      "name": "CollectionStore.swift",
+      "lineCoverage": 0.84375
+    },
+    {
+      "name": "BulkRecoveryPayload.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "ScanReviewCandidate.swift",
+      "lineCoverage": 0.9821428571428571
+    },
+    {
+      "name": "AppearanceSettingsView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "PortfolioSummaryView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "PostHogAnalytics.swift",
+      "lineCoverage": 0.4444444444444444
+    },
+    {
+      "name": "ScanIntent.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "ScanMode.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "BrickValStyle.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "ScannerStatusView.swift",
+      "lineCoverage": 0.8115942028985508
+    },
+    {
+      "name": "CollectorAvatarPicker.swift",
+      "lineCoverage": 0.12167300380228137
+    },
+    {
+      "name": "LanguageSettingsView.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "SoundEffectPlayer.swift",
+      "lineCoverage": 0.8888888888888888
+    },
+    {
+      "name": "CollectionFilter.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "CollectorProfileEditorView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "ExchangeRatesPayload.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "NotificationModels.swift",
+      "lineCoverage": 0.9294117647058824
+    },
+    {
+      "name": "HardScanAccessView.swift",
+      "lineCoverage": 0.78125
+    },
+    {
+      "name": "ScanProcessingOverlayView.swift",
+      "lineCoverage": 0.8557213930348259
+    },
+    {
+      "name": "MinifigureDetecting.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "BrickValApp.swift",
+      "lineCoverage": 0.9627659574468085
+    },
+    {
+      "name": "MotionStabilityService.swift",
+      "lineCoverage": 0.21875
+    },
+    {
+      "name": "BulkFocusOverlay.swift",
+      "lineCoverage": 0.961352657004831
+    },
+    {
+      "name": "SettingsTabView.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "AccountView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "DetectionObservation.swift",
+      "lineCoverage": 0.9444444444444444
+    },
+    {
+      "name": "AppRouter.swift",
+      "lineCoverage": 0.4727272727272727
+    },
+    {
+      "name": "ProductFeedbackSurveyView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "ImageProcessor.swift",
+      "lineCoverage": 0.5818181818181818
+    },
+    {
+      "name": "PartColorSelectionView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "BulkShareCard.swift",
+      "lineCoverage": 0.5637860082304527
+    },
+    {
+      "name": "ScanResultView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "APIError.swift",
+      "lineCoverage": 0.6966292134831461
+    },
+    {
+      "name": "ReferralView.swift",
+      "lineCoverage": 0.3285024154589372
+    },
+    {
+      "name": "AvatarBackgroundPreference.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "MinifigLookupPayload.swift",
+      "lineCoverage": 0.9696969696969697
+    },
+    {
+      "name": "ProductFeedbackModels.swift",
+      "lineCoverage": 0.3125
+    },
+    {
+      "name": "PartColorOption.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "CollectionRowView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "CoreMLMinifigureDetector.swift",
+      "lineCoverage": 0.45294117647058824
+    },
+    {
+      "name": "CameraError.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "ScanTabView.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "PartLookupPayload.swift",
+      "lineCoverage": 0.9473684210526315
+    },
+    {
+      "name": "ScannerSheet.swift",
+      "lineCoverage": 0.925
+    },
+    {
+      "name": "PurchasingError.swift",
+      "lineCoverage": 0.7233201581027668
+    },
+    {
+      "name": "PreferencesStore.swift",
+      "lineCoverage": 0.7297297297297297
+    },
+    {
+      "name": "EntitlementStore.swift",
+      "lineCoverage": 0.9074074074074074
+    },
+    {
+      "name": "OnboardingGoalView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "MonetizationStore.swift",
+      "lineCoverage": 0.9049295774647887
+    },
+    {
+      "name": "ViewfinderOverlayView.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "APIConfiguration.swift",
+      "lineCoverage": 0.7
+    },
+    {
+      "name": "ClerkAccountContentView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "AppShellView.swift",
+      "lineCoverage": 0.6573705179282868
+    },
+    {
+      "name": "BrickValCurrency.swift",
+      "lineCoverage": 0.8888888888888888
+    },
+    {
+      "name": "BulkProcessingOverlayView.swift",
+      "lineCoverage": 0.958904109589041
+    },
+    {
+      "name": "PhotoCaptureDelegate.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "CurrencySettingsView.swift",
+      "lineCoverage": 0.8717948717948718
+    },
+    {
+      "name": "MultipartFormData.swift",
+      "lineCoverage": 0.9583333333333334
+    },
+    {
+      "name": "OnboardingView.swift",
+      "lineCoverage": 0.8509174311926605
+    },
+    {
+      "name": "SubscriptionView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "ProductFeedbackStore.swift",
+      "lineCoverage": 0.41810344827586204
+    },
+    {
+      "name": "ManualSetEntryView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "NormalizedBoundingBox.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "PortfolioHistoryBuilder.swift",
+      "lineCoverage": 0.778169014084507
+    },
+    {
+      "name": "BrickValLocalization.swift",
+      "lineCoverage": 0.9555555555555556
+    },
+    {
+      "name": "AutoScanSession.swift",
+      "lineCoverage": 0.9655172413793104
+    },
+    {
+      "name": "BulkMinifigLookupRow.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "ScanReviewView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "InteractiveStockChart.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "LookupResult.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "DetectionSamplePlanner.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "BulkScanResultsView.swift",
+      "lineCoverage": 0.8237956676365987
+    },
+    {
+      "name": "CollectionTabView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "SetLookupPayload.swift",
+      "lineCoverage": 0.782608695652174
+    },
+    {
+      "name": "PrimaryGoal.swift",
+      "lineCoverage": 0.125
+    },
+    {
+      "name": "MarketRow.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "OfferCodeRedemptionStatusView.swift",
+      "lineCoverage": 0.21052631578947367
+    },
+    {
+      "name": "BulkDetectionTracker.swift",
+      "lineCoverage": 0.8173913043478261
+    },
+    {
+      "name": "ScannerControlsView.swift",
+      "lineCoverage": 0.9836065573770492
+    },
+    {
+      "name": "ScannerView.swift",
+      "lineCoverage": 0.7089442815249267
+    },
+    {
+      "name": "BulkRevealOverlay.swift",
+      "lineCoverage": 0.9790322580645161
+    },
+    {
+      "name": "DetectionOverlayView.swift",
+      "lineCoverage": 0.7
+    },
+    {
+      "name": "CollectionStoreError.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "PortfolioHorizon.swift",
+      "lineCoverage": 0.7
+    },
+    {
+      "name": "NotificationCoordinator.swift",
+      "lineCoverage": 0.7410358565737052
+    },
+    {
+      "name": "MinifigScanPayload.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "AppRootView.swift",
+      "lineCoverage": 0.8047619047619048
+    },
+    {
+      "name": "CollectionView.swift",
+      "lineCoverage": 0.04934541792547835
+    },
+    {
+      "name": "BrickValAPIClient.swift",
+      "lineCoverage": 0.5520581113801453
+    },
+    {
+      "name": "BulkRevealSession.swift",
+      "lineCoverage": 0.8820960698689956
+    },
+    {
+      "name": "PortfolioHistoryPoint.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "MarketHistoryPoint.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "BulkMinifigScanPayload.swift",
+      "lineCoverage": 0.5263157894736842
+    },
+    {
+      "name": "CollectionCondition.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "CameraPreview.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "VisionBoundingBoxMapper.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "ItemDetailView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "ProfileDesignDraftsView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "NotificationSettingsView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "RevenueCatPurchaseController.swift",
+      "lineCoverage": 0.5546218487394958
+    },
+    {
+      "name": "PortfolioChartView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "OnboardingPageView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "AppTab.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "LocalDetectionSchedule.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "MonetizationModels.swift",
+      "lineCoverage": 0.9180327868852459
+    },
+    {
+      "name": "ScanReview.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "ManualLookupView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "LegacyKeychainReader.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "BulkRecoveryDemoFixture.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "BulkMinifigLookupPayload.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "LookupPricing.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "ProWelcomeView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "AccentPreference.swift",
+      "lineCoverage": 0.4666666666666667
+    },
+    {
+      "name": "InstallationIdentity.swift",
+      "lineCoverage": 0.4791666666666667
+    },
+    {
+      "name": "CollectionRepository.swift",
+      "lineCoverage": 0.9615384615384616
+    },
+    {
+      "name": "AppSDKCoordinator.swift",
+      "lineCoverage": 0.3875968992248062
+    },
+    {
+      "name": "ScanPhase.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "CameraService.swift",
+      "lineCoverage": 0.211864406779661
+    },
+    {
+      "name": "IdentificationDetection.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "AppErrorReporter.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "SettingsView.swift",
+      "lineCoverage": 0.8878766643307638
+    },
+    {
+      "name": "CameraPreviewView.swift",
+      "lineCoverage": 0.75
+    },
+    {
+      "name": "AppLinks.swift",
+      "lineCoverage": 0.7142857142857143
+    },
+    {
+      "name": "BulkImageLayout.swift",
+      "lineCoverage": 0.9894736842105263
+    },
+    {
+      "name": "FocusedScanCropPlanner.swift",
+      "lineCoverage": 0.9428571428571428
+    },
+    {
+      "name": "CardModifier.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "CameraSessionBox.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "CurrencyStore.swift",
+      "lineCoverage": 0.7876712328767124
+    },
+    {
+      "name": "CollectionLoadingView.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "ThemePreference.swift",
+      "lineCoverage": 0.4666666666666667
+    },
+    {
+      "name": "IdentificationResult.swift",
+      "lineCoverage": 0
+    },
+    {
+      "name": "SDKEnvironmentRootView.swift",
+      "lineCoverage": 0.4954128440366973
+    },
+    {
+      "name": "ProBadge.swift",
+      "lineCoverage": 0.53125
+    },
+    {
+      "name": "SkeletonPlaceholder.swift",
+      "lineCoverage": 1
+    },
+    {
+      "name": "LegacyExpoMigration.swift",
+      "lineCoverage": 0.9523809523809523
+    },
+    {
+      "name": "CollectionItem.swift",
+      "lineCoverage": 0.8360655737704918
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "self_referral": {
+    "status": "self_referral",
+    "claimed": false
+  },
+  "invalid_code": {
+    "status": "invalid",
+    "claimed": false
+  },
+  "claimed_not_qualified_balance": "0",
+  "duplicate_account": {
+    "status": "claimed",
+    "claimed": false
+  },
+  "duplicate_installation": {
+    "status": "installation_already_used",
+    "claimed": false
+  },
+  "sequential_three_balance": "3",
+  "repeat_and_fourth_friend_balance": "3",
+  "concurrent_debit_successes": 3,
+  "concurrent_debit_balance": "0",
+  "pro_usage_bypasses_free_limit": {
+    "used": 0,
+    "is_pro": true,
+    "allowed": true
+  },
+  "simultaneous_qualified_count": "3",
+  "simultaneous_reward_rows": "0",
+  "replay_repairs_missing_reward": "0",
+  "deleted_installation_reusable": {
+    "status": "claimed",
+    "claimed": true
+  },
+  "new_account_can_self_grandfather": "t",
+  "schema_rerun_grandfathers_new_users": "t"
+}

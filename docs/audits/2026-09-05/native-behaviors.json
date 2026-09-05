@@ -1,0 +1,21 @@
+{
+  "add_after_load_failure_overwrites_original" : true,
+  "corrupt_collection_load_reported" : true,
+  "ebay_only_new_value" : null,
+  "ebay_only_used_value" : null,
+  "empty_history_produces_values" : [
+    96.5,
+    97.799999999999997,
+    97.099999999999994,
+    99.200000000000003,
+    100.59999999999999,
+    99.799999999999997,
+    101.40000000000001,
+    100
+  ],
+  "new_only_payload_used_value" : 100,
+  "pending_invite_after_restart" : "nil",
+  "pending_invite_before_restart" : "ABCD2345",
+  "write_failure_reported" : true,
+  "write_failure_rolls_back_empty_collection" : true
+}

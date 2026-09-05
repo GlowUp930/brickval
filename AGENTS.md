@@ -1,5 +1,11 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Reliability audit status — 2026-09-05
+
+The [whole-app audit](docs/audits/2026-09-05-whole-app.md) is the latest reliability assessment for build 167. Automated suites pass, but reliability sign-off is withheld: production lacks required referral/intro-credit and notification schema; targeted tests reproduce lost concurrent referral rewards, scan authorization bypasses, subscription errors, invented pricing/history, and collection recovery data loss. Physical-device referral and Apple purchase verification remain blocked. This audit made no product fixes or production changes; implementation and release are separate work.
+
+Older implementation-status notes below are historical, not verification evidence. In particular, `scan-gate.ts` contains implemented metering with failure paths; it is not merely a stub. The audit report and evidence should guide the next reliability task.
+
 ## Active Development Branch
 **Current restructuring work happens on `codex/swift-repo-structure`.**
 Do NOT push to or edit the `codex/loveable-design-practices-ihFVU` branch.

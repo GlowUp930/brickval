@@ -1,0 +1,7 @@
+{
+  "bundle_id": "com.brickval.app",
+  "version": "1.0.7",
+  "build": "167",
+  "api_base_url": "https://brickvalue.live",
+  "non_exempt_encryption": false
+}

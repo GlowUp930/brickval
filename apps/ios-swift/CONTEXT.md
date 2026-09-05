@@ -1,5 +1,11 @@
 # BrickVal Native iOS Context
 
+## Reliability audit — 2026-09-05
+
+Build 167 was uploaded, but **reliability is not signed off**. The [whole-app report](../../docs/audits/2026-09-05-whole-app.md) records 15 prioritized findings and an ordered remedy backlog. Production schema is missing fields/RPCs expected by referral, introductory-credit, and notification code. Local isolated tests also reproduce lost simultaneous referral rewards, scan authorization bypasses, subscription state errors, incorrect market values/history, and destructive collection recovery. Earlier statements that new users cannot claim legacy credit describe intent; the audit reproduces a server validation gap.
+
+Verification: 186 Swift tests, 2 XCTest photo-import tests, and 11 UI tests passed on each small and large simulator; 68 backend tests, type-checking, and 13-language checks passed. Bulk contrast and largest Dynamic Type failed visual review. Real TestFlight referral, account switching/deletion, and Apple purchase/restore journeys remain blocked by unavailable devices/test identities. No product fixes, production migrations, or new release were performed during the audit.
+
 Last verified: 2026-08-27
 
 This is the working context for the canonical BrickVal mobile app. It is intentionally specific to the native SwiftUI app. Repository-wide rules remain in [`AGENTS.md`](../../AGENTS.md).
