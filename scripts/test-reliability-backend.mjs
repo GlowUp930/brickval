@@ -111,6 +111,14 @@ try {
     async insert(row){if(created)return {error:{code:'23505'}};created=row.code;return {error:null};},
   };}};
   const codes=await Promise.all([referrals.getOrCreateReferralCode('owner'),referrals.getOrCreateReferralCode('owner')]);check(codes[0],codes[1]);
+  const deletion=await load('src/app/api/delete-account/route.ts', {
+    '@clerk/nextjs/server': `export async function auth(){return {userId:'audit-user'};} export async function clerkClient(){return {users:{async deleteUser(){if(globalThis.bvAudit.deletionFails)throw new Error('provider outage');}}};}`,
+    '@/lib/supabase': `export function getSupabase(){return globalThis.bvAudit.db;}`,
+  });
+  globalThis.bvAudit.db={async rpc(){return {error:null};},from(){return {update(){return {async eq(){return {error:{message:'receipt unavailable'}};}};}};}};
+  check((await deletion.POST()).status,200);
+  globalThis.bvAudit.deletionFails=true;
+  check((await deletion.POST()).status,503);
   console.log(`${checks} reliability backend assertions passed.`);
 } finally {
   globalThis.fetch=originalFetch;delete globalThis.bvAudit;

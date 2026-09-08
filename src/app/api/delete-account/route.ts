@@ -25,7 +25,9 @@ export async function POST() {
     }
     const { error: completionError } = await supabase.from("account_deletion_requests")
       .update({ completed: true }).eq("user_hash", createHash("sha256").update(userId).digest("hex"));
-    if (completionError) throw completionError;
+    // Identity and user data are already deleted. A receipt bookkeeping failure
+    // must not report that the account still exists; the signed webhook retries it.
+    if (completionError) console.warn("[delete-account] Completion receipt update deferred to webhook");
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "account_deletion_failed",
