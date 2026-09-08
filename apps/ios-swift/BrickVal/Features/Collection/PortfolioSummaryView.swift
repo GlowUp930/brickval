@@ -14,7 +14,7 @@ struct PortfolioSummaryView: View {
 
     private var displayValue: Double { value }
     private var previousValue: Double { history.first?.value ?? displayValue }
-    private var change: Double { displayValue - previousValue }
+    private var change: Double { (history.last?.value ?? previousValue) - previousValue }
     private var changePercent: Double { previousValue > 0 ? change / previousValue : 0 }
     private var changeSign: String { change >= 0 ? "+" : "−" }
     private var changeColor: Color {
@@ -40,6 +40,9 @@ struct PortfolioSummaryView: View {
                 .monospacedDigit()
                 .contentTransition(.numericText(value: displayValue))
             if history.count > 1 {
+            Text("Market trend for items with history")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             HStack(spacing: BrickValStyle.Primitive.space4) {
                 Text(changeSign)
                 BrickValCurrencyText(abs(change))
@@ -52,8 +55,6 @@ struct PortfolioSummaryView: View {
             .font(.system(size: 16, weight: .medium))
             .foregroundStyle(changeColor)
             .monospacedDigit()
-            } else {
-                Text("Saved value").font(.subheadline).foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

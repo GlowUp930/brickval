@@ -170,7 +170,7 @@ function buildAuthHeader(method: string, url: string): string {
 
 // ── API Fetch ────────────────────────────────────────────────────────────────
 
-async function brickLinkFetch<T>(path: string): Promise<T | null> {
+async function brickLinkFetch<T>(path: string, timeoutMs = 8_000): Promise<T | null> {
   try {
     const url = `${API_BASE}${path}`;
     const authHeader = buildAuthHeader("GET", url);
@@ -182,7 +182,7 @@ async function brickLinkFetch<T>(path: string): Promise<T | null> {
         Accept: "application/json",
       },
       redirect: "follow",
-      signal: AbortSignal.timeout(8_000), next: { revalidate: 0 },
+      signal: AbortSignal.timeout(timeoutMs), next: { revalidate: 0 },
     } as RequestInit);
 
     if (!res.ok) {
@@ -232,6 +232,24 @@ async function fetchPriceGuide(
 }
 
 // ── Get Item ─────────────────────────────────────────────────────────────────
+
+/** History requests fetch only sold guides, with two sequential calls per item.
+ * Four batch workers therefore issue at most four upstream calls at once. */
+export async function fetchCollectionSoldGuides(type: "set" | "minifig" | "part", identifier: string, colorId?: number) {
+  const itemNo = type === "set" && !identifier.includes("-") ? `${identifier}-1` : identifier;
+  const fetchSold = async (condition: "N" | "U") => {
+    const color = type === "part" ? `&color_id=${colorId}` : "";
+    // Bound even a full 20-item batch with failed suffix retries below the route deadline.
+    let guide = await brickLinkFetch<BrickLinkPriceGuide>(`/items/${type.toUpperCase()}/${itemNo}/price?guide_type=sold&new_or_used=${condition}&currency_code=USD${color}`, 4_000);
+    if (!guide && type === "set" && itemNo !== identifier) {
+      guide = await brickLinkFetch<BrickLinkPriceGuide>(`/items/SET/${identifier}/price?guide_type=sold&new_or_used=${condition}&currency_code=USD`, 4_000);
+    }
+    return guide;
+  };
+  const sold_new = await fetchSold("N");
+  const sold_used = await fetchSold("U");
+  return { sold_new, sold_used };
+}
 
 async function fetchItem(setNo: string): Promise<BrickLinkItem | null> {
   return brickLinkFetch<BrickLinkItem>(`/items/SET/${setNo}`);

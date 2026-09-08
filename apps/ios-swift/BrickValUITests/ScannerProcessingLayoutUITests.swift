@@ -2,6 +2,60 @@ import XCTest
 
 @MainActor
 final class ScannerProcessingLayoutUITests: XCTestCase {
+    func testExistingCollectionFetchesRealHistoryAndChangesTimeframe() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-showCollectionHistoryDemo", "-showProGatingDemo", "-brickval_language_override", "en"]
+        app.launch()
+        let month = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "collection.valueChart.1M.")).firstMatch
+        XCTAssertTrue(month.waitForExistence(timeout: 15))
+        let monthCount = Int(month.identifier.split(separator: ".").last ?? "0") ?? 0
+        XCTAssertGreaterThan(monthCount, 2)
+        let quarterButton = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Show 3M price history")).firstMatch
+        for _ in 0..<3 where !quarterButton.isHittable { app.swipeUp() }
+        quarterButton.tap()
+        let quarter = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "collection.valueChart.3M.")).firstMatch
+        XCTAssertTrue(quarter.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(Int(quarter.identifier.split(separator: ".").last ?? "0") ?? 0, monthCount)
+        quarter.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.4))
+            .press(forDuration: 0.3, thenDragTo: quarter.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.4)), withVelocity: .slow, thenHoldForDuration: 1)
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Collection real market history"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        let item = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Tintin Moon Rocket")).firstMatch
+        for _ in 0..<5 where !item.isHittable {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.65))
+                .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)))
+        }
+        XCTAssertTrue(item.waitForExistence(timeout: 5))
+        item.tap()
+        let detail = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "collectionItem.valueChart.")).firstMatch
+        for _ in 0..<5 where !detail.exists { app.swipeUp() }
+        XCTAssertTrue(detail.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(Int(detail.identifier.split(separator: ".").last ?? "0") ?? 0, 1)
+        let detailScreenshot = XCTAttachment(screenshot: app.screenshot())
+        detailScreenshot.name = "Item real market history"
+        detailScreenshot.lifetime = .keepAlways
+        add(detailScreenshot)
+    }
+
+    func testMarketHistoryLargeTextControlsRemainReachable() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-showCollectionHistoryDemo", "-showProGatingDemo", "-brickval_language_override", "en", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+        let chart = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "collection.valueChart.")).firstMatch
+        XCTAssertTrue(chart.waitForExistence(timeout: 15))
+        let half = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Show 6M price history")).firstMatch
+        for _ in 0..<4 where !half.isHittable { app.swipeUp() }
+        XCTAssertTrue(half.isHittable)
+        half.tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "collection.valueChart.6M.")).firstMatch.waitForExistence(timeout: 5))
+        let largeText = XCTAttachment(screenshot: app.screenshot())
+        largeText.name = "Market history largest text"
+        largeText.lifetime = .keepAlways
+        add(largeText)
+    }
+
     func testBulkAccessibilityControlsRemainReachable() {
         let app = XCUIApplication()
         app.launchArguments = ["-showBulkRecoveryDemo", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL", "-brickval_language_override", "en"]

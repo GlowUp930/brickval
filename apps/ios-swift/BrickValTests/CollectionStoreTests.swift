@@ -165,7 +165,7 @@ struct CollectionStoreTests {
     }
 
     @Test func portfolioHistoryUsesAddedItemMarketHistory() {
-        let item = CollectionItem(
+        var item = CollectionItem(
             setNumber: "75379",
             itemType: .set,
             name: "R2-D2",
@@ -179,6 +179,9 @@ struct CollectionStoreTests {
                 historyPoint(daysAgo: 0, value: 120),
             ]
         )
+        item.marketSales = item.marketHistory.map {
+            CollectionMarketSale(date: $0.date + "T00:00:00Z", priceUSD: $0.priceUSD, quantity: 1)
+        }
 
         let points = PortfolioHistoryBuilder.build(items: [item], horizon: .month)
         let values = points.map(\.value)
@@ -202,7 +205,7 @@ struct CollectionStoreTests {
         let points = PortfolioHistoryBuilder.build(items: [item], horizon: .month)
         let values = points.map(\.value)
 
-        #expect(values == [400])
+        #expect(values.isEmpty)
     }
 
     @Test func reloadsCollectionFromDirectoryContainingSpaces() async throws {

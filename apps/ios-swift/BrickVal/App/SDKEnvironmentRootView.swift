@@ -60,6 +60,8 @@ struct SDKEnvironmentRootView: View {
             AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showHardAccessDemo") {
             HardScanAccessView()
+        } else if ProcessInfo.processInfo.arguments.contains("-showCollectionHistoryDemo") {
+            CollectionHistoryDemoView()
         } else if ProcessInfo.processInfo.arguments.contains("-showScannerDemo") ||
                     ProcessInfo.processInfo.arguments.contains("-showProGatingDemo") ||
                     ProcessInfo.processInfo.arguments.contains("-showCollectionGatingDemo") ||

@@ -85,6 +85,30 @@ try {
   const expired=request({});expired.headers.set('authorization','Bearer expired');
   check((await scanAccess.scanRequestAccess(expired)).status,401);
 
+  // Reading collection history has its own request budget and never touches scan-credit RPCs.
+  budget=true; unavailable=false;
+  const historyCalls=[];
+  globalThis.bvAudit.db.rpc=async (name, args)=>{historyCalls.push({name,args});return {data:true};};
+  check((await scanAccess.scanRequestAccess(request({}), 'history')).userId.startsWith('guest:'),true);
+  check(historyCalls.length,1);
+  check(historyCalls[0].name,'consume_service_rate_limit');
+  check(historyCalls[0].args.p_key.startsWith('history-requests:'),true);
+  check((await scanAccess.scanRequestAccess(expired, 'history')).status,401);
+
+  let historyFetches=0;
+  globalThis.bvAudit.historyCache={identifier:'21367',item_type:'set',new_sales:[{date:'2026-09-01T00:00:00Z',price_usd:12,quantity:2}],used_sales:[],fetched_at:new Date().toISOString(),new_error:null,used_error:null};
+  globalThis.bvAudit.historyProvider=()=>{historyFetches++;throw new Error('Cache should avoid upstream');};
+  const historyRoute=await load('src/app/api/mobile/collection-history/route.ts', {
+    '@/lib/scan-request-access':`export async function scanRequestAccess(){return {userId:'audit-user'};}`,
+    '@/lib/cache':`export async function getCached(){return globalThis.bvAudit.historyCache;} export async function setCached(){}`,
+    '@/lib/bricklink':`export async function fetchCollectionSoldGuides(){return globalThis.bvAudit.historyProvider();}`,
+  });
+  const historyResponse=await historyRoute.POST(request({items:[{identifier:'21367-1',item_type:'set'}]}));
+  check(historyResponse.status,200);
+  check((await historyResponse.json()).items[0].new_sales.length,1);
+  check(historyFetches,0);
+  check((await historyRoute.POST(request({items:Array(21).fill({identifier:'21367',item_type:'set'})}))).status,400);
+
   const region=await load('src/app/api/minifig/bulk-scan/identify-region/route.ts',{
     '@/lib/scan-request-access':`export async function scanRequestAccess(){return {userId:'audit-user'};}`,
     '@/lib/backend-error-reporting':`export async function reportBulkScanError(){}`,

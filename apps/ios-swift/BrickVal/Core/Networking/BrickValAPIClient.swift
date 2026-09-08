@@ -8,6 +8,9 @@ enum BulkScanSource: String, Codable, Sendable {
 }
 
 struct BrickValAPIClient: Sendable {
+    var collectionHistory: @Sendable ([CollectionHistoryRequestItem]) async throws -> CollectionHistoryResponse = { _ in
+        throw APIError(endpoint: "collection history", statusCode: 0, serverMessage: nil)
+    }
     var scanMinifigure: @Sendable (Data) async throws -> MinifigScanResult
     var scanBulkMinifigures: @Sendable (Data, [BulkScanRegion], BulkScanSource) async throws -> BulkMinifigScanPayload
     var startBulkScan: (@Sendable (Data, [BulkScanRegion], BulkScanSource) async throws -> BulkScanStartPayload)? = nil
@@ -46,6 +49,19 @@ extension BrickValAPIClient {
         authToken: @escaping @Sendable () async -> String? = { nil }
     ) -> BrickValAPIClient {
         BrickValAPIClient(
+            collectionHistory: { items in
+#if DEBUG
+                if ProcessInfo.processInfo.arguments.contains("-showCollectionHistoryDemo") {
+                    return CollectionHistoryDemo.response(items)
+                }
+#endif
+                struct Body: Encodable { let items: [CollectionHistoryRequestItem] }
+                var request = try await request(baseURL: configuration.baseURL, path: "/api/mobile/collection-history", method: "POST",
+                                                body: JSONEncoder().encode(Body(items: items)), contentType: "application/json", token: authToken())
+                request.timeoutInterval = 120
+                let (data, response) = try await session.data(for: request)
+                return try decodeResponse(data: data, response: response, endpoint: "collection history")
+            },
             scanMinifigure: { imageData in
                 var form = MultipartFormData()
                 form.append(name: "image", filename: "scan.jpg", contentType: "image/jpeg", fileData: imageData)

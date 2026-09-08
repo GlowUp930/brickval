@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { supabase } from "./supabase";
 
 /** One server boundary for every provider-backed scan path, including legacy clients. */
-export async function scanRequestAccess(request: Request): Promise<{ userId: string } | NextResponse> {
+export async function scanRequestAccess(request: Request, purpose: "scan" | "history" = "scan"): Promise<{ userId: string } | NextResponse> {
   try {
     const session = await auth();
     if (!session.userId && request.headers.has("authorization")) {
@@ -34,12 +34,12 @@ export async function scanRequestAccess(request: Request): Promise<{ userId: str
     const limited = !account?.is_pro;
     const region = /\/(identify-region|recover)$/.test(new URL(request.url).pathname);
     const { data, error } = await supabase.rpc("consume_service_rate_limit", {
-      p_key: `scan-requests:${region ? "regions" : "primary"}:${userId}`,
-      p_limit: limited ? (region ? 180 : 12) : (region ? 600 : 120),
-      p_now: new Date().toISOString(), p_window_seconds: limited ? 86400 : 60,
+      p_key: purpose === "history" ? `history-requests:${userId}` : `scan-requests:${region ? "regions" : "primary"}:${userId}`,
+      p_limit: purpose === "history" ? 6 : limited ? (region ? 180 : 12) : (region ? 600 : 120),
+      p_now: new Date().toISOString(), p_window_seconds: purpose === "history" ? 60 : limited ? 86400 : 60,
     });
     if (error) throw error;
-    if (data !== true) return NextResponse.json({ error: "rate_limited", message: "Your scan allowance is temporarily exhausted. Please try again later." }, { status: 429 });
+    if (data !== true) return NextResponse.json({ error: "rate_limited", message: purpose === "history" ? "Price history is refreshing too often. Please try again in a minute." : "Your scan allowance is temporarily exhausted. Please try again later." }, { status: 429 });
     const { error: userError } = await supabase.from("users").upsert({
       id: userId!, ...(guest ? { bulk_intro_grandfathered: true } : {}),
     }, { onConflict: "id", ignoreDuplicates: true });

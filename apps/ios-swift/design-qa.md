@@ -1,6 +1,10 @@
 # Scan Result Card Visual QA
 
-## Saved-value chart recovery — build 169
+## Real market-history graphs — build 170
+
+Collection and item detail now render multi-point graphs from dated BrickLink sales. Current valuation stays above a separately labelled market trend; the chart identifies covered holdings. Single prices no longer occupy a full-height history graph. The DEBUG-only Joker/Tintin fixture starts with empty stored history and loads automatically, matching the reported old-collection failure. Apple's chart selection replaces the custom drag recognizer so vertical scrolling remains usable. Small-screen navigation and graph appearance pass targeted checks; final two-size and largest-text verification is in progress. See `docs/audits/2026-09-08-real-market-history.md` for release evidence.
+
+## Historical saved-value chart recovery — build 169 (superseded)
 
 Collection and item detail retain a visible green chart when only a saved price is available: a dashed reference line, one point and “Saved value” label. It does not imply flat historical performance or show an invented return. Real dated observations continue to render the history curve. Tested with an old Used Robin fixture with no history on iPhone SE (3rd generation); both charts and item quantity controls remain visible/reachable. All 198 native unit tests and 13-language catalog checks pass. Physical-device confirmation remains pending.
 

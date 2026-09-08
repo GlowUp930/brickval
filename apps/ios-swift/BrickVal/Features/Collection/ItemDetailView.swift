@@ -86,6 +86,10 @@ struct ItemDetailView: View {
             .padding(.bottom, BrickValStyle.Primitive.space32)
         }
         .background(detailBackground.ignoresSafeArea())
+        .task {
+            guard let coordinator else { return }
+            await store.refreshMarketHistory(using: coordinator.apiClient)
+        }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
@@ -178,7 +182,7 @@ struct ItemDetailView: View {
             titleBlock
             priceSummaryRow
             conditionTabs
-            if !historyPoints.isEmpty { chartBlock } else { Text("Price unavailable").foregroundStyle(.secondary) }
+            chartBlock
             quantityControls
             collectionFacts
             removeSection
@@ -239,6 +243,7 @@ struct ItemDetailView: View {
                 }
                 .foregroundStyle(marketChange ?? 0 >= 0 ? accent : BrickValStyle.Semantic.valueNegative)
                 if let marketChange {
+                    Text("Market trend for items with history").font(.caption2)
                     Text(marketChange, format: .percent.precision(.fractionLength(2)).locale(BrickValLocalization.effectiveLanguage.locale))
                         .font(.subheadline)
                         .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
@@ -284,7 +289,8 @@ struct ItemDetailView: View {
     private var chartBlock: some View {
         VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space16) {
             soldListingsLegend
-
+            Text("Estimated market history").font(.caption).foregroundStyle(.secondary)
+            if historyPoints.count > 1 {
             InteractiveStockChart(
                 points: historyPoints,
                 lineColor: accent,
@@ -292,8 +298,12 @@ struct ItemDetailView: View {
                 popupForeground: BrickValStyle.ScanResult.canvas
             )
             .id(horizon)
-            .accessibilityIdentifier("collectionItem.valueChart")
+            .accessibilityIdentifier("collectionItem.valueChart.\(historyPoints.count)")
             .frame(height: 330)
+            }
+            if historyPoints.count < 2 || store.isRefreshingHistory || store.historyErrorMessage != nil {
+                CollectionHistoryStatusView(hasHistory: historyPoints.count > 1)
+            }
 
             ChartHorizonPicker(
                 selection: $horizon,
@@ -619,10 +629,7 @@ struct ItemDetailView: View {
     private func conditionHistory(for option: DetailConditionOption, horizon: PortfolioHorizon) -> [StockChartPoint] {
         let sourceItem = matchingItems.first { $0.condition == option.condition }
             ?? (item.condition == option.condition ? item : nil)
-        return PortfolioHistoryBuilder.priceSeries(
-            from: sourceItem?.recordedHistory ?? [], horizon: horizon,
-            fallbackValue: sourceItem?.marketValueUSD ?? 0
-        )
+        return PortfolioHistoryBuilder.priceSeries(sales: sourceItem?.marketSales ?? [], horizon: horizon)
     }
 
 }

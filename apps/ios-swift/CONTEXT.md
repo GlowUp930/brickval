@@ -1,6 +1,12 @@
 # BrickVal Native iOS Context
 
-## Collection chart fix — build 169
+## Real market-history restoration — build 170
+
+Collection now requests real dated sales automatically, including for existing items with empty history. `/api/mobile/collection-history` is deployed and promoted at `dpl_F4aceFoU4FMhHuMd9okhhdw8g3qV`. Live checks returned 20 New/2 Used sales for Joker 70919 and 22 New/0 Used for Tintin 21367, without per-item errors; invalid bearer authentication returns 401. History uses an independent request budget, not scan or referral credits.
+
+Native `marketSales` persists separately from recorded scan prices. Daily weighted averages use real date spacing and current quantities; fixed-subset coverage and a common known start avoid invented past prices. Current valuation and historical return are separate. The 1M/3M/6M controls retain Pro gates; empty/single-point history uses a compact status. Apple's built-in chart selection preserves touch inspection and vertical scrolling. Release/verification details: `docs/audits/2026-09-08-real-market-history.md`. Final full-suite verification and Apple upload are in progress.
+
+## Historical collection chart fix — build 169 (superseded)
 
 The build 168 audit fix hid every chart without two dated observations, while normal lookup responses often contain no historical series. Build 169 restores a clearly labelled single saved-value reference chart in Collection and item detail, keeps unavailable prices unavailable, and preserves recorded prices across rescans/restart (including Used slots). A missing series no longer blanks a fully priced portfolio. Historical movement is shown only from dated observations; historical data is not backfilled or invented.
 

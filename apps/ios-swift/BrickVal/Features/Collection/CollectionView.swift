@@ -126,7 +126,15 @@ struct CollectionView: View {
         }
         .background(BrickValStyle.Semantic.canvas.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
-        .refreshable { await store.load() }
+        .task(id: store.items.map(\.id)) {
+            guard let coordinator else { return }
+            await store.refreshMarketHistory(using: coordinator.apiClient)
+        }
+        .refreshable {
+            await store.load()
+            guard let coordinator else { return }
+            await store.refreshMarketHistory(using: coordinator.apiClient, force: true)
+        }
         .overlay(alignment: .bottomTrailing) {
             ZStack(alignment: .bottomTrailing) {
                 if isShowingCollectionTips {

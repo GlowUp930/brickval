@@ -2,75 +2,61 @@ import Foundation
 import Testing
 @testable import BrickVal
 
+@MainActor
 struct PortfolioHistoryBuilderTests {
-    @Test func savedPriceKeepsChartAvailableWithoutHistoricalFeed() {
-        let points = PortfolioHistoryBuilder.priceSeries(from: [], horizon: .month, fallbackValue: 30)
-        #expect(points.map(\.value) == [30])
-        #expect(PortfolioHistoryBuilder.build(items: [fixture(history: [])], horizon: .month).map(\.value) == [30])
+    private let now = CollectionHistoryDemo.referenceDate
+
+    @Test func capturedJokerAndRocketSalesProduceDistinctTimeframes() {
+        var rocket = fixture()
+        rocket.marketSales = CollectionHistoryDemo.rocket
+        var joker = fixture(number: "70919")
+        joker.marketSales = CollectionHistoryDemo.joker
+        let windows = PortfolioHorizon.allCases.map {
+            PortfolioHistoryBuilder.marketHistory(items: [rocket, joker], horizon: $0, now: now)
+        }
+        #expect(windows.allSatisfy { $0.points.count > 2 && $0.coveredItems == 2 })
+        #expect(windows[0].points.count < windows[1].points.count)
+        #expect(windows[1].points.count < windows[2].points.count)
+        #expect(Set(windows[0].points.map(\.value)).count > 1)
     }
 
-    @Test func portfolioHistoryUsesTheSelectedDateWindow() {
-        let item = fixture(history: [
-            historyPoint(daysAgo: 180, value: 10),
-            historyPoint(daysAgo: 90, value: 20),
-            historyPoint(daysAgo: 0, value: 30),
-        ])
-
-        let month = PortfolioHistoryBuilder.build(items: [item], horizon: .month).map(\.value)
-        let quarter = PortfolioHistoryBuilder.build(items: [item], horizon: .quarter).map(\.value)
-        let half = PortfolioHistoryBuilder.build(items: [item], horizon: .half).map(\.value)
-
-        #expect(month != quarter)
-        #expect(quarter != half)
-        #expect(month.first == 30)
-        #expect(month.last == 30)
-        #expect(quarter.last == 30)
-        #expect(half.first == 10)
+    @Test func dailyAverageWeightsSoldQuantityAndRejectsInvalidSales() {
+        let sales = [sale("2026-09-01", 10, 1), sale("2026-09-01", 20, 3), sale("2026-09-02", 30, 1),
+                     sale("2026-09-02", 999, 0), sale("2026-09-09", 999, 1)]
+        let values = PortfolioHistoryBuilder.priceSeries(sales: sales, horizon: .month, now: now).map(\.value)
+        #expect(values == [17.5, 30])
     }
 
-    @Test func undatedPricesNeverInventHistoricalMovement() {
-        let history = [
-            MarketHistoryPoint(date: "Jan", priceUSD: 10, source: "test"),
-            MarketHistoryPoint(date: "Feb", priceUSD: 20, source: "test"),
-            MarketHistoryPoint(date: "Mar", priceUSD: 30, source: "test"),
-        ]
-
-        let month = PortfolioHistoryBuilder.priceSeries(from: history, horizon: .month, fallbackValue: 30)
-        let half = PortfolioHistoryBuilder.priceSeries(from: history, horizon: .half, fallbackValue: 30)
-
-        #expect(month.map(\.value) == [30])
-        #expect(half == month)
+    @Test func missingHistoryDoesNotHideCoveredItemsOrInventOldPrices() {
+        var first = fixture(); first.quantity = 2
+        first.marketSales = [sale("2026-08-15", 10), sale("2026-09-01", 20)]
+        var later = fixture(number: "70919")
+        later.marketSales = [sale("2026-08-20", 5), sale("2026-09-02", 8)]
+        let result = PortfolioHistoryBuilder.marketHistory(items: [first, later, fixture(number: "unknown")], horizon: .month, now: now)
+        #expect(result.coveredItems == 2 && result.totalItems == 3)
+        #expect(result.points.first?.timestamp == sale("2026-08-20", 1).timestamp)
+        #expect(result.points.map(\.value) == [25, 45, 48])
     }
 
-    @Test func oneItemWithoutHistoryStillShowsTheCompleteSavedTotal() {
-        let oldItem = CollectionItem(setNumber: "old", itemType: .set, name: "Old", theme: "LEGO",
-                                     marketValueUSD: 20, quantity: 2, addedAt: "2020-01-01T00:00:00Z")
-        let points = PortfolioHistoryBuilder.build(items: [oldItem, fixture(history: [])], horizon: .month)
-        #expect(points.map(\.value) == [70])
+    @Test func recordedScanPricesAreNotMarketSales() {
+        let item = fixture()
+        #expect(!item.recordedHistory.isEmpty)
+        #expect(PortfolioHistoryBuilder.build(items: [item], horizon: .month).isEmpty)
     }
 
-    @Test func missingPriceDoesNotBecomeAZeroValueChart() {
-        #expect(PortfolioHistoryBuilder.priceSeries(from: [], horizon: .month, fallbackValue: 0).isEmpty)
+    @Test func chartUsesActualDateSpacingAndNeverOvershoots() {
+        let points = [StockChartPoint(label: "A", value: 10, timestamp: now),
+                      StockChartPoint(label: "B", value: 30, timestamp: now.addingTimeInterval(86400)),
+                      StockChartPoint(label: "C", value: 20, timestamp: now.addingTimeInterval(864000))]
+        let samples = InteractiveStockChart.resample(points, count: 11)
+        #expect(samples[1].value == 30)
+        #expect(samples.allSatisfy { (10...30).contains($0.value) })
     }
 
-    private func fixture(history: [MarketHistoryPoint]) -> CollectionItem {
-        CollectionItem(
-            setNumber: "75379",
-            itemType: .set,
-            name: "R2-D2",
-            theme: "Star Wars",
-            marketValueUSD: 30,
-            quantity: 1,
-            marketHistory: history
-        )
+    private func sale(_ date: String, _ price: Double, _ quantity: Int = 1) -> CollectionMarketSale {
+        CollectionMarketSale(date: date + "T00:00:00Z", priceUSD: price, quantity: quantity)
     }
-
-    private func historyPoint(daysAgo: Int, value: Double) -> MarketHistoryPoint {
-        let date = Calendar(identifier: .gregorian).date(byAdding: .day, value: -daysAgo, to: .now) ?? .now
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd"
-        return MarketHistoryPoint(date: formatter.string(from: date), priceUSD: value, source: "test")
+    private func fixture(number: String = "21367") -> CollectionItem {
+        CollectionItem(setNumber: number, itemType: .set, name: "Fixture", theme: "LEGO", marketValueUSD: 30)
     }
 }

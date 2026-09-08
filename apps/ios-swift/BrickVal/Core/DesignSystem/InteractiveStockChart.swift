@@ -4,6 +4,7 @@ import SwiftUI
 struct StockChartPoint: Identifiable, Equatable {
     let label: String
     let value: Double
+    var timestamp: Date? = nil
     var id: String { label }
 }
 
@@ -115,16 +116,7 @@ struct InteractiveStockChart: View {
                             .frame(width: didReveal || reduceMotion ? geometry.size.width : 0)
                     }
             }
-            .chartOverlay { _ in
-                Rectangle()
-                    .fill(.clear)
-                    .contentShape(.rect)
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { value in select(at: value.location, width: geometry.size.width) }
-                            .onEnded { _ in selectedSampleID = nil }
-                    )
-            }
+            .chartXSelection(value: $selectedSampleID)
         }
         .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.9, blendDuration: 0.12), value: samples)
         .onAppear {
@@ -171,15 +163,7 @@ struct InteractiveStockChart: View {
         return (progress * width).clamped(to: estimatedHalfWidth ... max(estimatedHalfWidth, width - estimatedHalfWidth))
     }
 
-    private func select(at location: CGPoint, width: CGFloat) {
-        guard !samples.isEmpty else { return }
-        let relativeX = min(max(location.x, 0), width)
-        let progress = width > 0 ? relativeX / width : 0
-        let index = min(max(Int((progress * CGFloat(samples.count - 1)).rounded()), 0), samples.count - 1)
-        selectedSampleID = samples[index].id
-    }
-
-    private static func resample(_ points: [StockChartPoint], count: Int) -> [StockChartSample] {
+    static func resample(_ points: [StockChartPoint], count: Int) -> [StockChartSample] {
         guard count > 0 else { return [] }
         guard points.count > 1 else {
             guard let point = points.first else { return [] }
@@ -187,39 +171,30 @@ struct InteractiveStockChart: View {
         }
 
         return (0 ..< count).map { outputIndex in
-            let position = Double(outputIndex) / Double(count - 1) * Double(points.count - 1)
+            let fractionAcross = Double(outputIndex) / Double(max(count - 1, 1))
+            var position = fractionAcross * Double(points.count - 1)
+            var dateLabel: String?
+            if let start = points.first?.timestamp, let end = points.last?.timestamp, end > start,
+               points.allSatisfy({ $0.timestamp != nil }) {
+                let date = start.addingTimeInterval(end.timeIntervalSince(start) * fractionAcross)
+                let lower = points.lastIndex(where: { $0.timestamp! <= date }) ?? 0
+                let upper = min(lower + 1, points.count - 1)
+                let span = points[upper].timestamp!.timeIntervalSince(points[lower].timestamp!)
+                position = Double(lower) + (span > 0 ? date.timeIntervalSince(points[lower].timestamp!) / span : 0)
+                dateLabel = date.formatted(.dateTime.month(.abbreviated).day().locale(BrickValLocalization.effectiveLanguage.locale))
+            }
             let lower = Int(floor(position))
             let upper = min(lower + 1, points.count - 1)
             let fraction = position - Double(lower)
-            let value = Self.catmullRomValue(points: points, lower: lower, upper: upper, fraction: fraction)
-            let label = points[Int(position.rounded()).clamped(to: 0 ... points.count - 1)].label
+            let value = points[lower].value + (points[upper].value - points[lower].value) * fraction
+            let label = dateLabel ?? points[Int(position.rounded()).clamped(to: 0 ... points.count - 1)].label
             return StockChartSample(id: outputIndex, label: label, value: value)
         }
     }
 
-    private static func catmullRomValue(points: [StockChartPoint], lower: Int, upper: Int, fraction: Double) -> Double {
-        let p0 = points[max(lower - 1, 0)].value
-        let p1 = points[lower].value
-        let p2 = points[upper].value
-        let p3 = points[min(upper + 1, points.count - 1)].value
-        let t = fraction
-        let t2 = t * t
-        let t3 = t2 * t
-        let smoothed = 0.5 * (
-            (2 * p1) +
-                (-p0 + p2) * t +
-                (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
-                (-p0 + 3 * p1 - 3 * p2 + p3) * t3
-        )
-        let localLow = [p0, p1, p2, p3].min() ?? min(p1, p2)
-        let localHigh = [p0, p1, p2, p3].max() ?? max(p1, p2)
-        let overshoot = max((localHigh - localLow) * 0.08, max(abs(p1), abs(p2)) * 0.002)
-        let localBounds = (min(p1, p2) - overshoot) ... (max(p1, p2) + overshoot)
-        return smoothed.clamped(to: localBounds)
-    }
 }
 
-private struct StockChartSample: Identifiable, Equatable {
+struct StockChartSample: Identifiable, Equatable {
     let id: Int
     let label: String
     let value: Double

@@ -20,6 +20,8 @@ struct CollectionItem: Codable, Hashable, Identifiable, Sendable {
     var marketHistory: [MarketHistoryPoint]
     let marketRows: [MarketRow]
     let addedAt: String
+    var marketSales: [CollectionMarketSale] = []
+    var marketHistoryFetchedAt: String? = nil
 
     var id: String {
         "\(itemType.rawValue)-\(setNumber)-\(condition.rawValue)-\(colorID.map(String.init) ?? "none")"
@@ -98,6 +100,8 @@ struct CollectionItem: Codable, Hashable, Identifiable, Sendable {
         marketRows = try container.decodeIfPresent([MarketRow].self, forKey: .marketRows) ?? []
         addedAt = try container.decodeIfPresent(String.self, forKey: .addedAt)
             ?? ISO8601DateFormatter().string(from: .now)
+        marketSales = try container.decodeIfPresent([CollectionMarketSale].self, forKey: .marketSales) ?? []
+        marketHistoryFetchedAt = try container.decodeIfPresent(String.self, forKey: .marketHistoryFetchedAt)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -120,5 +124,7 @@ struct CollectionItem: Codable, Hashable, Identifiable, Sendable {
         case marketHistory = "market_history"
         case marketRows = "market_rows"
         case addedAt = "added_at"
+        case marketSales = "market_sales"
+        case marketHistoryFetchedAt = "market_history_fetched_at"
     }
 }

@@ -18,7 +18,7 @@ final class AppRouter {
         self.defaults = defaults
         pendingReferralCode = defaults.string(forKey: "brickvalue_pending_referral_code")
 #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("-showCollectionGatingDemo") {
+        if ProcessInfo.processInfo.arguments.contains("-showCollectionGatingDemo") || ProcessInfo.processInfo.arguments.contains("-showCollectionHistoryDemo") {
             selectedTab = .collection
         } else if ProcessInfo.processInfo.arguments.contains("-showHardPaywallPreviewRootDemo") {
             selectedTab = .settings

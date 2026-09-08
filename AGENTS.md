@@ -2,7 +2,7 @@
 
 ## Collection chart regression — 2026-09-08
 
-Build 169 restores collection and item charts when dated history is absent. A single known price is shown as a labelled “Saved value” reference line, without a historical return claim. Dated observations still produce history curves. Rescanning merges and persists earlier prices within the same item/condition slot. Native unit checks pass (198 tests / 200 runs); old-item collection and detail charts were inspected on the small simulator. Release upload status is recorded in native CONTEXT.md.
+Build 170 replaces build 169's insufficient saved-value placeholder with real dated BrickLink sales. Collection automatically loads and persists history for existing items through `/api/mobile/collection-history`, separately from scan prices. Graphs use quantity-weighted daily observations, current holdings and explicit coverage; a single point is not a historical graph. History has a separate request budget and never spends scan/referral credits. See `docs/audits/2026-09-08-real-market-history.md` and native CONTEXT.md for verification and release status.
 
 ## Live reliability rollout — 2026-09-08
 
