@@ -873,6 +873,7 @@ private struct OnboardingReviewScreen: View {
 }
 
 private struct OnboardingAccountScreen: View {
+    @Environment(\.appSDKCoordinator) private var coordinator
     let authenticatingProvider: OnboardingAuthProvider?
     let back: () -> Void
     let signInWithApple: () -> Void
@@ -992,7 +993,7 @@ private struct OnboardingAccountScreen: View {
                 .font(.title2)
                 .accessibilityHidden(true)
         case .google:
-            AsyncImage(url: OAuthProvider.google.iconImageUrl) { phase in
+            AsyncImage(url: coordinator?.clerk?.publishableKey.isEmpty == false ? OAuthProvider.google.iconImageUrl : nil) { phase in
                 if case .success(let image) = phase {
                     image.resizable().scaledToFit()
                 } else {
