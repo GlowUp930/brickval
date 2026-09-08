@@ -30,8 +30,13 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         XCTAssertTrue(item.waitForExistence(timeout: 5))
         item.tap()
         let detail = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "collectionItem.valueChart.")).firstMatch
-        for _ in 0..<5 where !detail.exists { app.swipeUp() }
+        for _ in 0..<8 {
+            if detail.exists && detail.frame.minY >= 0 && detail.frame.maxY < app.windows.firstMatch.frame.height * 0.85 { break }
+            app.swipeUp()
+        }
         XCTAssertTrue(detail.waitForExistence(timeout: 5))
+        XCTAssertGreaterThanOrEqual(detail.frame.minY, 0)
+        XCTAssertLessThan(detail.frame.maxY, app.windows.firstMatch.frame.height * 0.85)
         XCTAssertGreaterThan(Int(detail.identifier.split(separator: ".").last ?? "0") ?? 0, 1)
         let detailScreenshot = XCTAttachment(screenshot: app.screenshot())
         detailScreenshot.name = "Item real market history"

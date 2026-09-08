@@ -16,4 +16,12 @@ Captured backend sales for Joker 70919 (20 sales) and Tintin 21367 (22 sales) fo
 
 Passed: backend tests and reliability assertions, backend production build, weighted daily averages, New/Used separation, fixed partial coverage, no scan-price contamination, distinct timeframe filtering, actual date spacing/no overshoot, existing-item automatic population, offline retention, restart persistence and removed-item response rejection. Exact simulator/release results will be recorded after final verification.
 
-Production endpoint deployment, signed build upload and Apple processing are pending. Physical-device confirmation remains unverified; simulator evidence does not certify an installed TestFlight journey.
+## Release evidence
+
+- Backend deployment `dpl_F4aceFoU4FMhHuMd9okhhdw8g3qV` is promoted to `brickvalue.live`. Live HTTP 200 returns Joker 20 New/2 Used sales and Tintin 22 New/0 Used sales, no condition errors. Invalid bearer authentication returns 401. No production schema changes were needed.
+- Backend: 72 tests and 36 reliability assertions pass; type checking, production build and all 794 native strings plus four permission strings across 13 locales pass.
+- Native full suite: `/tmp/BrickVal170Final.xcresult`, 215 tests / 434 runs on iPhone SE (3rd generation) and iPhone 17 Pro, zero failures. Subsequent date-label adjustment received targeted checks. A navigation test intermittently failed to scroll to an offscreen item; the final stronger visible-detail check passes on both sizes (`/tmp/BrickVal170VisibleDetail.xcresult`). Largest-text timeframe controls pass on both sizes. Existing unrelated entitlement badges still truncate at the largest accessibility size.
+- Visible multi-point [Collection](evidence/2026-09-08-market-history/collection-small.png) and [item](evidence/2026-09-08-market-history/item-small.png) screenshots were inspected. The detail test now requires the entire chart frame to be on screen, rather than merely finding an offscreen element. Horizontal inspection and vertical navigation are exercised using Apple's built-in chart selection.
+- Signed archive: `/tmp/BrickVal170Final.xcarchive`, version 1.0.8 (170), product source `5d2d5ef`. Xcode's stored account credential failed during the first export; upload is retrying with the existing ASC API key. No new credentials were created.
+
+Apple upload/processing is pending. Physical-device confirmation remains unverified; simulator evidence does not certify an installed TestFlight journey.
