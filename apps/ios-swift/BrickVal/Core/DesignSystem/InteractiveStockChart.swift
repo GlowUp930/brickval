@@ -217,6 +217,11 @@ struct ChartHorizonPicker: View {
     var onProSelection: (PortfolioHorizon) -> Void = { _ in }
 
     private var timelineLabels: [String] {
+        if let start = timelinePoints.first?.timestamp, let end = timelinePoints.last?.timestamp, end > start {
+            return [start, start.addingTimeInterval(end.timeIntervalSince(start) / 2), end].map {
+                $0.formatted(.dateTime.month(.abbreviated).day().locale(BrickValLocalization.effectiveLanguage.locale))
+            }
+        }
         let uniquePoints = timelinePoints.reduce(into: [StockChartPoint]()) { result, point in
             guard result.last?.label != point.label else { return }
             result.append(point)
