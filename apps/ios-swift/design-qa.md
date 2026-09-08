@@ -2,7 +2,7 @@
 
 ## Real market-history graphs — build 170
 
-Collection and item detail now render multi-point graphs from dated BrickLink sales. Current valuation stays above a separately labelled market trend; the chart identifies covered holdings. Single prices no longer occupy a full-height history graph. The DEBUG-only Joker/Tintin fixture starts with empty stored history and loads automatically, matching the reported old-collection failure. Apple's chart selection replaces the custom drag recognizer so vertical scrolling remains usable. Small-screen navigation and graph appearance pass targeted checks; final two-size and largest-text verification is in progress. See `docs/audits/2026-09-08-real-market-history.md` for release evidence.
+Collection and item detail now render multi-point graphs from dated BrickLink sales. Current valuation stays above a separately labelled market trend; the chart identifies covered holdings. Single prices no longer occupy a full-height history graph. The DEBUG-only Joker/Tintin fixture starts with empty stored history and loads automatically, matching the reported old-collection failure. Apple's chart selection replaces the custom drag recognizer so vertical scrolling remains usable. The local full suite passes 215 tests / 434 runs across iPhone SE and iPhone 17 Pro. Visible collection/item graphs were inspected on both sizes; largest-text timeframe controls pass, while existing entitlement badges still truncate at that size. Build 170 is processed and available to both internal TestFlight groups. Physical-device confirmation remains pending. See `docs/audits/2026-09-08-real-market-history.md` for release evidence.
 
 ## Historical saved-value chart recovery — build 169 (superseded)
 
