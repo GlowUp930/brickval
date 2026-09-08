@@ -7,7 +7,8 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         app.launchArguments = ["-showBulkRecoveryDemo", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL", "-brickval_language_override", "en"]
         app.launch()
         let summary = app.descendants(matching: .any).matching(identifier: "bulkResults.summary").firstMatch
-        XCTAssertTrue(summary.waitForExistence(timeout: 12))
+        for _ in 0..<3 where !summary.waitForExistence(timeout: 2) { app.swipeUp() }
+        XCTAssertTrue(summary.waitForExistence(timeout: 3))
         let addButton = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Add ")).firstMatch
         for _ in 0..<6 where !addButton.isHittable { app.swipeUp() }
         XCTAssertTrue(addButton.isHittable)

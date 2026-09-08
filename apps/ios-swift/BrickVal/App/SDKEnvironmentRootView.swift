@@ -3,12 +3,24 @@ import SwiftUI
 
 struct SDKEnvironmentRootView: View {
     @Environment(MonetizationStore.self) private var monetization
+    @Environment(CollectionStore.self) private var collection
     @Environment(EntitlementStore.self) private var entitlements
     @State private var hasDismissedOnboardingDemo = false
     @State private var isOfferCodeRedemptionPresented = false
     let coordinator: AppSDKCoordinator
 
     var body: some View {
+        Group {
+            if let clerk = coordinator.clerk {
+                content.environment(clerk)
+            } else {
+                content
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-showProfileDesign1Demo") {
             ProfileDesignDraftsView(initialDraft: .compact)
@@ -76,6 +88,14 @@ struct SDKEnvironmentRootView: View {
             if let clerk = coordinator.clerk {
                 AppRootView()
                     .environment(clerk)
+                    .task {
+                        for await event in clerk.auth.events {
+                            if case .accountDeleted = event {
+                                do { try await collection.clearForAccountDeletion() }
+                                catch { /* CollectionStore retains the cleanup request and user-facing error. */ }
+                            }
+                        }
+                    }
                     .task(id: clerk.user?.id) {
                         await coordinator.synchronizeIdentity(userID: clerk.user?.id)
                         await monetization.refresh(

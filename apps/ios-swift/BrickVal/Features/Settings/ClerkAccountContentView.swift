@@ -55,8 +55,9 @@ struct ClerkAccountContentView: View {
         isDeleting = true
         defer { isDeleting = false }
         do {
+            // Clear confirmed local data first so a lost server response cannot leave it behind.
+            try await collection.clearForAccountDeletion()
             try await coordinator.apiClient.deleteAccount()
-            try await collection.clear()
             try? await clerk.auth.signOut()
             await coordinator.synchronizeIdentity(userID: nil)
         } catch {

@@ -59,7 +59,11 @@ final class AppSDKCoordinator: SuperwallDelegate {
                 try? await Clerk.shared.auth.getToken()
             })
         } else {
+#if DEBUG
+            clerk = .mockSignedOut
+#else
             clerk = nil
+#endif
             apiClient = .live()
         }
 

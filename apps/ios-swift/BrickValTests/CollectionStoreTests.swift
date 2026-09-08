@@ -4,6 +4,21 @@ import Testing
 
 @MainActor
 struct CollectionStoreTests {
+    @Test func accountDeletionCleanupResumesAfterRestart() async throws {
+        let suite = "deletion-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let repository = CollectionRepository(fileURL: temporaryURL())
+        let initial = CollectionStore(repository: repository, defaults: defaults)
+        try await initial.add(fixture(quantity: 1), isPro: true)
+        defaults.set(true, forKey: "collection.accountDeletionCleanupPending")
+        let restarted = CollectionStore(repository: repository, defaults: defaults)
+        await restarted.load()
+        #expect(restarted.items.isEmpty)
+        #expect(!defaults.bool(forKey: "collection.accountDeletionCleanupPending"))
+        #expect(try await repository.load().isEmpty)
+    }
+
     @Test func upsertsMatchingSlotsWithoutConsumingAnotherUniqueSlot() async throws {
         let repository = CollectionRepository(fileURL: temporaryURL())
         let store = CollectionStore(repository: repository)

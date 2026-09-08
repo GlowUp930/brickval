@@ -11,9 +11,12 @@ final class CollectionStore {
     var errorMessage: String?
 
     @ObservationIgnored private let repository: CollectionRepository
+    @ObservationIgnored private let defaults: UserDefaults
+    private let deletionKey = "collection.accountDeletionCleanupPending"
 
-    init(repository: CollectionRepository = CollectionRepository()) {
+    init(repository: CollectionRepository = CollectionRepository(), defaults: UserDefaults = .standard) {
         self.repository = repository
+        self.defaults = defaults
     }
 
     var totalValue: Double { items.reduce(0) { $0 + $1.totalValue } }
@@ -25,6 +28,10 @@ final class CollectionStore {
         isLoading = true
         defer { isLoading = false }
         do {
+            if defaults.bool(forKey: deletionKey) {
+                try await repository.removeAll()
+                defaults.removeObject(forKey: deletionKey)
+            }
             items = try await repository.load()
             hasLoaded = true
             errorMessage = nil
@@ -85,11 +92,24 @@ final class CollectionStore {
         try await persist(updatedItems)
     }
 
+    func clearForAccountDeletion() async throws {
+        defaults.set(true, forKey: deletionKey)
+        do {
+            try await clear()
+        } catch {
+            items = []
+            hasLoaded = false
+            errorMessage = BrickValLocalization.localized("Your collection could not be loaded. Please try again.")
+            throw error
+        }
+    }
+
     func clear() async throws {
         guard !isLoading, !isSaving else { throw CocoaError(.fileWriteUnknown) }
         isSaving = true
         defer { isSaving = false }
         try await repository.removeAll()
+        defaults.removeObject(forKey: deletionKey)
         items = []
         hasLoaded = true
         errorMessage = nil
