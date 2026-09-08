@@ -178,7 +178,7 @@ struct ItemDetailView: View {
             titleBlock
             priceSummaryRow
             conditionTabs
-            if historyPoints.count > 1 { chartBlock } else { Text("Not enough price history").foregroundStyle(.secondary) }
+            if !historyPoints.isEmpty { chartBlock } else { Text("Price unavailable").foregroundStyle(.secondary) }
             quantityControls
             collectionFacts
             removeSection
@@ -292,6 +292,7 @@ struct ItemDetailView: View {
                 popupForeground: BrickValStyle.ScanResult.canvas
             )
             .id(horizon)
+            .accessibilityIdentifier("collectionItem.valueChart")
             .frame(height: 330)
 
             ChartHorizonPicker(
@@ -619,7 +620,7 @@ struct ItemDetailView: View {
         let sourceItem = matchingItems.first { $0.condition == option.condition }
             ?? (item.condition == option.condition ? item : nil)
         return PortfolioHistoryBuilder.priceSeries(
-            from: sourceItem?.marketHistory ?? [], horizon: horizon,
+            from: sourceItem?.recordedHistory ?? [], horizon: horizon,
             fallbackValue: sourceItem?.marketValueUSD ?? 0
         )
     }

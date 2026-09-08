@@ -53,7 +53,7 @@ struct PortfolioSummaryView: View {
             .foregroundStyle(changeColor)
             .monospacedDigit()
             } else {
-                Text("Not enough price history").font(.subheadline).foregroundStyle(.secondary)
+                Text("Saved value").font(.subheadline).foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

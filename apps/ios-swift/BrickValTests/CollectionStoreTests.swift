@@ -4,6 +4,21 @@ import Testing
 
 @MainActor
 struct CollectionStoreTests {
+    @Test func rescanningRetainsRecordedPricesAfterRestart() async throws {
+        let repository = CollectionRepository(fileURL: temporaryURL())
+        let store = CollectionStore(repository: repository)
+        let first = CollectionItem(setNumber: "test", itemType: .minifig, name: "Test", theme: "LEGO",
+                                   marketValueUSD: 10, condition: .used, addedAt: "2026-09-01T00:00:00Z")
+        let second = CollectionItem(setNumber: "test", itemType: .minifig, name: "Test", theme: "LEGO",
+                                    marketValueUSD: 15, condition: .used, addedAt: "2026-09-08T00:00:00Z")
+        try await store.add(first, isPro: true)
+        try await store.add(second, isPro: true)
+        let restarted = CollectionStore(repository: repository)
+        await restarted.load()
+        #expect(restarted.items.first?.marketHistory.map(\.priceUSD) == [10, 15])
+        #expect(restarted.items.first?.quantity == 2)
+    }
+
     @Test func accountDeletionCleanupResumesAfterRestart() async throws {
         let suite = "deletion-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
@@ -187,7 +202,7 @@ struct CollectionStoreTests {
         let points = PortfolioHistoryBuilder.build(items: [item], horizon: .month)
         let values = points.map(\.value)
 
-        #expect(values.isEmpty)
+        #expect(values == [400])
     }
 
     @Test func reloadsCollectionFromDirectoryContainingSpaces() async throws {

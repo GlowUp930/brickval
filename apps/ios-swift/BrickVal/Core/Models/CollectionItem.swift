@@ -17,7 +17,7 @@ struct CollectionItem: Codable, Hashable, Identifiable, Sendable {
     let condition: CollectionCondition
     let colorID: Int?
     let colorName: String?
-    let marketHistory: [MarketHistoryPoint]
+    var marketHistory: [MarketHistoryPoint]
     let marketRows: [MarketRow]
     let addedAt: String
 
@@ -26,6 +26,12 @@ struct CollectionItem: Codable, Hashable, Identifiable, Sendable {
     }
 
     var totalValue: Double { (marketValueUSD ?? 0) * Double(quantity) }
+
+    var recordedHistory: [MarketHistoryPoint] {
+        guard let price = marketValueUSD, price.isFinite, price > 0,
+              !marketHistory.contains(where: { $0.date == addedAt }) else { return marketHistory }
+        return marketHistory + [MarketHistoryPoint(date: addedAt, priceUSD: price, source: dataSource)]
+    }
 
     init(
         setNumber: String,

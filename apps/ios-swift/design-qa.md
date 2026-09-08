@@ -1,5 +1,9 @@
 # Scan Result Card Visual QA
 
+## Saved-value chart recovery — build 169
+
+Collection and item detail retain a visible green chart when only a saved price is available: a dashed reference line, one point and “Saved value” label. It does not imply flat historical performance or show an invented return. Real dated observations continue to render the history curve. Tested with an old Used Robin fixture with no history on iPhone SE (3rd generation); both charts and item quantity controls remain visible/reachable. All 198 native unit tests and 13-language catalog checks pass. Physical-device confirmation remains pending.
+
 ## Live reliability rollout — 2026-09-08
 
 The production database repair and signed Clerk deletion integration are live. Backend deployment `dpl_FWhpwtHFCcRj7doPKRgYb1dJz3qi` was promoted after authentication/signature checks. Thirteen verified RevenueCat provider records were seeded while preserving all 15 existing Pro flags. Build 168 includes restart-safe local account-deletion cleanup. Version 1.0.8 (168) is processed and available to both existing internal TestFlight groups. GitHub run 34185416653 passed backend, database and native checks; local native verification passed 206 tests across two simulator sizes (416 runs). Physical iPhone referral, purchase, camera and deletion journeys remain unverified. See the September 8 remediation report for evidence and remaining checks. This section supersedes earlier pending-production notes below.

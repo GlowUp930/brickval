@@ -3,6 +3,12 @@ import Testing
 @testable import BrickVal
 
 struct PortfolioHistoryBuilderTests {
+    @Test func savedPriceKeepsChartAvailableWithoutHistoricalFeed() {
+        let points = PortfolioHistoryBuilder.priceSeries(from: [], horizon: .month, fallbackValue: 30)
+        #expect(points.map(\.value) == [30])
+        #expect(PortfolioHistoryBuilder.build(items: [fixture(history: [])], horizon: .month).map(\.value) == [30])
+    }
+
     @Test func portfolioHistoryUsesTheSelectedDateWindow() {
         let item = fixture(history: [
             historyPoint(daysAgo: 180, value: 10),
@@ -32,8 +38,19 @@ struct PortfolioHistoryBuilderTests {
         let month = PortfolioHistoryBuilder.priceSeries(from: history, horizon: .month, fallbackValue: 30)
         let half = PortfolioHistoryBuilder.priceSeries(from: history, horizon: .half, fallbackValue: 30)
 
-        #expect(month.isEmpty)
-        #expect(half.isEmpty)
+        #expect(month.map(\.value) == [30])
+        #expect(half == month)
+    }
+
+    @Test func oneItemWithoutHistoryStillShowsTheCompleteSavedTotal() {
+        let oldItem = CollectionItem(setNumber: "old", itemType: .set, name: "Old", theme: "LEGO",
+                                     marketValueUSD: 20, quantity: 2, addedAt: "2020-01-01T00:00:00Z")
+        let points = PortfolioHistoryBuilder.build(items: [oldItem, fixture(history: [])], horizon: .month)
+        #expect(points.map(\.value) == [70])
+    }
+
+    @Test func missingPriceDoesNotBecomeAZeroValueChart() {
+        #expect(PortfolioHistoryBuilder.priceSeries(from: [], horizon: .month, fallbackValue: 0).isEmpty)
     }
 
     private func fixture(history: [MarketHistoryPoint]) -> CollectionItem {

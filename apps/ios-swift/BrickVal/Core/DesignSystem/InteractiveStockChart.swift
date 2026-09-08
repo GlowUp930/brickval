@@ -52,6 +52,19 @@ struct InteractiveStockChart: View {
         GeometryReader { geometry in
             ZStack(alignment: .topLeading) {
                 Chart {
+                    if points.count == 1, let sample = samples.first {
+                        RuleMark(y: .value("Value", sample.value))
+                            .foregroundStyle(chartColor.opacity(0.55))
+                            .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 5]))
+                        PointMark(x: .value("Position", 0.5), y: .value("Value", sample.value))
+                            .foregroundStyle(chartColor)
+                            .symbolSize(64)
+                            .annotation(position: .top) {
+                                Text("Saved value")
+                                    .font(.caption)
+                                    .foregroundStyle(chartColor)
+                            }
+                    }
                     ForEach(samples) { sample in
                         if showsFill {
                             AreaMark(
@@ -169,8 +182,8 @@ struct InteractiveStockChart: View {
     private static func resample(_ points: [StockChartPoint], count: Int) -> [StockChartSample] {
         guard count > 0 else { return [] }
         guard points.count > 1 else {
-            let point = points.first ?? StockChartPoint(label: BrickValLocalization.localized("Now"), value: 0)
-            return (0 ..< count).map { StockChartSample(id: $0, label: point.label, value: point.value) }
+            guard let point = points.first else { return [] }
+            return [StockChartSample(id: 0, label: point.label, value: point.value)]
         }
 
         return (0 ..< count).map { outputIndex in

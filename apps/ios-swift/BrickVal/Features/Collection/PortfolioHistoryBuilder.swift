@@ -5,9 +5,12 @@ enum PortfolioHistoryBuilder {
 
     static func build(items: [CollectionItem], horizon: PortfolioHorizon) -> [PortfolioHistoryPoint] {
         guard !items.isEmpty else { return [] }
-        let series = items.map { datedHistory($0.marketHistory, horizon: horizon) }
+        let series = items.map { datedHistory($0.recordedHistory, horizon: horizon) }
         // A partial portfolio cannot be presented as the historical total.
-        guard series.allSatisfy({ !$0.isEmpty }) else { return [] }
+        guard series.allSatisfy({ !$0.isEmpty }) else {
+            guard items.allSatisfy({ ($0.marketValueUSD ?? 0).isFinite && ($0.marketValueUSD ?? 0) > 0 }) else { return [] }
+            return [PortfolioHistoryPoint(date: BrickValLocalization.localized("Saved value"), value: items.reduce(0) { $0 + $1.totalValue })]
+        }
         let dates = Set(series.flatMap { $0.map(\.date) }).sorted()
         return dates.compactMap { date in
             var total = 0.0
@@ -20,8 +23,11 @@ enum PortfolioHistoryBuilder {
     }
 
     static func priceSeries(from history: [MarketHistoryPoint], horizon: PortfolioHorizon, fallbackValue: Double) -> [StockChartPoint] {
-        // A current price is not a historical observation. Never invent dates or motion.
-        datedHistory(history, horizon: horizon).map { StockChartPoint(label: label($0.date), value: $0.value) }
+        let points = datedHistory(history, horizon: horizon).map { StockChartPoint(label: label($0.date), value: $0.value) }
+        guard points.isEmpty else { return points }
+        // A single reference value keeps the chart visible without inventing a past trend.
+        guard fallbackValue.isFinite, fallbackValue > 0 else { return [] }
+        return [StockChartPoint(label: BrickValLocalization.localized("Saved value"), value: fallbackValue)]
     }
 
     private static func datedHistory(_ history: [MarketHistoryPoint], horizon: PortfolioHorizon) -> [(date: Date, value: Double)] {

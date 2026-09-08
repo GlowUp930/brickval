@@ -17,7 +17,7 @@ struct PortfolioChartView: View {
     var body: some View {
         VStack(spacing: BrickValStyle.Primitive.space8) {
             Group {
-                if points.count > 1 {
+                if !points.isEmpty {
                     InteractiveStockChart(
                         points: points,
                         lineColor: accent,
@@ -26,6 +26,7 @@ struct PortfolioChartView: View {
                         showsFill: false
                     )
                     .id(horizon)
+                    .accessibilityIdentifier("collection.valueChart")
                 } else {
                     VStack(spacing: BrickValStyle.Primitive.space8) {
                         Rectangle().fill(BrickValStyle.Semantic.divider).frame(height: 1)

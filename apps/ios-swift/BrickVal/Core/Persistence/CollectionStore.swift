@@ -50,13 +50,17 @@ final class CollectionStore {
         guard !newItems.isEmpty else { return }
         var updatedItems = items
         for item in newItems {
+            var updated = item
+            updated.marketHistory = item.recordedHistory
             if let index = updatedItems.firstIndex(where: { $0.id == item.id }) {
-                var updated = item
+                let combined = updatedItems[index].recordedHistory + updated.marketHistory
+                updated.marketHistory = Dictionary(combined.map { ($0.date, $0) }, uniquingKeysWith: { _, latest in latest })
+                    .values.sorted { $0.date < $1.date }
                 updated.quantity += updatedItems[index].quantity
                 updatedItems.remove(at: index)
                 updatedItems.insert(updated, at: 0)
             } else {
-                updatedItems.insert(item, at: 0)
+                updatedItems.insert(updated, at: 0)
             }
         }
         let updatedUniqueCount = Set(updatedItems.map(\.collectionIdentity)).count

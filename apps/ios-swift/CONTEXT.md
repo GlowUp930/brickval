@@ -1,5 +1,11 @@
 # BrickVal Native iOS Context
 
+## Collection chart fix — build 169
+
+The build 168 audit fix hid every chart without two dated observations, while normal lookup responses often contain no historical series. Build 169 restores a clearly labelled single saved-value reference chart in Collection and item detail, keeps unavailable prices unavailable, and preserves recorded prices across rescans/restart (including Used slots). A missing series no longer blanks a fully priced portfolio. Historical movement is shown only from dated observations; historical data is not backfilled or invented.
+
+Verification: `/tmp/BrickValChartRed.xcresult` reproduced missing chart data; `/tmp/BrickValChartFinal.xcresult` passes 198 native unit tests (200 runs). Localization passes 788 strings plus four permission strings across 13 locales. Old Robin fixture without history was inspected on the small simulator in Collection and item detail (`/tmp/brickval-chart-small-fixed.png`, `/tmp/brickval-chart-detail-fixed.png`). Build 169 archive/upload is in progress.
+
 ## Live reliability rollout — 2026-09-08
 
 The production database repair and signed Clerk deletion integration are live. Backend deployment `dpl_FWhpwtHFCcRj7doPKRgYb1dJz3qi` was promoted after authentication/signature checks. Thirteen verified RevenueCat provider records were seeded while preserving all 15 existing Pro flags. Build 168 includes restart-safe local account-deletion cleanup. Version 1.0.8 (168) is processed and available to both existing internal TestFlight groups. GitHub run 34185416653 passed backend, database and native checks; local native verification passed 206 tests across two simulator sizes (416 runs). Physical iPhone referral, purchase, camera and deletion journeys remain unverified. See the September 8 remediation report for evidence and remaining checks. This section supersedes earlier pending-production notes below.

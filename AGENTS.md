@@ -1,5 +1,9 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Collection chart regression — 2026-09-08
+
+Build 169 restores collection and item charts when dated history is absent. A single known price is shown as a labelled “Saved value” reference line, without a historical return claim. Dated observations still produce history curves. Rescanning merges and persists earlier prices within the same item/condition slot. Native unit checks pass (198 tests / 200 runs); old-item collection and detail charts were inspected on the small simulator. Release upload status is recorded in native CONTEXT.md.
+
 ## Live reliability rollout — 2026-09-08
 
 The production database repair and signed Clerk deletion integration are live. Backend deployment `dpl_FWhpwtHFCcRj7doPKRgYb1dJz3qi` was promoted after authentication/signature checks. Thirteen verified RevenueCat provider records were seeded while preserving all 15 existing Pro flags. Build 168 includes restart-safe local account-deletion cleanup. Version 1.0.8 (168) is processed and available to both existing internal TestFlight groups. GitHub run 34185416653 passed backend, database and native checks; local native verification passed 206 tests across two simulator sizes (416 runs). Physical iPhone referral, purchase, camera and deletion journeys remain unverified. See the September 8 remediation report for evidence and remaining checks. This section supersedes earlier pending-production notes below.
