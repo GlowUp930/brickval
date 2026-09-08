@@ -4,7 +4,9 @@
 
 The build 168 audit fix hid every chart without two dated observations, while normal lookup responses often contain no historical series. Build 169 restores a clearly labelled single saved-value reference chart in Collection and item detail, keeps unavailable prices unavailable, and preserves recorded prices across rescans/restart (including Used slots). A missing series no longer blanks a fully priced portfolio. Historical movement is shown only from dated observations; historical data is not backfilled or invented.
 
-Verification: `/tmp/BrickValChartRed.xcresult` reproduced missing chart data; `/tmp/BrickValChartFinal.xcresult` passes 198 native unit tests (200 runs). Localization passes 788 strings plus four permission strings across 13 locales. Old Robin fixture without history was inspected on the small simulator in Collection and item detail (`/tmp/brickval-chart-small-fixed.png`, `/tmp/brickval-chart-detail-fixed.png`). Build 169 archive/upload is in progress.
+Verification: `/tmp/BrickValChartRed.xcresult` reproduced missing chart data; `/tmp/BrickValChartFinal.xcresult` passes 198 native unit tests (200 runs). Localization passes 788 strings plus four permission strings across 13 locales. Old Robin fixture without history was inspected on the small simulator in Collection and item detail (`/tmp/brickval-chart-small-fixed.png`, `/tmp/brickval-chart-detail-fixed.png`).
+
+Release: source `defcd86`, signed archive `/tmp/BrickVal169.xcarchive`, upload log `/tmp/brickval169-upload.log` reports success. Apple processing is complete; 1.0.8 (169), build ID `7fc0b0f6-f10b-4657-861d-b5247a05cb90`, is available to internal groups Team (Expo) and v1. Testing notes were saved. GitHub run `34190868867` passed backend, isolated database and native simulator verification.
 
 ## Live reliability rollout — 2026-09-08
 
