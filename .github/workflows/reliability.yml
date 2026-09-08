@@ -1,5 +1,7 @@
 name: Reliability checks
 on:
+  push:
+    branches: [codex/swift-repo-structure]
   pull_request:
     paths: ['src/**', 'supabase/**', 'tests/**', 'scripts/**', 'apps/ios-swift/**', 'package*.json', '.github/workflows/reliability.yml']
   workflow_dispatch:
