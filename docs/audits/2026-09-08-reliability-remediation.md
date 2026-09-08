@@ -41,6 +41,6 @@ Temporary evidence paths are local artifacts. Regression harnesses are committed
 3. Configure signed Clerk `user.deleted` delivery to `/api/webhook/clerk` and verify delivery/retry. Resolve the built-in profile/local-data deletion path.
 4. Deploy backend and perform read-only contract checks; inspect current production errors. The prior error-history sample is incomplete.
 5. Run real TestFlight referral opening, sign-in/onboarding/restart and reward spending with isolated identities, checking ledger rows alongside UI. Verify Apple sandbox purchase/restore, cancellation, grace period and account switching. Physical-device camera/permissions/poor connectivity are also pending.
-6. Check the changed privacy page at 390px, language/VoiceOver layouts and remaining deletion recovery before a new signed native archive/upload.
+6. Complete language/VoiceOver layouts and remaining deletion recovery before a new signed native archive/upload. The local production privacy page passed a 390px visual/overflow check on September 8.
 
 Next-release improvements: richer failure/retry coverage for local account deletion, exact scan-policy consistency across auxiliary routes, broader localization/accessibility review and provider-cost monitoring. Later architecture work: clarify entitlement ownership and collection sync expectations without a framework rewrite.
