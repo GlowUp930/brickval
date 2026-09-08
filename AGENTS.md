@@ -1,8 +1,13 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Live reliability rollout — 2026-09-08
+
+The production database repair and signed Clerk deletion integration are live. Backend deployment `dpl_FWhpwtHFCcRj7doPKRgYb1dJz3qi` was promoted after authentication/signature checks. Thirteen verified RevenueCat provider records were seeded while preserving all 15 existing Pro flags. Build 168 includes restart-safe local account-deletion cleanup. Version 1.0.8 (168) is processed and available to both existing internal TestFlight groups. GitHub run 34185416653 passed backend, database and native checks; local native verification passed 206 tests across two simulator sizes (416 runs). Physical iPhone referral, purchase, camera and deletion journeys remain unverified. See the September 8 remediation report for evidence and remaining checks. This section supersedes earlier pending-production notes below.
+
+
 ## Reliability remediation status — 2026-09-08
 
-The [remediation report](docs/audits/2026-09-08-reliability-remediation.md) tracks the locally verified fixes and pending rollout. Native tests pass on small/large simulators; 69 backend tests, 25 regression assertions, isolated database concurrency/migration checks, build, type checking and 13-language validation pass. Production migration/deployment is pending RevenueCat configuration and entitlement reconciliation; Clerk deletion setup and physical-device purchases/referrals remain blocked. Do not treat source fixes as deployed or full reliability sign-off.
+The [remediation report](docs/audits/2026-09-08-reliability-remediation.md) tracks the implemented fixes and rollout evidence. Production database repair, verified provider reconciliation and signed Clerk deletion delivery are complete. Local verification passes 69 backend tests, 27 reliability assertions and 206 native tests on two simulator sizes (416 runs), plus isolated database, type checking and 13-language checks. Physical-device journeys remain unverified; source and simulator coverage are not full reliability sign-off.
 
 ## Reliability audit status — 2026-09-05
 

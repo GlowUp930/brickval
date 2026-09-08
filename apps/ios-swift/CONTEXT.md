@@ -1,8 +1,13 @@
 # BrickVal Native iOS Context
 
+## Live reliability rollout — 2026-09-08
+
+The production database repair and signed Clerk deletion integration are live. Backend deployment `dpl_FWhpwtHFCcRj7doPKRgYb1dJz3qi` was promoted after authentication/signature checks. Thirteen verified RevenueCat provider records were seeded while preserving all 15 existing Pro flags. Build 168 includes restart-safe local account-deletion cleanup. Version 1.0.8 (168) is processed and available to both existing internal TestFlight groups. GitHub run 34185416653 passed backend, database and native checks; local native verification passed 206 tests across two simulator sizes (416 runs). Physical iPhone referral, purchase, camera and deletion journeys remain unverified. See the September 8 remediation report for evidence and remaining checks. This section supersedes earlier pending-production notes below.
+
+
 ## Reliability fixes — 2026-09-08
 
-See [remediation status](../../docs/audits/2026-09-08-reliability-remediation.md). Collection recovery, real price/history contracts, pending referrals, recipient messaging and accessible bulk layout have local regression coverage. The final Xcode result reports 205 tests across small and large iPhones with zero failures. Largest-text small-screen action reachability was visually inspected. Production configuration, Clerk deletion behavior and physical-device purchase/referral verification remain pending; these changes have not been uploaded as a new TestFlight build.
+See [remediation status](../../docs/audits/2026-09-08-reliability-remediation.md). Collection recovery, real price/history contracts, pending referrals, recipient messaging and accessible bulk layout have local regression coverage. The final Xcode result reports 206 tests across small and large iPhones (416 runs) with zero failures. Largest-text small-screen action reachability was visually inspected. Production configuration and signed Clerk delivery are verified; real-device deletion, purchases and referrals remain pending. See the live rollout status above for release progress.
 
 
 ## Reliability audit — 2026-09-05
