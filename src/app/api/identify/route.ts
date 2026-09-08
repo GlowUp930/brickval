@@ -1,3 +1,4 @@
+import { scanRequestAccess } from "@/lib/scan-request-access";
 import { NextRequest, NextResponse } from "next/server";
 import { anthropic } from "@/lib/anthropic";
 import { identifyNonSet, type NonSetIdentifyResponse } from "@/lib/brickognize";
@@ -43,10 +44,12 @@ function isAcceptedMediaType(type: string): type is AcceptedMediaType {
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  const accessRequest = await scanRequestAccess(req);
+  if (accessRequest instanceof NextResponse) return accessRequest;
   const mode = req.nextUrl.searchParams.get("mode") ?? "set";
   const scan = req.nextUrl.searchParams.get("scan") ?? "";
   if (mode !== "set" && mode !== "minifig") {
-    return NextResponse.json({ error: "Invalid scan mode" }, { status: 400 });
+    return NextResponse.json({ error: "invalid_scan_mode", message: "Invalid scan mode." }, { status: 400 });
   }
 
   let formData: FormData;
@@ -54,7 +57,7 @@ export async function POST(req: NextRequest) {
     formData = await req.formData();
   } catch {
     return NextResponse.json(
-      { error: "Invalid form data" },
+      { error: "invalid_form_data", message: "The scan upload could not be read. Please try again." },
       { status: 400 }
     );
   }
@@ -74,28 +77,28 @@ export async function POST(req: NextRequest) {
       guidedImages.length > MAX_GUIDED_BULK_IMAGES ||
       guidedImages.length !== guidedManifest.shards.length
     ) {
-      return NextResponse.json({ error: "Invalid guided bulk scan" }, { status: 400 });
+      return NextResponse.json({ error: "invalid_guided_bulk_scan", message: "The guided bulk scan could not be read. Please try again." }, { status: 400 });
     }
     const totalBytes = guidedImages.reduce((total, image) => total + image.size, 0);
     if (totalBytes > MAX_GUIDED_BULK_BYTES) {
-      return NextResponse.json({ error: "Bulk scan too large" }, { status: 413 });
+      return NextResponse.json({ error: "image_too_large", message: "This image is too large. Please choose a smaller photo." }, { status: 413 });
     }
     if (guidedImages.some((image) => !isAcceptedMediaType(image.type))) {
-      return NextResponse.json({ error: "Unsupported image type" }, { status: 415 });
+      return NextResponse.json({ error: "unsupported_image", message: "Please upload a JPEG, PNG, or WebP image." }, { status: 415 });
     }
   } else {
     if (!imageFile) {
-      return NextResponse.json({ error: "No image provided" }, { status: 400 });
+      return NextResponse.json({ error: "missing_image", message: "Please choose a photo to scan." }, { status: 400 });
     }
     if (imageFile.size > MAX_IMAGE_BYTES) {
       return NextResponse.json(
-        { error: "Image too large", message: "Please upload a smaller image and try again." },
+        { error: "image_too_large", message: "Please upload a smaller image and try again." },
         { status: 413 }
       );
     }
     if (!isAcceptedMediaType(imageFile.type)) {
       return NextResponse.json(
-        { error: "Unsupported image type", message: "Please upload a JPEG, PNG, or WebP image." },
+        { error: "unsupported_image", message: "Please upload a JPEG, PNG, or WebP image." },
         { status: 415 }
       );
     }
@@ -170,7 +173,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("[identify] Claude Vision error:", err);
     return NextResponse.json(
-      { error: "Vision API failed", message: "Something went wrong. Please try again." },
+      { error: "upstream", message: "Something went wrong. Please try again." },
       { status: 500 }
     );
   }

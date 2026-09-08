@@ -17,5 +17,5 @@ enum PortfolioHorizon: String, CaseIterable, Identifiable {
 
     var displayName: String { rawValue }
 
-    var summaryLabel: String { "Past \(rawValue)" }
+    var summaryLabel: String { BrickValLocalization.localized("Past \(rawValue)") }
 }

@@ -57,9 +57,7 @@ struct BulkRevealEntry: Identifiable, Sendable {
     }
 
     var priceSourceTitle: String {
-        item?.result.pricing.dataSource == "sold"
-            ? "Sold value"
-            : "Estimated market value"
+        MarketPriceSourceCopy.title(for: item?.result.pricing.dataSource)
     }
 
     mutating func markLoading() {

@@ -1,3 +1,4 @@
+import { scanRequestAccess } from "@/lib/scan-request-access";
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 
@@ -11,6 +12,8 @@ import { supabase } from "@/lib/supabase";
 const MAX_DETECTION_IMAGE_BYTES = 100 * 1024;
 
 export async function POST(req: NextRequest) {
+  const accessRequest = await scanRequestAccess(req);
+  if (accessRequest instanceof NextResponse) return accessRequest;
   if (process.env.ROBOFLOW_SMART_SCAN_ENABLED === "false") {
     return NextResponse.json(
       { error: "detector_disabled", message: "Smart scan is temporarily unavailable." },
@@ -35,18 +38,18 @@ export async function POST(req: NextRequest) {
   try {
     formData = await req.formData();
   } catch {
-    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+    return NextResponse.json({ error: "invalid_form_data", message: "The smart-scan upload could not be read." }, { status: 400 });
   }
 
   const image = formData.get("image");
   if (!(image instanceof File)) {
-    return NextResponse.json({ error: "No image provided" }, { status: 400 });
+    return NextResponse.json({ error: "missing_image", message: "Please choose a photo to scan." }, { status: 400 });
   }
   if (image.type !== "image/jpeg") {
-    return NextResponse.json({ error: "Only JPEG images are supported" }, { status: 415 });
+    return NextResponse.json({ error: "unsupported_image", message: "Only JPEG images are supported." }, { status: 415 });
   }
   if (image.size > MAX_DETECTION_IMAGE_BYTES) {
-    return NextResponse.json({ error: "Detection image too large" }, { status: 413 });
+    return NextResponse.json({ error: "image_too_large", message: "This image is too large. Please choose a smaller photo." }, { status: 413 });
   }
 
   try {

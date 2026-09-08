@@ -13,9 +13,10 @@ export type BulkScanSessionClaims = {
 };
 
 function secret(): string {
-  return process.env.BRICKVALUE_RECOVERY_SECRET
-    ?? process.env.SUPABASE_SERVICE_ROLE_KEY
-    ?? "brickvalue-development-recovery";
+  const value = process.env.BRICKVALUE_RECOVERY_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (value) return value;
+  if (process.env.NODE_ENV === "production") throw new Error("Scan signing key is not configured");
+  return "brickvalue-development-recovery";
 }
 
 function encode(value: object): string {
@@ -34,6 +35,7 @@ export function issueBulkScanSession(
 ): string {
   const payload = encode({
     userId,
+    nonce: crypto.randomUUID(),
     scanSource,
     regionIds: regions.map((region) => region.regionId),
     expiresAt: Math.floor(now / 1000) + SESSION_TTL_SECONDS,

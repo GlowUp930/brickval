@@ -6,8 +6,8 @@ enum CollectionCondition: String, Codable, CaseIterable, Sendable {
 
     var title: String {
         switch self {
-        case .newSealed: "New / sealed"
-        case .used: "Used"
+        case .newSealed: BrickValLocalization.localized("New / sealed")
+        case .used: BrickValLocalization.localized("Used")
         }
     }
 }

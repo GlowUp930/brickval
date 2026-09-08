@@ -14,8 +14,8 @@ test("bulk recovery allows ten figures plus one retry each", () => {
   assert.equal(BULK_RECOVERY_RATE_LIMIT.windowSeconds, 600);
 });
 
-test("per-region bulk sessions allow forty figures plus one retry each", () => {
-  assert.equal(BULK_SCAN_RATE_LIMIT.maxCalls, 80);
+test("per-region bulk sessions allow sixty figures plus one retry each", () => {
+  assert.equal(BULK_SCAN_RATE_LIMIT.maxCalls, 120);
   assert.equal(BULK_SCAN_RATE_LIMIT.windowSeconds, 600);
 });
 

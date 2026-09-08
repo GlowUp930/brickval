@@ -22,18 +22,18 @@ enum CollectorAvatar: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .classic: "Classic"
-        case .ghost: "Ghost"
-        case .wolf: "Wolf"
-        case .knight: "Knight"
-        case .city: "City"
-        case .space: "Space"
-        case .frankenstein: "Frank"
-        case .spider: "Spider"
-        case .skeleton: "Skeleton"
-        case .shark: "Shark"
-        case .hotdog: "Hot Dog"
-        case .goat: "Goat"
+        case .classic: BrickValLocalization.localized("Classic")
+        case .ghost: BrickValLocalization.localized("Ghost")
+        case .wolf: BrickValLocalization.localized("Wolf")
+        case .knight: BrickValLocalization.localized("Knight")
+        case .city: BrickValLocalization.localized("City")
+        case .space: BrickValLocalization.localized("Space")
+        case .frankenstein: BrickValLocalization.localized("Frank")
+        case .spider: BrickValLocalization.localized("Spider")
+        case .skeleton: BrickValLocalization.localized("Skeleton")
+        case .shark: BrickValLocalization.localized("Shark")
+        case .hotdog: BrickValLocalization.localized("Hot Dog")
+        case .goat: BrickValLocalization.localized("Goat")
         }
     }
 
@@ -56,18 +56,18 @@ enum CollectorAvatar: String, CaseIterable, Identifiable {
 
     var detail: String {
         switch self {
-        case .classic: "Blue cap"
-        case .ghost: "Glow shell"
-        case .wolf: "Wolfpack"
-        case .knight: "Castle helm"
-        case .city: "Rescue crew"
-        case .space: "Classic explorer"
-        case .frankenstein: "Monster maker"
-        case .spider: "Web crawler"
-        case .skeleton: "Bone collector"
-        case .shark: "Deep diver"
-        case .hotdog: "Snack squad"
-        case .goat: "Farm friend"
+        case .classic: BrickValLocalization.localized("Blue cap")
+        case .ghost: BrickValLocalization.localized("Glow shell")
+        case .wolf: BrickValLocalization.localized("Wolfpack")
+        case .knight: BrickValLocalization.localized("Castle helm")
+        case .city: BrickValLocalization.localized("Rescue crew")
+        case .space: BrickValLocalization.localized("Classic explorer")
+        case .frankenstein: BrickValLocalization.localized("Monster maker")
+        case .spider: BrickValLocalization.localized("Web crawler")
+        case .skeleton: BrickValLocalization.localized("Bone collector")
+        case .shark: BrickValLocalization.localized("Deep diver")
+        case .hotdog: BrickValLocalization.localized("Snack squad")
+        case .goat: BrickValLocalization.localized("Farm friend")
         }
     }
 }

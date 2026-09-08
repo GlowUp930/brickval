@@ -6,68 +6,95 @@ struct ScanProcessingOverlayView: View {
     let phase: ScanPhase
     let intent: ScanIntent
 
+    @State private var showsAverageExplanation = false
+
     var body: some View {
         ZStack {
             Color.black.opacity(0.52)
 
-            VStack(spacing: BrickValStyle.Primitive.space24) {
+            VStack(spacing: BrickValStyle.Primitive.space16) {
                 BrickValLogoLoader(
                     isHandingOff: false,
                     showsBackground: false,
                     showsWordmark: true,
                     scale: 0.78
                 )
-                .frame(width: 176, height: 250)
+                .frame(width: 176, height: 210)
 
                 VStack(spacing: BrickValStyle.Primitive.space8) {
                     Text(title)
                         .font(.title3.weight(.bold))
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
+                        .frame(maxWidth: 320)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .layoutPriority(1)
 
                     Text(subtitle)
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.72))
                         .multilineTextAlignment(.center)
-                        .frame(maxWidth: 280)
+                        .frame(maxWidth: 320)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .layoutPriority(1)
                 }
             }
             .padding(.horizontal, BrickValStyle.Primitive.space24)
         }
-        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+        .transition(reduceMotion ? .identity : .opacity)
         .animation(
             reduceMotion ? nil : .timingCurve(0.25, 1, 0.5, 1, duration: 0.26),
             value: phase
         )
+        .task(id: phase) {
+            showsAverageExplanation = false
+            guard phase == .identifying else { return }
+            do {
+                try await Task.sleep(for: .milliseconds(1_500))
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                showsAverageExplanation = true
+            }
+        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(title)
         .accessibilityValue(subtitle)
         .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityIdentifier("scanner.processing.status")
     }
 
     private var title: String {
-        switch phase {
+        if showsAverageExplanation, phase == .identifying {
+            return BrickValLocalization.localized("Calculating the average market price")
+        }
+        return switch phase {
         case .capturing:
-            intent == .bulk ? "Finding minifigures" : "Locking the photo"
+            intent == .bulk ? BrickValLocalization.localized("Finding minifigures") : BrickValLocalization.localized("Locking the photo")
         case .identifying:
-            intent == .bulk ? "Checking matches" : "Finding the best match"
+            intent == .bulk ? BrickValLocalization.localized("Checking matches") : BrickValLocalization.localized("Finding the best match")
         default:
-            "Finishing the scan"
+            BrickValLocalization.localized("Finishing the scan")
         }
     }
 
     private var subtitle: String {
-        switch phase {
+        if showsAverageExplanation, phase == .identifying {
+            return BrickValLocalization.localized("We use recent sold prices when available.")
+        }
+        return switch phase {
         case .capturing:
             intent == .bulk
-                ? "Searching the photo for every visible figure."
-                : "Keeping this exact frame for analysis."
+                ? BrickValLocalization.localized("Searching the photo for every visible figure.")
+                : BrickValLocalization.localized("Keeping this exact frame for analysis.")
         case .identifying:
             intent == .bulk
-                ? "Matching and pricing each minifigure."
-                : "Checking identity and current market value."
+                ? BrickValLocalization.localized("Matching and pricing each minifigure.")
+                : BrickValLocalization.localized("Checking identity and current market value.")
         default:
-            "Your result will appear here."
+            BrickValLocalization.localized("Your result will appear here.")
         }
     }
 }

@@ -79,7 +79,7 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
     }
 
     static let phaseOne = MonetizationPolicy(
-        version: 5,
+        version: 6,
         accessExperiment: AccessExperiment(
             enabled: false,
             hardPaywallPercent: 50,
@@ -98,7 +98,7 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
             introductoryBulkScans: 1,
             collectionUniqueItems: 10
         ),
-        lockedBulkPreview: false,
+        lockedBulkPreview: true,
         notifications: Notifications(
             enabled: true,
             scanReset: true,

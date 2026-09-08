@@ -34,14 +34,14 @@ function withCleanEnvironment(action: () => void) {
 test("current defaults gate daily scans, repeat bulk, and ten unique collection items", () => {
   withCleanEnvironment(() => {
     const policy = getMonetizationPolicy();
-    assert.equal(policy.version, 5);
+    assert.equal(policy.version, 6);
     assert.equal(policy.gates.singleDaily, true);
     assert.equal(policy.gates.bulkRepeat, true);
     assert.equal(policy.gates.collectionCapacity, true);
     assert.equal(policy.gates.marketHistory, false);
     assert.equal(policy.gates.appearance, true);
     assert.equal(policy.gates.offerCodes, true);
-    assert.equal(policy.lockedBulkPreview, false);
+    assert.equal(policy.lockedBulkPreview, true);
     assert.equal(policy.limits.singleScansPerDay, 3);
     assert.equal(policy.limits.introductoryBulkScans, 1);
     assert.equal(policy.limits.collectionUniqueItems, 10);

@@ -1,3 +1,5 @@
+import RevenueCat
+import StoreKit
 import SwiftUI
 
 struct AppRootView: View {
@@ -15,17 +17,22 @@ struct AppRootView: View {
     @State private var isShowingLaunch = true
     @State private var launchIsHandingOff = false
     @State private var migrationError: String?
+    @State private var purchaseFailureDemo: PurchaseFailure?
 
     var body: some View {
         ZStack {
             if isReady {
                 Group {
-                    if monetization.requiresUpdate {
+                    if isPurchaseFailureRootFixture {
+                        Color.clear
+                            .ignoresSafeArea()
+                    } else if monetization.requiresUpdate {
                         UpdateRequiredView(
                             minimumBuild: monetization.minimumSupportedBuild,
                             updateURL: monetization.appUpdateURL ?? AppLinks.appStore
                         )
-                    } else if preferences.hasCompletedOnboarding && !preferences.isReplayingOnboarding {
+                    } else if (preferences.hasCompletedOnboarding || isHardPaywallPreviewRootFixture) &&
+                                !preferences.isReplayingOnboarding {
                         if monetization.accessCohort == .hardTrial && entitlements.isLoading && !entitlements.isPro {
                             HardAccessStatusView()
                         } else if monetization.requiresProForApp(isPro: entitlements.isPro) {
@@ -51,11 +58,25 @@ struct AppRootView: View {
         .task {
             await prepare()
         }
+        .task(id: isReady) {
+            guard isReady, isPurchaseFailureRootFixture else { return }
+            try? await Task.sleep(for: .milliseconds(900))
+            guard !Task.isCancelled else { return }
+            purchaseFailureDemo = PurchaseFailure.from(
+                revenueCatCode: RevenueCat.ErrorCode.purchaseNotAllowedError.rawValue,
+                underlyingDomain: SKErrorDomain,
+                underlyingCode: SKError.Code.paymentNotAllowed.rawValue,
+                productID: "com.brickval.app.pro.yearly"
+            )
+        }
         .task(id: "\(scenePhase)-\(coordinator?.clerk?.user?.id ?? "signed-out")-\(preferences.referralOnboardingCompletionPending)") {
             guard scenePhase == .active,
                   preferences.referralOnboardingCompletionPending,
                   coordinator?.clerk?.user != nil
             else { return }
+            guard preferences.referralCompletionUserID == nil ||
+                    preferences.referralCompletionUserID == coordinator?.clerk?.user?.id else { return }
+            preferences.referralCompletionUserID = coordinator?.clerk?.user?.id
             do {
                 let response = try await api.completeReferralOnboarding()
                 preferences.referralOnboardingCompletionPending = false
@@ -72,7 +93,12 @@ struct AppRootView: View {
             Button("Retry") { Task { await migrate() } }
             Button("Not now", role: .cancel) { migrationError = nil }
         } message: {
-            Text(migrationError ?? "Your existing data has not been changed.")
+            Text(migrationError ?? BrickValLocalization.localized("Your existing data has not been changed."))
+        }
+        .alert("Purchase failed", isPresented: purchaseFailureDemoBinding) {
+            Button("OK", role: .cancel) { purchaseFailureDemo = nil }
+        } message: {
+            Text(purchaseFailureDemo?.errorDescription ?? BrickValLocalization.localized("We couldn't complete this purchase. Please try again."))
         }
     }
 
@@ -80,6 +106,13 @@ struct AppRootView: View {
         Binding(
             get: { migrationError != nil },
             set: { if !$0 { migrationError = nil } }
+        )
+    }
+
+    private var purchaseFailureDemoBinding: Binding<Bool> {
+        Binding(
+            get: { purchaseFailureDemo != nil },
+            set: { if !$0 { purchaseFailureDemo = nil } }
         )
     }
 
@@ -118,6 +151,22 @@ struct AppRootView: View {
             router.selectedTab == .scan
     }
 
+    private var isHardPaywallPreviewRootFixture: Bool {
+#if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-showHardPaywallPreviewRootDemo")
+#else
+        false
+#endif
+    }
+
+    private var isPurchaseFailureRootFixture: Bool {
+#if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-showPurchaseFailureRootDemo")
+#else
+        false
+#endif
+    }
+
     private func migrate() async {
         do {
             _ = try await migration.run(collectionStore: collectionStore, preferences: preferences)
@@ -128,7 +177,7 @@ struct AppRootView: View {
             await collectionStore.load()
             migrationError = nil
         } catch {
-            migrationError = "Brickvalue could not copy your Expo data yet. Nothing was deleted."
+            migrationError = BrickValLocalization.localized("Brickvalue could not copy your Expo data yet. Nothing was deleted.")
         }
     }
 }
@@ -174,9 +223,9 @@ struct UpdateRequiredView: View {
 
     private var message: String {
         if let minimumBuild {
-            return "This version is no longer supported. Install the latest update to keep scanning and valuing your collection. Build \(minimumBuild) or newer is required."
+            return BrickValLocalization.localized("This version is no longer supported. Install the latest update to keep scanning and valuing your collection. Build \(minimumBuild) or newer is required.")
         }
-        return "This version is no longer supported. Install the latest update to keep scanning and valuing your collection."
+        return BrickValLocalization.localized("This version is no longer supported. Install the latest update to keep scanning and valuing your collection.")
     }
 }
 

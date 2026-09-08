@@ -22,7 +22,11 @@ struct ManualLookupView: View {
                         .autocorrectionDisabled()
                         .focused($isIdentifierFocused)
                     if itemType == .part {
-                        TextField("Colour ID", value: $colorID, format: .number)
+                        TextField(
+                            "Colour ID",
+                            value: $colorID,
+                            format: .number.grouping(.never).locale(Locale(identifier: "en_US_POSIX"))
+                        )
                             .keyboardType(.numberPad)
                     }
                 }

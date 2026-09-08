@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
-import Jimp from "jimp";
+import { Jimp } from "jimp";
 
 const defaultAudit = "/Users/holamchan/Desktop/brickval-mobile/ml-work/brickval-camera-audit-2026-08-05";
 const auditDirectory = resolve(process.env.BULK_AUDIT_DIR ?? defaultAudit);
@@ -73,9 +73,9 @@ async function loadRegions(filename: string) {
 
 async function prepareImage(source: Buffer): Promise<Buffer> {
   const image = await Jimp.read(source);
-  if (Math.max(image.bitmap.width, image.bitmap.height) > 1600) image.scaleToFit(1600, 1600);
+  if (Math.max(image.bitmap.width, image.bitmap.height) > 1600) image.scaleToFit({ w: 1600, h: 1600 });
   for (const quality of [76, 64, 52, 40, 30]) {
-    const output = await image.clone().quality(quality).getBufferAsync("image/jpeg");
+    const output = await image.clone().getBuffer("image/jpeg", { quality });
     if (output.byteLength <= 700 * 1024) return output;
   }
   throw new Error("Benchmark image cannot fit the production upload limit");

@@ -23,18 +23,29 @@ struct ScannerView: View {
         let store = ScanStore(api: api)
 #if DEBUG
         let isProcessingLayoutDemo = ProcessInfo.processInfo.arguments.contains("-showScannerProcessingLayoutDemo")
+        let isWideBulkProcessingLayoutDemo = ProcessInfo.processInfo.arguments.contains("-showWideBulkProcessingLayoutDemo")
         let isBulkRecoveryDemo = ProcessInfo.processInfo.arguments.contains("-showBulkRecoveryDemo")
-        if isProcessingLayoutDemo,
+        let isLockedBulkPreviewDemo = ProcessInfo.processInfo.arguments.contains("-showLockedBulkPreviewDemo")
+        if isWideBulkProcessingLayoutDemo,
+           let imageData = BulkRecoveryDemoFixture.wideProcessingImageData {
+            store.configureBulkProcessingLayoutDemo(imageData: imageData)
+        } else if isProcessingLayoutDemo,
            let imageData = UIImage(named: "AvatarClassic")?.jpegData(compressionQuality: 0.9) {
             store.configureProcessingLayoutDemo(imageData: imageData)
         }
         if isBulkRecoveryDemo {
             store.configureBulkRecoveryDemo()
         }
+        if isLockedBulkPreviewDemo {
+            store.configureLockedBulkPreviewDemo()
+        }
         if ProcessInfo.processInfo.arguments.contains("-showBulkGatingDemo") {
             store.intent = .bulk
         }
-        runsCameraLoop = !isProcessingLayoutDemo && !isBulkRecoveryDemo
+        runsCameraLoop = !isProcessingLayoutDemo &&
+            !isWideBulkProcessingLayoutDemo &&
+            !isBulkRecoveryDemo &&
+            !isLockedBulkPreviewDemo
 #else
         runsCameraLoop = true
 #endif
@@ -72,13 +83,31 @@ struct ScannerView: View {
 
             GeometryReader { proxy in
                 let cameraSize = ScannerCameraLayout.size(fitting: proxy.size)
+                let fullStageRect = CGRect(origin: .zero, size: cameraSize)
+                let isBulkProcessing = store.intent == .bulk &&
+                    [.capturing, .identifying].contains(store.phase)
+                let bulkImageRect: CGRect = {
+                    guard store.intent == .bulk,
+                          let data = store.frozenImageData,
+                          let image = UIImage(data: data)
+                    else {
+                        return fullStageRect
+                    }
+                    return BulkImageLayout.aspectFitRect(
+                        imageSize: image.size,
+                        containerSize: cameraSize
+                    )
+                }()
 
                 ZStack {
                     ZStack(alignment: .top) {
                         CameraPreview(session: store.captureSession)
                             .background(.black)
                         if let data = store.frozenImageData {
-                            FrozenScanImageView(data: data)
+                            FrozenScanImageView(
+                                data: data,
+                                usesAspectFit: store.intent == .bulk
+                            )
                                 .transition(.opacity)
                         }
                         if ![.capturing, .identifying].contains(store.phase) {
@@ -92,7 +121,7 @@ struct ScannerView: View {
                                             state: .active
                                         )
                                     },
-                                    imageRect: CGRect(origin: .zero, size: cameraSize),
+                                    imageRect: store.intent == .bulk ? bulkImageRect : fullStageRect,
                                     containerSize: cameraSize,
                                     accent: accent
                                 )
@@ -140,7 +169,7 @@ struct ScannerView: View {
                     }
                     .frame(width: cameraSize.width, height: cameraSize.height)
                     .clipped()
-                    .accessibilityHidden(true)
+                    .accessibilityHidden(!isBulkProcessing)
 
                     Color.clear
                         .frame(width: cameraSize.width, height: cameraSize.height)
@@ -153,6 +182,7 @@ struct ScannerView: View {
                         )
                         .accessibilityValue(store.phase.statusText)
                         .accessibilityIdentifier("scanner.cameraStage")
+                        .accessibilityHidden(isBulkProcessing)
                 }
                 .frame(width: cameraSize.width, height: cameraSize.height)
                 .clipShape(.rect(cornerRadius: 24))
@@ -318,7 +348,7 @@ struct ScannerView: View {
             if feature == .bulkScan { store.intent = .bulk }
         } ?? false
         if !presented {
-            purchaseMessage = "Upgrade options are temporarily unavailable. Try again shortly."
+            purchaseMessage = BrickValLocalization.localized("Upgrade options are temporarily unavailable. Try again shortly.")
         }
     }
 
@@ -389,15 +419,15 @@ private struct ScannerAllowanceView: View {
         switch intent {
         case .single:
             guard policy.gates.singleDaily else { return nil }
-            if isPro { return "Unlimited scans" }
+            if isPro { return BrickValLocalization.localized("Unlimited scans") }
             let remaining = usage.singleScan.remaining
-            if remaining == 0 { return "No free scans left today" }
-            return "\(remaining) free \(remaining == 1 ? "scan" : "scans") left today"
+            if remaining == 0 { return BrickValLocalization.localized("No free scans left today") }
+            return BrickValLocalization.localized("\(remaining) free scan left today")
         case .bulk:
-            if isPro { return "Unlimited bulk scans" }
-            if lockedBulkPreviewAvailable { return "Preview available · unlock to value" }
+            if isPro { return BrickValLocalization.localized("Unlimited bulk scans") }
+            if lockedBulkPreviewAvailable { return BrickValLocalization.localized("Preview available · unlock to value") }
             let remaining = usage.bulkScan.remaining
-            return remaining > 0 ? "1 free try" : "Bulk scanning requires Pro"
+            return remaining > 0 ? BrickValLocalization.localized("1 free try") : BrickValLocalization.localized("Bulk scanning requires Pro")
         }
     }
 
@@ -426,17 +456,27 @@ enum ScannerCameraLayout {
 
 private struct FrozenScanImageView: View {
     let data: Data
+    let usesAspectFit: Bool
 
     @State private var image: UIImage?
 
     var body: some View {
         Group {
             if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
+                GeometryReader { proxy in
+                    let imageRect = usesAspectFit
+                        ? BulkImageLayout.aspectFitRect(
+                            imageSize: image.size,
+                            containerSize: proxy.size
+                        )
+                        : aspectFillRect(imageSize: image.size, containerSize: proxy.size)
+                    Image(uiImage: image)
+                        .resizable()
+                        .frame(width: imageRect.width, height: imageRect.height)
+                        .position(x: imageRect.midX, y: imageRect.midY)
+                }
+                .background(.black)
+                .clipped()
             } else {
                 Color.black
             }
@@ -445,6 +485,30 @@ private struct FrozenScanImageView: View {
             image = UIImage(data: data)
         }
         .accessibilityHidden(true)
+    }
+
+    private func aspectFillRect(imageSize: CGSize, containerSize: CGSize) -> CGRect {
+        guard imageSize.width > 0,
+              imageSize.height > 0,
+              containerSize.width > 0,
+              containerSize.height > 0
+        else {
+            return CGRect(origin: .zero, size: containerSize)
+        }
+        let scale = max(
+            containerSize.width / imageSize.width,
+            containerSize.height / imageSize.height
+        )
+        let renderedSize = CGSize(
+            width: imageSize.width * scale,
+            height: imageSize.height * scale
+        )
+        return CGRect(
+            x: (containerSize.width - renderedSize.width) / 2,
+            y: (containerSize.height - renderedSize.height) / 2,
+            width: renderedSize.width,
+            height: renderedSize.height
+        )
     }
 }
 
@@ -475,6 +539,12 @@ private struct ScanTipsCallout: View {
                 .font(.subheadline)
                 .foregroundStyle(BrickValStyle.Semantic.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+
+            tipRow(
+                "chart.line.uptrend.xyaxis",
+                title: "What the price means",
+                detail: "We use the average of recent sold prices. If sold data isn't available, we clearly label the average asking price from active listings."
+            )
 
             tipRow(
                 "person.crop.rectangle",
@@ -512,7 +582,7 @@ private struct ScanTipsCallout: View {
         .accessibilityLabel("Scan mode tips")
     }
 
-    private func tipRow(_ icon: String, title: String, detail: String) -> some View {
+    private func tipRow(_ icon: String, title: LocalizedStringResource, detail: LocalizedStringResource) -> some View {
         HStack(alignment: .top, spacing: BrickValStyle.Primitive.space8) {
             Image(systemName: icon)
                 .font(.body.weight(.semibold))
@@ -538,4 +608,5 @@ private struct ScanTipsCallout: View {
         .environment(CollectionStore())
         .environment(EntitlementStore())
         .environment(MonetizationStore())
+        .environment(CurrencyStore())
 }

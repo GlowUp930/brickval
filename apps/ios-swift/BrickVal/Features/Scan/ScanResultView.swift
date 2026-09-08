@@ -9,6 +9,7 @@ struct ScanResultView: View {
     @Environment(MonetizationStore.self) private var monetization
     @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(PreferencesStore.self) private var preferences
+    @Environment(CurrencyStore.self) private var currency
     @Environment(\.brickValAccent) private var accent
 
     let result: LookupResult
@@ -23,15 +24,24 @@ struct ScanResultView: View {
     @State private var proMessage: String?
     @State private var errorMessage: String?
 
+    private var commonSource: String? {
+        let newSource = result.pricing.source(for: .newSealed)
+        return newSource == result.pricing.source(for: .used) ? newSource : nil
+    }
+
     private var sourceLabel: String {
-        result.pricing.dataSource == "sold" ? "Sold market data" : "Active market listings"
+        MarketPriceSourceCopy.title(for: commonSource)
+    }
+
+    private var sourceDetail: String {
+        MarketPriceSourceCopy.detail(for: commonSource)
     }
 
     private var itemTypeLabel: String {
         switch result.itemType {
-        case .minifig: "Minifigure"
-        case .set: "LEGO set"
-        case .part: "LEGO part"
+        case .minifig: BrickValLocalization.localized("Minifigure")
+        case .set: BrickValLocalization.localized("LEGO set")
+        case .part: BrickValLocalization.localized("LEGO part")
         }
     }
 
@@ -68,7 +78,7 @@ struct ScanResultView: View {
             .alert("Could not save", isPresented: errorBinding) {
                 Button("OK", role: .cancel) { errorMessage = nil }
             } message: {
-                Text(errorMessage ?? "Try again.")
+                Text(errorMessage ?? BrickValLocalization.localized("Try again"))
             }
             .alert("BrickValue Pro", isPresented: proMessageBinding) {
                 Button("OK", role: .cancel) { proMessage = nil }
@@ -141,23 +151,52 @@ struct ScanResultView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(accent)
                 Spacer()
-                Text("USD").font(.caption.bold()).foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                Text(verbatim: currency.displayCurrency(for: preferences.effectiveCurrency).code)
+                    .font(.caption.bold())
+                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
             }
+            Text(sourceDetail)
+                .font(.caption)
+                .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 0) {
-                priceColumn(title: "USED", value: result.pricing.preferredUsedValue)
+                priceColumn(title: "USED", value: result.pricing.preferredUsedValue, condition: .used)
                 Divider().overlay(BrickValStyle.ScanResult.border)
-                priceColumn(title: "NEW", value: result.pricing.preferredNewValue)
+                priceColumn(title: "NEW", value: result.pricing.preferredNewValue, condition: .newSealed)
             }
             .frame(height: 78)
+            conversionCaption
         }
         .resultSurface()
     }
 
-    private func priceColumn(title: String, value: Double?) -> some View {
+    private var conversionCaption: some View {
+        let requestedCurrency = preferences.effectiveCurrency
+        let displayCurrency = currency.displayCurrency(for: requestedCurrency)
+        return Group {
+            if displayCurrency != .usd {
+                HStack(spacing: BrickValStyle.Primitive.space4) {
+                    Text("Converted from USD")
+                    Text("·")
+                    Text(currency.formattedRateDate(locale: BrickValLocalization.effectiveLanguage.locale) ?? "—")
+                }
+            } else if requestedCurrency != .usd {
+                Text("Currency conversion is unavailable. Values are shown in USD.")
+            }
+        }
+        .font(.caption2)
+        .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+    }
+
+    private func priceColumn(title: LocalizedStringResource, value: Double?, condition: CollectionCondition) -> some View {
         VStack(spacing: BrickValStyle.Primitive.space8) {
             Text(title).font(.caption.bold()).foregroundStyle(BrickValStyle.ScanResult.textSecondary)
             if let value {
                 CountingCurrencyText(value: value)
+                Text(MarketPriceSourceCopy.title(for: result.pricing.source(for: condition)))
+                    .font(.caption2)
+                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                    .multilineTextAlignment(.center)
             } else {
                 Text("No data")
             }
@@ -213,10 +252,15 @@ struct ScanResultView: View {
         }
     }
 
-    private func collectionButton(_ title: String, condition: CollectionCondition, prominent: Bool) -> some View {
+    private func collectionButton(_ title: LocalizedStringResource, condition: CollectionCondition, prominent: Bool) -> some View {
         Button { save(condition: condition) } label: {
             let isSaved = savedCondition == condition
-            Label(isSaved ? "Added" : isSaving ? "Saving..." : title, systemImage: isSaved ? "checkmark.circle.fill" : "plus.circle.fill")
+            let label = isSaved
+                ? BrickValLocalization.localized("Added")
+                : isSaving
+                    ? BrickValLocalization.localized("Saving…")
+                    : BrickValLocalization.localized(title)
+            Label(label, systemImage: isSaved ? "checkmark.circle.fill" : "plus.circle.fill")
                 .font(.headline)
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: BrickValStyle.ScanResult.controlHeight)
@@ -251,7 +295,7 @@ struct ScanResultView: View {
             params: ["source": "scan_result"]
         ) ?? false
         if !presented {
-            proMessage = "Upgrade options are temporarily unavailable. Try again shortly."
+            proMessage = BrickValLocalization.localized("Upgrade options are temporarily unavailable. Try again shortly.")
         }
     }
 
@@ -267,7 +311,7 @@ struct ScanResultView: View {
                 )
                 withAnimation(.spring(response: 0.22, dampingFraction: 0.84)) {
                     savedCondition = condition
-                    saveMessage = "Added to collection"
+                    saveMessage = BrickValLocalization.localized("Added to collection")
                     didSave = true
                 }
                 if !preferences.hasRequestedReview {
@@ -301,7 +345,7 @@ struct ScanResultView: View {
                     save(condition: condition)
                 } ?? false
                 if !presented {
-                    errorMessage = "Upgrade options are temporarily unavailable. Try again shortly."
+                    errorMessage = BrickValLocalization.localized("Upgrade options are temporarily unavailable. Try again shortly.")
                 }
             } catch {
                 errorMessage = error.localizedDescription
@@ -327,26 +371,43 @@ private extension View {
 
 private struct CountingCurrencyText: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(PreferencesStore.self) private var preferences
+    @Environment(CurrencyStore.self) private var currency
     let value: Double
     @State private var animatedValue = 0.0
 
     var body: some View {
-        Text(animatedValue, format: .currency(code: "USD"))
-            .monospacedDigit()
-            .contentTransition(.numericText())
-            .onAppear {
-                if reduceMotion {
+        let displayCurrency = currency.displayCurrency(for: preferences.effectiveCurrency)
+        let locale = BrickValLocalization.effectiveLanguage.locale
+        let amount = currency.formatted(animatedValue, to: preferences.effectiveCurrency, locale: locale)
+
+        HStack(alignment: .firstTextBaseline, spacing: BrickValStyle.Primitive.space4) {
+            Text(verbatim: amount)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+                .contentTransition(.numericText())
+            Text(verbatim: displayCurrency.code)
+                .font(.caption2.weight(.semibold))
+                .tracking(0.35)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: "\(amount), \(displayCurrency.code)"))
+        .onAppear {
+            if reduceMotion {
+                animatedValue = value
+            } else {
+                withAnimation(.easeOut(duration: 0.72)) {
                     animatedValue = value
-                } else {
-                    withAnimation(.easeOut(duration: 0.72)) {
-                        animatedValue = value
-                    }
                 }
             }
-            .onChange(of: value) { _, newValue in
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.42)) {
-                    animatedValue = newValue
-                }
+        }
+        .onChange(of: value) { _, newValue in
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.42)) {
+                animatedValue = newValue
             }
+        }
     }
 }

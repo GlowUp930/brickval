@@ -6,7 +6,13 @@ enum AccentPreference: String, CaseIterable, Identifiable, Sendable {
     case blue
 
     var id: Self { self }
-    var title: String { rawValue.capitalized }
+    var title: String {
+        switch self {
+        case .green: BrickValLocalization.localized("Green")
+        case .yellow: BrickValLocalization.localized("Yellow")
+        case .blue: BrickValLocalization.localized("Blue")
+        }
+    }
     var color: Color {
         switch self {
         case .green: Color(red: 0.000, green: 0.784, blue: 0.020)

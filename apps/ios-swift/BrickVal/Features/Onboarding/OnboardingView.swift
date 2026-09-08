@@ -9,6 +9,15 @@ enum OnboardingEntryPoint {
     case account
 }
 
+enum OnboardingRunMode: Equatable {
+    case standard
+    case isolatedHardPaywallPreview
+
+    var isIsolatedPreview: Bool {
+        self == .isolatedHardPaywallPreview
+    }
+}
+
 struct OnboardingView: View {
     @Environment(PreferencesStore.self) private var preferences
     @Environment(MonetizationStore.self) private var monetization
@@ -16,6 +25,7 @@ struct OnboardingView: View {
     @Environment(\.brickValAPIClient) private var api
     @Environment(AppRouter.self) private var router
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.requestReview) private var requestReview
     @State private var step: OnboardingStep = .brand
     @State private var goal: PrimaryGoal?
     @State private var presentedSheet: OnboardingSheet?
@@ -26,12 +36,16 @@ struct OnboardingView: View {
     @State private var referralMessage: String?
     @State private var isClaimingReferral = false
     @State private var didFinishOnboarding = false
+    @State private var didRequestOnboardingReview = false
+    private let runMode: OnboardingRunMode
     private let onFinish: () -> Void
 
     init(
         entryPoint: OnboardingEntryPoint = .beginning,
+        runMode: OnboardingRunMode = .standard,
         onFinish: @escaping () -> Void = {}
     ) {
+        self.runMode = runMode
         self.onFinish = onFinish
         _step = State(initialValue: entryPoint == .account ? .account : .brand)
 #if DEBUG
@@ -61,7 +75,8 @@ struct OnboardingView: View {
             OnboardingDetailSequence(
                 step: step,
                 goal: $goal,
-                advance: advanceDetailStep
+                advance: advanceDetailStep,
+                leaveReview: leaveReview
             )
             .opacity(step.isDetailStep ? 1 : 0)
             .scaleEffect(reduceMotion || step.isDetailStep ? 1 : 0.985)
@@ -85,6 +100,7 @@ struct OnboardingView: View {
                 message: referralMessage,
                 isClaiming: isClaimingReferral,
                 isSignedIn: coordinator?.clerk?.user != nil,
+                isPreview: runMode.isIsolatedPreview,
                 back: showAccountStep,
                 apply: applyReferralCode,
                 signIn: presentSignIn,
@@ -104,6 +120,7 @@ struct OnboardingView: View {
         .preferredColorScheme(.light)
         .interactiveDismissDisabled()
         .onAppear {
+            guard !runMode.isIsolatedPreview else { return }
             guard !didCaptureAnalytics else { return }
             didCaptureAnalytics = true
             coordinator?.analytics.capture(
@@ -142,6 +159,14 @@ struct OnboardingView: View {
             guard let newCode, step == .referral else { return }
             referralCode = newCode
         }
+        .onChange(of: step) { _, newStep in
+            guard newStep == .review else { return }
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(420))
+                guard !Task.isCancelled, step == .review else { return }
+                requestOnboardingReview()
+            }
+        }
         .task(id: step) {
             guard step == .referral else { return }
             if let pendingReferralCode = router.pendingReferralCode {
@@ -151,7 +176,7 @@ struct OnboardingView: View {
         .alert("Couldn’t sign in", isPresented: alertBinding) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text(alertMessage ?? "You can continue without an account and sign in later from Profile.")
+            Text(alertMessage ?? BrickValLocalization.localized("You can continue without an account and sign in later from Profile."))
         }
     }
 
@@ -163,8 +188,12 @@ struct OnboardingView: View {
     }
 
     private func presentSignIn() {
+        guard !runMode.isIsolatedPreview else {
+            alertMessage = BrickValLocalization.localized("Sign-in is disabled in preview. Use Skip to continue.")
+            return
+        }
         guard coordinator?.clerk != nil else {
-            alertMessage = "Sign-in is unavailable in this build. You can continue and sign in later from Profile."
+            alertMessage = BrickValLocalization.localized("Sign-in is unavailable in this build. You can continue and sign in later from Profile.")
             return
         }
         presentedSheet = .auth
@@ -188,7 +217,26 @@ struct OnboardingView: View {
         }
     }
 
+    private func requestOnboardingReview() {
+        guard !runMode.isIsolatedPreview else { return }
+        guard !didRequestOnboardingReview, !preferences.hasRequestedReview else { return }
+        didRequestOnboardingReview = true
+        preferences.hasRequestedReview = true
+        requestReview()
+    }
+
+    private func leaveReview() {
+        guard !runMode.isIsolatedPreview else { return }
+        requestReview()
+    }
+
     private func continueFromAccount() {
+        if runMode.isIsolatedPreview {
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.28)) {
+                step = .referral
+            }
+            return
+        }
         guard !preferences.isReplayingOnboarding else {
             finishOnboarding()
             return
@@ -214,8 +262,12 @@ struct OnboardingView: View {
     }
 
     private func authenticate(with provider: OnboardingAuthProvider) {
+        guard !runMode.isIsolatedPreview else {
+            alertMessage = BrickValLocalization.localized("Sign-in is disabled in preview. Use Skip to continue.")
+            return
+        }
         guard let clerk = coordinator?.clerk else {
-            alertMessage = "Sign-in is unavailable in this build. You can continue and sign in later from Profile."
+            alertMessage = BrickValLocalization.localized("Sign-in is unavailable in this build. You can continue and sign in later from Profile.")
             return
         }
 
@@ -241,7 +293,7 @@ struct OnboardingView: View {
             } catch {
                 authenticatingProvider = nil
                 guard !isAuthenticationCancellation(error) else { return }
-                alertMessage = "Sign-in didn’t complete. Check your connection and try again."
+                alertMessage = BrickValLocalization.localized("Sign-in didn’t complete. Check your connection and try again.")
             }
         }
     }
@@ -259,6 +311,12 @@ struct OnboardingView: View {
     private func finishOnboarding() {
         guard !didFinishOnboarding else { return }
         didFinishOnboarding = true
+
+        guard !runMode.isIsolatedPreview else {
+            onFinish()
+            return
+        }
+
         let isReplay = preferences.isReplayingOnboarding
         preferences.primaryGoal = goal
         preferences.isReplayingOnboarding = false
@@ -276,6 +334,7 @@ struct OnboardingView: View {
             ]
         )
         if !isReplay, coordinator?.clerk?.user != nil {
+            preferences.referralCompletionUserID = coordinator?.clerk?.user?.id
             preferences.referralOnboardingCompletionPending = true
             Task { await completeReferralOnboardingIfPossible() }
         }
@@ -284,11 +343,15 @@ struct OnboardingView: View {
 
     private func applyReferralCode() {
         guard referralCode.count == 8 else {
-            referralMessage = "Enter the 8-character invite code."
+            referralMessage = BrickValLocalization.localized("Enter the 8-character invite code.")
+            return
+        }
+        guard !runMode.isIsolatedPreview else {
+            referralMessage = BrickValLocalization.localized("Preview only — this invite code was not applied.")
             return
         }
         guard coordinator?.clerk?.user != nil else {
-            referralMessage = "Sign in to apply your invite code."
+            referralMessage = BrickValLocalization.localized("Sign in to apply your invite code.")
             presentSignIn()
             return
         }
@@ -296,8 +359,13 @@ struct OnboardingView: View {
     }
 
     private func claimReferralCode() async {
+        guard !runMode.isIsolatedPreview else {
+            referralMessage = BrickValLocalization.localized("Preview only — this invite code was not applied.")
+            return
+        }
         let normalizedCode = referralCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard normalizedCode.count == 8 else { return }
+        router.pendingReferralCode = normalizedCode
         isClaimingReferral = true
         referralMessage = nil
         coordinator?.analytics.capture(PostHogEvent.referralClaimAttempted, properties: ["source": "onboarding"])
@@ -308,18 +376,23 @@ struct OnboardingView: View {
                 normalizedCode,
                 InstallationIdentity.current()
             )
+            guard response.claimed || ["claimed", "qualified", "already_claimed"].contains(response.status) else {
+                referralMessage = BrickValLocalization.localized("That invite code could not be claimed.")
+                return
+            }
             monetization.applyReferralStatus(response.referral)
             router.clearPendingReferral()
             coordinator?.analytics.capture(PostHogEvent.referralClaimed, properties: ["source": "onboarding"])
             finishOnboarding()
         } catch let error as APIError where error.statusCode == 422 || error.statusCode == 409 {
-            referralMessage = error.serverMessage ?? "That invite code could not be applied."
+            referralMessage = error.localizedDescription
         } catch {
-            referralMessage = "We couldn't apply the invite code. You can skip and try again from Profile."
+            referralMessage = BrickValLocalization.localized("We couldn't apply the invite code. You can skip and try again from Profile.")
         }
     }
 
     private func completeReferralOnboardingIfPossible() async {
+        guard !runMode.isIsolatedPreview else { return }
         guard coordinator?.clerk?.user != nil else { return }
         do {
             let response = try await api.completeReferralOnboarding()
@@ -490,6 +563,7 @@ private struct OnboardingDetailSequence: View {
     let step: OnboardingStep
     @Binding var goal: PrimaryGoal?
     let advance: () -> Void
+    let leaveReview: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -530,7 +604,7 @@ private struct OnboardingDetailSequence: View {
         case .trust:
             OnboardingTrustScreen()
         case .review:
-            OnboardingReviewScreen()
+            OnboardingReviewScreen(leaveReview: leaveReview)
         default:
             EmptyView()
         }
@@ -559,8 +633,8 @@ private struct OnboardingProgressBar: View {
 }
 
 private struct OnboardingHero: View {
-    let title: String
-    let subtitle: String
+    let title: LocalizedStringResource
+    let subtitle: LocalizedStringResource
 
     var body: some View {
         VStack(spacing: BrickValStyle.Primitive.space8) {
@@ -596,10 +670,16 @@ private struct OnboardingValueScreen: View {
                 Text("SET").font(.caption.bold()).foregroundStyle(.secondary)
                 Text("75308  R2-D2").font(.title2.bold())
                 HStack {
-                    Text("Market Value").foregroundStyle(.secondary)
+                    Text("Average market price").foregroundStyle(.secondary)
                     Spacer()
-                    Text("$214").font(.title.bold()).monospacedDigit()
+                    BrickValCurrencyText(214)
+                        .font(.title.bold())
+                        .monospacedDigit()
                 }
+                Text("We use the average of recent sold prices. If sold data isn't available, we clearly label the average asking price from active listings.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 HStack {
                     Spacer()
                     Text("+24%").font(.headline).foregroundStyle(accent).monospacedDigit()
@@ -677,6 +757,7 @@ private struct OnboardingGoalScreen: View {
                         }
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("onboarding.goal.\(goal.rawValue)")
                 }
             }
         }
@@ -693,7 +774,7 @@ private struct OnboardingTrustScreen: View {
         VStack(spacing: BrickValStyle.Primitive.space32) {
             OnboardingHero(
                 title: "Real Market Data",
-                subtitle: "BrickValue uses data from reliable sources."
+                subtitle: "We use the average of recent sold prices. If sold data isn't available, we clearly label the average asking price from active listings."
             )
             ZStack {
                 Circle()
@@ -737,6 +818,7 @@ private struct OnboardingTrustScreen: View {
 private struct OnboardingReviewScreen: View {
     @Environment(\.brickValAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let leaveReview: () -> Void
     @State private var isAnimating = false
 
     var body: some View {
@@ -768,6 +850,17 @@ private struct OnboardingReviewScreen: View {
                 .font(.body.weight(.medium))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+
+            Button(action: leaveReview) {
+                Label("Leave a review", systemImage: "star.bubble")
+                    .font(.headline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(accent.opacity(0.14), in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.primary)
+            .accessibilityHint("Opens Apple's review prompt when available")
+            .accessibilityIdentifier("onboarding.leaveReview")
         }
         .padding(BrickValStyle.Primitive.space24)
         .onAppear {
@@ -842,6 +935,7 @@ private struct OnboardingAccountScreen: View {
                 .frame(minHeight: 44)
                 .accessibilityLabel("Skip sign-in for now")
                 .accessibilityHint("Opens BrickValue without an account")
+                .accessibilityIdentifier("onboarding.account.skip")
             }
 
             Spacer()
@@ -849,11 +943,10 @@ private struct OnboardingAccountScreen: View {
         .padding(.horizontal, BrickValStyle.Primitive.space24)
         .padding(.top, BrickValStyle.Primitive.space12)
         .padding(.bottom, BrickValStyle.Primitive.space24)
-        .accessibilityIdentifier("onboarding.account")
     }
 
     private func providerButton(
-        title: String,
+        title: LocalizedStringResource,
         provider: OnboardingAuthProvider,
         foreground: Color,
         background: Color,
@@ -926,6 +1019,7 @@ private struct OnboardingReferralScreen: View {
     let message: String?
     let isClaiming: Bool
     let isSignedIn: Bool
+    let isPreview: Bool
     let back: () -> Void
     let apply: () -> Void
     let signIn: () -> Void
@@ -987,7 +1081,7 @@ private struct OnboardingReferralScreen: View {
                         if isClaiming {
                             ProgressView().tint(.white)
                         } else {
-                            Text(isSignedIn ? "Apply code" : "Sign in to apply")
+                            Text(isPreview ? "Preview code" : (isSignedIn ? "Apply code" : "Sign in to apply"))
                                 .font(.headline.weight(.semibold))
                         }
                     }
@@ -996,12 +1090,17 @@ private struct OnboardingReferralScreen: View {
                     .background(accent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
                 .disabled(isClaiming || code.count != 8)
-                .accessibilityHint(isSignedIn ? "Attaches this invite to your account" : "Opens sign-in before applying the invite")
+                .accessibilityHint(
+                    isPreview
+                        ? "Shows that invite codes are disabled in preview"
+                        : (isSignedIn ? "Attaches this invite to your account" : "Opens sign-in before applying the invite")
+                )
 
                 Button("Skip", action: skip)
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity, minHeight: 44)
+                    .accessibilityIdentifier("onboarding.referral.skip")
             }
 
             Spacer()
@@ -1009,7 +1108,6 @@ private struct OnboardingReferralScreen: View {
         .padding(.horizontal, BrickValStyle.Primitive.space24)
         .padding(.top, BrickValStyle.Primitive.space12)
         .padding(.bottom, BrickValStyle.Primitive.space24)
-        .accessibilityIdentifier("onboarding.referral")
     }
 }
 
@@ -1113,17 +1211,17 @@ private final class PlayerLayerView: UIView {
 private extension PrimaryGoal {
     var onboardingTitle: String {
         switch self {
-        case .catalog: "Catalog my collection"
-        case .resell: "Buy and sell LEGO"
-        case .dealCheck: "Spot hidden gems"
+        case .catalog: BrickValLocalization.localized("Catalog my collection")
+        case .resell: BrickValLocalization.localized("Buy and sell LEGO")
+        case .dealCheck: BrickValLocalization.localized("Spot hidden gems")
         }
     }
 
     var onboardingDetail: String {
         switch self {
-        case .catalog: "Track what I own and what it is worth today."
-        case .resell: "Check value before I list, buy, or negotiate."
-        case .dealCheck: "Scan quickly in stores, markets, or bulk lots."
+        case .catalog: BrickValLocalization.localized("Track what I own and what it is worth today.")
+        case .resell: BrickValLocalization.localized("Check value before I list, buy, or negotiate.")
+        case .dealCheck: BrickValLocalization.localized("Scan quickly in stores, markets, or bulk lots.")
         }
     }
 }

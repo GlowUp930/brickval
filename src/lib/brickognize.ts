@@ -1,4 +1,4 @@
-import Jimp from "jimp";
+import { Jimp } from "jimp";
 import {
   buildBrickognizeBulkScanCrops,
   buildBrickognizeRecoveryCrops,
@@ -87,7 +87,7 @@ export async function identifyNonSet(
   try {
     sourceImage = await Jimp.read(imageBuffer);
     if (Math.max(sourceImage.bitmap.width, sourceImage.bitmap.height) > 1024) {
-      sourceImage.scaleToFit(1024, 1024);
+      sourceImage.scaleToFit({ w: 1024, h: 1024 });
     }
     searchWidth = sourceImage.bitmap.width;
     searchHeight = sourceImage.bitmap.height;
@@ -104,8 +104,8 @@ export async function identifyNonSet(
   if (!recoveryCrops.length) return { detections: mergeDetections() };
 
   async function identifyCrop(crop: { left: number; top: number; width: number; height: number }) {
-    const croppedImage = decodedImage.clone().crop(crop.left, crop.top, crop.width, crop.height).quality(88);
-    const croppedBuffer = await croppedImage.getBufferAsync("image/jpeg");
+    const croppedImage = decodedImage.clone().crop({ x: crop.left, y: crop.top, w: crop.width, h: crop.height });
+    const croppedBuffer = await croppedImage.getBuffer("image/jpeg", { quality: 88 });
     const croppedArrayBuffer = croppedBuffer.buffer.slice(
       croppedBuffer.byteOffset,
       croppedBuffer.byteOffset + croppedBuffer.byteLength

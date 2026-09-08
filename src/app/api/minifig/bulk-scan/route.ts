@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { scanRequestAccess } from "@/lib/scan-request-access";
 import { NextRequest, NextResponse } from "next/server";
 
 import { reportBulkScanError } from "@/lib/backend-error-reporting";
@@ -11,6 +11,9 @@ import { parseBulkScanInput } from "@/lib/bulk-scan-input";
 const MAX_CAPTURE_BYTES = 700 * 1024;
 
 export async function POST(req: NextRequest) {
+  const accessRequest = await scanRequestAccess(req);
+  if (accessRequest instanceof NextResponse) return accessRequest;
+  const { userId } = accessRequest;
   let formData: FormData;
   try {
     formData = await req.formData();
@@ -38,18 +41,12 @@ export async function POST(req: NextRequest) {
   }
   const { image, regions, scanSource } = input.value;
   if (image.type !== "image/jpeg") {
-    return NextResponse.json({ error: "Only JPEG images are supported" }, { status: 415 });
+    return NextResponse.json({ error: "unsupported_image", message: "Only JPEG images are supported." }, { status: 415 });
   }
   if (image.size > MAX_CAPTURE_BYTES) {
-    return NextResponse.json({ error: "Image too large" }, { status: 413 });
+    return NextResponse.json({ error: "image_too_large", message: "This image is too large. Please choose a smaller photo." }, { status: 413 });
   }
 
-  let userId: string | null = null;
-  try {
-    userId = (await auth()).userId;
-  } catch (error) {
-    console.warn("[bulk-scan] Auth unavailable; continuing as guest.", error);
-  }
 
   if (userId) {
     const access = await checkFeatureAccess(userId, "bulk_scan");
@@ -87,7 +84,7 @@ export async function POST(req: NextRequest) {
         usage: gate.usage,
       }, { status: 402 });
     }
-    return NextResponse.json({ ...scan, recoveryToken: issueBulkRecoveryToken(userId), usage: gate.usage });
+    return NextResponse.json({ ...scan, recoveryToken: issueBulkRecoveryToken(userId, Date.now(), true), usage: gate.usage });
   } catch (error) {
     if (error instanceof BrickognizeUnavailableError) {
       await reportBulkScanError(error, requestErrorContext(req, 502, scanSource, regions.length));

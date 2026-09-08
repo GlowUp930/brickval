@@ -1,10 +1,34 @@
 # Scan Result Card Visual QA
 
+## Reliability fixes — 2026-09-08
+
+See [remediation status](../../docs/audits/2026-09-08-reliability-remediation.md). Collection recovery, real price/history contracts, pending referrals, recipient messaging and accessible bulk layout have local regression coverage. The final Xcode result reports 205 tests across small and large iPhones with zero failures. Largest-text small-screen action reachability was visually inspected. Production configuration, Clerk deletion behavior and physical-device purchase/referral verification remain pending; these changes have not been uploaded as a new TestFlight build.
+
+
 ## Whole-app audit follow-up — 2026-09-05
 
 **Visual sign-off withheld for build 167.** The bulk white summary has very pale secondary labels, and the largest accessibility text size clips prices, condition controls, and the Add action on the small iPhone. [Report and screenshots](../../docs/audits/2026-09-05-whole-app.md#f11--p1-bulk-summary-contrast-and-accessibility-layout-fail) record the failures. Existing element-existence UI tests passed and did not detect these readability problems.
 
 The full native suites passed on both simulator sizes (186 Swift tests, 2 XCTest photo-import tests, 11 UI tests each). Localization catalogs passed for 13 languages. This does not certify VoiceOver, all translated layouts, real-camera performance, TestFlight referrals, or Apple purchases. Those untested journeys remain explicit gaps in the report. No visual or product fixes were made in this audit; previous implementation/upload notes below remain historical records.
+
+## TestFlight Build 167 QA — 2026-09-05
+
+- Release archive `1.0.7 (167)` succeeded with the Apple Distribution certificate and `BrickVal App Store Build 125` provisioning profile.
+- The archived bundle reports identifier `com.brickval.app`, version `1.0.7`, build `167`, and passes deep code-signature validation.
+- The exported IPA was uploaded to App Store Connect. Delivery `f2c5b5d0-2e66-444b-9756-5a1b5691e73f` reported `UPLOAD SUCCEEDED`; the follow-up build-status check reports `VALID`, `IMPORT-STATUS: VALID`, and `IS-ON-APP-STORE-CONNECT: true`.
+- Build 167 contains the collection detail branding header and compact bulk pricing layout documented below.
+
+final result: uploaded; App Store Connect accepted the build and TestFlight availability may continue asynchronously
+
+## Collection detail branding and compact bulk pricing QA — 2026-09-05
+
+- Collection item detail now keeps the existing BrickValue mark and wordmark in the navigation-bar principal area, so the brand stays visible while the item content scrolls.
+- Completed bulk results now group the lot value and identified count in a structured summary. The active ISO currency code appears in that summary; per-figure photo callouts, reveal-rail cards, result cards, match-correction rows, transfer tokens, and shared photo labels show the localized amount without repeating the code, while the share-card total keeps the code.
+- VoiceOver and other semantic labels retain the full localized amount with the active ISO code, preserving currency context when the visible tag is compact.
+- The native test suite passed on the BrickVal iPhone 17 Pro simulator: 186 unit tests in 30 suites and 11 UI tests, with zero failures. Localization audit and `git diff --check` also passed.
+- The complete small-iPhone simulator suite also passed: 186 unit tests in 30 suites and 11 UI tests, with zero failures. A focused rerun cleared one transient correction-sheet timing failure from the first small-device run.
+
+final result: implemented; automated verification passed on both simulator sizes
 
 ## Inputs
 
@@ -41,6 +65,170 @@ The full native suites passed on both simulator sizes (186 Swift tests, 2 XCTest
 
 final result: passed
 
+## TestFlight Build 163 QA — 2026-09-04
+
+- The native unit suite passed with 176 tests in 29 suites, and the iOS UI suite passed with 9 tests and zero failures on the BrickVal Small iPhone simulator.
+- Localization and notification audits passed: 763 app strings and 4 Info.plist strings are populated across all 13 supported locales, with notification registration carrying the active language code.
+- Release archive `1.0.7 (163)` succeeded with the Apple Distribution certificate and `BrickVal App Store Build 125` provisioning profile.
+- App Store Connect accepted the upload and reported the package as processing for TestFlight. TestFlight availability will follow Apple's asynchronous package processing.
+- The build includes the in-app Profile → Language picker, System default/device-language fallback, and locale-aware UI updates.
+
+final result: uploaded; TestFlight processing pending
+
+## Major-currency conversion QA — 2026-09-04
+
+- Profile → Currency offers System default and the 24 supported ISO codes. The override persists locally, can return to System default, and does not change the app language.
+- Market values, collection totals, historical chart points, bulk callouts, accessibility values, and exported share cards format converted display values from canonical USD. Detail and share surfaces disclose “Converted from USD” with the rate date.
+- Device-region selection, JPY zero-decimal formatting, stale-rate recovery, unavailable-rate USD fallback, large Dynamic Type, and Arabic right-to-left mirroring remain release checks. Subscription prices continue to come directly from StoreKit.
+- Every amount now shows the active ISO code (for example, `A$214.00 · AUD`); unavailable conversion shows the canonical amount as `$214.00 · USD` with the localized fallback message. Profile → Currency shows both the selected preference and the active fallback currency.
+- The linked production `/api/mobile/exchange-rates` endpoint is deployed and returns the complete 24-currency contract with USD identity rate `1`.
+- Build `1.0.7 (165)` includes the display fix. The signed archive reports `1.0.7 (165)` with the Apple Distribution certificate, App Store Connect processed the upload, and the build is available in both existing internal groups: `TE Team (Expo)` and `V1 v1`.
+
+final result: passed; build 165 is processing-complete and available to internal testers
+
+## Average market price clarity QA — 2026-09-04
+
+- Onboarding’s value example now says “Average market price” and explains that BrickValue uses an average of recent sold prices; active-listing asking-price averages are explicitly labeled when sold data is unavailable.
+- The first-run scan tips include the same plain-language definition. Every single and bulk scan shows an average-price explanation after roughly 1.5 seconds of processing without delaying a ready result.
+- Native result, collection tiles/detail, bulk result cards/reveal, and share-card labels distinguish “Average sold price” from “Average asking price.” The source detail is available to VoiceOver and remains readable without relying on color.
+- The single-scan processing overlay was rechecked on the BrickVal Small iPhone after the longer copy was added. The title and explanation wrap without clipping; the bulk processing title and live completed-item count remain inside the camera stage.
+- Reduce Motion keeps the status change immediate, and the copy remains part of the semantic status element. German, Hindi, Japanese, Arabic RTL, and large Dynamic Type remain required release checks.
+
+final result: implemented; native build and visual smoke check passed
+
+## TestFlight Build 166 QA — 2026-09-04
+
+- Release archive `1.0.7 (166)` succeeded with the Apple Distribution certificate and `BrickVal App Store Build 125` provisioning profile; the archived app bundle and code signature validate successfully.
+- The exported IPA was uploaded to App Store Connect. Delivery `787cc9af-d26c-438d-84a1-4697ed63a369` reported `UPLOAD SUCCEEDED`; App Store Connect build status is `VALID`, import status is `VALID`, and the build is on App Store Connect for TestFlight processing.
+- Build 166 contains the average market-price clarity copy and source labels from the section above. No market-data calculations or subscription pricing were changed.
+
+final result: uploaded; TestFlight processing may continue asynchronously
+
+## 13-language localization QA — 2026-09-03
+
+- The native string catalogs contain English (`en`), Spanish (`es`), French (`fr`), German (`de`), Italian (`it`), Brazilian Portuguese (`pt-BR`), Dutch (`nl`), Japanese (`ja`), Korean (`ko`), Simplified Chinese (`zh-Hans`), Traditional Chinese (`zh-Hant`), Arabic (`ar`), and Hindi (`hi`).
+- `npm run test:localization` passed: 763 app strings and 4 Info.plist strings have non-empty values in every locale, matching interpolation placeholders, and required singular/plural forms.
+- System default matches the device language automatically with English fallback. The Profile → Language row opens an in-app picker with System default plus all 13 supported languages; the selected override is persisted locally and reflected throughout the app.
+- Native strings use locale-aware USD, date, percentage, and quantity formatting. Arabic remains a right-to-left layout concern, and German, Hindi, Japanese, Arabic, and large Dynamic Type require small- and large-device visual review before release.
+- Superwall and notification registration receive the effective app locale so paywalls and billing alerts follow the in-app choice; dashboard paywall copy and StoreKit metadata still need locale-by-locale preview verification.
+- Simulator unit and UI smoke tests passed on the BrickVal Small iPhone with the test scheme pinned to English/US for deterministic existing assertions. A full language matrix smoke pass and native-language review of sensitive copy remain release checklist items.
+- The in-app language smoke test selected 日本語, verified the navigation title changed to 言語, and returned to English for deterministic follow-on tests.
+
+final result: automated localization coverage passed; manual locale and native-language review pending
+
+## Bulk image geometry standardization QA — 2026-09-01
+
+- Bulk photo-library detection now combines the existing source-aspect multiscale pass with a bounded padded 1:1 pass. Square detections map back to the upright source photo, padding-only proposals are discarded, duplicate proposals use the existing overlap threshold, and the 60-region limit is applied after merging. The supplied dense landscape benchmark measured 19 regions from the source pass, 21 from the standardized square pass, and at least 23 after merging.
+- The original photo remains unchanged for display, sharing, session upload, retries, and region crops. Recognition and recovery crops now use padded 1:1 JPEG output while retaining the existing 500 KB and 300 KB limits.
+- Frozen photos, processing overlays, locked previews, and completed results share one aspect-fit rectangle. The complete photo stays visible with black letterboxing, and detection frames and price callouts use that same rendered rectangle. The processing status surface is bounded to the scanner stage and wraps long Dynamic Type text vertically.
+- The wide-photo fixture uses visible left/right edge markers and a long processing message. Visual checks on the BrickVal Small iPhone and BrickVal iPhone 17 Pro confirmed both edges, status text, overlays, controls, and safe-area spacing remain in bounds. The fixture also reaches the scanner shell on a fresh simulator instead of being intercepted by onboarding.
+- Geometry unit coverage passed 8/8 focused tests, including landscape, portrait, square, panoramic, rotated, square-box mapping, padding filtering, duplicate merging, and square crop byte limits. The complete native suite passed 162 tests (164 runs including four dynamic-parameter runs) with zero failures on both simulator sizes. Existing accessibility coverage retains Reduce Motion, Reduce Transparency, VoiceOver, Dynamic Type, and 44-point control checks.
+- No image, crop, or private fixture was committed, logged, sent to analytics, or sent to Sentry. These geometry changes are included in signed and uploaded build `1.0.6 (162)`.
+
+final result: passed
+
+## TestFlight Build 162 QA — 2026-09-01
+
+- The complete native simulator suite passed with 173 tests, zero failures, and zero skips on the BrickVal Small iPhone simulator. The Release simulator compile also succeeded.
+- The signed archive reports version `1.0.6 (162)` with bundle identifier `com.brickval.app`, and includes the bulk image-geometry standardization plus the normalized Pro purchase-failure flow.
+- App Store Connect accepted the upload and TestFlight now reports build `162` as `Ready to Submit`; the build is assigned to the existing internal testing groups.
+- Physical iPhone purchase verification remains pending for annual/monthly purchase, seven-day trial eligibility, restore purchases, and offer-code redemption.
+
+final result: passed; physical-device purchase verification pending
+
+## Pro Purchase Failure QA — 2026-09-01
+
+- StoreKit and RevenueCat purchase failures are mapped to plain-language recovery states. The reported `purchaseNotAllowedError` no longer surfaces Apple’s raw “The device or user is not allowed to make the purchase.” message; it tells the user to check App Store or Screen Time purchase settings and retry.
+- Missing products and configuration failures use a temporary-unavailable message. Network and App Store failures ask the user to retry. Cancellation and pending purchases do not create a failure alert.
+- Failed transactions return the normalized error to Superwall, so the paywall remains available for another attempt. Annual and monthly products retain their existing trial, entitlement, restore, and offer-code flows.
+- Release Sentry diagnostics contain only the product ID, paywall placement, app build, RevenueCat error code, and StoreKit domain/code. They exclude Apple ID, receipt data, purchase tokens, email, raw SDK messages, and purchase payloads.
+- The production-root UI fixture `-showPurchaseFailureRootDemo` displayed the normalized alert through `AppRootView`; the raw StoreKit message was absent. The full native suite passed with 163 unit tests and 8 UI tests on the BrickVal Small iPhone simulator. Release compilation also passed.
+- Physical iPhone 14 / iOS 26.6 verification of annual purchase, monthly purchase, trial eligibility, restore, and offer-code redemption remains pending. On 2026-09-01, the signed-in dashboards were verified: App Store Connect shows both products Approved and available in all regions, with the annual introductory offer active; the Paid Apps Agreement, tax forms, and bank account are Active; RevenueCat maps both production products to `pro`; and Superwall's active purchase campaign lists the same product IDs. The fix is included in TestFlight build `1.0.6 (162)`.
+
+final result: code and production configuration verified; physical-device purchase verification pending
+
+## Bulk scan header branding / Build 161 QA - 2026-09-01
+
+- Replaced the green scan-symbol tile in the bulk-scan header with the existing BrickValue app mark and changed the visible wordmark from `BrickVal` to `BrickValue`.
+- The compact header uses the verified native logo asset and smaller system typography so the full wordmark, “Bulk scan” label, share action, and close action all remain visible on the small iPhone.
+- Small-iPhone targeted UI coverage passed for the branded icon and wordmark; the complete native suite passed with 153 tests (155 runs including four dynamic-parameter runs) and zero failures.
+- Visual QA confirmed the full icon/wordmark treatment and persistent per-figure prices remain visible in the completed bulk-results state. Build `1.0.6 (161)` was signed, uploaded to App Store Connect, and is processing for TestFlight.
+
+final result: passed
+
+## Bulk completed price callouts / Build 160 QA - 2026-09-01
+
+- Reproduced the reported regression: the live reveal owned one price callout, while completed review rendered only detection boxes, so prices disappeared after the final result returned.
+- Added a persistent per-region price-callout layer for resolved bulk results. Each callout is keyed to its detected region, remains visible in completed review, and updates safely if a match is corrected.
+- The completed-state UI regression verifies two resolved figures and their separate USD prices after the final summary appears. Price callouts retain VoiceOver labels and stable identifiers.
+- Small-iPhone visual QA confirmed both prices remain above their matching figure boxes while the summary, detection frames, result rail, and Add action remain intact.
+- The complete native suite passed with 153 tests (155 runs including four dynamic-parameter runs) and zero failures on the BrickVal Small iPhone. Build `1.0.6 (160)` was signed, uploaded to App Store Connect, and is processing for TestFlight.
+
+final result: passed
+
+## Hard-paywall preview button fix / Build 158 QA - 2026-08-28
+
+- Reproduced the Settings issue: the temporary preview row was present and tappable, but the onboarding sheet did not appear.
+- Fixed the presentation route by consolidating Settings sheets into one identifiable sheet state; account presentation remains available and the hard-paywall preview now opens reliably.
+- Added a UI regression test that taps the preview action and verifies both the preview close control and onboarding start control.
+- The small-iPhone native suite passed with 149 tests and zero failures. Release archive `1.0.6 (158)` succeeded, was signed, and was accepted by App Store Connect for TestFlight processing.
+
+final result: passed
+
+## Hard-paywall preview and universal free bulk preview / Build 159 QA - 2026-08-28
+
+- The Settings preview now runs through the production `AppRootView` with an isolated onboarding mode. It completes the normal pages, invite-code page, and local hard-access transition without changing onboarding completion, cohort assignment, review eligibility, account identity, referral claims, or onboarding analytics. `Close preview` remains available and returns to Profile without rebuilding the app root.
+- Locked bulk preview now applies to every app-accessible non-Pro user with zero usable introductory and referral bulk credits. Users with either credit, Pro users, and hard-paywall users retain their real-scan or app-gate behavior.
+- A locally eligible locked scan keeps the captured photo clear, runs the on-device detector and scan beam, reveals one locked placeholder card per detected region, and presents exactly `Upgrade` and `Refer`. The preview makes no identification, pricing, or scan-consumption request; the `Refer` action opens Invite friends. A stale local allowance that receives a bulk-limit `402` is converted into the same preview instead of opening the paywall immediately.
+- Small-iPhone visual QA confirmed the normal and Reduce Motion layouts: clear frozen photo, visible detection frames, progressive placeholder reveal, readable offer surface, safe-area spacing, and 44-point actions. Placeholder cards expose locked-state VoiceOver language; Reduce Transparency uses an opaque offer surface and Dynamic Type remains on system text styles.
+- Production-root hard-preview coverage and locked-preview Upgrade/Refer coverage passed. The complete native suite passed with 152 tests (154 runs including four dynamic-parameter runs) and zero failures on the BrickVal Small iPhone. Build `1.0.6 (159)` was signed, uploaded to App Store Connect, and is processing for TestFlight.
+
+final result: passed
+
+## Sentry HTTP Failure Capture QA — 2026-08-28
+
+- The shared `BRICKVAL-J` event was confirmed as a handled HTTP 503 generated by Sentry's automatic network-failure tracker, not an app crash.
+- Sentry's default wildcard request target was replaced with the configured BrickVal API host, keeping genuine backend 5xx telemetry while excluding third-party auth and purchase SDK traffic.
+- The focused regression test passed red before the fix and green after it. The full native simulator suite passed with 148 tests and zero failures.
+- Release build `157` compiled successfully locally. It has not been uploaded to TestFlight.
+
+final result: passed
+
+## Temporary hard-paywall onboarding preview / Build 156 QA - 2026-08-28
+
+- Profile/Settings includes a temporary “Preview hard-paywall onboarding” action.
+- The preview runs onboarding through the review prompt, account/referral steps, and final hard-access screen.
+- The action is included in the uploaded TestFlight build for validation and should be removed after this test cycle.
+- Build `1.0.6 (156)` was accepted by App Store Connect and is processing for TestFlight.
+
+## TestFlight Build 154 QA - 2026-08-28
+
+- Native unit and UI tests passed with 0 failures before archive.
+- Release archive succeeded and App Store Connect accepted version `1.0.6`, build `154` for processing.
+- Build includes referral onboarding, referral invite status, locked bulk preview, and referral-credit fallback behavior.
+
+Package status: processing
+
+## Free-user Bulk Preview Fix / Build 155 QA - 2026-08-28
+
+- Reproduced the paywall-only path: production was returning monetization policy version 4, while the native rollout expected version 5 with the locked-preview flag disabled.
+- Policy version 6 now enables the detector-only locked preview by default for new soft users. The explicit environment switch remains available as a rollback.
+- New soft users with no introductory or referral bulk credit route to `BulkScanPresentation.accessMode == .lockedPreview`; no identification, pricing, or scan-consumption request is started.
+- Pro users, users with an introductory/referral credit, and hard-gated users keep their existing access behavior.
+- The small-iPhone native suite passed with 147 tests and 0 failures. The signed `1.0.6 (155)` Release archive completed successfully and was not uploaded to TestFlight.
+
+final result: passed
+
+## Onboarding Review Prompt And Invite Friends Redesign QA - 2026-08-28
+
+- Screen 5 now requests Apple's native review prompt once after the screen settles and exposes a visible `Leave a review` fallback action.
+- The referral progress bar, invite code, sharing, claiming, Universal Link handling, and server-ledger behavior remain unchanged.
+- The Invite friends screen now uses a focused reward hero, explicit progress state, three-step visual progress markers, copy/share actions, and a separate claim-code section.
+- Controls retain at least 44-point touch targets, system text styles, semantic colors, VoiceOver labels, and Reduce Motion-safe status transitions.
+- The updated native project builds and the small-iPhone UI suite passes with zero failures. No TestFlight upload was made for this implementation task.
+
+final result: passed
+
 ## Referral-Aware Onboarding And Locked Bulk Preview QA - 2026-08-27
 
 - First-run onboarding now offers optional invite-code entry after account setup. Apply requires sign-in, Skip remains available after network errors, and Universal Links prefill the code.
@@ -51,7 +239,7 @@ final result: passed
 - If an existing anonymous installation later signs in, the app syncs its unused introductory allowance once through the authenticated monetization endpoint; the server stores only an installation hash and rejects reuse by another account.
 - PostHog captures referral entry/claim/completion and preview/upgrade/rescan metadata only; invite codes, photos, crops, tokens, and scan payloads are excluded.
 - Accessibility coverage includes 44pt controls, Dynamic Type, VoiceOver locked-state language, Reduce Motion crossfades, and Reduce Transparency-safe placeholders.
-- The native suite and targeted backend tests passed after implementation. The feature flag defaults off until the database migration and backend deployment are complete; no TestFlight build was uploaded for this implementation task.
+- The native suite and targeted backend tests passed after implementation. At that time the feature flag defaulted off pending the database migration and backend deployment; the current policy-v6 rollout is recorded above.
 
 final result: passed
 

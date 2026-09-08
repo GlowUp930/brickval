@@ -24,8 +24,8 @@ struct BulkSharePayload: Identifiable {
         photo: UIImage,
         cropBox: NormalizedBoundingBox,
         entries: [BulkShareEntry],
-        conditionTitle: String = "Used",
-        pricingSourceTitle: String = "Sold-market data",
+        conditionTitle: String = BrickValLocalization.localized("Used"),
+        pricingSourceTitle: String = BrickValLocalization.localized("Average sold price"),
         unresolvedCount: Int = 0
     ) {
         self.photo = photo
@@ -120,9 +120,24 @@ enum BulkShareCropper {
 
 struct BulkShareCardView: View {
     let payload: BulkSharePayload
+    let displayCurrency: BrickValCurrency
+    let conversionRate: Double
+    let rateAsOf: String?
 
     private let accent = Color(red: 0.0, green: 0.78, blue: 0.02)
     private let canvas = Color(red: 0.035, green: 0.035, blue: 0.04)
+
+    init(
+        payload: BulkSharePayload,
+        displayCurrency: BrickValCurrency = .usd,
+        conversionRate: Double = 1,
+        rateAsOf: String? = nil
+    ) {
+        self.payload = payload
+        self.displayCurrency = displayCurrency
+        self.conversionRate = conversionRate > 0 ? conversionRate : 1
+        self.rateAsOf = rateAsOf
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -175,7 +190,7 @@ struct BulkShareCardView: View {
                                 x: proxy.size.width * (box.x + box.width / 2),
                                 y: proxy.size.height * (box.y + box.height / 2)
                             )
-                        Text(entry.price, format: .currency(code: "USD"))
+                        Text(formattedAmount(entry.price))
                             .font(.system(size: 13, weight: .bold, design: .rounded))
                             .foregroundStyle(.black)
                             .padding(.horizontal, 10)
@@ -204,10 +219,24 @@ struct BulkShareCardView: View {
                 .font(.system(size: 20, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.82))
 
-            Text(payload.total, format: .currency(code: "USD"))
+            Text(formatted(payload.total))
                 .font(.system(size: 46, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .minimumScaleFactor(0.75)
+
+            if displayCurrency != .usd {
+                HStack(spacing: 4) {
+                    Text("Converted from USD")
+                    if let rateAsOf {
+                        Text("·")
+                        Text(rateAsOf)
+                    }
+                }
+                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.52))
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+            }
 
             HStack {
                 Text("\(payload.entries.count) minifigures")
@@ -263,13 +292,26 @@ struct BulkShareCardView: View {
     }
 
     private func topFindLabel(_ entry: BulkShareEntry) -> String {
-        "Top find \(entry.name) · \(entry.price.formatted(.currency(code: "USD")))"
+        let price = formatted(entry.price)
+        return BrickValLocalization.localized("Top find \(entry.name) · \(price)")
+    }
+
+    private func formatted(_ usdValue: Double) -> String {
+        "\(formattedAmount(usdValue)) · \(displayCurrency.code)"
+    }
+
+    private func formattedAmount(_ usdValue: Double) -> String {
+        (usdValue * conversionRate).formatted(
+            .currency(code: displayCurrency.code).locale(BrickValLocalization.effectiveLanguage.locale)
+        )
     }
 }
 
 @MainActor
 struct BulkSharePreviewView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(PreferencesStore.self) private var preferences
+    @Environment(CurrencyStore.self) private var currency
 
     let payload: BulkSharePayload
     @State private var renderedData: Data?
@@ -299,7 +341,12 @@ struct BulkSharePreviewView: View {
                         ProgressView("Preparing share card…")
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
-                        BulkShareCardView(payload: payload)
+                        BulkShareCardView(
+                            payload: payload,
+                            displayCurrency: currency.displayCurrency(for: preferences.effectiveCurrency),
+                            conversionRate: currency.rate(for: preferences.effectiveCurrency) ?? 1,
+                            rateAsOf: currency.formattedRateDate(locale: BrickValLocalization.effectiveLanguage.locale)
+                        )
                             .frame(maxHeight: .infinity)
                     }
                 }
@@ -339,7 +386,12 @@ struct BulkSharePreviewView: View {
 
     private func renderCard() async {
         let renderer = ImageRenderer(
-            content: BulkShareCardView(payload: payload)
+            content: BulkShareCardView(
+                payload: payload,
+                displayCurrency: currency.displayCurrency(for: preferences.effectiveCurrency),
+                conversionRate: currency.rate(for: preferences.effectiveCurrency) ?? 1,
+                rateAsOf: currency.formattedRateDate(locale: BrickValLocalization.effectiveLanguage.locale)
+            )
                 .frame(width: 360, height: 640)
         )
         renderer.scale = 3

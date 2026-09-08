@@ -4,6 +4,8 @@ struct ItemDetailView: View {
     @Environment(CollectionStore.self) private var store
     @Environment(EntitlementStore.self) private var entitlements
     @Environment(MonetizationStore.self) private var monetization
+    @Environment(PreferencesStore.self) private var preferences
+    @Environment(CurrencyStore.self) private var currency
     @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
@@ -22,15 +24,30 @@ struct ItemDetailView: View {
     }
 
     private var sourceLabel: String {
-        selectedCondition == .used ? "Used market data" : "New market data"
+        MarketPriceSourceCopy.title(for: selectedItem?.dataSource)
     }
 
-    private var selectedValue: Double {
-        selectedCondition.value(from: item)
+    private var sourceDetail: String {
+        MarketPriceSourceCopy.detail(for: selectedItem?.dataSource)
     }
+
+    private var itemTypeLabel: String {
+        switch item.itemType {
+        case .set: BrickValLocalization.localized("LEGO set")
+        case .minifig: BrickValLocalization.localized("Minifigure")
+        case .part: BrickValLocalization.localized("LEGO part")
+        }
+    }
+
+    private var selectedItem: CollectionItem? {
+        matchingItems.first { $0.condition == selectedCondition.condition }
+            ?? (currentItem.condition == selectedCondition.condition ? currentItem : nil)
+    }
+
+    private var selectedValue: Double? { selectedItem?.marketValueUSD }
 
     private var retailDelta: Double? {
-        guard let retailPrice = item.rrpUSD, retailPrice > 0 else { return nil }
+        guard let selectedValue, let retailPrice = item.rrpUSD, retailPrice > 0 else { return nil }
         return (selectedValue - retailPrice) / retailPrice
     }
 
@@ -48,8 +65,8 @@ struct ItemDetailView: View {
 
     private var marketChange: Double? {
         let points = historyPoints
-        guard let first = points.first?.value, let last = points.last?.value, first > 0 else {
-            return item.gainPercent.map { $0 / 100 }
+        guard points.count > 1, let first = points.first?.value, let last = points.last?.value, first > 0 else {
+            return nil
         }
         return (last - first) / first
     }
@@ -73,13 +90,33 @@ struct ItemDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: BrickValStyle.Primitive.space8) {
+                    Image("OnboardingLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 26, height: 26)
+                        .clipShape(.rect(cornerRadius: 7))
+
+                    Text("BrickValue")
+                        .font(.system(.headline, design: .rounded).weight(.bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                .foregroundStyle(BrickValStyle.Primitive.white)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("BrickValue")
+                .accessibilityIdentifier("collectionItem.brandHeader")
+            }
+        }
         .alert("Remove from collection?", isPresented: $showDeleteConfirmation) {
             Button("Remove", role: .destructive) {
                 Task { await remove() }
             }
             Button("Cancel", role: .cancel) { }
         } message: {
-            Text("This removes all \(totalOwnedQuantity) \(totalOwnedQuantity == 1 ? "copy" : "copies") of \(item.name) from your collection.")
+            Text("This removes all \(totalOwnedQuantity) copy of \(item.name) from your collection.")
         }
         .alert("Could not remove item", isPresented: errorBinding) { }
         .alert("BrickValue Pro", isPresented: proMessageBinding) {
@@ -141,7 +178,7 @@ struct ItemDetailView: View {
             titleBlock
             priceSummaryRow
             conditionTabs
-            if !historyPoints.isEmpty { chartBlock }
+            if historyPoints.count > 1 { chartBlock } else { Text("Not enough price history").foregroundStyle(.secondary) }
             quantityControls
             collectionFacts
             removeSection
@@ -161,7 +198,7 @@ struct ItemDetailView: View {
                     .font(.system(.title, design: .rounded, weight: .bold))
                     .foregroundStyle(BrickValStyle.ScanResult.textPrimary)
                     .lineLimit(2)
-                Text("\(item.itemType.rawValue.capitalized) · \(item.theme)")
+                Text("\(itemTypeLabel) · \(item.theme)")
                     .font(.title3)
                     .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
                     .lineLimit(2)
@@ -183,20 +220,31 @@ struct ItemDetailView: View {
                 Text(sourceLabel)
                     .font(.caption)
                     .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                Text(sourceDetail)
+                    .font(.caption2)
+                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: BrickValStyle.Primitive.space4) {
-                    Image(systemName: marketChange ?? 0 >= 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
-                        .font(.caption2)
-                    Text(selectedValue, format: .currency(code: "USD"))
-                        .font(.title3.bold())
-                        .monospacedDigit()
+                    if let marketChange {
+                        Image(systemName: marketChange >= 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
+                            .font(.caption2)
+                    }
+                    if let selectedValue {
+                        BrickValCurrencyText(selectedValue)
+                            .font(.title3.bold())
+                            .monospacedDigit()
+                    } else {
+                        Text("Price unavailable")
+                    }
                 }
                 .foregroundStyle(marketChange ?? 0 >= 0 ? accent : BrickValStyle.Semantic.valueNegative)
                 if let marketChange {
-                    Text(marketChange, format: .percent.precision(.fractionLength(2)))
+                    Text(marketChange, format: .percent.precision(.fractionLength(2)).locale(BrickValLocalization.effectiveLanguage.locale))
                         .font(.subheadline)
                         .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
                         .monospacedDigit()
                 }
+                conversionCaption
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
 
@@ -259,7 +307,7 @@ struct ItemDetailView: View {
     }
 
     private var soldListingsLegend: some View {
-        Label("Sold listings", systemImage: "tag.fill")
+        Label(sourceLabel, systemImage: item.dataSource == "sold" ? "checkmark.seal.fill" : "tag.fill")
             .font(.headline.weight(.semibold))
             .foregroundStyle(BrickValStyle.ScanResult.textPrimary)
             .padding(.horizontal, BrickValStyle.Primitive.space16)
@@ -282,7 +330,7 @@ struct ItemDetailView: View {
                     )
             }
             .shadow(color: accent.opacity(0.18), radius: 10, y: 4)
-            .accessibilityLabel("Graph shows recent sold listings")
+            .accessibilityLabel(sourceDetail)
     }
 
     private var productPhotoPlate: some View {
@@ -297,10 +345,36 @@ struct ItemDetailView: View {
 
     private var retailBadgeText: String? {
         guard let retailDelta, let retailPrice = item.rrpUSD else { return nil }
-        let direction = retailDelta >= 0 ? "Above retail" : "Below retail"
-        let percent = retailDelta.formatted(.percent.precision(.fractionLength(0)))
-        let retail = retailPrice.formatted(.currency(code: "USD"))
-        return "\(direction) \(percent) · Retail \(retail)"
+        let direction = retailDelta >= 0 ? BrickValLocalization.localized("Above retail") : BrickValLocalization.localized("Below retail")
+        let percent = retailDelta.formatted(.percent.precision(.fractionLength(0)).locale(BrickValLocalization.effectiveLanguage.locale))
+        let retail = currency.formattedWithCode(
+            retailPrice,
+            to: preferences.effectiveCurrency,
+            locale: BrickValLocalization.effectiveLanguage.locale
+        )
+        return BrickValLocalization.localized("\(direction) \(percent) · Retail \(retail)")
+    }
+
+    private var conversionCaption: some View {
+        let requestedCurrency = preferences.effectiveCurrency
+        let displayCurrency = currency.displayCurrency(for: requestedCurrency)
+        return Group {
+            if displayCurrency != .usd {
+                HStack(spacing: BrickValStyle.Primitive.space4) {
+                    Text("Converted from USD")
+                    if let date = currency.lastUpdatedText {
+                        Text("·")
+                        Text(currency.formattedRateDate(locale: BrickValLocalization.effectiveLanguage.locale) ?? date)
+                    }
+                }
+                .font(.caption2)
+                .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+            } else if requestedCurrency != .usd {
+                Text("Currency conversion is unavailable. Values are shown in USD.")
+                    .font(.caption2)
+                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+            }
+        }
     }
 
     private func retailBadge(_ text: String) -> some View {
@@ -327,22 +401,22 @@ struct ItemDetailView: View {
     private var collectionFacts: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                fact("TOTAL", collectionTotal.formatted(.currency(code: "USD")))
+                fact("TOTAL", currency.formattedWithCode(collectionTotal, to: preferences.effectiveCurrency, locale: BrickValLocalization.effectiveLanguage.locale))
                 Divider().overlay(BrickValStyle.ScanResult.border)
                 fact("QTY", "\(totalOwnedQuantity)")
             }
             Divider().overlay(BrickValStyle.ScanResult.border)
             HStack(spacing: 0) {
                 if let retailPrice = item.rrpUSD {
-                    fact("RETAIL", retailPrice.formatted(.currency(code: "USD")))
+                    fact("RETAIL", currency.formattedWithCode(retailPrice, to: preferences.effectiveCurrency, locale: BrickValLocalization.effectiveLanguage.locale))
                 } else if let year = item.yearReleased {
-                    fact("YEAR", year.formatted(.number.grouping(.never)))
+                    fact("YEAR", year.formatted(.number.grouping(.never).locale(BrickValLocalization.effectiveLanguage.locale)))
                 } else {
-                    fact("TYPE", item.itemType.rawValue.capitalized)
+                fact("TYPE", itemTypeLabel)
                 }
                 Divider().overlay(BrickValStyle.ScanResult.border)
                 if let pieces = item.pieces {
-                    fact("PIECES", pieces.formatted())
+                    fact("PIECES", pieces.formatted(.number.locale(BrickValLocalization.effectiveLanguage.locale)))
                 } else {
                     fact("ITEM", item.setNumber)
                 }
@@ -355,12 +429,12 @@ struct ItemDetailView: View {
         }
     }
 
-    private func fact(_ label: String, _ value: String) -> some View {
+    private func fact(_ label: LocalizedStringResource, _ value: String) -> some View {
         VStack(spacing: BrickValStyle.Primitive.space8) {
             Text(label)
                 .font(.caption.bold())
                 .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
-            Text(value)
+            Text(verbatim: value)
                 .font(.headline.bold())
                 .foregroundStyle(BrickValStyle.ScanResult.textPrimary)
                 .monospacedDigit()
@@ -383,7 +457,7 @@ struct ItemDetailView: View {
                 Text(option.title)
                     .font(.headline)
                     .foregroundStyle(BrickValStyle.ScanResult.textPrimary)
-                Text(option == .new ? "Sealed copies" : "Used copies")
+                Text(option == .new ? BrickValLocalization.localized("Sealed copies") : BrickValLocalization.localized("Used copies"))
                     .font(.caption)
                     .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
             }
@@ -478,7 +552,7 @@ struct ItemDetailView: View {
             params: ["source": "item_detail"]
         ) ?? false
         if !presented {
-            proMessage = "Upgrade options are temporarily unavailable. Try again shortly."
+            proMessage = BrickValLocalization.localized("Upgrade options are temporarily unavailable. Try again shortly.")
         }
     }
 
@@ -533,7 +607,7 @@ struct ItemDetailView: View {
                     adjustQuantity(for: option, delta: delta)
                 } ?? false
                 if !presented {
-                    errorMessage = "Upgrade options are temporarily unavailable. Try again shortly."
+                    errorMessage = BrickValLocalization.localized("Upgrade options are temporarily unavailable. Try again shortly.")
                 }
             } catch {
                 errorMessage = error.localizedDescription
@@ -542,40 +616,14 @@ struct ItemDetailView: View {
     }
 
     private func conditionHistory(for option: DetailConditionOption, horizon: PortfolioHorizon) -> [StockChartPoint] {
-        let base = item.marketHistory.isEmpty ? fallbackHistory() : item.marketHistory
-        let horizonOffset = Double(PortfolioHorizon.allCases.firstIndex(of: horizon) ?? 0) * 0.006
-
-        let adjustedHistory = base.enumerated().map { index, point in
-            let progress = base.count > 1 ? Double(index) / Double(base.count - 1) : 0
-            let conditionWave = option == .new ? sin(progress * .pi * 1.35) * 0.026 : -cos(progress * .pi * 1.2) * 0.022
-            let timelineWave = sin((progress + horizonOffset) * .pi * Double(horizon.rawValue.count + 1)) * 0.012
-            let adjusted = point.priceUSD * option.historyMultiplier * (1 + conditionWave + timelineWave)
-            return MarketHistoryPoint(date: point.date, priceUSD: max(0.01, adjusted), source: point.source)
-        }
-
-        return PortfolioHistoryBuilder.priceSeries(from: adjustedHistory, horizon: horizon, fallbackValue: selectedValue)
+        let sourceItem = matchingItems.first { $0.condition == option.condition }
+            ?? (item.condition == option.condition ? item : nil)
+        return PortfolioHistoryBuilder.priceSeries(
+            from: sourceItem?.marketHistory ?? [], horizon: horizon,
+            fallbackValue: sourceItem?.marketValueUSD ?? 0
+        )
     }
 
-    private func fallbackHistory() -> [MarketHistoryPoint] {
-        let value = max(selectedValue, 0.01)
-        let multipliers = [0.82, 0.86, 0.81, 0.92, 0.96, 0.91, 1.0]
-        let calendar = Calendar(identifier: .gregorian)
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd"
-        let today = calendar.startOfDay(for: .now)
-        let offsets = [-180, -150, -120, -90, -60, -30, 0]
-
-        return zip(offsets, multipliers).compactMap { offset, multiplier in
-            guard let date = calendar.date(byAdding: .day, value: offset, to: today) else { return nil }
-            return MarketHistoryPoint(
-                date: formatter.string(from: date),
-                priceUSD: value * multiplier,
-                source: item.dataSource
-            )
-        }
-    }
 }
 
 private enum DetailConditionOption: String, CaseIterable, Identifiable {
@@ -590,8 +638,8 @@ private enum DetailConditionOption: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .new: "New"
-        case .used: "Used"
+        case .new: BrickValLocalization.localized("New")
+        case .used: BrickValLocalization.localized("Used")
         }
     }
 
@@ -602,23 +650,8 @@ private enum DetailConditionOption: String, CaseIterable, Identifiable {
         }
     }
 
-    var historyMultiplier: Double {
-        switch self {
-        case .new: 1.0
-        case .used: 0.72
-        }
-    }
-
-    func value(from item: CollectionItem) -> Double {
-        let base = item.marketValueUSD ?? item.totalValue
-        switch (self, item.condition) {
-        case (.new, .newSealed), (.used, .used):
-            return base
-        case (.new, .used):
-            return base / historyMultiplier
-        case (.used, .newSealed):
-            return base * historyMultiplier
-        }
+    func value(from item: CollectionItem) -> Double? {
+        item.condition == condition ? item.marketValueUSD : nil
     }
 
     func collectionItem(from item: CollectionItem) -> CollectionItem {
@@ -633,16 +666,14 @@ private enum DetailConditionOption: String, CaseIterable, Identifiable {
             imageURL: item.imageURL,
             marketValueUSD: value(from: item),
             rrpUSD: item.rrpUSD,
-            gainPercent: item.gainPercent,
-            dataSource: item.dataSource,
+            gainPercent: item.condition == condition ? item.gainPercent : nil,
+            dataSource: item.condition == condition ? item.dataSource : nil,
             quantity: 1,
             condition: condition,
             colorID: item.colorID,
             colorName: item.colorName,
-            marketHistory: item.marketHistory.map {
-                MarketHistoryPoint(date: $0.date, priceUSD: $0.priceUSD * historyMultiplier, source: $0.source)
-            },
-            marketRows: item.marketRows,
+            marketHistory: item.condition == condition ? item.marketHistory : [],
+            marketRows: item.condition == condition ? item.marketRows : [],
             addedAt: item.addedAt
         )
     }

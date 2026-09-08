@@ -45,7 +45,7 @@ struct MinifigLookupPayload: Decodable, Sendable {
             identifier: figInfo.figNumber,
             itemType: .minifig,
             name: figInfo.name,
-            theme: figInfo.yearReleased.map { "Minifigure · \($0)" } ?? "Minifigure",
+            theme: figInfo.yearReleased.map { BrickValLocalization.localized("Minifigure · \($0)") } ?? BrickValLocalization.localized("Minifigure"),
             pieces: nil,
             yearReleased: figInfo.yearReleased,
             isObsolete: nil,

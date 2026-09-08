@@ -116,6 +116,10 @@ export function computePricing(
 
   // ── Assemble ComputedPricing ─────────────────────────────────────────────
   const pricing: ComputedPricing = {
+    hero_new_avg_usd: heroNewAvgUsd,
+    hero_used_avg_usd: blUsedAvg ?? ebayUsedAvgUsd ?? blStockUsedAvg,
+    new_data_source: blNewAvg !== null ? "sold" : ebayNewAvgUsd !== null ? ebayData.data_source : blStockNewAvg !== null ? "listing" : null,
+    used_data_source: blUsedAvg !== null ? "sold" : ebayUsedAvgUsd !== null ? ebayData.data_source : blStockUsedAvg !== null ? "listing" : null,
     rrp_usd: rrpUsd,
     gain_pct,
     exchange_rate_stale: ratesStale,
@@ -123,7 +127,7 @@ export function computePricing(
     ebay_used_sales: ebayData.used_sales,
     ebay_new_avg_usd: ebayNewAvgUsd,
     ebay_used_avg_usd: ebayUsedAvgUsd,
-    data_source: ebayData.data_source,
+    data_source: blNewAvg !== null ? "sold" : ebayNewAvgUsd !== null ? ebayData.data_source : "listing",
     bricklink_new_avg_usd: blNewAvg,
     bricklink_new_min_usd: blNewMin,
     bricklink_new_max_usd: blNewMax,

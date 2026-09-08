@@ -48,7 +48,7 @@ export type BrickognizeCropRect = {
   height: number;
 };
 
-export const MINIFIG_DETECTION_LIMIT = 40;
+export const MINIFIG_DETECTION_LIMIT = 60;
 const PART_DETECTION_LIMIT = 4;
 const BULK_SCAN_CROP_BUDGET = 6;
 

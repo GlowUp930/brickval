@@ -9,9 +9,9 @@ enum AppTab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .collection: "Collection"
-        case .scan: "Scan"
-        case .settings: "Profile"
+        case .collection: BrickValLocalization.localized("Collection")
+        case .scan: BrickValLocalization.localized("Scan")
+        case .settings: BrickValLocalization.localized("Profile")
         }
     }
 

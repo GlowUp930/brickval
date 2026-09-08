@@ -8,8 +8,8 @@ enum ScanMode: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .set: "LEGO set"
-        case .minifig: "Minifigure"
+        case .set: BrickValLocalization.localized("LEGO set")
+        case .minifig: BrickValLocalization.localized("Minifigure")
         }
     }
 }

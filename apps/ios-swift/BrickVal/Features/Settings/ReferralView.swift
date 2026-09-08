@@ -1,10 +1,12 @@
 import SwiftUI
+import UIKit
 
 struct ReferralView: View {
     @Environment(PreferencesStore.self) private var preferences
     @Environment(MonetizationStore.self) private var monetization
     @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.brickValAPIClient) private var api
+    @Environment(\.brickValAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppRouter.self) private var router
     @State private var status: ReferralStatus?
@@ -13,6 +15,7 @@ struct ReferralView: View {
     @State private var isClaiming = false
     @State private var message: String?
     @State private var showAccount = false
+    @State private var copiedCode = false
     @State private var hasCapturedOpen = false
 
     private var userID: String? {
@@ -24,14 +27,16 @@ struct ReferralView: View {
     }
 
     private var shareMessage: String {
-        guard let status else { return "Join me on BrickVal and find the value of your LEGO collection." }
-        return "Join me on BrickVal and find the value of your LEGO collection. Use my invite code \(status.code): https://brickvalue.live/r/\(status.code)"
+        guard let status else {
+            return BrickValLocalization.localized("Join me on BrickVal and find the value of your LEGO collection.")
+        }
+        return BrickValLocalization.localized("Join me on BrickVal and find the value of your LEGO collection. Use my invite code \(status.code): https://brickvalue.live/r/\(status.code)")
     }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space20) {
-                intro
+            VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space24) {
+                hero
 
                 if coordinator?.clerk == nil {
                     unavailableContent
@@ -63,15 +68,74 @@ struct ReferralView: View {
         }
     }
 
-    private var intro: some View {
-        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space8) {
-            Label("Earn scans together", systemImage: "person.2.fill")
-                .font(.title2.weight(.bold))
-                .foregroundStyle(BrickValStyle.Semantic.textPrimary)
-            Text("Invite three friends. When each friend signs in and completes onboarding, you receive three bonus bulk scans.")
-                .font(.body)
-                .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+    private var hero: some View {
+        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space20) {
+            HStack {
+                ZStack(alignment: .bottomTrailing) {
+                    Circle()
+                        .fill(BrickValStyle.Primitive.white.opacity(0.12))
+                        .frame(width: 72, height: 72)
+
+                    Image(systemName: "person.2.fill")
+                        .font(.system(size: 30, weight: .semibold))
+                        .foregroundStyle(accent)
+
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(BrickValStyle.Primitive.black)
+                        .frame(width: 24, height: 24)
+                        .background(accent, in: Circle())
+                        .overlay {
+                            Circle().stroke(BrickValStyle.Primitive.brandInk, lineWidth: 3)
+                        }
+                        .offset(x: 4, y: 4)
+                }
+                .accessibilityHidden(true)
+
+                Spacer(minLength: BrickValStyle.Primitive.space12)
+
+                VStack(alignment: .trailing, spacing: BrickValStyle.Primitive.space4) {
+                    Text("REWARD")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(BrickValStyle.Primitive.white.opacity(0.58))
+                    Text("+3 scans")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(accent)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space8) {
+                Text("Invite your LEGO crew")
+                    .font(.system(.largeTitle, design: .rounded, weight: .black))
+                    .foregroundStyle(BrickValStyle.Primitive.white)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+
+                Text("Bring three friends to BrickVal. When they join and finish onboarding, you unlock three bonus bulk scans.")
+                    .font(.body)
+                    .foregroundStyle(BrickValStyle.Primitive.white.opacity(0.72))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
+        .padding(BrickValStyle.Primitive.space20)
+        .background {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [BrickValStyle.Primitive.brandInk, BrickValStyle.Primitive.gray900],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(alignment: .topTrailing) {
+                    Circle()
+                        .fill(accent.opacity(0.16))
+                        .frame(width: 150, height: 150)
+                        .blur(radius: 2)
+                        .offset(x: 62, y: -76)
+                }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 
@@ -85,28 +149,34 @@ struct ReferralView: View {
     }
 
     private var signInContent: some View {
-        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space12) {
-            Label("Sign in to invite friends", systemImage: "person.crop.circle.badge.plus")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space16) {
+            Label("Save your invite progress", systemImage: "person.crop.circle.badge.plus")
+                .font(.headline.weight(.bold))
                 .foregroundStyle(BrickValStyle.Semantic.textPrimary)
-            Text("Your invite progress and bonus scans are attached to your BrickVal account.")
-                .font(.subheadline)
+
+            Text("Sign in to get your invite code and keep your bonus scans connected to your account.")
+                .font(.body)
                 .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
             Button("Open account", systemImage: "person.crop.circle") {
                 showAccount = true
             }
             .buttonStyle(.borderedProminent)
+            .tint(accent)
             .frame(minHeight: 44)
         }
-        .padding(BrickValStyle.Primitive.space16)
-        .background(BrickValStyle.Semantic.surfaceMuted, in: RoundedRectangle(cornerRadius: 16))
+        .padding(BrickValStyle.Primitive.space20)
+        .background(BrickValStyle.Semantic.surfaceMuted, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .accessibilityElement(children: .contain)
     }
 
     private var referralContent: some View {
-        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space16) {
+        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space20) {
             if isLoading && status == nil {
-                ProgressView("Loading invite status...")
+                ProgressView("Loading invite status…")
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, BrickValStyle.Primitive.space20)
             } else if let status {
                 progressContent(status)
                 shareContent(status)
@@ -114,78 +184,195 @@ struct ReferralView: View {
             }
 
             if let message {
-                Text(message)
+                Label(message, systemImage: "info.circle.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
             }
         }
     }
 
     private func progressContent(_ status: ReferralStatus) -> some View {
-        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space12) {
+        let qualifiedCount = min(status.qualifiedCount, status.goal)
+
+        return VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space16) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Invite progress")
-                    .font(.headline)
-                Spacer()
-                Text("\(min(status.qualifiedCount, status.goal)) of \(status.goal)")
-                    .font(.headline.monospacedDigit())
-                    .foregroundStyle(BrickValStyle.Semantic.valuePositive)
+                VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space4) {
+                    Text("Invite progress")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(BrickValStyle.Semantic.textPrimary)
+                    Text(status.rewardGranted ? "Your reward is unlocked" : "Three qualified friends unlock your reward")
+                        .font(.subheadline)
+                        .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: BrickValStyle.Primitive.space12)
+
+                Text("\(qualifiedCount) / \(status.goal)")
+                    .font(.title3.weight(.bold).monospacedDigit())
+                    .foregroundStyle(accent)
             }
-            ProgressView(value: Double(min(status.qualifiedCount, status.goal)), total: Double(status.goal))
-                .tint(BrickValStyle.Semantic.valuePositive)
+
+            ProgressView(value: Double(qualifiedCount), total: Double(status.goal))
+                .tint(accent)
                 .accessibilityValue("\(status.qualifiedCount) of \(status.goal) friends qualified")
-            Text(status.bulkCreditsRemaining > 0
-                 ? "\(status.bulkCreditsRemaining) bonus bulk \(status.bulkCreditsRemaining == 1 ? "scan" : "scans") available"
-                 : "Bonus scans unlock after three qualified friends.")
-                .font(.subheadline)
-                .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+
+            HStack(spacing: BrickValStyle.Primitive.space8) {
+                ForEach(0..<status.goal, id: \.self) { index in
+                    let isComplete = index < qualifiedCount
+                    HStack(spacing: BrickValStyle.Primitive.space8) {
+                        Image(systemName: isComplete ? "checkmark" : "person")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(isComplete ? BrickValStyle.Primitive.black : BrickValStyle.Semantic.textSecondary)
+                            .frame(width: 30, height: 30)
+                            .background(isComplete ? accent : BrickValStyle.Semantic.canvas, in: Circle())
+                            .overlay {
+                                Circle().stroke(isComplete ? accent : BrickValStyle.Semantic.divider, lineWidth: 1)
+                            }
+
+                        if index < status.goal - 1 {
+                            Rectangle()
+                                .fill(index < qualifiedCount - 1 ? accent : BrickValStyle.Semantic.divider)
+                                .frame(height: 2)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .accessibilityHidden(true)
+
+            Text(progressMessage(for: status))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(status.bulkCreditsRemaining > 0 ? accent : BrickValStyle.Semantic.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(BrickValStyle.Primitive.space16)
-        .background(BrickValStyle.Semantic.surfaceMuted, in: RoundedRectangle(cornerRadius: 16))
+        .padding(BrickValStyle.Primitive.space20)
+        .background(BrickValStyle.Semantic.surfaceMuted, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .accessibilityElement(children: .contain)
     }
 
+    private func progressMessage(for status: ReferralStatus) -> String {
+        if status.bulkCreditsRemaining > 0 {
+            return BrickValLocalization.localized("\(status.bulkCreditsRemaining) bonus bulk scan available")
+        }
+        if status.rewardGranted {
+            return BrickValLocalization.localized("Your referral reward has been used. Invite more friends to keep growing the community.")
+        }
+        let remaining = max(0, status.goal - status.qualifiedCount)
+        return BrickValLocalization.localized("\(remaining) more friend to unlock 3 bonus bulk scans.")
+    }
+
     private func shareContent(_ status: ReferralStatus) -> some View {
-        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space12) {
-            Text("Your invite code")
-                .font(.headline)
-            Text(status.code)
-                .font(.system(size: 30, weight: .bold, design: .monospaced))
-                .tracking(2)
-                .foregroundStyle(BrickValStyle.Semantic.valuePositive)
-                .accessibilityLabel("Invite code \(status.code)")
+        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space16) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space4) {
+                    Text("Your invite code")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(BrickValStyle.Semantic.textPrimary)
+                    Text("Friends enter this code when they join BrickVal.")
+                        .font(.subheadline)
+                        .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: BrickValStyle.Primitive.space8)
+
+                Button {
+                    UIPasteboard.general.string = status.code
+                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.2)) {
+                        copiedCode = true
+                    }
+                } label: {
+                    Label(copiedCode ? "Copied" : "Copy", systemImage: copiedCode ? "checkmark" : "doc.on.doc")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(accent)
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(copiedCode ? "Invite code copied" : "Copy invite code")
+            }
+
+            HStack(spacing: BrickValStyle.Primitive.space12) {
+                Text(status.code)
+                    .font(.system(.title, design: .monospaced, weight: .bold))
+                    .tracking(2)
+                    .foregroundStyle(BrickValStyle.Semantic.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .accessibilityLabel("Invite code \(status.code)")
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, BrickValStyle.Primitive.space16)
+            .frame(minHeight: 64)
+            .background(BrickValStyle.Semantic.canvas, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(BrickValStyle.Semantic.divider, lineWidth: 1)
+            }
+
             ShareLink(item: shareMessage, subject: Text("BrickVal invite")) {
-                Label("Invite friends", systemImage: "square.and.arrow.up")
-                    .frame(maxWidth: .infinity, minHeight: 44)
+                Label("Share invite", systemImage: "square.and.arrow.up")
+                    .font(.headline.weight(.bold))
+                    .frame(maxWidth: .infinity, minHeight: 52)
             }
             .buttonStyle(.borderedProminent)
+            .tint(accent)
             .simultaneousGesture(TapGesture().onEnded {
                 coordinator?.analytics.capture(PostHogEvent.referralInviteShared)
             })
         }
+        .padding(BrickValStyle.Primitive.space20)
+        .background(BrickValStyle.Semantic.surfaceMuted, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
     private var claimContent: some View {
-        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space12) {
-            Text("Have an invite code?")
-                .font(.headline)
-            HStack(spacing: BrickValStyle.Primitive.space8) {
-                TextField("Invite code", text: $inviteCode)
-                    .textInputAutocapitalization(.characters)
-                    .autocorrectionDisabled()
-                    .textFieldStyle(.roundedBorder)
-                    .onChange(of: inviteCode) { _, newValue in
-                        inviteCode = String(newValue.uppercased().filter { $0.isLetter || $0.isNumber }.prefix(8))
-                    }
-                Button("Claim") {
-                    Task { await claimEnteredCode() }
-                }
-                .buttonStyle(.bordered)
-                .frame(minHeight: 44)
-                .disabled(isClaiming || inviteCode.count != 8)
+        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space16) {
+            VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space4) {
+                Text("Have an invite code?")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(BrickValStyle.Semantic.textPrimary)
+                Text("Enter a friend's code to support their reward.")
+                    .font(.subheadline)
+                    .foregroundStyle(BrickValStyle.Semantic.textSecondary)
             }
+
+            TextField("8-character code", text: $inviteCode)
+                .textInputAutocapitalization(.characters)
+                .autocorrectionDisabled()
+                .font(.system(.title3, design: .monospaced, weight: .semibold))
+                .padding(.horizontal, BrickValStyle.Primitive.space16)
+                .frame(minHeight: 56)
+                .background(BrickValStyle.Semantic.canvas, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(inviteCode.isEmpty ? BrickValStyle.Semantic.divider : accent, lineWidth: 1.5)
+                }
+                .onChange(of: inviteCode) { _, newValue in
+                    inviteCode = String(newValue.uppercased().filter { $0.isLetter || $0.isNumber }.prefix(8))
+                }
+
+            Button {
+                Task { await claimEnteredCode() }
+            } label: {
+                HStack {
+                    if isClaiming {
+                        ProgressView().tint(BrickValStyle.Primitive.black)
+                    } else {
+                        Text("Apply invite code")
+                            .font(.headline.weight(.bold))
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 52)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(accent)
+            .disabled(isClaiming || inviteCode.count != 8)
         }
+        .padding(BrickValStyle.Primitive.space20)
+        .background(BrickValStyle.Semantic.surfaceMuted, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
     private func loadReferralStatus() async {
@@ -197,6 +384,7 @@ struct ReferralView: View {
         }
 
         isLoading = true
+        message = nil
         defer { isLoading = false }
 
         do {
@@ -209,7 +397,7 @@ struct ReferralView: View {
                 await claim(code: pendingReferralCode, clearPendingCode: true)
             }
         } catch {
-            message = error.localizedDescription
+            message = BrickValLocalization.localized("We couldn't load your invite details. Check your connection and try again.")
         }
     }
 
@@ -220,7 +408,7 @@ struct ReferralView: View {
     private func claim(code: String, clearPendingCode: Bool) async {
         let normalizedCode = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard normalizedCode.count == 8 else {
-            message = "Enter the 8-character invite code."
+            message = BrickValLocalization.localized("Enter the 8-character invite code.")
             return
         }
 
@@ -238,13 +426,13 @@ struct ReferralView: View {
             monetization.applyReferralStatus(response.referral)
             inviteCode = ""
             if clearPendingCode { router.clearPendingReferral() }
-            if response.claimed {
+            if response.claimed || response.status == "claimed" || response.status == "qualified" {
                 coordinator?.analytics.capture(PostHogEvent.referralClaimed)
                 var rewardGranted = response.referral.rewardGranted
                 if preferences.hasCompletedOnboarding {
                     rewardGranted = await completeReferralOnboarding()
                 } else {
-                    message = "Invite accepted. Your friend will count when onboarding is complete."
+                    message = BrickValLocalization.localized("Invite accepted. Complete onboarding to count toward your friend's reward.")
                 }
                 if rewardGranted {
                     coordinator?.analytics.capture(
@@ -253,14 +441,14 @@ struct ReferralView: View {
                     )
                 }
             } else if response.status == "already_claimed" || response.status == "qualified" {
-                message = "This account already has an invite attached."
+                message = BrickValLocalization.localized("This account already has an invite attached.")
             } else if response.status == "installation_already_used" {
-                message = "This installation has already used an invite code."
+                message = BrickValLocalization.localized("This installation has already used an invite code.")
             } else {
-                message = "That invite code could not be claimed."
+                message = BrickValLocalization.localized("That invite code could not be claimed.")
             }
         } catch {
-            message = error.localizedDescription
+            message = BrickValLocalization.localized("We couldn't apply that invite code. Check your connection and try again.")
         }
     }
 
@@ -270,9 +458,7 @@ struct ReferralView: View {
             let completion = try await api.completeReferralOnboarding()
             preferences.referralOnboardingCompletionPending = false
             monetization.applyReferralStatus(completion.referral)
-            message = completion.rewardGranted
-                ? "Invite accepted. Your bonus scans are ready."
-                : "Invite accepted. Your friend is now counted toward your referral progress."
+            message = BrickValLocalization.localized("Invite accepted. You now count toward your friend's reward.")
             coordinator?.analytics.capture(
                 PostHogEvent.referralOnboardingCompleted,
                 properties: [
@@ -283,8 +469,9 @@ struct ReferralView: View {
             )
             return completion.rewardGranted
         } catch {
+            preferences.referralCompletionUserID = coordinator?.clerk?.user?.id
             preferences.referralOnboardingCompletionPending = true
-            message = "Invite accepted. We'll finish counting it when you're back online."
+            message = BrickValLocalization.localized("Invite accepted. We'll finish counting it when you're back online.")
             return false
         }
     }

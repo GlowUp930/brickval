@@ -35,7 +35,7 @@ struct SubscriptionView: View {
                         } else if let coordinator {
                             coordinator.presentUpgrade()
                         } else {
-                            message = "Upgrade options are not configured for this build."
+                            message = BrickValLocalization.localized("Upgrade options are not configured for this build.")
                         }
                     }
                     .buttonStyle(.borderedProminent)
@@ -88,7 +88,7 @@ struct SubscriptionView: View {
                 coordinator?.dismissPaywallPresentationError()
             }
         } message: {
-            Text(coordinator?.paywallPresentationError ?? "Please try again.")
+            Text(coordinator?.paywallPresentationError ?? BrickValLocalization.localized("Something went wrong. Please try again in a moment."))
         }
         .sheet(isPresented: $showAccount) {
             NavigationStack {
@@ -104,7 +104,7 @@ struct SubscriptionView: View {
         )
     }
 
-    private func proFeature(_ title: String, systemImage: String) -> some View {
+    private func proFeature(_ title: LocalizedStringResource, systemImage: String) -> some View {
         HStack(spacing: 12) {
             Label(title, systemImage: systemImage)
             Spacer()

@@ -79,6 +79,7 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
     @ObservationIgnored private var apnsToken: String?
     @ObservationIgnored private var subscriberID: String?
     @ObservationIgnored private var accessCohort: String?
+    @ObservationIgnored private var languageCode: String
     @ObservationIgnored private var deviceRegistrationHandler: (@Sendable (BrickValNotificationDeviceRegistration) async throws -> Void)?
     @ObservationIgnored private var responseHandler: (@MainActor @Sendable (URL) -> Void)?
 
@@ -104,6 +105,7 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
 #else
         environment = "production"
 #endif
+        languageCode = BrickValLocalization.effectiveLanguageCode
         subscriptionState = nil
         policy = MonetizationPolicy.phaseOne.notifications
         scanResetReminderEnabled = defaults.bool(forKey: Keys.scanResetReminder)
@@ -138,6 +140,12 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
         syncDeviceRegistration()
     }
 
+    func updateLanguage(_ language: BrickValLanguage) {
+        guard languageCode != language.rawValue else { return }
+        languageCode = language.rawValue
+        syncDeviceRegistration()
+    }
+
     func updatePolicy(_ policy: MonetizationPolicy.Notifications) {
         self.policy = policy
         if !policy.enabled || !policy.scanReset {
@@ -163,7 +171,8 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
               let request = BrickValNotificationSchedulePlanner.scanReset(
                 resetDate: resetDate,
                 now: now(),
-                timeZone: timeZone
+                timeZone: timeZone,
+                locale: Locale(identifier: languageCode)
               )
         else { return false }
 
@@ -175,7 +184,7 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
             lastError = nil
             return true
         } catch {
-            lastError = "We couldn’t schedule the scan reminder."
+            lastError = BrickValLocalization.localized("We couldn’t schedule the scan reminder.")
             return false
         }
     }
@@ -222,7 +231,8 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
                 expirationDate: expirationDate,
                 willRenew: willRenew,
                 now: now(),
-                timeZone: timeZone
+                timeZone: timeZone,
+                locale: Locale(identifier: languageCode)
               )
         else { return }
 
@@ -230,7 +240,7 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
             try await center.add(request)
             lastError = nil
         } catch {
-            lastError = "We couldn’t schedule the trial reminder."
+            lastError = BrickValLocalization.localized("We couldn’t schedule the trial reminder.")
         }
     }
 
@@ -262,14 +272,14 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
             let granted = try await center.requestAuthorization()
             await refreshAuthorizationStatus()
             guard granted else {
-                lastError = "Notifications are off. You can enable them in Settings."
+                lastError = BrickValLocalization.localized("Notifications are off. You can enable them in Settings.")
                 return false
             }
             UIApplication.shared.registerForRemoteNotifications()
             lastError = nil
             return true
         } catch {
-            lastError = "Notifications are unavailable right now."
+            lastError = BrickValLocalization.localized("Notifications are unavailable right now.")
             return false
         }
     }
@@ -280,6 +290,7 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
             deviceID: deviceID,
             apnsToken: apnsToken,
             environment: environment,
+            languageCode: languageCode,
             subscriberID: subscriberID,
             accessCohort: accessCohort,
             accountAlertsEnabled: accountAlertsEnabled

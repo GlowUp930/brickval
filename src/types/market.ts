@@ -61,6 +61,10 @@ export interface MinifigPricing {
 }
 
 export interface ComputedPricing {
+  hero_new_avg_usd?: number | null;
+  hero_used_avg_usd?: number | null;
+  new_data_source?: "sold" | "listing" | null;
+  used_data_source?: "sold" | "listing" | null;
   // RRP from Brickset (US retail price)
   rrp_usd: number | null;
   gain_pct: number | null;

@@ -34,6 +34,11 @@ function generateCode(): string {
 }
 
 async function ensureUser(userId: string): Promise<void> {
+  const { data: deleting, error: deletionError } = await supabase.from("account_deletion_requests")
+    .select("user_hash").eq("user_hash", createHash("sha256").update(userId!).digest("hex"))
+    .gt("expires_at", new Date().toISOString()).maybeSingle();
+  if (deletionError) throw deletionError;
+  if (deleting) throw new Error("Account deletion is pending");
   const { error } = await supabase
     .from("users")
     .upsert({ id: userId }, { onConflict: "id", ignoreDuplicates: true });
@@ -60,6 +65,10 @@ export async function getOrCreateReferralCode(userId: string): Promise<string> {
     });
     if (!error) return code;
     if (error.code !== "23505") throw error;
+    const { data: winner, error: winnerError } = await supabase.from("referral_codes")
+      .select("code").eq("referrer_user_id", userId).eq("active", true).maybeSingle();
+    if (winnerError) throw winnerError;
+    if (winner?.code) return winner.code;
   }
 
   throw new Error("Unable to create a referral code.");
@@ -80,6 +89,10 @@ export async function getReferralStatus(userId: string): Promise<ReferralStatus>
     .eq("user_id", userId);
   if (creditError) throw creditError;
 
+  const { data: rewards, error: rewardError } = await supabase.from("referral_rewards")
+    .select("id").eq("referrer_user_id", userId).eq("milestone", "3_qualified");
+  if (rewardError) throw rewardError;
+
   const qualifiedCount = attributions?.filter((row) => row.status === "qualified").length ?? 0;
   const bulkCreditsRemaining = Math.max(
     0,
@@ -92,7 +105,7 @@ export async function getReferralStatus(userId: string): Promise<ReferralStatus>
     goal: REFERRAL_GOAL,
     bonusBulkScans: REFERRAL_BONUS_BULK_SCANS,
     bulkCreditsRemaining,
-    rewardGranted: qualifiedCount >= REFERRAL_GOAL,
+    rewardGranted: (rewards?.length ?? 0) > 0,
   };
 }
 

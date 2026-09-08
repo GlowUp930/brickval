@@ -1,4 +1,5 @@
 import ClerkKit
+import Foundation
 import Observation
 import RevenueCat
 import Sentry
@@ -8,6 +9,11 @@ import SuperwallKit
 @Observable
 @MainActor
 final class AppSDKCoordinator: SuperwallDelegate {
+    static func sentryFailedRequestTargets(for baseURL: URL) -> [String] {
+        guard let host = baseURL.host, !host.isEmpty else { return [] }
+        return [host]
+    }
+
     let clerk: Clerk?
     let apiClient: BrickValAPIClient
     let analytics: PostHogAnalytics
@@ -68,6 +74,9 @@ final class AppSDKCoordinator: SuperwallDelegate {
                 options.environment = "production"
                 options.sendDefaultPii = false
                 options.enableAutoSessionTracking = true
+                options.failedRequestTargets = Self.sentryFailedRequestTargets(
+                    for: APIConfiguration.live.baseURL
+                )
             }
         }
 #endif
@@ -85,16 +94,25 @@ final class AppSDKCoordinator: SuperwallDelegate {
             if self.offerCodeClient == nil {
                 self.offerCodeClient = controller
             }
+            Purchases.configure(withAPIKey: revenueCatKey)
+            purchasesConfigured = true
             if let superwallKey {
                 Superwall.configure(apiKey: superwallKey, purchaseController: controller)
+                // Superwall otherwise reads the device-wide locale list. Keep
+                // its paywall language aligned with the app's effective
+                // localization, including the user's in-app language choice.
+                Superwall.shared.localeIdentifier = BrickValLocalization.effectiveLanguage.locale.identifier
                 Superwall.shared.delegate = self
                 superwallConfigured = true
             }
-            Purchases.configure(withAPIKey: revenueCatKey)
-            purchasesConfigured = true
             entitlementStore.beginLoading()
             controller.startSyncing()
         }
+    }
+
+    func updateLocalization(_ language: BrickValLanguage) {
+        guard superwallConfigured else { return }
+        Superwall.shared.localeIdentifier = language.locale.identifier
     }
 
     func presentUpgrade() {
@@ -226,6 +244,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
     }
 
     func didDismissPaywall(withInfo paywallInfo: PaywallInfo) {
+        purchaseController?.setPurchasePlacement(nil)
         guard let pendingManualDismissal,
               pendingManualDismissalPlacement?.rawValue == paywallInfo.presentedByPlacementWithName else {
             return
@@ -365,6 +384,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
         feature: (@MainActor () -> Void)?,
         manualDismissal: (@MainActor () -> Void)?
     ) {
+        purchaseController?.setPurchasePlacement(placement.rawValue)
         pendingManualDismissal = manualDismissal
         pendingManualDismissalPlacement = manualDismissal == nil ? nil : placement
 
@@ -404,10 +424,11 @@ final class AppSDKCoordinator: SuperwallDelegate {
     }
 
     private func handlePaywallPresentationFailure() {
+        purchaseController?.setPurchasePlacement(nil)
         pendingManualDismissal = nil
         pendingManualDismissalPlacement = nil
         showsSubscriptionFallback = false
-        paywallPresentationError = "We couldn't load the upgrade options. Please try again."
+        paywallPresentationError = BrickValLocalization.localized("We couldn't load the upgrade options. Please try again.")
     }
 
     private static func configurationValue(_ key: String) -> String? {

@@ -99,7 +99,7 @@ struct FeedbackSurveySheet: View {
                 FeedbackMultiChoiceGrid(
                     values: PMFFeedbackOptions.benefits,
                     selection: $pmfBenefits,
-                    title: { $0 },
+                    title: { PMFFeedbackOptions.title(forBenefit: $0) },
                     emoji: { PMFFeedbackOptions.benefitEmoji(for: $0) }
                 )
             }
@@ -111,7 +111,7 @@ struct FeedbackSurveySheet: View {
                 FeedbackMultiChoiceGrid(
                     values: PMFFeedbackOptions.improvements,
                     selection: $pmfImprovements,
-                    title: { $0 },
+                    title: { PMFFeedbackOptions.title(forImprovement: $0) },
                     emoji: { PMFFeedbackOptions.improvementEmoji(for: $0) }
                 )
             }
@@ -152,7 +152,7 @@ struct FeedbackSurveySheet: View {
         }
     }
 
-    private var title: String {
+    private var title: LocalizedStringResource {
         switch survey {
         case .cancellation: "Help us improve"
         case .pmf: "A quick question"
@@ -160,7 +160,7 @@ struct FeedbackSurveySheet: View {
         }
     }
 
-    private var subtitle: String {
+    private var subtitle: LocalizedStringResource {
         switch survey {
         case .cancellation: "Your Pro access stays active. Share what happened in a few taps."
         case .pmf: "Your feedback helps us focus BrickValue on what collectors need most."
@@ -177,7 +177,7 @@ struct FeedbackSurveySheet: View {
     }
 
     private var actionTitle: String {
-        survey == .cancellation ? "Send feedback" : "Share feedback"
+        survey == .cancellation ? BrickValLocalization.localized("Send feedback") : BrickValLocalization.localized("Share feedback")
     }
 
     private var canSubmit: Bool {
@@ -324,8 +324,8 @@ struct PostPurchaseSurveyCard: View {
 
 private struct FeedbackHeader: View {
     let emoji: String
-    let title: String
-    let subtitle: String
+    let title: LocalizedStringResource
+    let subtitle: LocalizedStringResource
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -349,8 +349,8 @@ private struct FeedbackHeader: View {
 }
 
 private struct FeedbackSection<Content: View>: View {
-    let title: String
-    let subtitle: String
+    let title: LocalizedStringResource
+    let subtitle: LocalizedStringResource
     @ViewBuilder let content: () -> Content
 
     var body: some View {
@@ -596,6 +596,28 @@ private enum PMFFeedbackOptions {
         "Nothing right now"
     ]
 
+    static func title(forBenefit value: String) -> String {
+        switch value {
+        case "Fast scans": BrickValLocalization.localized("Fast scans")
+        case "Bulk scan": BrickValLocalization.localized("Bulk scan")
+        case "Collection value": BrickValLocalization.localized("Collection value")
+        case "Market history": BrickValLocalization.localized("Market history")
+        case "Themes": BrickValLocalization.localized("Themes")
+        default: BrickValLocalization.localized("Something else")
+        }
+    }
+
+    static func title(forImprovement value: String) -> String {
+        switch value {
+        case "Better matches": BrickValLocalization.localized("Better matches")
+        case "Faster results": BrickValLocalization.localized("Faster results")
+        case "More LEGO coverage": BrickValLocalization.localized("More LEGO coverage")
+        case "Collection insights": BrickValLocalization.localized("Collection insights")
+        case "More customization": BrickValLocalization.localized("More customization")
+        default: BrickValLocalization.localized("Nothing right now")
+        }
+    }
+
     static func benefitEmoji(for value: String) -> String {
         switch value {
         case "Fast scans": "📸"
@@ -622,13 +644,13 @@ private enum PMFFeedbackOptions {
 private extension PostPurchaseReason {
     var feedbackTitle: String {
         switch self {
-        case .unlimitedScans: "Unlimited scans"
-        case .bulkScanning: "Bulk scan"
-        case .collectionTracking: "Collection tracking"
-        case .valuesHistory: "Values + history"
-        case .customization: "Customization"
-        case .supportingBrickValue: "Support BrickValue"
-        case .other: "Something else"
+        case .unlimitedScans: BrickValLocalization.localized("Unlimited scans")
+        case .bulkScanning: BrickValLocalization.localized("Bulk scan")
+        case .collectionTracking: BrickValLocalization.localized("Collection tracking")
+        case .valuesHistory: BrickValLocalization.localized("Values + history")
+        case .customization: BrickValLocalization.localized("Customization")
+        case .supportingBrickValue: BrickValLocalization.localized("Support BrickValue")
+        case .other: BrickValLocalization.localized("Something else")
         }
     }
 
@@ -648,13 +670,13 @@ private extension PostPurchaseReason {
 private extension AcquisitionSource {
     var feedbackTitle: String {
         switch self {
-        case .tiktok: "TikTok"
-        case .instagram: "Instagram"
-        case .youtube: "YouTube"
-        case .appStoreSearch: "App Store search"
-        case .webSearch: "Google or web search"
-        case .friendCommunity: "Friend or LEGO community"
-        case .other: "Something else"
+        case .tiktok: BrickValLocalization.localized("TikTok")
+        case .instagram: BrickValLocalization.localized("Instagram")
+        case .youtube: BrickValLocalization.localized("YouTube")
+        case .appStoreSearch: BrickValLocalization.localized("App Store search")
+        case .webSearch: BrickValLocalization.localized("Google or web search")
+        case .friendCommunity: BrickValLocalization.localized("Friend or LEGO community")
+        case .other: BrickValLocalization.localized("Something else")
         }
     }
 
@@ -674,10 +696,10 @@ private extension AcquisitionSource {
 private extension PMFSentiment {
     var feedbackTitle: String {
         switch self {
-        case .veryDisappointed: "Very disappointed"
-        case .somewhatDisappointed: "Somewhat disappointed"
-        case .notDisappointed: "Not disappointed"
-        case .noLongerUse: "I no longer use it"
+        case .veryDisappointed: BrickValLocalization.localized("Very disappointed")
+        case .somewhatDisappointed: BrickValLocalization.localized("Somewhat disappointed")
+        case .notDisappointed: BrickValLocalization.localized("Not disappointed")
+        case .noLongerUse: BrickValLocalization.localized("I no longer use it")
         }
     }
 
@@ -694,14 +716,14 @@ private extension PMFSentiment {
 private extension CancellationReason {
     var feedbackTitle: String {
         switch self {
-        case .price: "Price"
-        case .scanAccuracy: "Accuracy"
-        case .scanSpeed: "Speed"
-        case .notEnoughUse: "Not using it"
-        case .missingFeature: "Missing feature"
-        case .technicalProblem: "Technical issue"
-        case .temporaryNeed: "Temporary need"
-        case .other: "Something else"
+        case .price: BrickValLocalization.localized("Price")
+        case .scanAccuracy: BrickValLocalization.localized("Accuracy")
+        case .scanSpeed: BrickValLocalization.localized("Speed")
+        case .notEnoughUse: BrickValLocalization.localized("Not using it")
+        case .missingFeature: BrickValLocalization.localized("Missing feature")
+        case .technicalProblem: BrickValLocalization.localized("Technical issue")
+        case .temporaryNeed: BrickValLocalization.localized("Temporary need")
+        case .other: BrickValLocalization.localized("Something else")
         }
     }
 

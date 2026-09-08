@@ -5,11 +5,11 @@ export const BULK_RECOVERY_RATE_LIMIT = {
   windowSeconds: 10 * 60,
 } as const;
 
-// Dense photo sessions can contain forty regions and may spend one retry on
+// Dense photo sessions can contain sixty regions and may spend one retry on
 // each weak crop. Keep this budget separate from manual recovery's ten-figure
 // limit so the two flows cannot change each other's allowance.
 export const BULK_SCAN_RATE_LIMIT = {
-  maxCalls: 80,
+  maxCalls: 120,
   windowSeconds: 10 * 60,
 } as const;
 

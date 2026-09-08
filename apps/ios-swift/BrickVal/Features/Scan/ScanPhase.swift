@@ -22,14 +22,14 @@ enum ScanPhase: Equatable {
 
     var statusText: String {
         switch self {
-        case .idle: "Ready"
-        case .preparingCamera: "Preparing camera…"
-        case .searching: "Hold a minifigure inside the frame"
-        case .holding: "Hold steady…"
-        case .capturing: "Capturing…"
-        case .identifying: "Analyzing minifigures…"
-        case .review: "Review the detected items"
-        case .result: "Match found"
+        case .idle: BrickValLocalization.localized("Ready")
+        case .preparingCamera: BrickValLocalization.localized("Preparing camera…")
+        case .searching: BrickValLocalization.localized("Hold a minifigure inside the frame")
+        case .holding: BrickValLocalization.localized("Hold steady…")
+        case .capturing: BrickValLocalization.localized("Capturing…")
+        case .identifying: BrickValLocalization.localized("Analyzing minifigures…")
+        case .review: BrickValLocalization.localized("Review the detected items")
+        case .result: BrickValLocalization.localized("Match found")
         case .failed(let message): message
         }
     }

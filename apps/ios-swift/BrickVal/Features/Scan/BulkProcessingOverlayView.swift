@@ -12,12 +12,18 @@ struct BulkProcessingOverlayView: View {
     @Environment(\.brickValAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var image: UIImage?
+    @State private var showsAverageExplanation = false
 
     var body: some View {
         GeometryReader { proxy in
-            ZStack(alignment: .top) {
+            let statusWidth = max(proxy.size.width - 28, 44)
+
+            ZStack(alignment: .topLeading) {
                 if let image {
-                    let imageRect = aspectFillRect(imageSize: image.size, containerSize: proxy.size)
+                    let imageRect = BulkImageLayout.aspectFitRect(
+                        imageSize: image.size,
+                        containerSize: proxy.size
+                    )
                     Image(uiImage: image)
                         .resizable()
                         .frame(width: imageRect.width, height: imageRect.height)
@@ -37,18 +43,24 @@ struct BulkProcessingOverlayView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Label(title, systemImage: phase == .capturing ? "viewfinder" : "tag")
                         .font(.headline.weight(.bold))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .layoutPriority(1)
+                        .accessibilityIdentifier("scanner.bulkProcessing.title")
                     Text(subtitle)
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.72))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("scanner.bulkProcessing.subtitle")
                 }
                 .foregroundStyle(.white)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(width: statusWidth, alignment: .leading)
                 .background(.black.opacity(0.74), in: .rect(cornerRadius: 16))
                 .padding(14)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("\(title). \(subtitle)")
+                .accessibilityIdentifier("scanner.bulkProcessing.status")
             }
             .background(.black)
             .clipShape(.rect(cornerRadius: 24))
@@ -56,32 +68,42 @@ struct BulkProcessingOverlayView: View {
         .task(id: imageData) {
             image = imageData.flatMap(UIImage.init(data:))
         }
-        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.985)))
+        .task(id: phase) {
+            showsAverageExplanation = false
+            guard phase == .identifying else { return }
+            do {
+                try await Task.sleep(for: .milliseconds(1_500))
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                showsAverageExplanation = true
+            }
+        }
+        .transition(reduceMotion ? .identity : .opacity)
     }
 
     private var title: String {
-        phase == .capturing ? "Finding minifigures" : "Checking sold prices"
+        if showsAverageExplanation, phase == .identifying {
+            return BrickValLocalization.localized("Calculating average prices")
+        }
+        return phase == .capturing ? BrickValLocalization.localized("Finding minifigures") : BrickValLocalization.localized("Checking sold prices")
     }
 
     private var subtitle: String {
         if phase == .capturing {
-            return source == .photoLibrary ? "Mapping every figure in your photo" : "Freezing your lot and its detected figures"
+            return source == .photoLibrary
+                ? BrickValLocalization.localized("Mapping every figure in your photo")
+                : BrickValLocalization.localized("Freezing your lot and its detected figures")
         }
         if total > 0 {
-            return "Comparing \(completed) of \(total) detected figure\(total == 1 ? "" : "s")"
+            return BrickValLocalization.localized("Comparing \(completed) of \(total) detected figure")
         }
-        return regions.isEmpty ? "Comparing matches and market values" : "Comparing \(regions.count) detected figure\(regions.count == 1 ? "" : "s")"
+        if regions.isEmpty {
+            return BrickValLocalization.localized("Comparing matches and market values")
+        }
+        return BrickValLocalization.localized("Comparing \(regions.count) detected figure")
     }
 
-    private func aspectFillRect(imageSize: CGSize, containerSize: CGSize) -> CGRect {
-        guard imageSize.width > 0, imageSize.height > 0 else { return CGRect(origin: .zero, size: containerSize) }
-        let scale = max(containerSize.width / imageSize.width, containerSize.height / imageSize.height)
-        let size = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
-        return CGRect(
-            x: (containerSize.width - size.width) / 2,
-            y: (containerSize.height - size.height) / 2,
-            width: size.width,
-            height: size.height
-        )
-    }
 }

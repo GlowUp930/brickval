@@ -3,17 +3,49 @@ import StoreKit
 import SuperwallKit
 
 @MainActor
+protocol RevenueCatPurchaseClient: AnyObject {
+    func purchase(product: RevenueCat.StoreProduct) async throws -> RevenueCatPurchaseOutcome
+}
+
+struct RevenueCatPurchaseOutcome {
+    let userCancelled: Bool
+    let customerInfo: RevenueCat.CustomerInfo
+}
+
+@MainActor
+private final class LiveRevenueCatPurchaseClient: RevenueCatPurchaseClient {
+    func purchase(product: RevenueCat.StoreProduct) async throws -> RevenueCatPurchaseOutcome {
+        let result = try await Purchases.shared.purchase(product: product)
+        return RevenueCatPurchaseOutcome(
+            userCancelled: result.userCancelled,
+            customerInfo: result.customerInfo
+        )
+    }
+}
+
+@MainActor
 final class RevenueCatPurchaseController: PurchaseController, OfferCodeRedemptionClient {
     private let entitlementStore: EntitlementStore
     private let notificationCoordinator: NotificationCoordinator
+    private let purchaseClient: any RevenueCatPurchaseClient
+    private let errorReporter: any PurchaseErrorReporting
     private var syncTasks: [Task<Void, Never>] = []
+    private(set) var purchasePlacement: String?
 
     init(
         entitlementStore: EntitlementStore,
-        notificationCoordinator: NotificationCoordinator
+        notificationCoordinator: NotificationCoordinator,
+        purchaseClient: (any RevenueCatPurchaseClient)? = nil,
+        errorReporter: (any PurchaseErrorReporting)? = nil
     ) {
         self.entitlementStore = entitlementStore
         self.notificationCoordinator = notificationCoordinator
+        self.purchaseClient = purchaseClient ?? LiveRevenueCatPurchaseClient()
+        self.errorReporter = errorReporter ?? SentryPurchaseErrorReporter()
+    }
+
+    func setPurchasePlacement(_ placement: String?) {
+        purchasePlacement = placement
     }
 
     func startSyncing() {
@@ -41,19 +73,29 @@ final class RevenueCatPurchaseController: PurchaseController, OfferCodeRedemptio
 
     func purchase(product: SuperwallKit.StoreProduct) async -> PurchaseResult {
         do {
-            guard let product = product.sk2Product else { throw PurchasingError.storeKitProductMissing }
-            let result = try await Purchases.shared.purchase(product: RevenueCat.StoreProduct(sk2Product: product))
+            let productID = product.productIdentifier
+            guard let sk2Product = product.sk2Product else { throw PurchasingError.storeKitProductMissing }
+            let result = try await purchaseClient.purchase(
+                product: RevenueCat.StoreProduct(sk2Product: sk2Product)
+            )
             if result.userCancelled { return .cancelled }
             await apply(result.customerInfo)
             entitlementStore.recordNewPurchase(
-                productID: product.id,
+                productID: productID,
                 isTrial: result.customerInfo.entitlements["pro"]?.periodType == .trial
             )
             return .purchased
-        } catch let error as RevenueCat.ErrorCode where error == .paymentPendingError {
-            return .pending
         } catch {
-            return .failed(error)
+            let failure = PurchaseFailure.from(error: error, productID: product.productIdentifier)
+            switch failure.category {
+            case .cancelled:
+                return .cancelled
+            case .pending:
+                return .pending
+            case .notAllowed, .productUnavailable, .network, .store, .configuration, .unknown:
+                errorReporter.capture(failure: failure, placement: purchasePlacement)
+                return .failed(failure)
+            }
         }
     }
 

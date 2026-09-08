@@ -8,10 +8,10 @@ export async function POST() {
   try {
     userId = (await auth()).userId;
   } catch {
-    return NextResponse.json({ error: "Authentication unavailable" }, { status: 401 });
+    return NextResponse.json({ error: "authentication_unavailable", message: "Sign-in is temporarily unavailable." }, { status: 401 });
   }
   if (!userId) {
-    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    return NextResponse.json({ error: "authentication_required", message: "Sign in to sync your subscription." }, { status: 401 });
   }
 
   const verifiedPro = await refreshProEntitlement(userId);
@@ -19,7 +19,7 @@ export async function POST() {
 
   return NextResponse.json({
     verified: verifiedPro !== null,
-    isPro: verifiedPro ?? status.usage.isPro,
+    isPro: status.usage.isPro,
   }, {
     headers: { "Cache-Control": "private, no-store" },
   });

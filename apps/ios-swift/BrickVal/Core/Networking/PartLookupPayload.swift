@@ -34,7 +34,7 @@ struct PartLookupPayload: Decodable, Sendable {
             identifier: partInfo.partNumber,
             itemType: .part,
             name: partInfo.name,
-            theme: partInfo.colorName.map { "Part · \($0)" } ?? "Part",
+            theme: partInfo.colorName.map { BrickValLocalization.localized("Part · \($0)") } ?? BrickValLocalization.localized("Part"),
             pieces: nil,
             yearReleased: partInfo.yearReleased,
             isObsolete: nil,

@@ -1,5 +1,9 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Reliability remediation status — 2026-09-08
+
+The [remediation report](docs/audits/2026-09-08-reliability-remediation.md) tracks the locally verified fixes and pending rollout. Native tests pass on small/large simulators; 69 backend tests, 25 regression assertions, isolated database concurrency/migration checks, build, type checking and 13-language validation pass. Production migration/deployment is pending RevenueCat configuration and entitlement reconciliation; Clerk deletion setup and physical-device purchases/referrals remain blocked. Do not treat source fixes as deployed or full reliability sign-off.
+
 ## Reliability audit status — 2026-09-05
 
 The [whole-app audit](docs/audits/2026-09-05-whole-app.md) is the latest reliability assessment for build 167. Automated suites pass, but reliability sign-off is withheld: production lacks required referral/intro-credit and notification schema; targeted tests reproduce lost concurrent referral rewards, scan authorization bypasses, subscription errors, invented pricing/history, and collection recovery data loss. Physical-device referral and Apple purchase verification remain blocked. This audit made no product fixes or production changes; implementation and release are separate work.
@@ -29,7 +33,7 @@ The Collection tab follows the Robinhood-style portfolio direction for layout an
 Keep product-language notes separate from implementation notes. Do not let archived Expo docs override the active Swift app direction.
 
 ## What we're building
-Native mobile app: scan a LEGO set photo → get its current **USD** market value (not AUD).
+Native mobile app: scan a LEGO set photo → get its current market value from canonical **USD** data, with optional locale-aware display conversion.
 Current default scope is iOS publish-readiness using the native Swift app and bundle identifier `com.brickval.app`.
 The existing Next.js app remains the hosted API/web backend at `brickvalue.live`. Build only what is in the plan. No extras, no abstractions.
 
@@ -126,7 +130,7 @@ NEXT_PUBLIC_APP_URL
 # Native iOS rollout
 BRICKVALUE_MINIMUM_IOS_BUILD       ← optional forced-update gate; set only after the replacement build is live
 BRICKVALUE_IOS_UPDATE_URL          ← optional App Store/TestFlight update URL
-BRICKVALUE_LOCKED_BULK_PREVIEW_ENABLED ← optional locked soft-paywall preview flag; keep off until the referral/grandfathering migration is deployed
+BRICKVALUE_LOCKED_BULK_PREVIEW_ENABLED ← optional locked soft-paywall preview rollback switch; defaults on for app-accessible non-Pro users with no usable introductory or referral bulk credit in policy v6
 
 # Legacy (not active in current flow)
 RAPIDAPI_KEY
@@ -233,7 +237,7 @@ The `increment_scan(p_user_id, p_free_limit)` RPC:
 - Brickset set data: `brickset:{setNumber}` — 24hr TTL
 - BrickLink market data: `bricklink:{setNumber}` — 24hr TTL
 - eBay market data: `ebay:{setNumber}` — 24hr TTL
-- Exchange rates: `fx:EUR-USD-AUD` — 24hr TTL
+- Exchange rates (including legacy eBay normalization): `fx:all-rates-v3` — 7-day TTL, refreshed after 24 hours
 - RapidAPI bulk dataset: `rapidapi:all` — 7-day TTL (legacy)
 
 ## Error states to handle
@@ -248,8 +252,8 @@ The `increment_scan(p_user_id, p_free_limit)` RPC:
 - Non-LEGO photo uploaded → "This doesn't look like a LEGO set.
   Try uploading a photo of a LEGO box."
 - API rate limit / failure → "Something went wrong. Please try again in a moment."
-- Exchange rate fetch fails → Show EUR price with note
-  "Currency conversion unavailable — showing EUR price."
+- Exchange rate fetch fails → Show the canonical USD price with the `USD` code and a note
+  "Currency conversion unavailable — showing USD price."
 - Retirement status unknown → Show "Status unknown" badge, not "Active."
 - Paywall hit → 402 response: "You've used all 5 free scans. Upgrade to BrickVal Pro."
 
@@ -266,8 +270,7 @@ This is not optional — it is in the success criteria.
 - Native auth/error tracking: Clerk and Sentry are Swift Package dependencies in `apps/ios-swift/project.yml`.
 - Native product analytics: PostHog is a Swift Package dependency in `apps/ios-swift/project.yml`; it starts during native app initialization, captures lifecycle/screen events, identifies Clerk users by stable ID, and resets on logout. The project key is local-only in `Configuration/Secrets.xcconfig`.
 - Previous Expo app: kept at `apps/expo-previous/` for reference only.
-- Backend scan gate: `src/lib/scan-gate.ts` is STUBBED — returns `allowed: true` for all users.
-  Real backend scan limits + Stripe paywall still need final wiring.
+- Backend scan gate: `src/lib/scan-gate.ts` implements metering and durable bulk authorization. See the remediation report for production rollout dependencies.
 - eBay API: OAuth active (Browse API working). EPN partner.
   Awaiting Marketplace Insights scope via Application Growth Check.
   Falls back to Browse API (active listings) until approved.
@@ -281,7 +284,7 @@ This is not optional — it is in the success criteria.
 - Brickset API: ✅ ACTIVE — provides RRP (US/UK/CA/DE), theme, pieces, minifigs,
   retirement status, set images. Appends "-1" suffix for Brickset format.
   Free tier limit: 100 requests/day.
-- Frankfurter API: ✅ ACTIVE — ECB-sourced rates, 24hr cache, hardcoded fallbacks.
+- Frankfurter API: ✅ ACTIVE — ECB-sourced daily USD rates for the 24 display currencies; refreshed after 24 hours, retained for up to seven days, with stale and USD fallback handling.
 - RapidAPI bulk dataset: LEGACY — integrated but not active in current lookup flow.
   Replaced by eBay + BrickLink as primary data sources.
 - Stripe: webhook handler active, Stripe SDK singleton in place on the hosted backend.
@@ -298,8 +301,9 @@ This is not optional — it is in the success criteria.
 - `src/lib/ebay.ts` — eBay OAuth 2.0, Browse API + Marketplace Insights, multi-marketplace
 - `src/lib/bricklink.ts` — BrickLink OAuth 1.0, price guide (sold + stock), item info
 - `src/lib/brickset.ts` — Brickset API v3, set metadata + RRP + retirement
-- `src/lib/frankfurter.ts` — Frankfurter currency conversion (EUR/USD/AUD/GBP)
-- `src/lib/scan-gate.ts` — paywall/scan limit logic (stubbed, returns allowed: true)
+- `src/lib/frankfurter.ts` — Frankfurter USD-based rates plus legacy eBay normalization fields
+- `src/app/api/mobile/exchange-rates/route.ts` — mobile USD-based display-rate contract for the 24 supported currencies
+- `src/lib/scan-gate.ts` — paywall/scan limits and durable bulk authorization
 - `src/lib/cache.ts` — Supabase api_cache getCached() / setCached() helpers
 - `src/lib/anthropic.ts` — Codex SDK singleton (lazy, server-only)
 - `src/lib/supabase.ts` — Supabase service-role client singleton (lazy, server-only)
@@ -319,3 +323,14 @@ This is not optional — it is in the success criteria.
 - From `apps/ios-swift`: `xcodebuild -project BrickVal.xcodeproj -scheme BrickVal -destination 'platform=iOS Simulator,name=iPhone 16' test` — run Swift unit tests
 - From `apps/expo-previous`: `npm test` — check the previous Expo app only when using it as reference
 - From repo root: `npm run dev` — start hosted Next.js backend/web app when needed
+
+## Localization
+- Native localization uses `apps/ios-swift/BrickVal/Resources/Localizable.xcstrings` and `InfoPlist.xcstrings` for English (`en`), Spanish (`es`), French (`fr`), German (`de`), Italian (`it`), Brazilian Portuguese (`pt-BR`), Dutch (`nl`), Japanese (`ja`), Korean (`ko`), Simplified Chinese (`zh-Hans`), Traditional Chinese (`zh-Hant`), Arabic (`ar`), and Hindi (`hi`).
+- English is the source and fallback. System default selects the best supported device language; Profile → Language offers an in-app picker for System default or any supported language and persists that choice locally. Unsupported device languages fall back to English.
+- Keep API identifiers, analytics events, logs, set numbers, and upstream LEGO names unchanged. Keep market values canonical USD, then format the selected display currency, dates, percentages, and quantities with the active locale; use POSIX only for machine-readable dates and identifiers.
+- Every customer-facing market value includes the actual active ISO currency code beside the localized amount; unavailable conversion explicitly falls back to and identifies `USD`.
+- Every displayed market price is identified as an average. Sold data uses “Average sold price” with a completed-sales explanation; active-listing fallback uses “Average asking price” and says it is not a completed sale. Onboarding, scan processing, result, collection-detail, bulk, share-card, and VoiceOver copy must keep this distinction clear.
+- Strings created outside SwiftUI views use `BrickValLocalization.localized(...)` so an in-app override applies immediately to alerts, model state, accessibility values, and notifications.
+- Run `npm run test:localization` before native releases. It checks all 13 locales, non-empty values, interpolation placeholders, plural forms, and permission strings. Arabic mirroring, Dynamic Type, and sensitive-copy native review remain part of release QA.
+- Currency display supports USD, EUR, GBP, AUD, CAD, NZD, JPY, CNY, HKD, TWD, KRW, SGD, INR, BRL, MXN, CHF, SEK, NOK, DKK, PLN, CZK, AED, SAR, and ZAR. Profile → Currency offers these codes plus System default; the override is independent from language and persists locally.
+- Market data and analytics remain canonical USD. The app refreshes USD-based rates daily, keeps successful rates for up to seven days, marks retained rates stale, and temporarily shows USD with a localized notice when no usable rate exists. StoreKit, RevenueCat, and Superwall subscription prices always come directly from Apple and are not converted.

@@ -8,6 +8,7 @@ struct BrickValApp: App {
     @State private var preferences = PreferencesStore()
     @State private var entitlements = EntitlementStore()
     @State private var monetization = MonetizationStore()
+    @State private var currency = CurrencyStore()
     @State private var notifications: NotificationCoordinator
     @State private var sdkCoordinator: AppSDKCoordinator
     @State private var productFeedback: ProductFeedbackStore
@@ -17,7 +18,8 @@ struct BrickValApp: App {
         let notificationCoordinator = NotificationCoordinator()
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-showProfileTabDemo") ||
-            ProcessInfo.processInfo.arguments.contains("-showProGatingDemo") {
+            ProcessInfo.processInfo.arguments.contains("-showProGatingDemo") ||
+            ProcessInfo.processInfo.arguments.contains("-showHardPaywallPreviewRootDemo") {
             entitlementStore.update(isPro: true)
         }
 #endif
@@ -33,14 +35,21 @@ struct BrickValApp: App {
 
     var body: some Scene {
         WindowGroup {
+            let language = preferences.effectiveLanguage
             SDKEnvironmentRootView(coordinator: sdkCoordinator)
                 .environment(router)
                 .environment(collectionStore)
                 .environment(preferences)
                 .environment(entitlements)
                 .environment(monetization)
+                .environment(currency)
                 .environment(notifications)
                 .environment(productFeedback)
+                .environment(\.locale, language.locale)
+                .environment(
+                    \.layoutDirection,
+                    language.isRightToLeft ? .rightToLeft : .leftToRight
+                )
                 .environment(\.appSDKCoordinator, sdkCoordinator)
                 .environment(\.brickValAPIClient, sdkCoordinator.apiClient)
                 .preferredColorScheme(activeColorScheme)
@@ -49,6 +58,8 @@ struct BrickValApp: App {
                 .onOpenURL(perform: router.handle)
                 .onAppear {
                     notifications.updatePolicy(monetization.policy.notifications)
+                    notifications.updateLanguage(language)
+                    sdkCoordinator.updateLocalization(language)
                     appDelegate.onDeviceToken = { token in
                         notifications.setAPNsDeviceToken(token)
                     }
@@ -62,8 +73,14 @@ struct BrickValApp: App {
                 .onChange(of: monetization.policy) { _, policy in
                     notifications.updatePolicy(policy.notifications)
                 }
+                .onChange(of: preferences.languageOverride) { _, _ in
+                    let language = preferences.effectiveLanguage
+                    notifications.updateLanguage(language)
+                    sdkCoordinator.updateLocalization(language)
+                }
                 .task {
                     await notifications.refreshAuthorizationStatus()
+                    await currency.refresh(using: sdkCoordinator.apiClient)
                 }
         }
     }

@@ -9,9 +9,9 @@ enum PrimaryGoal: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .catalog: "Track my collection"
-        case .resell: "Buy and resell"
-        case .dealCheck: "Check prices quickly"
+        case .catalog: BrickValLocalization.localized("Track my collection")
+        case .resell: BrickValLocalization.localized("Buy and resell")
+        case .dealCheck: BrickValLocalization.localized("Check prices quickly")
         }
     }
 }

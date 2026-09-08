@@ -1,23 +1,20 @@
-import { auth } from "@clerk/nextjs/server";
+import { scanRequestAccess } from "@/lib/scan-request-access";
 import { NextRequest, NextResponse } from "next/server";
 
 import { reportBulkScanError } from "@/lib/backend-error-reporting";
 import { lookupBulkMinifigures } from "@/lib/bulk-minifig-lookup";
 import { verifyBulkScanSession } from "@/lib/bulk-scan-session";
-import { BULK_SCAN_RATE_LIMIT, bulkScanRateLimitKey, bulkScanUsageKey } from "@/lib/bulk-recovery-rate-limit";
+import { BULK_SCAN_RATE_LIMIT, bulkScanRateLimitKey } from "@/lib/bulk-recovery-rate-limit";
 import { BrickognizeUnavailableError, identifyNonSet } from "@/lib/brickognize";
-import { consumeFeatureUsage } from "@/lib/scan-gate";
+import { authorizeBulkScan, consumeFeatureUsage } from "@/lib/scan-gate";
 import { supabase } from "@/lib/supabase";
 
 const MAX_REGION_CROP_BYTES = 500 * 1024;
 
 export async function POST(req: NextRequest) {
-  let userId: string | null = null;
-  try {
-    userId = (await auth()).userId;
-  } catch {
-    userId = null;
-  }
+  const accessRequest = await scanRequestAccess(req);
+  if (accessRequest instanceof NextResponse) return accessRequest;
+  const { userId } = accessRequest;
 
   let formData: FormData;
   try {
@@ -94,27 +91,15 @@ export async function POST(req: NextRequest) {
 
     let usage: Awaited<ReturnType<typeof consumeFeatureUsage>>["usage"] | undefined;
     if (candidates.length && userId) {
-      const { data: ownsUsage, error: usageLockError } = await supabase.rpc("consume_service_rate_limit", {
-        p_key: bulkScanUsageKey(sessionToken),
-        p_limit: 1,
-        p_now: new Date().toISOString(),
-        p_window_seconds: 10 * 60,
-      });
-      if (usageLockError) {
-        return NextResponse.json({ error: "usage_unavailable", message: "Your scan could not be confirmed. Please try again." }, { status: 503 });
+      const gate = await authorizeBulkScan(userId, sessionToken, claims.expiresAt);
+      if (!gate.allowed) {
+        return NextResponse.json({
+          error: "paywall", feature: "bulk_scan",
+          message: "Your free bulk scan has been used. Upgrade to BrickValue Pro for unlimited bulk scans.",
+          usage: gate.usage,
+        }, { status: 402 });
       }
-      if (ownsUsage === true) {
-        const gate = await consumeFeatureUsage(userId, "bulk_scan");
-        if (!gate.allowed) {
-          return NextResponse.json({
-            error: "paywall",
-            feature: "bulk_scan",
-            message: "Your free bulk scan has been used. Upgrade to BrickValue Pro for unlimited bulk scans.",
-            usage: gate.usage,
-          }, { status: 402 });
-        }
-        usage = gate.usage;
-      }
+      usage = gate.usage;
     }
 
     return NextResponse.json({

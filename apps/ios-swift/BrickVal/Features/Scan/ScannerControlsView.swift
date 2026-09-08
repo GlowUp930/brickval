@@ -54,12 +54,12 @@ struct ScannerControlsView: View {
     }
 
     private var captureLabel: String {
-        intent == .bulk ? "Capture bulk scan" : "Scan minifigure"
+        intent == .bulk ? BrickValLocalization.localized("Capture bulk scan") : BrickValLocalization.localized("Scan minifigure")
     }
 
     private var captureHint: String {
         automaticScanAvailable && intent == .single
-            ? "Capture now instead of waiting for automatic scanning"
-            : "Capture the camera image"
+            ? BrickValLocalization.localized("Capture now instead of waiting for automatic scanning")
+            : BrickValLocalization.localized("Capture the camera image")
     }
 }

@@ -8,6 +8,8 @@ struct BulkSweepTotalHUD: View {
     let totalUpdateKey: String?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(PreferencesStore.self) private var preferences
+    @Environment(CurrencyStore.self) private var currency
     @State private var isValueArriving = false
 
     var body: some View {
@@ -18,7 +20,7 @@ struct BulkSweepTotalHUD: View {
                 .tracking(0.8)
 
             HStack(spacing: 8) {
-                Text(total, format: .currency(code: "USD"))
+                BrickValCurrencyText(total)
                     .font(.title3.weight(.heavy).monospacedDigit())
                     .foregroundStyle(accent)
                     .contentTransition(.numericText())
@@ -70,7 +72,7 @@ struct BulkSweepTotalHUD: View {
         .accessibilityIdentifier("bulkReveal.total")
         .accessibilityLabel("Lot value")
         .accessibilityValue(
-            "\(total.formatted(.currency(code: "USD"))), \(pricedCount) of \(itemCount) figures priced"
+            "\(currency.formattedWithCode(total, to: preferences.effectiveCurrency, locale: BrickValLocalization.effectiveLanguage.locale)), \(pricedCount) of \(itemCount) figures priced"
         )
     }
 }
@@ -99,6 +101,8 @@ struct BulkSweepResultCarousel: View {
     let accent: Color
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(PreferencesStore.self) private var preferences
+    @Environment(CurrencyStore.self) private var currency
 
     private var revealedEntries: [BulkRevealEntry] {
         Array(entries.prefix(revealedCount).suffix(4))
@@ -148,7 +152,7 @@ struct BulkSweepResultCarousel: View {
                         .font(.caption2.bold())
                         .lineLimit(1)
                     if let displayValue = entry.value(for: condition) {
-                        Text(displayValue, format: .currency(code: "USD"))
+                        BrickValCurrencyText(displayValue, showsCurrencyCode: false)
                             .font(.caption2.bold().monospacedDigit())
                             .foregroundStyle(accent)
                     } else {
@@ -165,7 +169,7 @@ struct BulkSweepResultCarousel: View {
             .overlay { RoundedRectangle(cornerRadius: 10).stroke(accent.opacity(0.46)) }
             .accessibilityElement(children: .combine)
             .accessibilityLabel(
-                "\(item.result.name), \(entry.value(for: condition)?.formatted(.currency(code: "USD")) ?? "Price unavailable")"
+                "\(item.result.name), \(entry.value(for: condition).map { currency.formattedWithCode($0, to: preferences.effectiveCurrency, locale: BrickValLocalization.effectiveLanguage.locale) } ?? BrickValLocalization.localized("Price unavailable"))"
             )
         }
     }
@@ -213,6 +217,8 @@ struct BulkRevealOverlay: View {
 
     @Environment(\.brickValAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(PreferencesStore.self) private var preferences
+    @Environment(CurrencyStore.self) private var currency
     @State private var animatedJackpotTotal = 0.0
     @State private var transferProgress = 1.0
 
@@ -328,7 +334,7 @@ struct BulkRevealOverlay: View {
                 width: hudAnchor.x - start.x,
                 height: hudAnchor.y - start.y
             )
-            Text("+\(transferValue.formatted(.currency(code: "USD")))")
+            Text("+\(currency.formatted(transferValue, to: preferences.effectiveCurrency, locale: BrickValLocalization.effectiveLanguage.locale))")
                 .font(.caption.weight(.bold).monospacedDigit())
                 .foregroundStyle(.black)
                 .padding(.horizontal, 10)
@@ -352,7 +358,7 @@ struct BulkRevealOverlay: View {
     private var jackpotContent: some View {
         VStack(spacing: 8) {
             Spacer()
-            Text(animatedJackpotTotal, format: .currency(code: "USD"))
+        BrickValCurrencyText(animatedJackpotTotal)
                 .font(.system(size: 54, weight: .heavy, design: .rounded))
                 .foregroundStyle(accent)
                 .contentTransition(.numericText())
@@ -362,7 +368,7 @@ struct BulkRevealOverlay: View {
                 .foregroundStyle(.white)
             if let topFind, let topValue = topFind.value(for: condition) {
                 Label(
-                    "Top find \(topValue.formatted(.currency(code: "USD")))",
+                    "Top find \(currency.formattedWithCode(topValue, to: preferences.effectiveCurrency, locale: BrickValLocalization.effectiveLanguage.locale))",
                     systemImage: "star.fill"
                 )
                 .font(.subheadline.weight(.bold).monospacedDigit())

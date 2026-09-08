@@ -26,7 +26,7 @@ export async function localizeObjectsWithGoogleVision(file: File): Promise<Norma
     body: JSON.stringify({
       requests: [{
         image: { content: bytes.toString("base64") },
-        features: [{ type: "OBJECT_LOCALIZATION", maxResults: 40 }],
+        features: [{ type: "OBJECT_LOCALIZATION", maxResults: 60 }],
       }],
     }),
     signal: AbortSignal.timeout(8_000),

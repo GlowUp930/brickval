@@ -19,13 +19,13 @@ enum PostPurchaseReason: String, CaseIterable, Codable, Equatable, Hashable, Sen
 
     var displayTitle: String {
         switch self {
-        case .unlimitedScans: "Unlimited scans"
-        case .bulkScanning: "Bulk scanning"
-        case .collectionTracking: "Collection tracking"
-        case .valuesHistory: "LEGO values and history"
-        case .customization: "Customization"
-        case .supportingBrickValue: "Supporting BrickValue"
-        case .other: "Other"
+        case .unlimitedScans: BrickValLocalization.localized("Unlimited scans")
+        case .bulkScanning: BrickValLocalization.localized("Bulk scanning")
+        case .collectionTracking: BrickValLocalization.localized("Collection tracking")
+        case .valuesHistory: BrickValLocalization.localized("LEGO values and history")
+        case .customization: BrickValLocalization.localized("Customization")
+        case .supportingBrickValue: BrickValLocalization.localized("Supporting BrickValue")
+        case .other: BrickValLocalization.localized("Other")
         }
     }
 }
@@ -41,13 +41,13 @@ enum AcquisitionSource: String, CaseIterable, Codable, Equatable, Hashable, Send
 
     var displayTitle: String {
         switch self {
-        case .tiktok: "TikTok"
-        case .instagram: "Instagram"
-        case .youtube: "YouTube"
-        case .appStoreSearch: "App Store search"
-        case .webSearch: "Google or web search"
-        case .friendCommunity: "Friend or LEGO community"
-        case .other: "Other"
+        case .tiktok: BrickValLocalization.localized("TikTok")
+        case .instagram: BrickValLocalization.localized("Instagram")
+        case .youtube: BrickValLocalization.localized("YouTube")
+        case .appStoreSearch: BrickValLocalization.localized("App Store search")
+        case .webSearch: BrickValLocalization.localized("Google or web search")
+        case .friendCommunity: BrickValLocalization.localized("Friend or LEGO community")
+        case .other: BrickValLocalization.localized("Other")
         }
     }
 }
@@ -60,10 +60,10 @@ enum PMFSentiment: String, CaseIterable, Codable, Equatable, Hashable, Sendable 
 
     var displayTitle: String {
         switch self {
-        case .veryDisappointed: "Very disappointed"
-        case .somewhatDisappointed: "Somewhat disappointed"
-        case .notDisappointed: "Not disappointed"
-        case .noLongerUse: "I no longer use it"
+        case .veryDisappointed: BrickValLocalization.localized("Very disappointed")
+        case .somewhatDisappointed: BrickValLocalization.localized("Somewhat disappointed")
+        case .notDisappointed: BrickValLocalization.localized("Not disappointed")
+        case .noLongerUse: BrickValLocalization.localized("I no longer use it")
         }
     }
 }
@@ -80,14 +80,14 @@ enum CancellationReason: String, CaseIterable, Codable, Equatable, Hashable, Sen
 
     var displayTitle: String {
         switch self {
-        case .price: "Price"
-        case .scanAccuracy: "Scan accuracy"
-        case .scanSpeed: "Scan speed"
-        case .notEnoughUse: "I do not use it enough"
-        case .missingFeature: "Missing feature"
-        case .technicalProblem: "Technical problem"
-        case .temporaryNeed: "I only needed it temporarily"
-        case .other: "Other"
+        case .price: BrickValLocalization.localized("Price")
+        case .scanAccuracy: BrickValLocalization.localized("Scan accuracy")
+        case .scanSpeed: BrickValLocalization.localized("Scan speed")
+        case .notEnoughUse: BrickValLocalization.localized("I do not use it enough")
+        case .missingFeature: BrickValLocalization.localized("Missing feature")
+        case .technicalProblem: BrickValLocalization.localized("Technical problem")
+        case .temporaryNeed: BrickValLocalization.localized("I only needed it temporarily")
+        case .other: BrickValLocalization.localized("Other")
         }
     }
 }

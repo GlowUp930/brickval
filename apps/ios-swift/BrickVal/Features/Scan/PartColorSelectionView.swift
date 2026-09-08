@@ -59,7 +59,7 @@ struct PartColorSelectionView: View {
                 do {
                     colors = try await store.loadPartColors()
                 } catch {
-                    errorMessage = "Try again in a moment, or use manual lookup with a BrickLink colour ID."
+                    errorMessage = BrickValLocalization.localized("Try again in a moment, or use manual lookup with a BrickLink colour ID.")
                 }
             }
         }

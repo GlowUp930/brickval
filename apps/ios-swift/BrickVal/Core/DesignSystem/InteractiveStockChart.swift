@@ -9,6 +9,8 @@ struct StockChartPoint: Identifiable, Equatable {
 
 struct InteractiveStockChart: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(PreferencesStore.self) private var preferences
+    @Environment(CurrencyStore.self) private var currency
 
     let points: [StockChartPoint]
     let lineColor: Color
@@ -20,7 +22,15 @@ struct InteractiveStockChart: View {
     @State private var didReveal = false
 
     private var samples: [StockChartSample] {
-        Self.resample(points, count: 140)
+        let requestedCurrency = preferences.effectiveCurrency
+        let displayCurrency = currency.displayCurrency(for: requestedCurrency)
+        return Self.resample(points, count: 140).map {
+            StockChartSample(
+                id: $0.id,
+                label: $0.label,
+                value: currency.converted($0.value, to: displayCurrency)
+            )
+        }
     }
 
     private var selectedSample: StockChartSample? {
@@ -117,13 +127,21 @@ struct InteractiveStockChart: View {
         .clipped()
         .sensoryFeedback(.selection, trigger: selectedSampleID)
         .accessibilityLabel("Price history chart")
-        .accessibilityValue(selectedSample.map { "\($0.label), \($0.value.formatted(.currency(code: "USD")))" } ?? "Drag across the chart to inspect prices")
+        .accessibilityValue(selectedSample.map {
+            let requestedCurrency = preferences.effectiveCurrency
+            let displayCurrency = currency.displayCurrency(for: requestedCurrency)
+            let amount = $0.value.formatted(
+                currency.formatStyle(for: displayCurrency, locale: BrickValLocalization.effectiveLanguage.locale)
+            )
+            let formatted = "\(amount) · \(displayCurrency.code)"
+            return "\($0.label), \(formatted)"
+        } ?? BrickValLocalization.localized("Drag across the chart to inspect prices"))
     }
 
     private func scrubberLabel(_ sample: StockChartSample) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(sample.label).font(.caption2.weight(.semibold)).opacity(0.72)
-            Text(sample.value, format: .currency(code: "USD"))
+            BrickValCurrencyText(sample.value, isAlreadyConverted: true)
                 .font(.caption.weight(.bold))
                 .monospacedDigit()
         }
@@ -151,7 +169,7 @@ struct InteractiveStockChart: View {
     private static func resample(_ points: [StockChartPoint], count: Int) -> [StockChartSample] {
         guard count > 0 else { return [] }
         guard points.count > 1 else {
-            let point = points.first ?? StockChartPoint(label: "Now", value: 0)
+            let point = points.first ?? StockChartPoint(label: BrickValLocalization.localized("Now"), value: 0)
             return (0 ..< count).map { StockChartSample(id: $0, label: point.label, value: point.value) }
         }
 
@@ -268,8 +286,8 @@ struct ChartHorizonPicker: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(
                         proHorizons.contains(option) && !isPro
-                            ? "Show \(option.rawValue) price history, requires BrickValue Pro"
-                            : "Show \(option.rawValue) price history"
+                            ? BrickValLocalization.localized("Show \(option.rawValue) price history, requires BrickValue Pro")
+                            : BrickValLocalization.localized("Show \(option.rawValue) price history")
                     )
                     .accessibilityAddTraits(selection == option ? .isSelected : [])
                 }

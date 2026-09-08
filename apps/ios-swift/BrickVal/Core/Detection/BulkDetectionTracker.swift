@@ -62,6 +62,7 @@ struct BulkDetectionTracker: Sendable {
 
     func regions(for timestamp: Date) -> [BulkScanRegion] {
         observations(for: timestamp)
+            .prefix(BulkScanSource.maximumRegionCount)
             .map { BulkScanRegion(regionId: $0.regionID, boundingBox: $0.boundingBox.clamped) }
     }
 

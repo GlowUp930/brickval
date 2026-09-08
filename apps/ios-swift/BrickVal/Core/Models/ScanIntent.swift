@@ -8,8 +8,8 @@ enum ScanIntent: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .single: "Minifigure"
-        case .bulk: "Bulk"
+        case .single: BrickValLocalization.localized("Minifigure")
+        case .bulk: BrickValLocalization.localized("Bulk")
         }
     }
 

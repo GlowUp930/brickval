@@ -96,7 +96,7 @@ final class ScanStore {
         smartScanAvailable = onDeviceSmartScanEnabled
         smartScanMessage = onDeviceSmartScanEnabled
             ? nil
-            : "Automatic scan paused. Tap the shutter to scan manually."
+            : BrickValLocalization.localized("Automatic scan paused. Tap the shutter to scan manually.")
     }
 
     var captureSession: AVCaptureSession { camera.sessionBox.session }
@@ -115,6 +115,22 @@ final class ScanStore {
         phase = .identifying
     }
 
+    func configureBulkProcessingLayoutDemo(imageData: Data) {
+        intent = .bulk
+        authorizationStatus = .authorized
+        frozenImageData = imageData
+        frozenBulkSource = .photoLibrary
+        bulkProcessingRegions = [
+            NormalizedBoundingBox(x: 0.02, y: 0.18, width: 0.14, height: 0.55),
+            NormalizedBoundingBox(x: 0.42, y: 0.24, width: 0.16, height: 0.48),
+            NormalizedBoundingBox(x: 0.84, y: 0.14, width: 0.14, height: 0.58)
+        ]
+        bulkProcessingSource = .photoLibrary
+        bulkProcessingCompleted = 17
+        bulkProcessingTotal = 123
+        phase = .identifying
+    }
+
     func configureBulkRecoveryDemo() {
         guard let imageData = BulkRecoveryDemoFixture.imageData else { return }
         intent = .bulk
@@ -127,6 +143,24 @@ final class ScanStore {
             unresolvedRegions: BulkRecoveryDemoFixture.unresolvedRegions,
             recoveryToken: "debug-recovery-token",
             source: .camera
+        )
+    }
+
+    func configureLockedBulkPreviewDemo() {
+        guard let imageData = BulkRecoveryDemoFixture.imageData else { return }
+        let regions = BulkRecoveryDemoFixture.lockedPreviewRegions
+        intent = .bulk
+        authorizationStatus = .authorized
+        frozenImageData = imageData
+        frozenBulkRegions = regions
+        frozenBulkSource = .camera
+        phase = .review
+        presentedBulkResults = BulkScanPresentation(
+            imageData: imageData,
+            regions: regions,
+            recoveryToken: nil,
+            source: .camera,
+            accessMode: .lockedPreview
         )
     }
 #endif
@@ -260,7 +294,7 @@ final class ScanStore {
     func importBulkPhoto(_ data: Data?) async {
         guard intent == .bulk, phase != .capturing, phase != .identifying else { return }
         guard canBeginCurrentScan else {
-            phase = .failed("You've used all available bulk scans. Upgrade to continue.")
+            phase = .failed(BrickValLocalization.localized("You've used all available bulk scans. Upgrade to continue."))
             proLimitFeature = .bulkScan
             analytics?.capture(
                 PostHogEvent.scanBlocked,
@@ -277,7 +311,7 @@ final class ScanStore {
             ]
         )
         guard let data else {
-            phase = .failed("We couldn't read that photo. Choose another image and try again.")
+            phase = .failed(BrickValLocalization.localized("We couldn't read that photo. Choose another image and try again."))
             analytics?.capture(
                 PostHogEvent.scanFailed,
                 properties: ["scan_type": ScanIntent.bulk.rawValue, "source": "photo_library"]
@@ -315,7 +349,7 @@ final class ScanStore {
 
     func importBulkPhotoLoadFailed() async {
         guard intent == .bulk else { return }
-        phase = .failed("We couldn't load that photo. Check your Photos permission and choose another image.")
+        phase = .failed(BrickValLocalization.localized("We couldn't load that photo. Check your Photos permission and choose another image."))
         analytics?.capture(
             PostHogEvent.scanFailed,
             properties: ["scan_type": ScanIntent.bulk.rawValue, "source": "photo_library"]
@@ -527,7 +561,7 @@ final class ScanStore {
 
     func completeBulkSave(count: Int) {
         reset()
-        let message = "Added \(count) \(count == 1 ? "item" : "items") to your collection"
+        let message = BrickValLocalization.localized("Added \(count) item to your collection")
         successMessage = message
         Task {
             try? await Task.sleep(for: .seconds(2.4))
@@ -574,7 +608,7 @@ final class ScanStore {
         } catch CameraError.frameUnavailable {
             return
         } catch {
-            disableSmartScan(message: "Automatic scanning paused because the on-device detector could not start.")
+            disableSmartScan(message: BrickValLocalization.localized("Automatic scanning paused because the on-device detector could not start."))
         }
     }
 
@@ -623,18 +657,12 @@ final class ScanStore {
         if mode == .minifig, intent == .bulk {
             if let monetization,
                monetization.shouldUseLockedBulkPreview(isPro: isProSubscriber) {
-                var previewRegions = Array(bulkRegions.prefix(BulkScanSource.maximumRegionCount))
-                if previewRegions.isEmpty {
-                    let detection = try await bulkPhotoDetector.detectBulkRegions(
-                        in: imageData,
-                        limit: BulkScanSource.maximumRegionCount
-                    )
-                    previewRegions = Array(detection.regions.prefix(BulkScanSource.maximumRegionCount))
-                    detectorModelVersion = detection.modelVersion
-                    detectorDetectionMilliseconds = detection.inferenceMilliseconds
-                }
-                guard !previewRegions.isEmpty else {
-                    phase = .failed("No minifigures were found. Try a brighter photo with the figures separated and facing forward.")
+                guard try await presentLockedBulkPreview(
+                    imageData: imageData,
+                    bulkRegions: bulkRegions,
+                    bulkSource: bulkSource
+                ) else {
+                    phase = .failed(BrickValLocalization.localized("No minifigures were found. Try a brighter photo with the figures separated and facing forward."))
                     analytics?.capture(
                         PostHogEvent.bulkPreviewCompleted,
                         properties: [
@@ -645,28 +673,6 @@ final class ScanStore {
                     )
                     return
                 }
-
-                frozenBulkRegions = previewRegions
-                frozenBulkSource = bulkSource
-                bulkProcessingRegions = previewRegions.map(\.boundingBox)
-                bulkProcessingSource = bulkSource
-                bulkProcessingCompleted = 0
-                bulkProcessingTotal = previewRegions.count
-                phase = .review
-                presentedBulkResults = BulkScanPresentation(
-                    imageData: imageData,
-                    regions: previewRegions,
-                    recoveryToken: nil,
-                    source: bulkSource,
-                    accessMode: .lockedPreview
-                )
-                analytics?.capture(
-                    PostHogEvent.bulkPreviewStarted,
-                    properties: [
-                        "source": bulkSource == .photoLibrary ? "photo_library" : "camera",
-                        "detected_count": previewRegions.count,
-                    ]
-                )
                 return
             }
 
@@ -682,11 +688,11 @@ final class ScanStore {
                 let start = try await startBulkScan(image, bulkRegions, bulkSource)
                 let regions = Array(start.regions.prefix(BulkScanSource.maximumRegionCount))
                 guard !regions.isEmpty else {
-                    phase = .failed("No minifigures were found. Try a brighter photo with the figures separated and facing forward.")
+                    phase = .failed(BrickValLocalization.localized("No minifigures were found. Try a brighter photo with the figures separated and facing forward."))
                     return
                 }
                 guard let frozenImageData else {
-                    phase = .failed("The captured photo is no longer available. Please retake the photo.")
+                    phase = .failed(BrickValLocalization.localized("The captured photo is no longer available. Please retake the photo."))
                     return
                 }
                 bulkProcessingCompleted = 0
@@ -718,7 +724,7 @@ final class ScanStore {
                   !items.isEmpty || !response.reviewItems.isEmpty || !response.unresolvedRegions.isEmpty
             else {
                 self.frozenImageData = nil
-                phase = .failed("No priced minifigures were found. Try a brighter photo with the figures separated and facing forward.")
+                phase = .failed(BrickValLocalization.localized("No priced minifigures were found. Try a brighter photo with the figures separated and facing forward."))
                 return
             }
             monetization?.recordSuccessfulBulk(serverUsage: response.usage)
@@ -767,7 +773,7 @@ final class ScanStore {
             case .review(let detections, let timings, let usage):
                 let candidates = ScanReviewCandidate.make(from: detections)
                 guard !candidates.isEmpty else {
-                    phase = .failed("No minifigure match was found. Try a closer, brighter photo.")
+                    phase = .failed(BrickValLocalization.localized("No minifigure match was found. Try a closer, brighter photo."))
                     logResultTimings(timings, startedAt: startedAt)
                     submitFeedback(
                         outcome: .brickognizeRejected,
@@ -796,7 +802,7 @@ final class ScanStore {
                     properties: ["scan_type": ScanIntent.single.rawValue, "outcome": "needs_review"]
                 )
             case .notFound(let timings):
-                phase = .failed("No minifigure match was found. Try a closer, brighter photo.")
+                phase = .failed(BrickValLocalization.localized("No minifigure match was found. Try a closer, brighter photo."))
                 logResultTimings(timings, startedAt: startedAt)
                 submitFeedback(
                     outcome: .brickognizeRejected,
@@ -812,13 +818,13 @@ final class ScanStore {
 
         let identification = try await api.identify(image, mode, intent)
         guard !identification.detections.isEmpty || identification.setNumber != nil else {
-            phase = .failed("No match was found. Try a clearer photo.")
+            phase = .failed(BrickValLocalization.localized("No match was found. Try a clearer photo."))
             return
         }
 
         let identifier = identification.setNumber ?? identification.detections.first?.id
         guard let identifier else {
-            phase = .failed("The item could not be identified.")
+            phase = .failed(BrickValLocalization.localized("The item could not be identified."))
             return
         }
         let result = try await api.lookup(identifier, mode == .set ? .set : .minifig, nil)
@@ -829,6 +835,48 @@ final class ScanStore {
             PostHogEvent.scanCompleted,
             properties: ["scan_type": intent.rawValue, "outcome": "matched"]
         )
+    }
+
+    private func presentLockedBulkPreview(
+        imageData: Data,
+        bulkRegions: [BulkScanRegion],
+        bulkSource: BulkScanSource
+    ) async throws -> Bool {
+        var previewRegions = Array(bulkRegions.prefix(BulkScanSource.maximumRegionCount))
+        if previewRegions.isEmpty {
+            let detection = try await bulkPhotoDetector.detectBulkRegions(
+                in: imageData,
+                limit: BulkScanSource.maximumRegionCount
+            )
+            previewRegions = Array(detection.regions.prefix(BulkScanSource.maximumRegionCount))
+            detectorModelVersion = detection.modelVersion
+            detectorDetectionMilliseconds = detection.inferenceMilliseconds
+        }
+        guard !previewRegions.isEmpty else { return false }
+
+        frozenImageData = imageData
+        frozenBulkRegions = previewRegions
+        frozenBulkSource = bulkSource
+        bulkProcessingRegions = previewRegions.map(\.boundingBox)
+        bulkProcessingSource = bulkSource
+        bulkProcessingCompleted = 0
+        bulkProcessingTotal = previewRegions.count
+        phase = .review
+        presentedBulkResults = BulkScanPresentation(
+            imageData: imageData,
+            regions: previewRegions,
+            recoveryToken: nil,
+            source: bulkSource,
+            accessMode: .lockedPreview
+        )
+        analytics?.capture(
+            PostHogEvent.bulkPreviewStarted,
+            properties: [
+                "source": bulkSource == .photoLibrary ? "photo_library" : "camera",
+                "detected_count": previewRegions.count,
+            ]
+        )
+        return true
     }
 
     /// Resolves bulk regions in a bounded window while the results screen is visible.
@@ -850,7 +898,8 @@ final class ScanStore {
         await withTaskGroup(of: BulkRegionOutcome.self) { group in
             while nextIndex < presentation.regions.count || inFlight > 0 {
                 guard !Task.isCancelled,
-                      presentedBulkResults?.id == presentation.id
+                      presentedBulkResults?.id == presentation.id,
+                      presentation.accessMode == .real
                 else {
                     group.cancelAll()
                     return
@@ -914,7 +963,12 @@ final class ScanStore {
                         candidates: payload.candidates.map(\.normalized)
                     ))
                 case .failed(let region, let error):
-                    sawProLimit = sawProLimit || error?.isProLimit == true
+                    if let error {
+                        usage = usage ?? error.usage
+                        sawProLimit = sawProLimit || (
+                            error.isProLimit && error.feature == .bulkScan
+                        )
+                    }
                     presentation.markUnresolved(region.regionId)
                 }
             }
@@ -925,10 +979,26 @@ final class ScanStore {
         else { return }
 
         if sawProLimit {
-            presentation.terminalError = "You've reached the bulk scan limit. Upgrade to continue."
-            proLimitFeature = .bulkScan
+            monetization?.applyServerUsage(usage)
+            if !isProSubscriber,
+               monetization?.shouldUseLockedBulkPreview(isPro: false, serverLimit: true) == true {
+                presentation.enterLockedPreview()
+                bulkProcessingCompleted = 0
+                bulkProcessingTotal = presentation.regions.count
+                analytics?.capture(
+                    PostHogEvent.bulkPreviewStarted,
+                    properties: [
+                        "source": presentation.source == .photoLibrary ? "photo_library" : "camera",
+                        "detected_count": presentation.regions.count,
+                        "trigger": "server_limit",
+                    ]
+                )
+            } else {
+                presentation.terminalError = BrickValLocalization.localized("You've reached the bulk scan limit. Upgrade to continue.")
+                proLimitFeature = .bulkScan
+            }
         } else if presentation.successfulCount == 0 {
-            presentation.terminalError = "We couldn't identify any figures. Try a brighter photo with the figures separated and facing forward."
+            presentation.terminalError = BrickValLocalization.localized("We couldn't identify any figures. Try a brighter photo with the figures separated and facing forward.")
         } else {
             monetization?.recordSuccessfulBulk(serverUsage: usage)
             if monetization?.isSignedIn == true,
@@ -965,7 +1035,7 @@ final class ScanStore {
 
     private func disableSmartScan(message: String) {
         smartScanAvailable = false
-        smartScanMessage = "\(message) Tap the shutter to scan manually."
+        smartScanMessage = BrickValLocalization.localized("\(message) Tap the shutter to scan manually.")
         resetDetectionState()
         phase = .searching
     }
@@ -984,17 +1054,42 @@ final class ScanStore {
                         )
                         return
                     } catch {
-                        phase = .failed("We couldn't verify Pro access. Check your connection and try again.")
+                        phase = .failed(BrickValLocalization.localized("We couldn't verify Pro access. Check your connection and try again."))
                         return
                     }
                 }
-                phase = .failed("We couldn't verify Pro access. Check your connection and try again.")
+                phase = .failed(BrickValLocalization.localized("We couldn't verify Pro access. Check your connection and try again."))
                 return
             }
 
             monetization?.applyServerUsage(apiError.usage)
+            if apiError.feature == .bulkScan,
+               monetization?.shouldUseLockedBulkPreview(isPro: false, serverLimit: true) == true,
+               let frozenImageData {
+                do {
+                    if try await presentLockedBulkPreview(
+                        imageData: frozenImageData,
+                        bulkRegions: frozenBulkRegions,
+                        bulkSource: frozenBulkSource
+                    ) {
+                        return
+                    }
+                    phase = .failed(BrickValLocalization.localized("No minifigures were found. Try a brighter photo with the figures separated and facing forward."))
+                    analytics?.capture(
+                        PostHogEvent.bulkPreviewCompleted,
+                        properties: [
+                            "source": frozenBulkSource == .photoLibrary ? "photo_library" : "camera",
+                            "detected_count": 0,
+                            "outcome": "empty",
+                        ]
+                    )
+                    return
+                } catch {
+                    // Preserve the server-limit state when local detection cannot rebuild the preview.
+                }
+            }
             proLimitFeature = apiError.feature
-            phase = .failed(apiError.serverMessage ?? "You've reached the scan limit. Upgrade to continue.")
+            phase = .failed(apiError.localizedDescription)
             analytics?.capture(
                 PostHogEvent.scanBlocked,
                 properties: [

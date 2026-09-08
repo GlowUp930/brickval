@@ -29,12 +29,12 @@ struct LookupResult: Identifiable, Sendable {
             marketValueUSD: condition == .used ? pricing.preferredUsedValue : pricing.preferredNewValue,
             rrpUSD: pricing.rrpUSD,
             gainPercent: pricing.gainPercent,
-            dataSource: pricing.dataSource,
+            dataSource: pricing.source(for: condition),
             quantity: quantity,
             condition: condition,
             colorID: colorID,
             colorName: colorName,
-            marketHistory: marketHistory
+            marketHistory: condition == .newSealed ? marketHistory : []
         )
     }
 }

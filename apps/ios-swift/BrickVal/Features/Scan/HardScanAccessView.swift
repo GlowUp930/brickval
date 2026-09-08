@@ -73,7 +73,7 @@ struct HardScanAccessView: View {
                 coordinator?.dismissPaywallPresentationError()
             }
         } message: {
-            Text(coordinator?.paywallPresentationError ?? "Please try again.")
+            Text(coordinator?.paywallPresentationError ?? BrickValLocalization.localized("Something went wrong. Please try again in a moment."))
         }
         .task {
             reveal()
@@ -183,7 +183,7 @@ struct HardScanAccessView: View {
         }
     }
 
-    private func benefit(_ title: String, icon: String, isCompact: Bool) -> some View {
+    private func benefit(_ title: LocalizedStringResource, icon: String, isCompact: Bool) -> some View {
         Label {
             Text(title)
                 .font(.body.weight(.semibold))

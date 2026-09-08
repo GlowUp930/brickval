@@ -15,14 +15,14 @@ enum AvatarBackgroundPreference: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .accent: "App accent"
-        case .charcoal: "Charcoal"
-        case .green: "Green"
-        case .yellow: "Yellow"
-        case .blue: "Blue"
-        case .red: "Red"
-        case .lilac: "Lilac"
-        case .custom: "Custom"
+        case .accent: BrickValLocalization.localized("App accent")
+        case .charcoal: BrickValLocalization.localized("Charcoal")
+        case .green: BrickValLocalization.localized("Green")
+        case .yellow: BrickValLocalization.localized("Yellow")
+        case .blue: BrickValLocalization.localized("Blue")
+        case .red: BrickValLocalization.localized("Red")
+        case .lilac: BrickValLocalization.localized("Lilac")
+        case .custom: BrickValLocalization.localized("Custom")
         }
     }
 

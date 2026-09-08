@@ -87,9 +87,10 @@ function markStatusAsPro(status: MonetizationStatus): MonetizationStatus {
 }
 
 async function persistProStatus(userId: string, isPro: boolean): Promise<void> {
-  const { error } = await supabase
-    .from("users")
-    .upsert({ id: userId, is_pro: isPro }, { onConflict: "id" });
+  const { error } = await supabase.rpc("apply_subscription_entitlement", {
+    p_user_id: userId, p_provider: "revenuecat", p_active: isPro,
+    p_version_ms: Date.now(), p_event_id: `reconcile:${crypto.randomUUID()}`,
+  });
   if (error) throw error;
 }
 
@@ -99,7 +100,7 @@ export async function reconcileDeniedProStatus(
   verify: ProEntitlementVerifier = fetchRevenueCatProEntitlement,
   persist: ProStatusPersister = persistProStatus
 ): Promise<MonetizationStatus> {
-  if (status.usage.isPro) return status;
+  if (status.usage.isPro || userId.startsWith("guest:")) return status;
 
   try {
     const isPro = await verify(userId);
@@ -143,11 +144,12 @@ export async function getMonetizationStatus(
   if (!userId) return { policy, usage: emptyUsage(policy, false, now) };
 
   try {
-    const { data: user } = await supabase
+    const { data: user, error: userError } = await supabase
       .from("users")
       .select("is_pro, bulk_intro_grandfathered")
       .eq("id", userId)
       .maybeSingle();
+    if (userError) throw userError;
     const isPro = Boolean(user?.is_pro);
     const bulkLimit = user?.bulk_intro_grandfathered
       ? policy.limits.introductoryBulkScans
@@ -176,8 +178,8 @@ export async function getMonetizationStatus(
       },
     };
   } catch (error) {
-    console.warn("[scan-gate] Usage lookup failed; failing open.", error);
-    return { policy, usage: emptyUsage(policy, false, now) };
+    console.warn("[scan-gate] Usage lookup unavailable");
+    throw error;
   }
 }
 
@@ -237,6 +239,11 @@ export async function consumeFeatureUsage(
     const status = await getMonetizationStatus(userId, now);
     if (Boolean(data.allowed)) return { allowed: true, usage: status.usage };
 
+    const verified = userId.startsWith("guest:") ? false : await fetchRevenueCatProEntitlement(userId);
+    if (verified === null) throw new Error("Paid access could not be verified; credits preserved");
+    const repairedStatus = await reconcileDeniedProStatus(userId, status, async () => verified);
+    if (repairedStatus.usage.isPro) return { allowed: true, usage: repairedStatus.usage };
+
     // Consume the grandfathered introductory allowance first. Referral credits
     // are the fallback once the server confirms that allowance is exhausted.
     if (feature === "bulk_scan" && await consumeReferralBulkCredit(userId)) {
@@ -244,14 +251,40 @@ export async function consumeFeatureUsage(
       return { allowed: true, usage: updatedStatus.usage };
     }
 
-    const repairedStatus = await reconcileDeniedProStatus(userId, status);
-    return {
-      allowed: repairedStatus.usage.isPro,
-      usage: repairedStatus.usage,
-    };
+    return { allowed: false, usage: repairedStatus.usage };
   } catch (error) {
-    console.warn("[scan-gate] Usage consume failed; failing open.", error);
-    const status = await getMonetizationStatus(userId, now);
-    return { allowed: true, usage: status.usage };
+    console.warn("[scan-gate] Usage authorization unavailable");
+    throw error;
   }
+}
+
+/** Idempotent across region requests, retries, and lost responses. */
+export async function authorizeBulkScan(
+  userId: string, sessionToken: string, expiresAt: number,
+): Promise<UsageGateResult> {
+  const sessionHash = createHash("sha256").update(sessionToken).digest("hex");
+  const { data: decision, error: decisionError } = await supabase.from("bulk_scan_authorizations")
+    .select("allowed,user_id,expires_at").eq("session_hash", sessionHash).maybeSingle();
+  if (decisionError) throw decisionError;
+  const status = await getMonetizationStatus(userId);
+  if (decision) return {
+    allowed: decision.user_id === userId && Date.parse(decision.expires_at) > Date.now() && decision.allowed === true,
+    usage: status.usage,
+  };
+  if (!status.usage.isPro && !userId.startsWith("guest:")) {
+    const verified = await fetchRevenueCatProEntitlement(userId);
+    if (verified === null && await hasReferralBulkCredit(userId)) {
+      throw new Error("Paid access could not be verified; credits preserved");
+    }
+    if (verified === true) await persistProStatus(userId, true);
+  }
+  const { data, error } = await supabase.rpc("authorize_bulk_scan", {
+    p_user_id: userId,
+    p_session_hash: sessionHash,
+    p_free_limit: status.policy.gates.bulkRepeat ? status.policy.limits.introductoryBulkScans : 2147483647,
+    p_expires_at: new Date(expiresAt * 1000).toISOString(),
+  });
+  if (error || typeof data !== "boolean") throw error ?? new Error("Invalid authorization response");
+  const updated = await getMonetizationStatus(userId);
+  return { allowed: data, usage: updated.usage };
 }

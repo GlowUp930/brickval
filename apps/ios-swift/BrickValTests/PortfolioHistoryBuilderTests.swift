@@ -22,7 +22,7 @@ struct PortfolioHistoryBuilderTests {
         #expect(half.first == 10)
     }
 
-    @Test func fallbackPriceSeriesStillRespondsToTheSelectedHorizon() {
+    @Test func undatedPricesNeverInventHistoricalMovement() {
         let history = [
             MarketHistoryPoint(date: "Jan", priceUSD: 10, source: "test"),
             MarketHistoryPoint(date: "Feb", priceUSD: 20, source: "test"),
@@ -32,7 +32,8 @@ struct PortfolioHistoryBuilderTests {
         let month = PortfolioHistoryBuilder.priceSeries(from: history, horizon: .month, fallbackValue: 30)
         let half = PortfolioHistoryBuilder.priceSeries(from: history, horizon: .half, fallbackValue: 30)
 
-        #expect(month.map(\.value) != half.map(\.value))
+        #expect(month.isEmpty)
+        #expect(half.isEmpty)
     }
 
     private func fixture(history: [MarketHistoryPoint]) -> CollectionItem {

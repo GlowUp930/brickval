@@ -1,5 +1,6 @@
 import ImageIO
 import SwiftUI
+import UIKit
 
 actor ImageProcessor {
     func detectionSample(from data: Data, mode: DetectionSampleMode) throws -> Data {
@@ -68,9 +69,10 @@ actor ImageProcessor {
 
         for maximumDimension: CGFloat in [896, 720, 600] {
             let scale = min(1, maximumDimension / max(source.size.width, source.size.height))
-            let output = scale < 1
+            let resized = scale < 1
                 ? resize(source, to: CGSize(width: source.size.width * scale, height: source.size.height * scale))
                 : source
+            let output = padToSquare(resized)
             for quality in [0.72, 0.58, 0.44, 0.30] {
                 if let jpeg = output.jpegData(compressionQuality: quality), jpeg.count <= 300 * 1024 {
                     return jpeg
@@ -98,15 +100,16 @@ actor ImageProcessor {
 
         for maximumDimension: CGFloat in [1280, 1024, 896] {
             let scale = min(1, maximumDimension / max(source.size.width, source.size.height))
-            let output: UIImage
+            let resized: UIImage
             if scale < 1 {
-                output = resize(
+                resized = resize(
                     source,
                     to: CGSize(width: source.size.width * scale, height: source.size.height * scale)
                 )
             } else {
-                output = source
+                resized = source
             }
+            let output = padToSquare(resized)
             for quality in [0.80, 0.68, 0.55, 0.42] {
                 if let jpeg = output.jpegData(compressionQuality: quality), jpeg.count <= 500 * 1024 {
                     return jpeg
@@ -177,6 +180,28 @@ actor ImageProcessor {
     private func resize(_ image: UIImage, to size: CGSize) -> UIImage {
         renderer(size: size).image { _ in
             image.draw(in: CGRect(origin: .zero, size: size))
+        }
+    }
+
+    private func padToSquare(_ image: UIImage) -> UIImage {
+        let width = image.size.width
+        let height = image.size.height
+        guard width > 0, height > 0 else { return image }
+
+        let side = max(width, height)
+        guard abs(width - height) > 0.5 else { return image }
+
+        return renderer(size: CGSize(width: side, height: side)).image { context in
+            UIColor.black.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: side, height: side))
+            image.draw(
+                in: CGRect(
+                    x: (side - width) / 2,
+                    y: (side - height) / 2,
+                    width: width,
+                    height: height
+                )
+            )
         }
     }
 

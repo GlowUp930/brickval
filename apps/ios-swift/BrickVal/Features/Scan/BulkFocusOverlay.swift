@@ -17,11 +17,29 @@ struct BulkFocusRegion: Identifiable, Sendable {
     let state: BulkFocusState
 }
 
-struct BulkFocusCallout: Equatable, Sendable {
+struct BulkFocusCallout: Identifiable, Equatable, Sendable {
+    let id: String
     let box: NormalizedBoundingBox
     let text: String
+    let accessibilityText: String?
     let isLoading: Bool
     let isUnavailable: Bool
+
+    init(
+        id: String = "bulk-focus-callout",
+        box: NormalizedBoundingBox,
+        text: String,
+        accessibilityText: String? = nil,
+        isLoading: Bool,
+        isUnavailable: Bool
+    ) {
+        self.id = id
+        self.box = box
+        self.text = text
+        self.accessibilityText = accessibilityText
+        self.isLoading = isLoading
+        self.isUnavailable = isUnavailable
+    }
 }
 
 struct BulkFocusOverlay: View, Animatable {
@@ -32,6 +50,7 @@ struct BulkFocusOverlay: View, Animatable {
     let isScanning: Bool
     var beamProgress: Double?
     let callout: BulkFocusCallout?
+    let persistentCallouts: [BulkFocusCallout]
 
     init(
         regions: [BulkFocusRegion],
@@ -40,7 +59,8 @@ struct BulkFocusOverlay: View, Animatable {
         accent: Color,
         isScanning: Bool = false,
         beamProgress: Double? = nil,
-        callout: BulkFocusCallout? = nil
+        callout: BulkFocusCallout? = nil,
+        persistentCallouts: [BulkFocusCallout] = []
     ) {
         self.regions = regions
         self.imageRect = imageRect
@@ -49,6 +69,7 @@ struct BulkFocusOverlay: View, Animatable {
         self.isScanning = isScanning
         self.beamProgress = beamProgress
         self.callout = callout
+        self.persistentCallouts = persistentCallouts
     }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -60,54 +81,60 @@ struct BulkFocusOverlay: View, Animatable {
 
     @ViewBuilder
     var body: some View {
-        if regions.isEmpty {
+        if regions.isEmpty && persistentCallouts.isEmpty && callout == nil {
             Color.clear
         } else {
             ZStack {
-                Color.black.opacity(0.70)
-                    .mask {
-                        ZStack {
-                            Rectangle().fill(.white)
-                            ForEach(regions) { region in
-                                if let box = region.box {
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(.black.opacity(maskOpacity(for: displayedState(for: region))))
-                                        .frame(width: box.width * imageRect.width, height: box.height * imageRect.height)
-                                        .position(
-                                            x: imageRect.minX + (box.x + box.width / 2) * imageRect.width,
-                                            y: imageRect.minY + (box.y + box.height / 2) * imageRect.height
-                                        )
+                if !regions.isEmpty {
+                    Color.black.opacity(0.70)
+                        .mask {
+                            ZStack {
+                                Rectangle().fill(.white)
+                                ForEach(regions) { region in
+                                    if let box = region.box {
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(.black.opacity(maskOpacity(for: displayedState(for: region))))
+                                            .frame(width: box.width * imageRect.width, height: box.height * imageRect.height)
+                                            .position(
+                                                x: imageRect.minX + (box.x + box.width / 2) * imageRect.width,
+                                                y: imageRect.minY + (box.y + box.height / 2) * imageRect.height
+                                            )
+                                    }
                                 }
                             }
                         }
+
+                    if isScanning, let beamProgress, !reduceMotion {
+                        scanBeam(at: beamProgress)
                     }
 
-                if isScanning, let beamProgress, !reduceMotion {
-                    scanBeam(at: beamProgress)
+                    ForEach(regions) { region in
+                        if let box = region.box {
+                            let state = displayedState(for: region)
+                            let rect = CGRect(
+                                x: imageRect.minX + box.x * imageRect.width,
+                                y: imageRect.minY + box.y * imageRect.height,
+                                width: box.width * imageRect.width,
+                                height: box.height * imageRect.height
+                            )
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(
+                                    strokeColor(for: state),
+                                    lineWidth: state == .active || state == .topFind ? 3 : 1.5
+                                )
+                                .frame(width: rect.width, height: rect.height)
+                                .position(x: rect.midX, y: rect.midY)
+                            numberBadge(region.number, state: state)
+                                .position(
+                                    x: min(max(rect.midX, 18), containerSize.width - 18),
+                                    y: max(rect.minY, 18)
+                            )
+                        }
+                    }
                 }
 
-                ForEach(regions) { region in
-                    if let box = region.box {
-                        let state = displayedState(for: region)
-                        let rect = CGRect(
-                            x: imageRect.minX + box.x * imageRect.width,
-                            y: imageRect.minY + box.y * imageRect.height,
-                            width: box.width * imageRect.width,
-                            height: box.height * imageRect.height
-                        )
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(
-                                strokeColor(for: state),
-                                lineWidth: state == .active || state == .topFind ? 3 : 1.5
-                            )
-                            .frame(width: rect.width, height: rect.height)
-                            .position(x: rect.midX, y: rect.midY)
-                        numberBadge(region.number, state: state)
-                            .position(
-                                x: min(max(rect.midX, 18), containerSize.width - 18),
-                                y: max(rect.minY, 18)
-                            )
-                    }
+                ForEach(persistentCallouts) { persistentCallout in
+                    priceCallout(persistentCallout)
                 }
 
                 if let callout {
@@ -115,7 +142,8 @@ struct BulkFocusOverlay: View, Animatable {
                 }
             }
             .allowsHitTesting(false)
-            .accessibilityHidden(true)
+            .accessibilityElement(children: .contain)
+            .accessibilityHidden(persistentCallouts.isEmpty && callout == nil)
         }
     }
 
@@ -206,6 +234,7 @@ struct BulkFocusOverlay: View, Animatable {
         let rect = imageBox(callout.box)
         let isNearTop = rect.minY < imageRect.minY + 38
         let y = isNearTop ? rect.maxY + 16 : rect.minY - 16
+        let spokenPrice = callout.accessibilityText ?? callout.text
         return Group {
             if callout.isLoading {
                 HStack(spacing: 7) {
@@ -233,6 +262,14 @@ struct BulkFocusOverlay: View, Animatable {
             x: min(max(rect.midX, 58), containerSize.width - 58),
             y: min(max(y, 22), containerSize.height - 22)
         )
+        .accessibilityLabel(
+            callout.isLoading
+                ? "Checking price"
+                : callout.isUnavailable
+                    ? "Price unavailable"
+                    : "Price \(spokenPrice)"
+        )
+        .accessibilityIdentifier("bulkResults.priceCallout.\(callout.id)")
         .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.88)))
         .animation(reduceMotion ? nil : .easeOut(duration: 0.22), value: callout)
     }

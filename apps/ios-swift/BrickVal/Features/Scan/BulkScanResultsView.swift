@@ -54,7 +54,11 @@ struct BulkScanResultsView: View {
     @Environment(MonetizationStore.self) private var monetization
     @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.brickValAccent) private var accent
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(PreferencesStore.self) private var preferences
+    @Environment(CurrencyStore.self) private var currency
 
     @Namespace private var photoStageNamespace
 
@@ -117,7 +121,13 @@ struct BulkScanResultsView: View {
                 lockedPreviewLayout
                     .zIndex(1)
             } else {
-                reviewLayout
+                Group {
+                    if dynamicTypeSize.isAccessibilitySize {
+                        ScrollView { reviewLayout }
+                    } else {
+                        reviewLayout
+                    }
+                }
                     .opacity(isImmersiveReveal ? 0 : 1)
                     .allowsHitTesting(!isImmersiveReveal && reviewInteractionReady)
                     .accessibilityHidden(isImmersiveReveal || !reviewInteractionReady)
@@ -139,7 +149,7 @@ struct BulkScanResultsView: View {
             correctionRequestID += 1
             store.reset()
         }
-        .task {
+        .task(id: "\(presentation.id.uuidString)-\(presentation.accessMode.rawValue)") {
             await runRevealProgressively()
         }
         .task(id: presentation.id) {
@@ -188,7 +198,7 @@ struct BulkScanResultsView: View {
         .alert("Could not add items", isPresented: errorBinding) {
             Button("OK", role: .cancel) { errorMessage = nil }
         } message: {
-            Text(errorMessage ?? "Please try again.")
+            Text(errorMessage ?? BrickValLocalization.localized("Something went wrong. Please try again in a moment."))
         }
     }
 
@@ -204,9 +214,16 @@ struct BulkScanResultsView: View {
                     .padding(.vertical, 10)
                     .background(.orange.opacity(0.12), in: .rect(cornerRadius: 12))
             }
-            reviewPhotoStage
-                .frame(maxWidth: .infinity, minHeight: 360, maxHeight: 620)
-            .layoutPriority(1)
+            if dynamicTypeSize.isAccessibilitySize {
+                photoResults(immersive: true, showsAnalysis: false)
+                    .frame(height: 300)
+                summaryPill
+                resultCarousel
+            } else {
+                reviewPhotoStage
+                    .frame(maxWidth: .infinity, minHeight: 360, maxHeight: 620)
+                    .layoutPriority(1)
+            }
             actionButtons
         }
         .padding(.horizontal, 16)
@@ -220,7 +237,7 @@ struct BulkScanResultsView: View {
 
             Button("Close", systemImage: "xmark", action: close)
                 .labelStyle(.iconOnly)
-                .font(.title3.bold())
+                .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(.white)
                 .frame(width: 46, height: 46)
                 .background(BrickValStyle.ScanResult.surface.opacity(0.88), in: .circle)
@@ -239,9 +256,22 @@ struct BulkScanResultsView: View {
         ZStack(alignment: .topTrailing) {
             photoResults(immersive: true)
 
+            VStack(spacing: 10) {
+                Spacer(minLength: 0)
+                if !isPreviewOfferVisible {
+                    lockedPreviewProgress
+                }
+                lockedPreviewPlaceholderRail
+                if isPreviewOfferVisible {
+                    lockedPreviewOffer
+                        .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
             Button("Close", systemImage: "xmark", action: close)
                 .labelStyle(.iconOnly)
-                .font(.title3.bold())
+                .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(.white)
                 .frame(width: 46, height: 46)
                 .background(BrickValStyle.ScanResult.surface.opacity(0.88), in: .circle)
@@ -252,18 +282,96 @@ struct BulkScanResultsView: View {
                 .disabled(isSaving)
                 .accessibilityHint("Closes this preview without saving the photo")
 
-            if isPreviewOfferVisible {
-                VStack {
-                    Spacer()
-                    lockedPreviewOffer
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
-            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.black)
         .accessibilityIdentifier("bulkPreview.locked")
+    }
+
+    private var lockedPreviewProgress: some View {
+        HStack(spacing: 8) {
+            ProgressView()
+                .tint(accent)
+                .accessibilityHidden(true)
+            Text(revealStatusTitle ?? BrickValLocalization.localized("Scanning"))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .padding(.horizontal, 14)
+        .frame(minHeight: 42)
+        .background(.black.opacity(0.78), in: .capsule)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Bulk scan preview progress")
+        .accessibilityValue(
+            "\(revealSession.revealedCount) of \(presentation.regions.count) locked placeholders revealed"
+        )
+        .accessibilityIdentifier("bulkPreview.progress")
+    }
+
+    @ViewBuilder
+    private var lockedPreviewPlaceholderRail: some View {
+        let entries = Array(revealSession.revealedEntries)
+        if !entries.isEmpty {
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 8) {
+                    ForEach(entries) { entry in
+                        lockedPreviewPlaceholderCard(entry)
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+            .scrollIndicators(.hidden)
+            .frame(height: 94)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: revealSession.revealedCount)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Locked bulk scan results")
+            .accessibilityValue(
+                "\(entries.count) of \(presentation.regions.count) detected figures shown as placeholders"
+            )
+            .accessibilityIdentifier("bulkPreview.placeholderRail")
+        }
+    }
+
+    private func lockedPreviewPlaceholderCard(_ entry: BulkRevealEntry) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Image(systemName: "lock.fill")
+                    .font(.caption2.weight(.bold))
+                Text("FIGURE \(entry.spatialNumber)")
+                    .font(.caption2.weight(.bold).monospacedDigit())
+            }
+            .foregroundStyle(accent)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("IDENTITY")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.56))
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(.white.opacity(0.7))
+                    .frame(width: 82, height: 7)
+                    .blur(radius: 2.5)
+                Text("PRICE")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.56))
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(accent.opacity(0.82))
+                    .frame(width: 54, height: 7)
+                    .blur(radius: 2.5)
+            }
+        }
+        .padding(10)
+        .frame(width: 132, height: 86, alignment: .leading)
+        .background(.black.opacity(0.86), in: .rect(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(accent.opacity(0.42), lineWidth: 1)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Locked figure \(entry.spatialNumber) placeholder")
+        .accessibilityValue("Identity and price hidden")
+        .accessibilityIdentifier("bulkPreview.placeholderCard.\(entry.id)")
     }
 
     private var lockedPreviewOffer: some View {
@@ -282,32 +390,43 @@ struct BulkScanResultsView: View {
                     dismissPreviewForRescan()
                 } ?? false
                 if !presented {
-                    errorMessage = "Upgrade options are temporarily unavailable. Try again shortly."
+                    errorMessage = BrickValLocalization.localized("Upgrade options are temporarily unavailable. Try again shortly.")
                 }
             } label: {
-                Text("Subscribe to unlock")
+                Text("Upgrade")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .frame(maxWidth: .infinity, minHeight: 52)
                     .background(accent, in: .capsule)
             }
             .buttonStyle(.plain)
             .accessibilityHint("Opens the BrickVal Pro subscription paywall")
+            .accessibilityIdentifier("bulkPreview.upgrade")
 
             Button {
                 coordinator?.analytics.capture(PostHogEvent.bulkPreviewReferralTapped)
                 showReferral = true
             } label: {
-                Label("Invite 3 friends", systemImage: "person.2")
+                Label("Refer", systemImage: "person.2")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
             .buttonStyle(.bordered)
             .tint(.white)
+            .accessibilityHint("Opens Invite Friends to earn bulk scan credits")
+            .accessibilityIdentifier("bulkPreview.refer")
         }
         .padding(16)
-        .background(.ultraThinMaterial, in: .rect(cornerRadius: 18))
+        .background {
+            if reduceTransparency {
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(BrickValStyle.ScanResult.surface)
+            } else {
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(.ultraThinMaterial)
+            }
+        }
         .overlay { RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.18)) }
         .padding(.horizontal, 16)
         .safeAreaPadding(.bottom, 18)
@@ -340,27 +459,29 @@ struct BulkScanResultsView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            Image(systemName: "viewfinder")
-                .font(.title3.bold())
-                .foregroundStyle(.black)
-                .frame(width: 38, height: 38)
-                .background(accent, in: .rect(cornerRadius: 9))
-                .accessibilityHidden(true)
-            Text("BrickVal")
-                .font(.title2.bold())
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
-            Text("Bulk scan")
-                .font(.headline)
-                .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+            Image("OnboardingLogo")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 34, height: 34)
+                .clipShape(.rect(cornerRadius: 9))
+                .accessibilityLabel("BrickValue app icon")
+                .accessibilityIdentifier("bulkResults.appIcon")
+            (dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout(spacing: 10))) {
+                Text("BrickValue")
+                    .font(.system(size: 20, weight: .bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+                Text("Bulk scan")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+            }
             Spacer(minLength: 8)
             Button {
                 sharePayload = makeSharePayload()
             } label: {
                 Image(systemName: "square.and.arrow.up")
-                    .font(.title3.bold())
+                    .font(.system(size: 22, weight: .bold))
             }
             .foregroundStyle(.white)
             .frame(width: 46, height: 46)
@@ -370,7 +491,7 @@ struct BulkScanResultsView: View {
             .accessibilityHint("Creates a shareable value card with the scan photo")
             Button("Close", systemImage: "xmark", action: close)
                 .labelStyle(.iconOnly)
-                .font(.title3.bold())
+                .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(.white)
                 .frame(width: 46, height: 46)
                 .background(BrickValStyle.ScanResult.surface, in: .circle)
@@ -383,7 +504,10 @@ struct BulkScanResultsView: View {
     private func photoResults(immersive: Bool, showsAnalysis: Bool = true) -> some View {
         if let capturedImage {
             GeometryReader { proxy in
-                let imageRect = aspectFitRect(imageSize: capturedImage.size, containerSize: proxy.size)
+                let imageRect = BulkImageLayout.aspectFitRect(
+                    imageSize: capturedImage.size,
+                    containerSize: proxy.size
+                )
                 ZStack {
                     Image(uiImage: capturedImage)
                         .resizable()
@@ -402,6 +526,13 @@ struct BulkScanResultsView: View {
                             EmptyView()
                         } else if presentationPhase == .completedReview {
                             completedDetectionOverlays(imageRect: imageRect)
+                            BulkFocusOverlay(
+                                regions: [],
+                                imageRect: imageRect,
+                                containerSize: proxy.size,
+                                accent: accent,
+                                persistentCallouts: completedPriceCallouts
+                            )
                         } else if presentation.accessMode == .lockedPreview {
                             BulkFocusOverlay(
                                 regions: revealFocusRegions,
@@ -535,22 +666,35 @@ struct BulkScanResultsView: View {
     }
 
     private var summaryPill: some View {
-        HStack(spacing: 9) {
-            Text(selectedTotal, format: .currency(code: "USD"))
-                .foregroundStyle(accent)
-            Text("·")
-                .foregroundStyle(.gray)
+        (dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10)) : AnyLayout(HStackLayout(spacing: 16))) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Lot value")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color(white: 0.28))
+                BrickValCurrencyText(selectedTotal)
+                    .font(.title3.bold())
+                    .foregroundStyle(Color(red: 0, green: 0.38, blue: 0.02))
+                    .monospacedDigit()
+            }
+
+            Spacer(minLength: 8)
+
             Text("\(identifiedCount) identified")
-                .foregroundStyle(.gray)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color(white: 0.28))
+                .multilineTextAlignment(.trailing)
+                .lineLimit(nil)
+                .minimumScaleFactor(0.8)
         }
-        .font(.title3.bold())
-        .padding(.horizontal, 20)
-        .frame(minHeight: 54)
-        .background(.white, in: .capsule)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
+        .frame(minHeight: 64)
+        .background(.white, in: .rect(cornerRadius: 24))
+        .environment(\.colorScheme, .light)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("bulkResults.summary")
         .accessibilityLabel("Identified value")
-        .accessibilityValue("\(selectedTotal.formatted(.currency(code: "USD"))), \(identifiedCount) identified")
+        .accessibilityValue("\(currency.formattedWithCode(selectedTotal, to: preferences.effectiveCurrency, locale: BrickValLocalization.effectiveLanguage.locale)), \(identifiedCount) identified")
     }
 
     private var resultCarousel: some View {
@@ -565,7 +709,7 @@ struct BulkScanResultsView: View {
                 }
             }
             .scrollIndicators(.hidden)
-            .frame(height: 124)
+            .frame(height: dynamicTypeSize.isAccessibilitySize ? 350 : 124)
             .onChange(of: focusedResultID) { _, id in
                 guard let id else { return }
                 Task { @MainActor in
@@ -582,6 +726,8 @@ struct BulkScanResultsView: View {
         let item = state.wrappedValue.item
         let isSelected = state.wrappedValue.isSelected
         let condition = state.wrappedValue.condition
+        let sourceTitle = MarketPriceSourceCopy.title(for: item.result.pricing.source(for: condition))
+        let sourceDetail = MarketPriceSourceCopy.detail(for: item.result.pricing.source(for: condition))
         return HStack(spacing: 7) {
             Button {
                 withAnimation(.easeOut(duration: 0.16)) {
@@ -626,19 +772,26 @@ struct BulkScanResultsView: View {
 
                         Group {
                             if let price = price(for: item) {
-                                Text(price, format: .currency(code: "USD"))
+                                BrickValCurrencyText(price, showsCurrencyCode: false)
                             } else {
                                 Text("Price unavailable")
                             }
                         }
                         .font(.caption.bold().monospacedDigit())
                         .foregroundStyle(isSelected ? accent : .gray)
+
+                        Text(sourceTitle)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.62))
+                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+                            .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.62)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.white)
                 .accessibilityLabel("Change match for \(item.result.name)")
+                .accessibilityValue("\(sourceTitle). \(sourceDetail)")
                 .accessibilityHint("Shows possible matches for this figure")
 
                 conditionControl(state: state, selection: condition)
@@ -648,7 +801,8 @@ struct BulkScanResultsView: View {
         .padding(8)
         .background(.black.opacity(0.72), in: .rect(cornerRadius: 12))
         .opacity(isSelected ? 1 : 0.72)
-        .frame(width: 154, height: 96)
+        .frame(width: dynamicTypeSize.isAccessibilitySize ? 300 : 154)
+        .frame(minHeight: dynamicTypeSize.isAccessibilitySize ? 280 : 96)
     }
 
     private func conditionControl(state: Binding<BulkScanItemState>, selection: CollectionCondition) -> some View {
@@ -661,7 +815,7 @@ struct BulkScanResultsView: View {
     }
 
     private func conditionButton(
-        _ title: String,
+        _ title: LocalizedStringResource,
         condition: CollectionCondition,
         state: Binding<BulkScanItemState>,
         selection: CollectionCondition
@@ -673,7 +827,7 @@ struct BulkScanResultsView: View {
         .foregroundStyle(selection == condition ? .black : BrickValStyle.ScanResult.textSecondary)
         .frame(maxWidth: .infinity, minHeight: 44)
         .background(selection == condition ? accent : .clear, in: .capsule)
-        .accessibilityLabel("\(title) condition")
+        .accessibilityLabel(BrickValLocalization.localized("\(BrickValLocalization.localized(title)) condition"))
         .accessibilityAddTraits(selection == condition ? .isSelected : [])
     }
 
@@ -727,20 +881,6 @@ struct BulkScanResultsView: View {
         )
     }
 
-    private func aspectFitRect(imageSize: CGSize, containerSize: CGSize) -> CGRect {
-        guard imageSize.width > 0, imageSize.height > 0 else {
-            return CGRect(origin: .zero, size: containerSize)
-        }
-        let scale = min(containerSize.width / imageSize.width, containerSize.height / imageSize.height)
-        let renderedSize = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
-        return CGRect(
-            x: (containerSize.width - renderedSize.width) / 2,
-            y: (containerSize.height - renderedSize.height) / 2,
-            width: renderedSize.width,
-            height: renderedSize.height
-        )
-    }
-
     private var actionButtons: some View {
         Button(action: saveSelected) {
             Label(
@@ -748,6 +888,10 @@ struct BulkScanResultsView: View {
                 systemImage: isSaving ? "hourglass" : "plus.circle.fill"
             )
             .font(.headline)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
             .frame(maxWidth: .infinity, minHeight: 58)
             .background(accent, in: .rect(cornerRadius: 14))
             .foregroundStyle(.black)
@@ -817,12 +961,41 @@ struct BulkScanResultsView: View {
 
         let isLoading = !entry.isTerminal || entry.isLoading
         let price = entry.value(for: revealSession.condition)
+        let visibleText = price.map {
+            currency.formatted($0, to: preferences.effectiveCurrency, locale: BrickValLocalization.effectiveLanguage.locale)
+        } ?? BrickValLocalization.localized("Price unavailable")
+        let spokenText = price.map {
+            currency.formattedWithCode($0, to: preferences.effectiveCurrency, locale: BrickValLocalization.effectiveLanguage.locale)
+        }
         return BulkFocusCallout(
+            id: entry.id,
             box: box,
-            text: isLoading ? "Checking price" : price?.formatted(.currency(code: "USD")) ?? "Price unavailable",
+            text: isLoading ? BrickValLocalization.localized("Checking price") : visibleText,
+            accessibilityText: isLoading ? nil : spokenText,
             isLoading: isLoading,
             isUnavailable: price == nil
         )
+    }
+
+    private var completedPriceCallouts: [BulkFocusCallout] {
+        revealSession.entries.compactMap { entry in
+            guard entry.isResolved, let box = entry.boundingBox else { return nil }
+            let price = entry.value(for: revealSession.condition)
+            let visibleText = price.map {
+                currency.formatted($0, to: preferences.effectiveCurrency, locale: BrickValLocalization.effectiveLanguage.locale)
+            } ?? BrickValLocalization.localized("Price unavailable")
+            let spokenText = price.map {
+                currency.formattedWithCode($0, to: preferences.effectiveCurrency, locale: BrickValLocalization.effectiveLanguage.locale)
+            }
+            return BulkFocusCallout(
+                id: entry.id,
+                box: box,
+                text: visibleText,
+                accessibilityText: spokenText,
+                isLoading: false,
+                isUnavailable: price == nil
+            )
+        }
     }
 
     private var valueTransferEntry: BulkRevealEntry? {
@@ -833,23 +1006,23 @@ struct BulkScanResultsView: View {
     private var revealStatusTitle: String? {
         if revealStage == .scanning {
             return presentation.accessMode == .lockedPreview
-                ? "\(presentation.regions.count) figures found"
-                : "Scanning your lot"
+                ? BrickValLocalization.localized("\(presentation.regions.count) figures found")
+                : BrickValLocalization.localized("Scanning your lot")
         }
         if presentation.accessMode == .lockedPreview {
-            return isPreviewOfferVisible ? nil : "Preparing your preview"
+            return isPreviewOfferVisible ? nil : BrickValLocalization.localized("Preparing your preview")
         }
         guard let entry = revealSession.currentEntry else { return nil }
         if revealStage == .waiting || !entry.isTerminal {
-            return "Checking figure \(entry.spatialNumber) of \(revealSession.entries.count)"
+            return BrickValLocalization.localized("Checking figure \(entry.spatialNumber) of \(revealSession.entries.count)")
         }
         if revealStage == .transferringValue {
-            return "Adding figure \(entry.spatialNumber) of \(revealSession.entries.count)"
+            return BrickValLocalization.localized("Adding figure \(entry.spatialNumber) of \(revealSession.entries.count)")
         }
         if entry.isTerminal {
-            return "Figure \(entry.spatialNumber) of \(revealSession.entries.count)"
+            return BrickValLocalization.localized("Figure \(entry.spatialNumber) of \(revealSession.entries.count)")
         }
-        return "Checking figure \(entry.spatialNumber) of \(revealSession.entries.count)"
+        return BrickValLocalization.localized("Checking figure \(entry.spatialNumber) of \(revealSession.entries.count)")
     }
 
     private func runRevealProgressively() async {
@@ -1078,12 +1251,23 @@ struct BulkScanResultsView: View {
         guard !entries.isEmpty else { return nil }
         let cropBox = BulkShareCropper.cropBox(for: entries.compactMap(\.boundingBox))
         let photo = BulkShareCropper.crop(capturedImage, to: cropBox) ?? capturedImage
+        let selectedSources = itemStates
+            .filter(\.isSelected)
+            .map { $0.item.result.pricing.dataSource }
+        let sharedSource: String? = {
+            guard let first = selectedSources.first,
+                  first != nil,
+                  selectedSources.allSatisfy({ $0 == first })
+            else { return nil }
+            return first
+        }()
+        let pricingSourceTitle = MarketPriceSourceCopy.title(for: sharedSource)
         return BulkSharePayload(
             photo: photo,
             cropBox: cropBox,
             entries: entries,
             conditionTitle: shareConditionTitle,
-            pricingSourceTitle: "Sold-market data",
+            pricingSourceTitle: pricingSourceTitle,
             unresolvedCount: unresolvedRegions.count
         )
     }
@@ -1101,10 +1285,10 @@ struct BulkScanResultsView: View {
 
     private var shareConditionTitle: String {
         let selectedConditions = itemStates.filter(\.isSelected).map(\.condition)
-        guard let first = selectedConditions.first else { return "Used" }
+        guard let first = selectedConditions.first else { return BrickValLocalization.localized("Used") }
         return selectedConditions.allSatisfy { $0 == first }
-            ? (first == .used ? "Used" : "New / sealed")
-            : "Mixed conditions"
+            ? (first == .used ? BrickValLocalization.localized("Used") : BrickValLocalization.localized("New / sealed"))
+            : BrickValLocalization.localized("Mixed conditions")
     }
 
     private var errorBinding: Binding<Bool> {
@@ -1147,7 +1331,7 @@ struct BulkScanResultsView: View {
                     saveSelected()
                 } ?? false
                 if !presented {
-                    errorMessage = "Upgrade options are temporarily unavailable. Try again shortly."
+                    errorMessage = BrickValLocalization.localized("Upgrade options are temporarily unavailable. Try again shortly.")
                 }
             } catch {
                 errorMessage = error.localizedDescription
@@ -1170,16 +1354,17 @@ struct BulkScanResultsView: View {
 
     private func matchTargetLabel(for regionID: String) -> String {
         guard presentation.regions.contains(where: { $0.regionId == regionID }) else {
-            return "Detected figure"
+            return BrickValLocalization.localized("Detected figure")
         }
         let number = revealSession.entries.first(where: { $0.id == regionID })?.spatialNumber
+        let numberText = number.map(String.init) ?? ""
         switch presentation.regionStates[regionID] {
         case .resolved(let item):
-            return "Figure \(number.map(String.init) ?? ""), \(item.result.name)"
+            return BrickValLocalization.localized("Figure \(numberText), \(item.result.name)")
         case .unresolved:
-            return "Figure \(number.map(String.init) ?? ""), unidentified"
+            return BrickValLocalization.localized("Figure \(numberText), unidentified")
         case .pending, .loading, .none:
-            return "Detected figure \(number.map(String.init) ?? "")"
+            return BrickValLocalization.localized("Detected figure \(numberText)")
         }
     }
 
@@ -1248,11 +1433,11 @@ struct BulkScanResultsView: View {
         } catch is CancellationError {
             return []
         } catch let error as APIError where error.statusCode == 401 {
-            errorMessage = "This scan’s correction link has expired. Retake the photo to try again."
+            errorMessage = BrickValLocalization.localized("This scan’s correction link has expired. Retake the photo to try again.")
             Self.correctionLogger.info("bulk_match_retry outcome=expired")
             return []
         } catch {
-            errorMessage = "Couldn’t check this figure. Check your connection and try again."
+            errorMessage = BrickValLocalization.localized("Couldn’t check this figure. Check your connection and try again.")
             Self.correctionLogger.info("bulk_match_retry outcome=unavailable")
             return []
         }
@@ -1320,6 +1505,8 @@ private struct BulkMatchTarget: Identifiable {
 private struct BulkMatchCorrectionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(PreferencesStore.self) private var preferences
+    @Environment(CurrencyStore.self) private var currency
 
     let target: BulkMatchTarget
     let accent: Color
@@ -1471,7 +1658,7 @@ private struct BulkMatchCorrectionSheet: View {
                         .font(.caption.bold().monospacedDigit())
                         .foregroundStyle(.secondary)
                     if let price = candidate.result.pricing.preferredUsedValue {
-                        Text(price, format: .currency(code: "USD"))
+                        BrickValCurrencyText(price, showsCurrencyCode: false)
                             .font(.caption.bold().monospacedDigit())
                             .foregroundStyle(accent)
                     } else {

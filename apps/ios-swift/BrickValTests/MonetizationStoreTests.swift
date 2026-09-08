@@ -14,7 +14,8 @@ struct MonetizationStoreTests {
 
         let store = MonetizationStore(defaults: context.defaults)
 
-        #expect(store.policy.version == 5)
+        #expect(store.policy.version == 6)
+        #expect(store.policy.lockedBulkPreview)
         #expect(store.policy.gates.singleDaily)
         #expect(store.scanReminder(isPro: false) == "3 free scans left today")
     }
@@ -24,6 +25,17 @@ struct MonetizationStoreTests {
         let store = MonetizationStore(defaults: context.defaults)
 
         #expect(store.policy.gates.offerCodes)
+    }
+
+    @Test func bundledPolicyShowsLockedPreviewToNewSoftUsers() {
+        let context = context()
+        let store = MonetizationStore(defaults: context.defaults)
+
+        store.enrollNewUserIfNeeded(seed: 50)
+
+        #expect(store.accessCohort == .experimentSoft)
+        #expect(store.policy.lockedBulkPreview)
+        #expect(store.shouldUseLockedBulkPreview(isPro: false))
     }
 
     @Test func olderCachedPolicyWithoutOfferCodeFlagRemainsReadable() throws {
@@ -64,7 +76,8 @@ struct MonetizationStoreTests {
 
         let store = MonetizationStore(defaults: context.defaults)
 
-        #expect(store.policy.version == 5)
+        #expect(store.policy.version == 6)
+        #expect(store.policy.lockedBulkPreview)
         #expect(store.policy.gates.singleDaily)
         #expect(store.policy.gates.offerCodes)
     }
@@ -151,13 +164,14 @@ struct MonetizationStoreTests {
         #expect(secondStore.usage.singleScan.remaining == 3)
     }
 
-    @Test func anonymousBulkAllowanceIsConsumedOnceAfterSuccess() {
+    @Test func anonymousBulkAllowanceFallsBackToLockedPreviewAfterSuccess() {
         let context = context()
         let store = MonetizationStore(defaults: context.defaults)
 
         #expect(store.canUseBulk(isPro: false))
         store.recordSuccessfulBulk(serverUsage: nil)
-        #expect(store.canUseBulk(isPro: false) == false)
+        #expect(store.shouldUseLockedBulkPreview(isPro: false))
+        #expect(store.canUseBulk(isPro: false))
         #expect(store.canUseBulk(isPro: true))
     }
 
@@ -234,6 +248,22 @@ struct MonetizationStoreTests {
         #expect(store.usage.bulkScan.limit == 1)
         #expect(store.usage.bulkScan.remaining == 1)
         #expect(store.shouldUseLockedBulkPreview(isPro: false) == false)
+    }
+
+    @Test func existingFreeUserWithNoBulkCreditsUsesLockedPreview() {
+        let context = context()
+        context.defaults.set(true, forKey: "has_completed_onboarding")
+
+        let store = MonetizationStore(defaults: context.defaults, initialPolicy: .phaseOne)
+        store.applyServerUsage(UsageSnapshot(
+            isPro: false,
+            singleScan: UsageCounter(used: 0, limit: 3, remaining: 3, resetsAt: nil),
+            bulkScan: UsageCounter(used: 1, limit: 1, remaining: 0, resetsAt: nil)
+        ))
+
+        #expect(store.accessCohort == .legacySoft)
+        #expect(store.shouldUseLockedBulkPreview(isPro: false))
+        #expect(store.canUseBulk(isPro: false))
     }
 
     @Test func signedInExistingUserSyncsUnusedIntroductoryCredit() async {

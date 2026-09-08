@@ -25,7 +25,7 @@ export async function getBricksetRrp(setNumber: string): Promise<number | null> 
     const params = JSON.stringify({ setNumber: `${setNumber}-1`, pageSize: 1 });
     const url = `${API_BASE}/getSets?apiKey=${encodeURIComponent(apiKey)}&userHash=&params=${encodeURIComponent(params)}`;
 
-    const res = await fetch(url, { next: { revalidate: 0 } });
+    const res = await fetch(url, { signal: AbortSignal.timeout(8_000), next: { revalidate: 0 } });
     if (!res.ok) {
       console.warn(`[brickset] HTTP ${res.status} for set ${setNumber}`);
       return null;

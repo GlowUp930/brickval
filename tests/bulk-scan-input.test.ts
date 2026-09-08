@@ -14,21 +14,31 @@ function formDataFor(count: number, scanSource: "camera" | "photoLibrary" = "pho
   return formData;
 }
 
-test("camera bulk scans accept more than ten regions", () => {
-  assert.equal(parseBulkScanInput(formDataFor(10, "camera")).ok, true);
+test("camera bulk scans accept sixty regions and reject sixty-one", () => {
   assert.equal(parseBulkScanInput(formDataFor(60, "camera")).ok, true);
+
+  const result = parseBulkScanInput(formDataFor(61, "camera"));
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.error.code, "invalid_regions");
+    assert.match(result.error.message, /60 figures/);
+  }
 });
 
-test("photo-library bulk scans accept eleven and forty regions", () => {
-  assert.equal(parseBulkScanInput(formDataFor(11)).ok, true);
-  const result = parseBulkScanInput(formDataFor(40));
-  assert.equal(result.ok, true);
-  if (result.ok) assert.equal(result.value.regions.length, 40);
-});
-
-test("photo-library bulk scans accept more than forty regions", () => {
+test("photo-library bulk scans accept sixty regions", () => {
   const result = parseBulkScanInput(formDataFor(60));
   assert.equal(result.ok, true);
+  if (result.ok) assert.equal(result.value.regions.length, 60);
+});
+
+test("photo-library bulk scans reject more than sixty regions", () => {
+  const result = parseBulkScanInput(formDataFor(61));
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.error.code, "invalid_regions");
+    assert.equal(result.error.regionCount, 61);
+    assert.match(result.error.message, /60 figures/);
+  }
 });
 
 test("bulk scans reject a missing image with a structured error", () => {

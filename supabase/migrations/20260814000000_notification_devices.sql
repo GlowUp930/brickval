@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS notification_devices (
   device_id               text PRIMARY KEY,
   apns_token              text NOT NULL,
   environment             text NOT NULL CHECK (environment IN ('sandbox', 'production')),
+  language_code           text DEFAULT 'en',
   app_user_id             text,
   clerk_user_id           text,
   access_cohort           text,

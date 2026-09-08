@@ -5,6 +5,8 @@ struct ScanReviewView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.brickValAccent) private var accent
+    @Environment(PreferencesStore.self) private var preferences
+    @Environment(CurrencyStore.self) private var currency
 
     let review: ScanReview
     let store: ScanStore
@@ -161,7 +163,7 @@ struct ScanReviewView: View {
                                 .padding(.vertical, 5)
                                 .background(accent, in: Capsule())
 
-                            Text(candidate.score, format: .percent.precision(.fractionLength(0)))
+                            Text(candidate.score, format: .percent.precision(.fractionLength(0)).locale(BrickValLocalization.effectiveLanguage.locale))
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(accent)
                         }
@@ -223,7 +225,7 @@ struct ScanReviewView: View {
 
                     HStack(spacing: 10) {
                         Label(
-                            candidate.score.formatted(.percent.precision(.fractionLength(0))),
+                            candidate.score.formatted(.percent.precision(.fractionLength(0)).locale(BrickValLocalization.effectiveLanguage.locale)),
                             systemImage: "checkmark.seal.fill"
                         )
                         .foregroundStyle(isSelected ? accent : .secondary)
@@ -280,7 +282,7 @@ struct ScanReviewView: View {
     ) -> some View {
         if let result = candidate.result,
            let price = result.pricing.preferredUsedValue ?? result.pricing.preferredNewValue {
-            Text(price, format: .currency(code: "USD"))
+            BrickValCurrencyText(price)
                 .font(font)
                 .foregroundStyle(accent ? self.accent : .primary)
         } else if isLoading {
@@ -440,19 +442,20 @@ struct ScanReviewView: View {
         } catch is CancellationError {
             return
         } catch {
-            loadError = "Some match details could not be loaded. You can still choose a match."
+            loadError = BrickValLocalization.localized("Some match details could not be loaded. You can still choose a match.")
         }
         isLoading = false
     }
 
     private func accessibilityLabel(for candidate: ScanReviewCandidate) -> String {
-        let confidence = candidate.score.formatted(.percent.precision(.fractionLength(0)))
+        let confidence = candidate.score.formatted(.percent.precision(.fractionLength(0)).locale(BrickValLocalization.effectiveLanguage.locale))
         guard let result = candidate.result else {
-            return "\(candidate.identifier), \(confidence) match confidence"
+            return BrickValLocalization.localized("\(candidate.identifier), \(confidence) match confidence")
         }
-        let price = (result.pricing.preferredUsedValue ?? result.pricing.preferredNewValue)?
-            .formatted(.currency(code: "USD")) ?? "price unavailable"
-        return "\(result.name), \(candidate.identifier), \(confidence) match confidence, \(price)"
+        let price = (result.pricing.preferredUsedValue ?? result.pricing.preferredNewValue).map {
+            currency.formattedWithCode($0, to: preferences.effectiveCurrency, locale: BrickValLocalization.effectiveLanguage.locale)
+        } ?? BrickValLocalization.localized("Price unavailable")
+        return BrickValLocalization.localized("\(result.name), \(candidate.identifier), \(confidence) match confidence, \(price)")
     }
 }
 

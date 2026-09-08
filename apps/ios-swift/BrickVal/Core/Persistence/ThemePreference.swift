@@ -6,7 +6,13 @@ enum ThemePreference: String, CaseIterable, Identifiable, Sendable {
     case light
 
     var id: Self { self }
-    var title: String { rawValue.capitalized }
+    var title: String {
+        switch self {
+        case .system: BrickValLocalization.localized("System")
+        case .dark: BrickValLocalization.localized("Dark")
+        case .light: BrickValLocalization.localized("Light")
+        }
+    }
 
     var colorScheme: ColorScheme? {
         switch self {

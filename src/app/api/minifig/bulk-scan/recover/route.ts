@@ -1,8 +1,9 @@
-import { auth } from "@clerk/nextjs/server";
+import { scanRequestAccess } from "@/lib/scan-request-access";
 import { NextRequest, NextResponse } from "next/server";
 
 import { lookupBulkMinifigures } from "@/lib/bulk-minifig-lookup";
-import { verifyBulkRecoveryToken } from "@/lib/bulk-recovery-token";
+import { authorizeBulkScan } from "@/lib/scan-gate";
+import { verifiedRecoveryClaims } from "@/lib/bulk-recovery-token";
 import { BULK_RECOVERY_RATE_LIMIT, bulkRecoveryRateLimitKey } from "@/lib/bulk-recovery-rate-limit";
 import { BrickognizeUnavailableError, identifyNonSet } from "@/lib/brickognize";
 import { supabase } from "@/lib/supabase";
@@ -10,27 +11,25 @@ import { supabase } from "@/lib/supabase";
 const MAX_RECOVERY_BYTES = 500 * 1024;
 
 export async function POST(req: NextRequest) {
-  let userId: string | null = null;
-  try {
-    userId = (await auth()).userId;
-  } catch {
-    userId = null;
-  }
+  const accessRequest = await scanRequestAccess(req);
+  if (accessRequest instanceof NextResponse) return accessRequest;
+  const { userId } = accessRequest;
 
   let formData: FormData;
   try {
     formData = await req.formData();
   } catch {
-    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+    return NextResponse.json({ error: "invalid_form_data", message: "The recovery upload could not be read." }, { status: 400 });
   }
 
   const image = formData.get("image");
   const token = String(formData.get("recoveryToken") ?? "");
   if (!(image instanceof File) || image.type !== "image/jpeg" || image.size > MAX_RECOVERY_BYTES) {
-    return NextResponse.json({ error: "Invalid recovery image" }, { status: 400 });
+    return NextResponse.json({ error: "invalid_image", message: "Choose a valid JPEG recovery photo." }, { status: 400 });
   }
-  if (!verifyBulkRecoveryToken(token, userId)) {
-    return NextResponse.json({ error: "Recovery expired", message: "Please retake the bulk photo." }, { status: 401 });
+  const claims = verifiedRecoveryClaims(token, userId);
+  if (!claims) {
+    return NextResponse.json({ error: "recovery_expired", message: "Please retake the bulk photo." }, { status: 401 });
   }
 
   // A signed recovery token is scoped to one scan session. This allows up to
@@ -77,6 +76,12 @@ export async function POST(req: NextRequest) {
       .filter((candidate) => Boolean(candidate.result))
       .slice(0, 3);
 
+    if (candidates.length && !claims.authorized) {
+      const gate = await authorizeBulkScan(userId, token, claims.expiresAt);
+      if (!gate.allowed) return NextResponse.json({ error: "paywall", feature: "bulk_scan",
+        message: "Your free bulk scan has been used. Upgrade to BrickValue Pro for unlimited bulk scans.", usage: gate.usage }, { status: 402 });
+      return NextResponse.json({ candidates, usage: gate.usage });
+    }
     return NextResponse.json({ candidates });
   } catch (error) {
     if (error instanceof BrickognizeUnavailableError) {

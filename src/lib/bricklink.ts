@@ -182,7 +182,7 @@ async function brickLinkFetch<T>(path: string): Promise<T | null> {
         Accept: "application/json",
       },
       redirect: "follow",
-      next: { revalidate: 0 },
+      signal: AbortSignal.timeout(8_000), next: { revalidate: 0 },
     } as RequestInit);
 
     if (!res.ok) {

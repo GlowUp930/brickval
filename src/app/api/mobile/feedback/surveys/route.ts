@@ -20,11 +20,11 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json() as ProductFeedbackPayload;
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json({ error: "invalid_json", message: "The survey response could not be read." }, { status: 400 });
   }
 
   if (!isValidProductFeedbackPayload(body)) {
-    return NextResponse.json({ error: "Invalid survey response" }, { status: 400 });
+    return NextResponse.json({ error: "invalid_survey_response", message: "The survey response is invalid." }, { status: 400 });
   }
 
   const subject = userId ?? String(body.anonymousID);
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
 
   if (historyError) {
     console.error("[product-feedback] Survey history lookup failed:", historyError);
-    return NextResponse.json({ error: "Survey could not be recorded" }, { status: 500 });
+    return NextResponse.json({ error: "survey_unavailable", message: "The survey response could not be recorded." }, { status: 500 });
   }
 
   const now = Date.now();
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ recorded: false, duplicate: true });
     }
     console.error("[product-feedback] Survey insert failed:", error);
-    return NextResponse.json({ error: "Survey could not be recorded" }, { status: 500 });
+    return NextResponse.json({ error: "survey_unavailable", message: "The survey response could not be recorded." }, { status: 500 });
   }
 
   return NextResponse.json({ recorded: true });

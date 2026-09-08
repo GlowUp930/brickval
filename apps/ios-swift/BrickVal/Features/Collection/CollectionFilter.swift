@@ -6,7 +6,13 @@ enum CollectionFilter: String, CaseIterable, Identifiable {
     case minifigs
 
     var id: Self { self }
-    var title: String { rawValue.capitalized }
+    var title: String {
+        switch self {
+        case .all: BrickValLocalization.localized("All")
+        case .sets: BrickValLocalization.localized("Sets")
+        case .minifigs: BrickValLocalization.localized("Minifigures")
+        }
+    }
 
     func includes(_ item: CollectionDisplayItem) -> Bool {
         switch self {

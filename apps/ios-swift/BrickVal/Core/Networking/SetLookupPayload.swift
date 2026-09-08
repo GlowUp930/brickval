@@ -41,8 +41,8 @@ struct SetLookupPayload: Decodable, Sendable {
         LookupResult(
             identifier: setInfo?.setNumber ?? setNumber ?? fallbackIdentifier,
             itemType: .set,
-            name: setInfo?.name ?? name ?? "Unknown LEGO set",
-            theme: theme ?? "LEGO set",
+            name: setInfo?.name ?? name ?? BrickValLocalization.localized("LEGO set"),
+            theme: theme ?? BrickValLocalization.localized("LEGO set"),
             pieces: pieces,
             yearReleased: setInfo?.yearReleased,
             isObsolete: setInfo?.isObsolete,

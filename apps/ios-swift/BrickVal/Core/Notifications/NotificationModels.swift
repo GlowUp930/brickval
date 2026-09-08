@@ -32,6 +32,7 @@ struct BrickValNotificationDeviceRegistration: Codable, Equatable, Sendable {
     let deviceID: String
     let apnsToken: String
     let environment: String
+    let languageCode: String
     let subscriberID: String?
     let accessCohort: String?
     let accountAlertsEnabled: Bool
@@ -79,7 +80,8 @@ enum BrickValNotificationSchedulePlanner {
         resetDate: Date,
         now: Date,
         timeZone: TimeZone = .autoupdatingCurrent,
-        calendar: Calendar = .autoupdatingCurrent
+        calendar: Calendar = .autoupdatingCurrent,
+        locale: Locale = BrickValLocalization.effectiveLanguage.locale
     ) -> BrickValLocalNotificationRequest? {
         guard resetDate > now else { return nil }
         let fireDate = deliveryDate(
@@ -91,8 +93,8 @@ enum BrickValNotificationSchedulePlanner {
         return BrickValLocalNotificationRequest(
             identifier: BrickValNotificationCategory.scanReset.requestIdentifier,
             category: .scanReset,
-            title: "Your free scans are ready",
-            body: "Scan another minifigure when you’re ready.",
+            title: BrickValLocalization.localized("Your free scans are ready", locale: locale),
+            body: BrickValLocalization.localized("Scan another minifigure when you’re ready.", locale: locale),
             fireDate: fireDate,
             deepLink: BrickValNotificationCategory.scanReset.deepLink
         )
@@ -103,7 +105,8 @@ enum BrickValNotificationSchedulePlanner {
         willRenew: Bool,
         now: Date,
         timeZone: TimeZone = .autoupdatingCurrent,
-        calendar: Calendar = .autoupdatingCurrent
+        calendar: Calendar = .autoupdatingCurrent,
+        locale: Locale = BrickValLocalization.effectiveLanguage.locale
     ) -> BrickValLocalNotificationRequest? {
         guard willRenew, expirationDate > now else { return nil }
         let preferredDate = expirationDate.addingTimeInterval(-48 * 60 * 60)
@@ -111,8 +114,8 @@ enum BrickValNotificationSchedulePlanner {
         return BrickValLocalNotificationRequest(
             identifier: BrickValNotificationCategory.trialEnding.requestIdentifier,
             category: .trialEnding,
-            title: "Your BrickValue trial ends in 2 days",
-            body: "Review your plan before it renews.",
+            title: BrickValLocalization.localized("Your BrickValue trial ends in 2 days", locale: locale),
+            body: BrickValLocalization.localized("Review your plan before it renews.", locale: locale),
             fireDate: deliveryDate(
                 preferredDate: preferredDate,
                 now: now,

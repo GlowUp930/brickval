@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { sendAPNsAlert } from "@/lib/apns";
+import { fetchRevenueCatProEntitlement } from "@/lib/revenuecat-entitlement";
+import { billingAlertForLanguage } from "@/lib/notification-localization";
 
 /**
  * RevenueCat Webhook endpoint.
@@ -22,30 +24,17 @@ import { sendAPNsAlert } from "@/lib/apns";
  * and set Authorization header to Bearer <REVENUECAT_WEBHOOK_SECRET>.
  */
 
-const PRO_EVENTS = new Set([
-  "INITIAL_PURCHASE",
-  "RENEWAL",
-  "UNCANCELLATION",
-  "NON_RENEWING_PURCHASE",
-]);
-
-const REVOKE_EVENTS = new Set([
-  "EXPIRATION",
-  "BILLING_ISSUE",
-  "PRODUCT_CHANGE",
-]);
-
 export async function POST(req: NextRequest) {
   // Verify webhook secret
   const secret = process.env.REVENUECAT_WEBHOOK_SECRET;
   if (!secret) {
     console.error("[revenuecat] Missing REVENUECAT_WEBHOOK_SECRET");
-    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+    return NextResponse.json({ error: "webhook_not_configured", message: "Webhook is not configured." }, { status: 500 });
   }
 
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "unauthorized", message: "Unauthorized." }, { status: 401 });
   }
 
   let body: {
@@ -53,52 +42,49 @@ export async function POST(req: NextRequest) {
       type?: string;
       app_user_id?: string;
       entitlement_ids?: string[];
+      id?: string;
+      event_timestamp_ms?: number;
+      transferred_from?: string[];
+      transferred_to?: string[];
     };
   };
 
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json({ error: "invalid_json", message: "The webhook body could not be read." }, { status: 400 });
   }
 
   const event = body.event;
-  if (!event?.type || !event.app_user_id) {
-    return NextResponse.json({ error: "Missing event data" }, { status: 400 });
+  if (!event?.type || (!event.app_user_id && event.type !== "TRANSFER")) {
+    return NextResponse.json({ error: "missing_event_data", message: "The webhook event is missing data." }, { status: 400 });
   }
 
-  const userId = event.app_user_id;
-  const eventType = event.type;
-  if (userId.length > 128) {
-    return NextResponse.json({ error: "Invalid user id" }, { status: 400 });
+  if (event.type === "TEST") return NextResponse.json({ received: true });
+  const userIds = event.type === "TRANSFER"
+    ? [...new Set([...(event.transferred_from ?? []), ...(event.transferred_to ?? [])])]
+    : [event.app_user_id!];
+  if (!userIds.length || userIds.some(id => id.length > 128) || !event.id ||
+      !Number.isFinite(event.event_timestamp_ms)) {
+    return NextResponse.json({ error: "invalid_event", message: "The webhook event is invalid." }, { status: 400 });
   }
 
-  if (!event.entitlement_ids?.includes("pro")) {
-    return NextResponse.json({ received: true });
-  }
-
-  if (eventType === "BILLING_ISSUE") {
-    await sendBillingAlerts(userId);
-  }
-
-  // CANCELLATION means user cancelled but still has access until period ends.
-  // We keep is_pro = true. EXPIRATION is when access actually ends.
-  if (PRO_EVENTS.has(eventType)) {
-    const { error } = await supabase
-      .from("users")
-      .upsert({ id: userId, is_pro: true }, { onConflict: "id" });
-    if (error) {
-      console.error(`[revenuecat] Failed to activate pro for ${userId}:`, error);
-      return NextResponse.json({ error: "DB update failed" }, { status: 500 });
+  try {
+    for (const userId of userIds) {
+      // Events are notifications to reconcile, not independent entitlement truth.
+      // This preserves grace, scheduled product changes, refunds, and transfers.
+      const isPro = await fetchRevenueCatProEntitlement(userId);
+      if (isPro === null) throw new Error("Entitlement verification unavailable");
+      const { data: changed, error } = await supabase.rpc("apply_subscription_entitlement", {
+        p_user_id: userId, p_provider: "revenuecat", p_active: isPro,
+        p_version_ms: event.event_timestamp_ms, p_event_id: event.id,
+      });
+      if (error) throw error;
+      if (changed === true && event.type === "BILLING_ISSUE") await sendBillingAlerts(userId);
     }
-  } else if (REVOKE_EVENTS.has(eventType)) {
-    const { error } = await supabase
-      .from("users")
-      .upsert({ id: userId, is_pro: false }, { onConflict: "id" });
-    if (error) {
-      console.error(`[revenuecat] Failed to revoke pro for ${userId}:`, error);
-      return NextResponse.json({ error: "DB update failed" }, { status: 500 });
-    }
+  } catch {
+    console.error("[revenuecat] Subscription reconciliation failed; requesting retry");
+    return NextResponse.json({ error: "subscription_unavailable", message: "The subscription update could not be saved." }, { status: 503 });
   }
 
   return NextResponse.json({ received: true });
@@ -110,7 +96,7 @@ async function sendBillingAlerts(appUserID: string) {
 
   const { data: devices, error } = await supabase
     .from("notification_devices")
-    .select("device_id, apns_token, environment")
+    .select("device_id, apns_token, environment, language_code")
     .eq("app_user_id", appUserID)
     .eq("enabled", true)
     .eq("account_alerts_enabled", true);
@@ -121,11 +107,12 @@ async function sendBillingAlerts(appUserID: string) {
 
   await Promise.all((devices ?? []).map(async (device) => {
     try {
+      const copy = billingAlertForLanguage(device.language_code);
       const result = await sendAPNsAlert({
         token: device.apns_token,
         environment: device.environment,
-        title: "Action needed for BrickValue Pro",
-        body: "Update your payment details to keep Pro access.",
+        title: copy.title,
+        body: copy.body,
         deepLink: "brickval://settings",
         category: "accountAction",
       });

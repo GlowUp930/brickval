@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     "Privacy policy for BrickVal, including data collection, camera use, payments, analytics, and account deletion.",
 };
 
-const lastUpdated = "May 4, 2026";
+const lastUpdated = "September 5, 2026";
 
 const sections = [
   {
@@ -54,6 +54,7 @@ const sections = [
   {
     title: "Data Retention",
     body: [
+      "After account deletion, we retain hashed account and referral-installation security receipts for about 90 days to prevent repeated reward claims and process deletion retries. These receipts do not contain your name, email, photos, or collection. Guest scan limits use a server-hashed network address; people sharing a network may share the guest allowance.",
       "We keep account and payment status information while your account is active or as needed for legal, tax, security, and support reasons. Cached market data is designed to expire, usually within 24 hours for active pricing sources. Some logs may be kept for a limited time by our infrastructure providers.",
     ],
   },

@@ -22,6 +22,26 @@ export async function getCached<T>(key: string): Promise<T | null> {
 }
 
 /**
+ * Read a cache row even after its TTL. This is used only for graceful stale
+ * fallbacks when an upstream service is temporarily unavailable.
+ */
+export async function getCachedIncludingExpired<T>(key: string): Promise<T | null> {
+  try {
+    const { data, error } = await supabase
+      .from("api_cache")
+      .select("data")
+      .eq("cache_key", key)
+      .single();
+
+    if (error || !data) return null;
+    return data.data as T;
+  } catch (err) {
+    console.warn("[cache] getCachedIncludingExpired failed", err);
+    return null;
+  }
+}
+
+/**
  * Write to the api_cache table.
  * Cleans up expired rows before writing.
  * @param ttlHours Time-to-live in hours. Defaults to 24.
@@ -37,13 +57,15 @@ export async function setCached<T>(
   ).toISOString();
 
   try {
-    await supabase.from("api_cache").delete().lt("expires_at", now);
+    const { error: cleanupError } = await supabase.from("api_cache").delete().lt("expires_at", now);
+    if (cleanupError) console.warn("[cache] Expired-row cleanup failed", cleanupError.code);
 
-    await supabase.from("api_cache").upsert({
+    const { error: writeError } = await supabase.from("api_cache").upsert({
       cache_key: key,
       data: value as object,
       expires_at: expiresAt,
     });
+    if (writeError) throw writeError;
   } catch (err) {
     console.warn("[cache] setCached failed", err);
   }

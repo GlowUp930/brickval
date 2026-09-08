@@ -66,7 +66,7 @@ struct AppearanceSettingsView: View {
 
     private func presentUpgrade() {
         guard let coordinator else {
-            upgradeMessage = "Upgrade options are not configured for this build."
+            upgradeMessage = BrickValLocalization.localized("Upgrade options are not configured for this build.")
             return
         }
         _ = coordinator.presentUpgrade(placement: .appearanceAttempt)

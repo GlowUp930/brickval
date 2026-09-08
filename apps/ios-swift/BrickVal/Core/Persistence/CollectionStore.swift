@@ -6,6 +6,8 @@ import Observation
 final class CollectionStore {
     private(set) var items: [CollectionItem] = []
     private(set) var isLoading = false
+    private var hasLoaded = false
+    private var isSaving = false
     var errorMessage: String?
 
     @ObservationIgnored private let repository: CollectionRepository
@@ -19,13 +21,16 @@ final class CollectionStore {
     var uniqueItemCount: Int { Set(items.map(\.collectionIdentity)).count }
 
     func load() async {
+        guard !isLoading, !isSaving else { return }
         isLoading = true
         defer { isLoading = false }
         do {
             items = try await repository.load()
+            hasLoaded = true
             errorMessage = nil
         } catch {
-            errorMessage = "Your collection could not be loaded. Please try again."
+            hasLoaded = false
+            errorMessage = BrickValLocalization.localized("Your collection could not be loaded. Please try again.")
         }
     }
 
@@ -34,6 +39,7 @@ final class CollectionStore {
     }
 
     func add(_ newItems: [CollectionItem], isPro: Bool, freeLimit: Int = 10) async throws {
+        try await ensureReadyToWrite()
         guard !newItems.isEmpty else { return }
         var updatedItems = items
         for item in newItems {
@@ -50,16 +56,16 @@ final class CollectionStore {
         guard isPro || updatedUniqueCount <= freeLimit else {
             throw CollectionStoreError.freeLimitReached(limit: freeLimit, used: uniqueItemCount)
         }
-        items = updatedItems
-        try await persistOrReload()
+        try await persist(updatedItems)
     }
 
     func remove(_ item: CollectionItem) async throws {
-        items.removeAll { $0.id == item.id }
-        try await persistOrReload()
+        try await ensureReadyToWrite()
+        try await persist(items.filter { $0.id != item.id })
     }
 
     func setQuantity(_ quantity: Int, for item: CollectionItem, isPro: Bool, freeLimit: Int = 10) async throws {
+        try await ensureReadyToWrite()
         let normalizedQuantity = max(0, quantity)
         guard let index = items.firstIndex(where: { $0.id == item.id }) else {
             if normalizedQuantity > 0 {
@@ -70,32 +76,49 @@ final class CollectionStore {
             return
         }
 
+        var updatedItems = items
         if normalizedQuantity == 0 {
-            items.remove(at: index)
+            updatedItems.remove(at: index)
         } else {
-            items[index].quantity = normalizedQuantity
+            updatedItems[index].quantity = normalizedQuantity
         }
-        try await persistOrReload()
+        try await persist(updatedItems)
     }
 
     func clear() async throws {
+        guard !isLoading, !isSaving else { throw CocoaError(.fileWriteUnknown) }
+        isSaving = true
+        defer { isSaving = false }
+        try await repository.removeAll()
         items = []
-        try await persistOrReload()
+        hasLoaded = true
+        errorMessage = nil
     }
 
     func replaceForMigration(_ migrated: [CollectionItem]) async throws {
+        try await ensureReadyToWrite()
         guard items.isEmpty, try await repository.isEmpty() else { return }
-        items = migrated
-        try await persistOrReload()
+        try await persist(migrated)
     }
 
-    private func persistOrReload() async throws {
+    private func ensureReadyToWrite() async throws {
+        if !hasLoaded && !isLoading { await load() }
+        guard hasLoaded, !isLoading, !isSaving else {
+            throw NSError(domain: "BrickVal.Collection", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: BrickValLocalization.localized("Your collection could not be loaded. Please try again.")
+            ])
+        }
+    }
+
+    private func persist(_ updatedItems: [CollectionItem]) async throws {
+        isSaving = true
+        defer { isSaving = false }
         do {
-            try await repository.replace(with: items)
+            try await repository.replace(with: updatedItems)
+            items = updatedItems
             errorMessage = nil
         } catch {
-            items = (try? await repository.load()) ?? []
-            errorMessage = "That change could not be saved."
+            errorMessage = BrickValLocalization.localized("That change could not be saved.")
             throw error
         }
     }

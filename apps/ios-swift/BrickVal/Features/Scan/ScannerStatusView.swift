@@ -47,14 +47,14 @@ struct ScannerStatusView: View {
 
     private var statusText: String {
         if intent == .bulk, phase == .searching {
-            return "Frame up to 60 figures, then tap the shutter"
+            return BrickValLocalization.localized("Frame up to 60 figures, then tap the shutter")
         }
         return phase.statusText
     }
 
     private var retryHint: String {
         intent == .bulk
-            ? "Retries the current bulk scan or prepares the camera again"
-            : "Prepares the camera again"
+            ? BrickValLocalization.localized("Retries the current bulk scan or prepares the camera again")
+            : BrickValLocalization.localized("Prepares the camera again")
     }
 }

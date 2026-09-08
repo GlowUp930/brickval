@@ -102,9 +102,9 @@ struct NotificationSettingsView: View {
 
     private var statusTitle: String {
         switch notifications.authorizationStatus {
-        case .authorized, .provisional, .ephemeral: "Notifications are on"
-        case .denied: "Notifications are off"
-        case .notDetermined: "Notifications are not set up"
+        case .authorized, .provisional, .ephemeral: BrickValLocalization.localized("Notifications are on")
+        case .denied: BrickValLocalization.localized("Notifications are off")
+        case .notDetermined: BrickValLocalization.localized("Notifications are not set up")
         }
     }
 
@@ -125,11 +125,11 @@ struct NotificationSettingsView: View {
     private var statusMessage: String {
         switch notifications.authorizationStatus {
         case .authorized, .provisional, .ephemeral:
-            "BrickValue will only send reminders you choose. We do not send inactivity or generic marketing notifications."
+            BrickValLocalization.localized("BrickValue will only send reminders you choose. We do not send inactivity or generic marketing notifications.")
         case .denied:
-            "Turn notifications on in Settings to use a reminder you requested."
+            BrickValLocalization.localized("Turn notifications on in Settings to use a reminder you requested.")
         case .notDetermined:
-            "Notifications stay off until you choose a reminder below."
+            BrickValLocalization.localized("Notifications stay off until you choose a reminder below.")
         }
     }
 
@@ -164,8 +164,8 @@ struct NotificationSettingsView: View {
 }
 
 private struct NotificationToggleRow: View {
-    let title: String
-    let subtitle: String
+    let title: LocalizedStringResource
+    let subtitle: LocalizedStringResource
     @Binding var isOn: Bool
 
     var body: some View {

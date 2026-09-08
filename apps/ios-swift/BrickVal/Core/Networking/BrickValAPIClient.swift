@@ -15,6 +15,9 @@ struct BrickValAPIClient: Sendable {
     var recoverBulkMinifigure: @Sendable (Data, String) async throws -> BulkRecoveryPayload
     var identify: @Sendable (Data, ScanMode, ScanIntent) async throws -> IdentificationResult
     var lookup: @Sendable (String, ItemType, Int?) async throws -> LookupResult
+    var exchangeRates: @Sendable () async throws -> ExchangeRatesPayload = {
+        throw APIError(endpoint: "exchange rates", statusCode: 0, code: "service_unavailable", serverMessage: nil)
+    }
     var bulkLookupMinifigures: @Sendable ([String], BulkLookupSource) async throws -> BulkMinifigLookupResult
     var monetizationStatus: @Sendable () async throws -> MonetizationStatus
     var syncSubscription: @Sendable () async throws -> SubscriptionSyncResult
@@ -207,6 +210,20 @@ extension BrickValAPIClient {
                 case .part:
                     return try decoder.decode(PartLookupPayload.self, from: data).normalized
                 }
+            },
+            exchangeRates: {
+                let request = try await request(
+                    baseURL: configuration.baseURL,
+                    path: "/api/mobile/exchange-rates",
+                    method: "GET",
+                    token: authToken()
+                )
+                let (data, response) = try await session.data(for: request)
+                return try decodeResponse(
+                    data: data,
+                    response: response,
+                    endpoint: "exchange rates"
+                )
             },
             bulkLookupMinifigures: { identifiers, source in
                 let body = try JSONEncoder().encode(BulkMinifigLookupRequest(
@@ -491,6 +508,7 @@ private func validate(
         throw APIError(
             endpoint: endpoint,
             statusCode: http.statusCode,
+            code: payload?.error,
             serverMessage: payload?.message ?? payload?.error,
             feature: payload?.feature,
             usage: payload?.usage

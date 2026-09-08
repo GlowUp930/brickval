@@ -44,6 +44,7 @@ export async function fetchRevenueCatProEntitlement(
     const response = await fetcher(
       `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(userId)}`,
       {
+        signal: AbortSignal.timeout(8_000),
         headers: {
           Authorization: `Bearer ${apiKey}`,
           Accept: "application/json",

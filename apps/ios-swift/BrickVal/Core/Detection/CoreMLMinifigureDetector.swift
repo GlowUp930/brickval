@@ -81,7 +81,61 @@ actor CoreMLMinifigureDetector: MinifigureDetecting, BulkFrameDetecting, BulkPho
 
         let sourceWidth = CGFloat(source.width)
         let sourceHeight = CGFloat(source.height)
-        let tileRects = Self.bulkTileRects(width: sourceWidth, height: sourceHeight)
+        let sourceTileRects = Self.bulkTileRects(width: sourceWidth, height: sourceHeight)
+        let sourceObservations = try detectBulkObservations(
+            in: source,
+            tileRects: sourceTileRects,
+            regionPrefix: "source"
+        )
+
+        guard let squareCanvas = BulkSquareInferenceCanvas(source: source) else {
+            throw MinifigureDetectorError.invalidImage
+        }
+        let squareWidth = CGFloat(squareCanvas.image.width)
+        let squareTileRects = Self.bulkTileRects(width: squareWidth, height: squareWidth)
+        let squareObservations = try detectBulkObservations(
+            in: squareCanvas.image,
+            tileRects: squareTileRects,
+            regionPrefix: "square"
+        ).compactMap { observation -> DetectionObservation? in
+            guard let box = squareCanvas.mapToSource(observation.boundingBox) else { return nil }
+            return DetectionObservation(
+                confidence: observation.confidence,
+                boundingBox: box,
+                detectionFrameCoverage: box.area,
+                fullyVisible: true,
+                regionID: observation.regionID,
+                timestamp: observation.timestamp
+            )
+        }
+
+        let sourceMerged = Self.mergeBulkPhotoObservations(sourceObservations)
+        let squareMerged = Self.mergeBulkPhotoObservations(squareObservations)
+        let merged = Self.mergeBulkPhotoObservations(sourceMerged + squareMerged)
+            .prefix(max(0, limit))
+            .enumerated()
+            .map { index, observation in
+                BulkScanRegion(
+                    regionId: "library-\(index + 1)",
+                    boundingBox: observation.boundingBox.clamped
+                )
+            }
+
+        return BulkPhotoDetectionBatch(
+            regions: Array(merged),
+            inferenceMilliseconds: Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1_000),
+            modelVersion: Self.bulkModelVersion,
+            tileCount: sourceTileRects.count + squareTileRects.count
+        )
+    }
+
+    private func detectBulkObservations(
+        in source: CGImage,
+        tileRects: [CGRect],
+        regionPrefix: String
+    ) throws -> [DetectionObservation] {
+        let sourceWidth = CGFloat(source.width)
+        let sourceHeight = CGFloat(source.height)
         var observations: [DetectionObservation] = []
 
         for (index, tileRect) in tileRects.enumerated() {
@@ -112,28 +166,14 @@ actor CoreMLMinifigureDetector: MinifigureDetecting, BulkFrameDetecting, BulkPho
                         boundingBox: box,
                         detectionFrameCoverage: box.area,
                         fullyVisible: true,
-                        regionID: "library-\(index)-\(UUID().uuidString)",
+                        regionID: "\(regionPrefix)-\(index)-\(UUID().uuidString)",
                         timestamp: .now
                     )
                 }
             observations.append(contentsOf: tileObservations)
         }
 
-        let merged = mergeBulkPhotoObservations(observations)
-            .enumerated()
-            .map { index, observation in
-                BulkScanRegion(
-                    regionId: "library-\(index + 1)",
-                    boundingBox: observation.boundingBox.clamped
-                )
-            }
-
-        return BulkPhotoDetectionBatch(
-            regions: Array(merged),
-            inferenceMilliseconds: Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1_000),
-            modelVersion: Self.bulkModelVersion,
-            tileCount: tileRects.count
-        )
+        return observations
     }
 
     private func model() throws -> VNCoreMLModel {
@@ -242,7 +282,7 @@ actor CoreMLMinifigureDetector: MinifigureDetecting, BulkFrameDetecting, BulkPho
         return rects
     }
 
-    private func mergeBulkPhotoObservations(_ observations: [DetectionObservation]) -> [DetectionObservation] {
+    static func mergeBulkPhotoObservations(_ observations: [DetectionObservation]) -> [DetectionObservation] {
         var kept: [DetectionObservation] = []
         for observation in observations.sorted(by: { $0.confidence > $1.confidence }) {
             let overlapsExisting = kept.contains { existing in
@@ -260,7 +300,7 @@ actor CoreMLMinifigureDetector: MinifigureDetecting, BulkFrameDetecting, BulkPho
         }
     }
 
-    private func overlapOfSmaller(_ lhs: NormalizedBoundingBox, _ rhs: NormalizedBoundingBox) -> Double {
+    private static func overlapOfSmaller(_ lhs: NormalizedBoundingBox, _ rhs: NormalizedBoundingBox) -> Double {
         let right = min(lhs.x + lhs.width, rhs.x + rhs.width)
         let bottom = min(lhs.y + lhs.height, rhs.y + rhs.height)
         let intersection = max(0, right - max(lhs.x, rhs.x)) * max(0, bottom - max(lhs.y, rhs.y))
@@ -278,6 +318,6 @@ enum MinifigureDetectorError: LocalizedError {
     case incompatibleModel
 
     var errorDescription: String? {
-        "The on-device minifigure detector is unavailable."
+        BrickValLocalization.localized("The on-device minifigure detector is unavailable.")
     }
 }

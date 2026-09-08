@@ -1,3 +1,4 @@
+import { scanRequestAccess } from "@/lib/scan-request-access";
 import { NextRequest, NextResponse } from "next/server";
 import { getCached, setCached } from "@/lib/cache";
 import { getEbayMarketData } from "@/lib/ebay";
@@ -13,18 +14,20 @@ const LOOKUP_CACHE_TTL_HOURS = 24;
 
 function lookupCacheKey(mode: string, identifier: string, colorId?: number | string) {
   return mode === "part"
-    ? `lookup:part:${identifier}:${colorId ?? "none"}`
+    ? `lookup:v2:part:${identifier}:${colorId ?? "none"}`
     : mode === "minifig"
-      ? `lookup:minifig:${identifier}`
-      : `lookup:set:${identifier}`;
+      ? `lookup:v2:minifig:${identifier}`
+      : `lookup:v2:set:${identifier}`;
 }
 
 export async function POST(req: NextRequest) {
+  const accessRequest = await scanRequestAccess(req);
+  if (accessRequest instanceof NextResponse) return accessRequest;
   let body: { setNumber?: string; mode?: string; colorId?: number | string };
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json({ error: "invalid_json", message: "The lookup request could not be read." }, { status: 400 });
   }
 
   const mode = body.mode ?? "set";
@@ -33,7 +36,7 @@ export async function POST(req: NextRequest) {
   if (mode === "minifig") {
     const figNumber = sanitizeMinifigNumber(body.setNumber);
     if (!figNumber) {
-      return NextResponse.json({ error: "Invalid figure number" }, { status: 400 });
+      return NextResponse.json({ error: "invalid_minifigure_number", message: "Enter a valid minifigure number." }, { status: 400 });
     }
 
     const cacheKey = lookupCacheKey(mode, figNumber);
@@ -60,7 +63,7 @@ export async function POST(req: NextRequest) {
     const colorId = Number(body.colorId);
 
     if (!partNumber || partNumber.length < 2 || !Number.isFinite(colorId) || colorId < 0) {
-      return NextResponse.json({ error: "Invalid part lookup" }, { status: 400 });
+      return NextResponse.json({ error: "invalid_part_lookup", message: "Enter a valid part number and colour." }, { status: 400 });
     }
 
     const cacheKey = lookupCacheKey(mode, partNumber, colorId);
@@ -164,7 +167,7 @@ export async function POST(req: NextRequest) {
   const setNumber = body.setNumber?.trim().replace(/[^0-9]/g, "");
   if (!setNumber || setNumber.length < 4) {
     return NextResponse.json(
-      { error: "Invalid set number" },
+      { error: "invalid_set_number", message: "Enter a valid LEGO set number." },
       { status: 400 }
     );
   }

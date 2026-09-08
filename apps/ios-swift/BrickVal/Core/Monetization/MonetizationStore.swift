@@ -200,13 +200,13 @@ final class MonetizationStore {
             (referralStatus?.bulkCreditsRemaining ?? 0) > 0 || shouldUseLockedBulkPreview(isPro: isPro)
     }
 
-    func shouldUseLockedBulkPreview(isPro: Bool) -> Bool {
+    func shouldUseLockedBulkPreview(isPro: Bool, serverLimit: Bool = false) -> Bool {
         policy.lockedBulkPreview &&
-            accessCohort == .experimentSoft &&
+            policy.gates.bulkRepeat &&
             !isPro &&
-            !hasGrandfatheredBulkCredit &&
+            !requiresProForApp(isPro: false) &&
             (referralStatus?.bulkCreditsRemaining ?? 0) == 0 &&
-            usage.bulkScan.remaining == 0
+            (serverLimit || usage.bulkScan.remaining == 0)
     }
 
     func canUseSingle(isPro: Bool) -> Bool {
@@ -218,11 +218,11 @@ final class MonetizationStore {
     }
 
     func scanReminder(isPro: Bool) -> String? {
-        if isPro { return "Unlimited scans" }
+        if isPro { return BrickValLocalization.localized("Unlimited scans") }
         guard policy.gates.singleDaily else { return nil }
         let remaining = usage.singleScan.remaining
-        if remaining == 0 { return "No free scans left today" }
-        return "\(remaining) free \(remaining == 1 ? "scan" : "scans") left today"
+        if remaining == 0 { return BrickValLocalization.localized("No free scans left today") }
+        return BrickValLocalization.localized("\(remaining) free scan left today")
     }
 
     private func apply(_ snapshot: UsageSnapshot) {

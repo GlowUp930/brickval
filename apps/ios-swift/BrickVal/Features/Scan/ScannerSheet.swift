@@ -43,7 +43,7 @@ final class BulkScanPresentation: Identifiable {
     let imageData: Data
     let regions: [BulkScanRegion]
     let source: BulkScanSource
-    let accessMode: BulkScanAccessMode
+    private(set) var accessMode: BulkScanAccessMode
     let sessionToken: String?
     var recoveryToken: String?
     private(set) var regionStates: [String: BulkRegionProgressState]
@@ -139,6 +139,17 @@ final class BulkScanPresentation: Identifiable {
     func markUnresolved(_ regionID: String, candidates: [BulkScanReviewCandidate] = []) {
         guard regionStates[regionID] != nil else { return }
         regionStates[regionID] = .unresolved(candidates: Array(candidates.prefix(3)))
+        revision += 1
+    }
+
+    func enterLockedPreview() {
+        guard accessMode == .real else { return }
+        accessMode = .lockedPreview
+        recoveryToken = nil
+        terminalError = nil
+        for region in regions {
+            regionStates[region.regionId] = .pending
+        }
         revision += 1
     }
 

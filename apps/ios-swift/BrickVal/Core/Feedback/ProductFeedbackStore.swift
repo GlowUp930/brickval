@@ -121,7 +121,7 @@ final class ProductFeedbackStore {
         let orderedBenefits = benefits.sorted()
         let orderedImprovements = improvements.sorted()
         guard !orderedBenefits.isEmpty, !orderedImprovements.isEmpty else {
-            errorMessage = "Please answer both questions before sending."
+            errorMessage = BrickValLocalization.localized("Please answer both questions before sending.")
             return
         }
         let bucket = Int(now().timeIntervalSince1970 / (90 * 24 * 60 * 60))
@@ -190,7 +190,7 @@ final class ProductFeedbackStore {
             presentedSurvey = nil
         } catch {
             isSubmitting = false
-            errorMessage = "We couldn't send that feedback. Check your connection and try again."
+            errorMessage = BrickValLocalization.localized("We couldn't send that feedback. Check your connection and try again.")
         }
     }
 

@@ -1,5 +1,5 @@
+import { scanRequestAccess } from "@/lib/scan-request-access";
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { getCached, setCached } from "@/lib/cache";
 import { getEbayMarketData } from "@/lib/ebay";
 import { getBrickLinkMarketData } from "@/lib/bricklink";
@@ -63,13 +63,9 @@ async function lookupOne(
 }
 
 export async function POST(req: NextRequest) {
-  let userId: string | null = null;
-  try {
-    const session = await auth();
-    userId = session.userId;
-  } catch (error) {
-    console.warn("[bulk-lookup] Auth unavailable; continuing as guest.", error);
-  }
+  const accessRequest = await scanRequestAccess(req);
+  if (accessRequest instanceof NextResponse) return accessRequest;
+  const { userId } = accessRequest;
 
   let body: {
     setNumbers?: unknown;
@@ -80,13 +76,13 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json({ error: "invalid_json", message: "The lookup request could not be read." }, { status: 400 });
   }
 
   const mode = body.mode === "minifig" ? "minifig" : "set";
   const isBulkScan = mode === "minifig" && body.source === "bulk-scan";
   if (mode === "set" && (!Array.isArray(body.setNumbers) || body.setNumbers.length === 0)) {
-    return NextResponse.json({ error: "No set numbers provided" }, { status: 400 });
+    return NextResponse.json({ error: "missing_set_numbers", message: "Add at least one set number." }, { status: 400 });
   }
 
   // Sanitize sets independently; minifigure pricing follows the detected regions.
@@ -106,11 +102,11 @@ export async function POST(req: NextRequest) {
   const figNumbers = sanitizeBulkMinifigNumbers(rawFigNumbers);
 
   if (mode === "set" && setNumbers.length === 0) {
-    return NextResponse.json({ error: "No valid set numbers" }, { status: 400 });
+    return NextResponse.json({ error: "invalid_set_numbers", message: "No valid LEGO set numbers were provided." }, { status: 400 });
   }
 
   if (mode === "minifig" && figNumbers.length === 0) {
-    return NextResponse.json({ error: "No valid minifigure numbers" }, { status: 400 });
+    return NextResponse.json({ error: "invalid_minifigure_numbers", message: "No valid minifigure numbers were provided." }, { status: 400 });
   }
 
   if (userId && isBulkScan) {

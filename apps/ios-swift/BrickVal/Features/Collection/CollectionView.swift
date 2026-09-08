@@ -186,7 +186,7 @@ struct CollectionView: View {
                 HStack(spacing: BrickValStyle.Primitive.space8) {
                     VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space4) {
                         if entitlements.isPro {
-                            ProUnlimitedLabel(text: "Unlimited items")
+                            ProUnlimitedLabel(text: BrickValLocalization.localized("Unlimited items"))
                         } else {
                             Text("\(store.uniqueItemCount) of \(monetization.collectionLimit) free slots used")
                                 .font(.subheadline.weight(.semibold))
@@ -237,7 +237,7 @@ struct CollectionView: View {
             ]
         ) ?? false
         if !presented {
-            purchaseMessage = "Upgrade options are temporarily unavailable. Try again shortly."
+            purchaseMessage = BrickValLocalization.localized("Upgrade options are temporarily unavailable. Try again shortly.")
         }
     }
 
@@ -247,7 +247,7 @@ struct CollectionView: View {
             params: ["source": "collection"]
         ) ?? false
         if !presented {
-            purchaseMessage = "Upgrade options are temporarily unavailable. Try again shortly."
+            purchaseMessage = BrickValLocalization.localized("Upgrade options are temporarily unavailable. Try again shortly.")
         }
     }
 
@@ -294,7 +294,7 @@ struct CollectionView: View {
         .accessibilityElement(children: .contain)
     }
 
-    private func headerButton(_ systemName: String, label: String, action: @escaping () -> Void) -> some View {
+    private func headerButton(_ systemName: String, label: LocalizedStringResource, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 22, weight: .medium))
@@ -305,7 +305,7 @@ struct CollectionView: View {
                 )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(label)
+        .accessibilityLabel(BrickValLocalization.localized(label))
     }
 
     private func dismissCollectionTips() {
@@ -373,7 +373,7 @@ private struct CollectionTipsCallout: View {
         .accessibilityLabel("Collection quick start tips")
     }
 
-    private func tipRow(_ icon: String, title: String, detail: String) -> some View {
+    private func tipRow(_ icon: String, title: LocalizedStringResource, detail: LocalizedStringResource) -> some View {
         HStack(alignment: .top, spacing: BrickValStyle.Primitive.space8) {
             Image(systemName: icon)
                 .font(.body.weight(.semibold))
@@ -450,4 +450,5 @@ struct CollectionDisplayItem: Identifiable, Hashable {
         .environment(PreferencesStore())
         .environment(EntitlementStore())
         .environment(MonetizationStore())
+        .environment(CurrencyStore())
 }

@@ -158,7 +158,7 @@ struct CollectionStoreTests {
         #expect(values.last == 240)
     }
 
-    @Test func portfolioHistoryForAddedItemWithoutHistoryStillShowsMovement() {
+    @Test func portfolioHistoryDoesNotInventMovementWithoutObservations() {
         let item = CollectionItem(
             setNumber: "10305",
             itemType: .set,
@@ -172,9 +172,7 @@ struct CollectionStoreTests {
         let points = PortfolioHistoryBuilder.build(items: [item], horizon: .month)
         let values = points.map(\.value)
 
-        #expect(values.count > 1)
-        #expect(Set(values).count > 1)
-        #expect(values.last == 400)
+        #expect(values.isEmpty)
     }
 
     @Test func reloadsCollectionFromDirectoryContainingSpaces() async throws {
@@ -191,6 +189,73 @@ struct CollectionStoreTests {
 
         #expect(second.items.first?.quantity == 2)
         #expect(second.errorMessage == nil)
+    }
+
+    @Test func failedLoadNeverOverwritesOriginal() async throws {
+        let url = temporaryURL()
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let original = Data("{broken but recoverable".utf8)
+        try original.write(to: url)
+        let store = CollectionStore(repository: CollectionRepository(fileURL: url))
+        await store.load()
+        await #expect(throws: (any Error).self) { try await store.add(fixture(quantity: 1), isPro: true) }
+        #expect(try Data(contentsOf: url) == original)
+        #expect(store.items.isEmpty)
+    }
+
+    @Test func unreadableCollectionRecoversBackupAndPreservesOriginal() async throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let repository = CollectionRepository(fileURL: url)
+        try await repository.replace(with: [fixture(quantity: 1)])
+        try await repository.replace(with: [fixture(quantity: 2)])
+        let corrupt = Data("broken".utf8)
+        try corrupt.write(to: url)
+        let store = CollectionStore(repository: repository)
+        await store.load()
+        #expect(store.totalQuantity == 1)
+        try await store.add(fixture(quantity: 1), isPro: true)
+        #expect(store.totalQuantity == 2)
+        let files = try FileManager.default.contentsOfDirectory(at: url.deletingLastPathComponent(), includingPropertiesForKeys: nil)
+        let preserved = try #require(files.first { $0.lastPathComponent.contains("unreadable-") })
+        #expect(try Data(contentsOf: preserved) == corrupt)
+    }
+
+    @Test func explicitDeletionRemovesRecoveryCopies() async throws {
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let repository = CollectionRepository(fileURL: url)
+        try await repository.replace(with: [fixture(quantity: 1)])
+        try await repository.replace(with: [fixture(quantity: 2)])
+        try Data("corrupt".utf8).write(to: url)
+        let store = CollectionStore(repository: repository)
+        await store.load()
+        try await store.clear()
+        let files = try FileManager.default.contentsOfDirectory(at: url.deletingLastPathComponent(), includingPropertiesForKeys: nil)
+        #expect(files.isEmpty)
+        #expect(store.items.isEmpty)
+    }
+
+    @Test func pricingKeepsConditionsAndFallbackSourcesSeparate() throws {
+        let data = Data(#"{"ebay_new_avg_usd":100,"ebay_used_avg_usd":80,"new_data_source":"listing","used_data_source":"sold"}"#.utf8)
+        let price = try JSONDecoder().decode(LookupPricing.self, from: data)
+        #expect(price.preferredNewValue == 100)
+        #expect(price.preferredUsedValue == 80)
+        #expect(price.source(for: .used) == "sold")
+        let newOnly = try JSONDecoder().decode(LookupPricing.self, from: Data(#"{"hero_new_avg_usd":100}"#.utf8))
+        #expect(newOnly.preferredUsedValue == nil)
+    }
+
+    @Test func pendingInviteSurvivesRestartAndClear() {
+        let suite = "referral-test-\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        AppRouter(defaults: defaults).handle(url: URL(string: "https://brickvalue.live/r/ABCD2345")!)
+        let restarted = AppRouter(defaults: defaults)
+        #expect(restarted.pendingReferralCode == "ABCD2345")
+        restarted.clearPendingReferral()
+        #expect(AppRouter(defaults: defaults).pendingReferralCode == nil)
     }
 
     private func fixture(quantity: Int, number: String = "1", condition: CollectionCondition = .newSealed) -> CollectionItem {

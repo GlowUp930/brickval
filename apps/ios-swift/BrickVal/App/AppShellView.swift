@@ -52,7 +52,7 @@ struct AppShellView: View {
                 coordinator?.dismissPaywallPresentationError()
             }
         } message: {
-            Text(coordinator?.paywallPresentationError ?? "Please try again.")
+            Text(coordinator?.paywallPresentationError ?? BrickValLocalization.localized("Something went wrong. Please try again in a moment."))
         }
         .fullScreenCover(isPresented: proWelcomeBinding) {
             ProWelcomeView()
@@ -138,6 +138,7 @@ struct AppShellView: View {
         .environment(PreferencesStore())
         .environment(EntitlementStore())
         .environment(MonetizationStore())
+        .environment(CurrencyStore())
         .environment(NotificationCoordinator())
         .environment(ProductFeedbackStore(defaults: UserDefaults(suiteName: "AppShellPreview")!))
 }

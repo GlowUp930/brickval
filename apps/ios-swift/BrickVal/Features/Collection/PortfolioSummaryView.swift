@@ -2,6 +2,8 @@ import SwiftUI
 
 struct PortfolioSummaryView: View {
     @Environment(\.brickValAccent) private var accent
+    @Environment(PreferencesStore.self) private var preferences
+    @Environment(CurrencyStore.self) private var currency
     let value: Double
     let items: [CollectionItem]
     let horizon: PortfolioHorizon
@@ -10,7 +12,7 @@ struct PortfolioSummaryView: View {
         PortfolioHistoryBuilder.build(items: items, horizon: horizon)
     }
 
-    private var displayValue: Double { history.last?.value ?? value }
+    private var displayValue: Double { value }
     private var previousValue: Double { history.first?.value ?? displayValue }
     private var change: Double { displayValue - previousValue }
     private var changePercent: Double { previousValue > 0 ? change / previousValue : 0 }
@@ -21,23 +23,38 @@ struct PortfolioSummaryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space8) {
-            Text("COLLECTION VALUE")
-                .font(.system(size: 12, weight: .bold))
-                .tracking(0.7)
-                .foregroundStyle(BrickValStyle.Semantic.textSecondary)
-            Text("$\(displayValue, specifier: "%.2f")")
+            HStack(alignment: .firstTextBaseline) {
+                Text("COLLECTION VALUE")
+                    .font(.system(size: 12, weight: .bold))
+                    .tracking(0.7)
+                    .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+                Spacer(minLength: BrickValStyle.Primitive.space8)
+                Text(verbatim: currency.displayCurrency(for: preferences.effectiveCurrency).code)
+                    .font(.caption2.weight(.semibold))
+                    .tracking(0.35)
+                    .foregroundStyle(BrickValStyle.Semantic.textSecondary)
+            }
+            BrickValCurrencyText(displayValue)
                 .font(.system(size: 40, weight: .bold))
                 .foregroundStyle(BrickValStyle.Semantic.textPrimary)
                 .monospacedDigit()
                 .contentTransition(.numericText(value: displayValue))
+            if history.count > 1 {
             HStack(spacing: BrickValStyle.Primitive.space4) {
-                Text("\(changeSign)$\(abs(change), specifier: "%.2f")")
-                Text("(\(changeSign)\(abs(changePercent) * 100, specifier: "%.2f")%)")
+                Text(changeSign)
+                BrickValCurrencyText(abs(change))
+                Text("(")
+                Text(changeSign)
+                Text(abs(changePercent), format: .percent.precision(.fractionLength(2)).locale(BrickValLocalization.effectiveLanguage.locale))
+                Text(")")
                 Text(horizon.summaryLabel)
             }
             .font(.system(size: 16, weight: .medium))
             .foregroundStyle(changeColor)
             .monospacedDigit()
+            } else {
+                Text("Not enough price history").font(.subheadline).foregroundStyle(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)

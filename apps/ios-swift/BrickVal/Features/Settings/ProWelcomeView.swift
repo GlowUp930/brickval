@@ -159,8 +159,8 @@ struct ProWelcomeView: View {
                             success = await notifications.requestAccountAlerts()
                         }
                         notificationMessage = success
-                            ? "You’re all set. We’ll only send the reminder you chose."
-                            : "Notifications are off. You can enable them later in Profile."
+                            ? BrickValLocalization.localized("You’re all set. We’ll only send the reminder you chose.")
+                            : BrickValLocalization.localized("Notifications are off. You can enable them later in Profile.")
                     }
                 } label: {
                     Label(
@@ -187,7 +187,7 @@ struct ProWelcomeView: View {
         }
     }
 
-    private func unlockedRow(_ title: String, icon: String) -> some View {
+    private func unlockedRow(_ title: LocalizedStringResource, icon: String) -> some View {
         Label {
             Text(title)
                 .font(.body.weight(.semibold))
@@ -199,7 +199,7 @@ struct ProWelcomeView: View {
                 .frame(width: 28)
         }
         .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
-        .accessibilityLabel("\(title), unlocked")
+        .accessibilityLabel(BrickValLocalization.localized("\(BrickValLocalization.localized(title)), unlocked"))
     }
 
     @MainActor

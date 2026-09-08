@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { getSupabase } from "@/lib/supabase";
@@ -9,24 +10,25 @@ import { getSupabase } from "@/lib/supabase";
 export async function POST() {
   const { userId } = await auth();
   if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "authentication_required", message: "Sign in to delete your account." }, { status: 401 });
   }
 
   const supabase = getSupabase();
-  const { error: dbError } = await supabase
-    .from("users")
-    .delete()
-    .eq("id", userId);
-
-  if (dbError) {
-    return NextResponse.json(
-      { error: "Failed to delete account data" },
-      { status: 500 }
-    );
+  try {
+    // The database deletion and security receipt are one durable transaction.
+    // If Clerk fails, the still-authenticated user can retry this same endpoint.
+    const { error } = await supabase.rpc("stage_account_deletion", { p_user_id: userId });
+    if (error) throw error;
+    const client = await clerkClient();
+    try { await client.users.deleteUser(userId); } catch (error) {
+      if ((error as { status?: number }).status !== 404) throw error;
+    }
+    const { error: completionError } = await supabase.from("account_deletion_requests")
+      .update({ completed: true }).eq("user_hash", createHash("sha256").update(userId).digest("hex"));
+    if (completionError) throw completionError;
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "account_deletion_failed",
+      message: "Account deletion could not be completed. Please retry from Manage Account." }, { status: 503 });
   }
-
-  const client = await clerkClient();
-  await client.users.deleteUser(userId);
-
-  return NextResponse.json({ ok: true });
 }

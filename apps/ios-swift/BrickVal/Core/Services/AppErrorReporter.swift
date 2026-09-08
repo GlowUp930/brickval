@@ -38,12 +38,59 @@ final class SentryAppErrorReporter: AppErrorReporting {
             "release": "com.brickval.app@\(context.appVersion)+\(context.appBuild)",
         ], key: "scan_error")
 
+        if let apiError = error as? APIError {
+            var apiContext: [String: Any] = ["status_code": apiError.statusCode]
+            if let code = apiError.code { apiContext["code"] = code }
+            // Keep the server's English diagnostic separate from the
+            // localized customer-facing error description.
+            if let serverMessage = apiError.serverMessage {
+                apiContext["server_message"] = serverMessage
+            }
+            scope.setContext(value: apiContext, key: "api_error")
+        }
+
         let nsError = NSError(
             domain: "com.brickval.app.scan",
             code: context.statusCode,
             userInfo: [NSLocalizedDescriptionKey: error.localizedDescription]
         )
         SentrySDK.capture(error: nsError, scope: scope)
+#endif
+    }
+}
+
+@MainActor
+protocol PurchaseErrorReporting: AnyObject {
+    func capture(failure: PurchaseFailure, placement: String?)
+}
+
+@MainActor
+final class NoopPurchaseErrorReporter: PurchaseErrorReporting {
+    func capture(failure: PurchaseFailure, placement: String?) {}
+}
+
+@MainActor
+final class SentryPurchaseErrorReporter: PurchaseErrorReporting {
+    func capture(failure: PurchaseFailure, placement: String?) {
+#if DEBUG
+        return
+#else
+        let bundle = Bundle.main
+        let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+        let scope = Scope()
+        scope.setTag(value: failure.productID, key: "purchase_product_id")
+        scope.setTag(value: placement ?? "unknown", key: "purchase_placement")
+        scope.setTag(value: build, key: "app_build")
+        scope.setContext(value: failure.diagnosticProperties.reduce(into: [String: Any]()) { result, item in
+            result[item.key] = item.value
+        }, key: "purchase_failure")
+
+        let error = NSError(
+            domain: "com.brickval.purchase",
+            code: failure.revenueCatCode ?? -1,
+            userInfo: [NSLocalizedDescriptionKey: failure.errorDescription ?? BrickValLocalization.localized("Purchase failed.")]
+        )
+        SentrySDK.capture(error: error, scope: scope)
 #endif
     }
 }

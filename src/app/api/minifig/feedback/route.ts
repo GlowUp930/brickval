@@ -16,12 +16,12 @@ export async function POST(req: NextRequest) {
   try {
     form = await req.formData();
   } catch {
-    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+    return NextResponse.json({ error: "invalid_form_data", message: "The feedback upload could not be read." }, { status: 400 });
   }
 
   const outcome = String(form.get("outcome") ?? "") as ScanFeedbackOutcome;
   if (!OUTCOMES.has(outcome)) {
-    return NextResponse.json({ error: "Invalid scan outcome" }, { status: 400 });
+    return NextResponse.json({ error: "invalid_scan_outcome", message: "The scan feedback could not be recorded." }, { status: 400 });
   }
 
   const consent = form.get("consent") === "true";
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     image instanceof File &&
     planFeedbackImageCollection({ consent, outcome, random: Math.random() });
   if (image instanceof File && (image.type !== "image/jpeg" || image.size > MAX_FEEDBACK_IMAGE_BYTES)) {
-    return NextResponse.json({ error: "Invalid feedback image" }, { status: 413 });
+    return NextResponse.json({ error: "invalid_image", message: "Choose a JPEG feedback image under 500 KB." }, { status: 413 });
   }
 
   try {
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ recorded: true, imageStored: imagePath !== null });
   } catch (error) {
     console.error("[minifig-feedback] Failed:", error);
-    return NextResponse.json({ error: "feedback_unavailable" }, { status: 503 });
+    return NextResponse.json({ error: "feedback_unavailable", message: "Feedback is temporarily unavailable." }, { status: 503 });
   }
 }
 

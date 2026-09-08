@@ -27,7 +27,10 @@ struct ReferralTests {
     @Test
     @MainActor
     func universalReferralLinkOpensInviteRoute() {
-        let router = AppRouter()
+        let suite = "referral-route-test-\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let router = AppRouter(defaults: defaults)
         router.handle(url: URL(string: "https://brickvalue.live/r/ABCD2345")!)
 
         #expect(router.selectedTab == .settings)
@@ -38,7 +41,10 @@ struct ReferralTests {
     @Test
     @MainActor
     func invalidReferralLinkDoesNotChangeNavigation() {
-        let router = AppRouter()
+        let suite = "referral-route-test-\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let router = AppRouter(defaults: defaults)
         router.handle(url: URL(string: "https://brickvalue.live/r/too-short")!)
 
         #expect(router.selectedTab == .scan)

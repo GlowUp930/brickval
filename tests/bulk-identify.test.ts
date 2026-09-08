@@ -27,11 +27,29 @@ test("guided bulk results are keyed to physical region IDs", () => {
   assert.deepEqual(assigned.map((item) => item.regionId), ["region-right", "region-left"]);
 });
 
-test("guided bulk manifest rejects more than four images or forty regions", () => {
+test("guided bulk manifest rejects more than six images", () => {
   const tooManyShards = JSON.stringify({
-    shards: Array.from({ length: 5 }, (_, index) => ({ shardId: `s${index}`, imageIndex: index, regions: [] })),
+    shards: Array.from({ length: 7 }, (_, index) => ({ shardId: `s${index}`, imageIndex: index, regions: [] })),
   });
   assert.equal(parseBulkRegionManifest(tooManyShards), null);
+});
+
+test("guided bulk manifest accepts sixty regions", () => {
+  const manifest = JSON.stringify({
+    shards: Array.from({ length: 6 }, (_, imageIndex) => ({
+      shardId: `shard-${imageIndex + 1}`,
+      imageIndex,
+      regions: Array.from({ length: 10 }, (_, regionIndex) => ({
+        regionId: `region-${imageIndex * 10 + regionIndex + 1}`,
+        boundingBox: { x: 0.1, y: 0.1, width: 0.2, height: 0.3 },
+      })),
+    })),
+  });
+
+  assert.equal(
+    parseBulkRegionManifest(manifest)?.shards.flatMap((shard) => shard.regions).length,
+    60,
+  );
 });
 
 test("guided bulk ignores provider detections without usable boxes", () => {
@@ -88,22 +106,22 @@ test("guided crop plan groups up to five figures per provider request", () => {
   assert.ok(crops.every((crop) => crop.regions.length <= 5));
 });
 
-test("photo-library crop plan covers forty regions in at most eight groups", () => {
-  const regions = Array.from({ length: 40 }, (_, index) => ({
+test("bulk crop plan covers sixty regions in at most twelve groups", () => {
+  const regions = Array.from({ length: 60 }, (_, index) => ({
     regionId: `region-${index + 1}`,
     boundingBox: {
-      x: (index % 8) * 0.11,
-      y: Math.floor(index / 8) * 0.19,
-      width: 0.08,
-      height: 0.15,
+      x: (index % 10) * 0.09,
+      y: Math.floor(index / 10) * 0.14,
+      width: 0.07,
+      height: 0.12,
     },
   }));
 
-  const crops = planGuidedBulkCrops(regions, 40);
+  const crops = planGuidedBulkCrops(regions, 60);
 
-  assert.ok(crops.length <= 8);
+  assert.ok(crops.length <= 12);
   assert.ok(crops.every((crop) => crop.regions.length <= 5));
-  assert.equal(crops.flatMap((crop) => crop.regions).length, 40);
+  assert.equal(crops.flatMap((crop) => crop.regions).length, 60);
 });
 
 test("per-region recognition creates one isolated crop for every physical figure", () => {
@@ -117,7 +135,7 @@ test("per-region recognition creates one isolated crop for every physical figure
     },
   }));
 
-  const crops = planPerRegionRecognitionCrops(regions, 40);
+  const crops = planPerRegionRecognitionCrops(regions, 60);
 
   assert.equal(crops.length, 24);
   assert.ok(crops.every((crop) => crop.regions.length === 1));
@@ -127,14 +145,18 @@ test("per-region recognition creates one isolated crop for every physical figure
   );
 });
 
-test("photo-library manifests accept forty regions while camera manifests stay capped at ten", () => {
-  const value = JSON.stringify(Array.from({ length: 40 }, (_, index) => ({
+test("bulk manifests accept sixty regions and reject a sixty-first region", () => {
+  const value = JSON.stringify(Array.from({ length: 60 }, (_, index) => ({
     regionId: `region-${index + 1}`,
-    boundingBox: { x: (index % 10) * 0.09, y: Math.floor(index / 10) * 0.2, width: 0.07, height: 0.16 },
+    boundingBox: { x: (index % 10) * 0.09, y: Math.floor(index / 10) * 0.14, width: 0.07, height: 0.12 },
   })));
+  const tooMany = JSON.stringify([...JSON.parse(value) as unknown[], {
+    regionId: "region-61",
+    boundingBox: { x: 0.1, y: 0.9, width: 0.07, height: 0.08 },
+  }]);
 
-  assert.equal(parseBulkRegions(value, 40)?.length, 40);
-  assert.equal(parseBulkRegions(value, 10), null);
+  assert.equal(parseBulkRegions(value, 60)?.length, 60);
+  assert.equal(parseBulkRegions(tooMany, 60), null);
 });
 
 test("photo-library fallback keeps small figures covered across the image", () => {
@@ -153,7 +175,7 @@ test("cloud proposals augment local regions without collapsing separate figures"
     { x: 0.052, y: 0.102, width: 0.12, height: 0.24 },
     { x: 0.45, y: 0.1, width: 0.12, height: 0.24 },
     { x: 0.72, y: 0.1, width: 0.12, height: 0.24 },
-  ], 40);
+  ], 60);
 
   assert.equal(merged.length, 3);
   assert.equal(merged[0]?.regionId, "local-1");

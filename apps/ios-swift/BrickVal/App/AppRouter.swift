@@ -9,12 +9,19 @@ final class AppRouter {
     var collectionPath: [AppRoute] = []
     var scanPath: [AppRoute] = []
     var settingsPath: [AppRoute] = []
-    var pendingReferralCode: String?
+    @ObservationIgnored private let defaults: UserDefaults
+    var pendingReferralCode: String? {
+        didSet { defaults.set(pendingReferralCode, forKey: "brickvalue_pending_referral_code") }
+    }
 
-    init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        pendingReferralCode = defaults.string(forKey: "brickvalue_pending_referral_code")
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-showCollectionGatingDemo") {
             selectedTab = .collection
+        } else if ProcessInfo.processInfo.arguments.contains("-showHardPaywallPreviewRootDemo") {
+            selectedTab = .settings
         }
 #endif
     }

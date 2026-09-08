@@ -46,7 +46,7 @@ struct ClerkAccountContentView: View {
         )) {
             Button("OK", role: .cancel) { deletionError = nil }
         } message: {
-            Text(deletionError ?? "Try again.")
+            Text(deletionError ?? BrickValLocalization.localized("Try again"))
         }
     }
 

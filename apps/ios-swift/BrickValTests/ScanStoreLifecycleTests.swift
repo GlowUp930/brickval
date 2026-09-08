@@ -209,6 +209,62 @@ struct ScanStoreLifecycleTests {
     }
 
     @Test @MainActor
+    func serverBulkLimitDuringProgressivePresentationFallsBackToLockedPreview() async throws {
+        let suite = "ScanStoreLifecycleTests.serverLimitPreview.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let monetization = MonetizationStore(defaults: defaults, initialPolicy: .phaseOne)
+        monetization.applyServerUsage(UsageSnapshot(
+            isPro: false,
+            singleScan: UsageCounter(used: 0, limit: 3, remaining: 3, resetsAt: nil),
+            bulkScan: UsageCounter(used: 0, limit: 1, remaining: 1, resetsAt: nil)
+        ))
+
+        var api = BrickValAPIClient.successfulLookupStub
+        api.startBulkScan = { _, regions, source in
+            BulkScanStartPayload(
+                scanSource: source,
+                regions: regions,
+                sessionToken: "server-limit-session",
+                recoveryToken: nil,
+                proposalSource: "test"
+            )
+        }
+        api.identifyBulkRegion = { _, _, _ in
+            throw APIError(
+                endpoint: "bulk region identification",
+                statusCode: 402,
+                serverMessage: "You've reached the bulk scan limit.",
+                feature: .bulkScan,
+                usage: nil
+            )
+        }
+
+        let regions = [BulkScanRegion(
+            regionId: "server-limit-1",
+            boundingBox: NormalizedBoundingBox(x: 0.2, y: 0.2, width: 0.3, height: 0.5)
+        )]
+        let store = ScanStore(
+            api: api,
+            bulkPhotoDetector: StubBulkPhotoDetector(regions: regions)
+        )
+        store.configureMonetization(monetization, isPro: false)
+        store.intent = .bulk
+
+        await store.importBulkPhoto(try recoveryImageData())
+        let presentation = try #require(store.presentedBulkResults)
+        #expect(presentation.accessMode == .real)
+
+        await store.processBulkPresentation(presentation)
+
+        #expect(presentation.accessMode == .lockedPreview)
+        #expect(presentation.terminalError == nil)
+        #expect(store.proLimitFeature == nil)
+        #expect(presentation.regions.count == regions.count)
+    }
+
+    @Test @MainActor
     func lowConfidenceBulkMatchUsesBestPricedCandidateWithoutReview() async throws {
         var api = BrickValAPIClient.successfulLookupStub
         api.startBulkScan = { _, regions, source in
@@ -369,6 +425,7 @@ struct ScanStoreLifecycleTests {
                 throw APIError(
                     endpoint: "bulk minifig scan",
                     statusCode: 400,
+                    code: "invalid_region",
                     serverMessage: "The scan included an invalid region list."
                 )
             },
@@ -400,7 +457,7 @@ struct ScanStoreLifecycleTests {
 
         await store.importBulkPhoto(imageData)
 
-        #expect(store.phase == .failed("The scan included an invalid region list."))
+        #expect(store.phase == .failed("A valid minifigure crop is required."))
         #expect(store.frozenImageData == imageData)
         #expect(reporter.contexts.count == 1)
         #expect(reporter.contexts.first?.statusCode == 400)
@@ -548,7 +605,7 @@ struct ScanStoreLifecycleTests {
 
 final class ScanStorePhotoImportXCTests: XCTestCase {
     @MainActor
-    func testBlockedBulkPhotoImportLeavesAnActionableState() async {
+    func testExhaustedFreeBulkPhotoImportShowsLockedPreviewWithoutBackendCalls() async {
         let suiteName = "ScanStorePhotoImportXCTests.bulkGate.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
             XCTFail("Could not create isolated defaults")
@@ -567,28 +624,66 @@ final class ScanStorePhotoImportXCTests: XCTestCase {
             bulkScan: UsageCounter(used: 1, limit: 1, remaining: 0, resetsAt: nil)
         ))
 
-        let store = ScanStore(bulkPhotoDetector: StubBulkPhotoDetector(regions: []))
+        let backendCalls = BackendCallProbe()
+        var api = BrickValAPIClient.successfulLookupStub
+        api.startBulkScan = { _, _, _ in
+            await backendCalls.record()
+            throw ScanStoreLifecycleTestError.unusedEndpoint
+        }
+        api.identifyBulkRegion = { _, _, _ in
+            await backendCalls.record()
+            throw ScanStoreLifecycleTestError.unusedEndpoint
+        }
+        api.scanBulkMinifigures = { _, _, _ in
+            await backendCalls.record()
+            throw ScanStoreLifecycleTestError.unusedEndpoint
+        }
+        let regions = [BulkScanRegion(
+            regionId: "legacy-preview-1",
+            boundingBox: NormalizedBoundingBox(x: 0.2, y: 0.2, width: 0.3, height: 0.5)
+        )]
+        let store = ScanStore(
+            api: api,
+            bulkPhotoDetector: StubBulkPhotoDetector(regions: regions)
+        )
         store.configureMonetization(monetization, isPro: false)
         store.intent = .bulk
 
         await store.importBulkPhoto(Data("fixture".utf8))
 
-        XCTAssertEqual(store.proLimitFeature, .bulkScan)
-        XCTAssertEqual(
-            store.phase,
-            .failed("You've used all available bulk scans. Upgrade to continue.")
-        )
+        XCTAssertNil(store.proLimitFeature)
+        XCTAssertEqual(store.phase, .review)
+        XCTAssertEqual(store.presentedBulkResults?.accessMode, .lockedPreview)
+        XCTAssertEqual(store.presentedBulkResults?.regions.count, regions.count)
+        let backendCallCount = await backendCalls.value()
+        XCTAssertEqual(backendCallCount, 0)
     }
 
     @MainActor
-    func testServerBulkLimitKeepsThePhotoImportFailureVisible() async {
+    func testServerBulkLimitConvertsFrozenPhotoToLockedPreview() async {
+        let suiteName = "ScanStorePhotoImportXCTests.serverLimit.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let monetization = MonetizationStore(defaults: defaults, initialPolicy: .phaseOne)
+        monetization.applyServerUsage(UsageSnapshot(
+            isPro: false,
+            singleScan: UsageCounter(used: 0, limit: 3, remaining: 3, resetsAt: nil),
+            bulkScan: UsageCounter(used: 0, limit: 1, remaining: 1, resetsAt: nil)
+        ))
+
         var api = BrickValAPIClient.successfulLookupStub
         api.scanBulkMinifigures = { _, _, _ in
             throw APIError(
                 endpoint: "bulk minifig scan",
                 statusCode: 402,
                 serverMessage: "You've used all 5 free scans. Upgrade to continue.",
-                feature: .bulkScan
+                feature: .bulkScan,
+                usage: UsageSnapshot(
+                    isPro: false,
+                    singleScan: UsageCounter(used: 0, limit: 3, remaining: 3, resetsAt: nil),
+                    bulkScan: UsageCounter(used: 1, limit: 1, remaining: 0, resetsAt: nil)
+                )
             )
         }
 
@@ -599,6 +694,7 @@ final class ScanStorePhotoImportXCTests: XCTestCase {
                 boundingBox: NormalizedBoundingBox(x: 0.2, y: 0.2, width: 0.3, height: 0.5)
             )])
         )
+        store.configureMonetization(monetization, isPro: false)
         store.intent = .bulk
         let imageData = UIGraphicsImageRenderer(size: CGSize(width: 8, height: 8)).image { _ in
             UIColor.white.setFill()
@@ -607,11 +703,10 @@ final class ScanStorePhotoImportXCTests: XCTestCase {
 
         await store.importBulkPhoto(imageData)
 
-        XCTAssertEqual(store.proLimitFeature, .bulkScan)
-        XCTAssertEqual(
-            store.phase,
-            .failed("You've used all 5 free scans. Upgrade to continue.")
-        )
+        XCTAssertNil(store.proLimitFeature)
+        XCTAssertEqual(store.phase, .review)
+        XCTAssertEqual(store.presentedBulkResults?.accessMode, .lockedPreview)
+        XCTAssertEqual(store.presentedBulkResults?.regions.count, 1)
         XCTAssertEqual(store.frozenImageData, imageData)
     }
 

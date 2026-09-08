@@ -1,5 +1,5 @@
 import { getCached, setCached } from "./cache";
-import type { ExchangeRates } from "./frankfurter";
+import type { EbayExchangeRates } from "./frankfurter";
 
 export interface EbaySale {
   title: string;
@@ -73,7 +73,7 @@ async function fetchWithRetry(
   let lastError: Error | null = null;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const res = await fetch(url, options);
+      const res = await fetch(url, { ...options, signal: options.signal ?? AbortSignal.timeout(8_000) });
       // Only retry on infrastructure errors (5xx)
       if (RETRYABLE_STATUSES.has(res.status) && attempt < retries) {
         console.warn(`[ebay] ${res.status} on attempt ${attempt + 1}, retrying...`);
@@ -161,7 +161,7 @@ async function getInsightsToken(): Promise<string | null> {
 function convertToUsd(
   rawPrice: number,
   currency: string,
-  rates: ExchangeRates
+  rates: EbayExchangeRates
 ): number {
   let usd: number;
   switch (currency) {
@@ -193,7 +193,7 @@ async function fetchInsightsSales(
   condition: Condition,
   marketplace: MarketplaceId,
   token: string,
-  rates: ExchangeRates
+  rates: EbayExchangeRates
 ): Promise<EbaySale[]> {
   const conditionId = condition === "new" ? "1000" : "3000";
   const query = encodeURIComponent(`LEGO ${setNumber}`);
@@ -252,7 +252,7 @@ async function fetchGlobalSoldListings(
   setNumber: string,
   condition: Condition,
   token: string,
-  rates: ExchangeRates
+  rates: EbayExchangeRates
 ): Promise<EbaySale[]> {
   // Query all marketplaces in parallel
   const results = await Promise.allSettled(
@@ -307,7 +307,7 @@ async function fetchGlobalSoldListings(
 async function fetchBrowseListings(
   setNumber: string,
   condition: Condition,
-  rates: ExchangeRates,
+  rates: EbayExchangeRates,
   token: string
 ): Promise<EbaySale[]> {
   const conditionId = condition === "new" ? "1000" : "3000";
@@ -378,7 +378,7 @@ async function fetchBrowseListings(
 
 export async function getEbayMarketData(
   setNumber: string,
-  rates: ExchangeRates
+  rates: EbayExchangeRates
 ): Promise<EbayMarketData> {
   const cacheKey = `ebay-v2:${setNumber}`;
   const cached = await getCached<EbayMarketData>(cacheKey);

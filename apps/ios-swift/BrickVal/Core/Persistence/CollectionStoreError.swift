@@ -6,7 +6,7 @@ enum CollectionStoreError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .freeLimitReached(let limit, _):
-            "Your free collection can hold \(limit) unique items. Upgrade to BrickValue Pro for unlimited items."
+            BrickValLocalization.localized("Your free collection can hold \(limit) unique items. Upgrade to BrickValue Pro for unlimited items.")
         }
     }
 }

@@ -1,9 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
+import { scanRequestAccess } from "@/lib/scan-request-access";
 import { NextRequest, NextResponse } from "next/server";
 
 import { reportBulkScanError } from "@/lib/backend-error-reporting";
-import { mergeBulkRegionProposals } from "@/lib/bulk-identify";
-import { issueBulkRecoveryToken } from "@/lib/bulk-recovery-token";
+import { MAX_LIBRARY_BULK_REGIONS, mergeBulkRegionProposals } from "@/lib/bulk-identify";
 import { parseBulkScanInput } from "@/lib/bulk-scan-input";
 import { issueBulkScanSession } from "@/lib/bulk-scan-session";
 import { googleVisionObjectLocalizationEnabled, localizeObjectsWithGoogleVision } from "@/lib/google-vision-localizer";
@@ -12,6 +11,9 @@ import { checkFeatureAccess } from "@/lib/scan-gate";
 const MAX_CAPTURE_BYTES = 700 * 1024;
 
 export async function POST(req: NextRequest) {
+  const accessRequest = await scanRequestAccess(req);
+  if (accessRequest instanceof NextResponse) return accessRequest;
+  const { userId } = accessRequest;
   let formData: FormData;
   try {
     formData = await req.formData();
@@ -51,12 +53,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "image_too_large", message: "This image is too large. Please choose a smaller photo." }, { status: 413 });
   }
 
-  let userId: string | null = null;
-  try {
-    userId = (await auth()).userId;
-  } catch {
-    userId = null;
-  }
 
   if (userId) {
     const access = await checkFeatureAccess(userId, "bulk_scan");
@@ -77,7 +73,7 @@ export async function POST(req: NextRequest) {
       mergedRegions = mergeBulkRegionProposals(
         regions,
         proposals,
-        Number.MAX_SAFE_INTEGER,
+        MAX_LIBRARY_BULK_REGIONS,
       );
     } catch (error) {
       // Cloud proposal assistance is optional. The local detector remains the
@@ -86,11 +82,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const sessionToken = issueBulkScanSession(userId, scanSource, mergedRegions);
   return NextResponse.json({
     scanSource,
     regions: mergedRegions,
-    sessionToken: issueBulkScanSession(userId, scanSource, mergedRegions),
-    recoveryToken: issueBulkRecoveryToken(userId),
+    sessionToken,
+    recoveryToken: sessionToken,
     proposalSource: googleVisionObjectLocalizationEnabled() ? "local_plus_cloud" : "local",
   });
 }

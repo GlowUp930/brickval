@@ -1,7 +1,8 @@
-import Jimp from "jimp";
+import { Jimp } from "jimp";
 
 import { BrickognizeUnavailableError, identifyNonSet } from "./brickognize";
 import {
+  MAX_LIBRARY_BULK_REGIONS,
   assignDetectionsToRegions,
   mergeBulkDetections,
   planAccuracyBulkRecoveryCrops,
@@ -57,7 +58,7 @@ export async function runBulkMinifigScan(
   const imageHeight = source.bitmap.height;
   const guided = options.guided !== false;
   const scanSource = options.source ?? "camera";
-  const regionLimit = Number.MAX_SAFE_INTEGER;
+  const regionLimit = MAX_LIBRARY_BULK_REGIONS;
   const perRegionCrops = guided && regions.length
     ? planPerRegionRecognitionCrops(regions, regionLimit)
     : [];
@@ -251,10 +252,10 @@ async function identifyCrop(
   timeoutMilliseconds = 7_000
 ): Promise<NonSetDetection[]> {
   const rect = pixelRect(crop.boundingBox, imageWidth, imageHeight);
-  const cropped = source.clone().crop(rect.left, rect.top, rect.width, rect.height).quality(84);
-  if (Math.max(cropped.bitmap.width, cropped.bitmap.height) < 896) cropped.scaleToFit(896, 896);
-  if (Math.max(cropped.bitmap.width, cropped.bitmap.height) > 1280) cropped.scaleToFit(1280, 1280);
-  const data = await cropped.getBufferAsync("image/jpeg");
+  const cropped = source.clone().crop({ x: rect.left, y: rect.top, w: rect.width, h: rect.height });
+  if (Math.max(cropped.bitmap.width, cropped.bitmap.height) < 896) cropped.scaleToFit({ w: 896, h: 896 });
+  if (Math.max(cropped.bitmap.width, cropped.bitmap.height) > 1280) cropped.scaleToFit({ w: 1280, h: 1280 });
+  const data = await cropped.getBuffer("image/jpeg", { quality: 84 });
   const arrayBuffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
   const file = new File([arrayBuffer], `bulk-${index + 1}.jpg`, { type: "image/jpeg" });
   const response = await identifyNonSet(file, {

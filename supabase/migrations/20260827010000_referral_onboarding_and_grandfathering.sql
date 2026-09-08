@@ -17,7 +17,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_bulk_intro_installation_hash_idx
 UPDATE users
 SET bulk_intro_grandfathered = true
 WHERE bulk_intro_grandfathered = false
-  AND created_at < now();
+  AND created_at < timestamp '2026-08-28 00:00:00';
 
 ALTER TABLE referral_attributions
   ADD COLUMN IF NOT EXISTS installation_hash text;

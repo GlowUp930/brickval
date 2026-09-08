@@ -53,7 +53,7 @@ function percentage(name: string, fallback: number): number {
 
 export function getMonetizationPolicy(): MonetizationPolicy {
   return {
-    version: 5,
+    version: 6,
     accessExperiment: {
       enabled: booleanValue("BRICKVALUE_HARD_PAYWALL_EXPERIMENT_ENABLED", false),
       hardPaywallPercent: percentage("BRICKVALUE_HARD_PAYWALL_PERCENT", 50),
@@ -72,8 +72,9 @@ export function getMonetizationPolicy(): MonetizationPolicy {
       introductoryBulkScans: positiveInteger("BRICKVALUE_FREE_BULK_SCANS", 1),
       collectionUniqueItems: positiveInteger("BRICKVALUE_FREE_COLLECTION_ITEMS", 10),
     },
-    // Enable only after the referral/grandfathering migration is deployed.
-    lockedBulkPreview: booleanValue("BRICKVALUE_LOCKED_BULK_PREVIEW_ENABLED", false),
+    // New soft users see a local blurred preview after their introductory credit is exhausted.
+    // Keep the environment override as a rollback switch for the rollout.
+    lockedBulkPreview: booleanValue("BRICKVALUE_LOCKED_BULK_PREVIEW_ENABLED", true),
     notifications: {
       enabled: booleanValue("BRICKVALUE_NOTIFICATIONS_ENABLED", true),
       scanReset: booleanValue("BRICKVALUE_SCAN_RESET_NOTIFICATIONS_ENABLED", true),

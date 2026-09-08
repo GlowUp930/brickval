@@ -13,6 +13,12 @@ final class PreferencesStore {
     var scanImprovementConsent: Bool { didSet { save(scanImprovementConsent, for: Keys.consent) } }
     var theme: ThemePreference { didSet { save(theme.rawValue, for: Keys.theme) } }
     var accent: AccentPreference { didSet { save(accent.rawValue, for: Keys.accent) } }
+    var languageOverride: BrickValLanguage? {
+        didSet { save(languageOverride?.rawValue, for: BrickValLocalization.languageOverrideKey) }
+    }
+    var currencyOverride: BrickValCurrency? {
+        didSet { save(currencyOverride?.rawValue, for: Keys.currency) }
+    }
     var avatarName: String? { didSet { save(avatarName, for: Keys.avatar) } }
     var avatarBackground: AvatarBackgroundPreference { didSet { save(avatarBackground.rawValue, for: Keys.avatarBackground) } }
     var hasSeenHistoryTip: Bool { didSet { save(hasSeenHistoryTip, for: Keys.historyTip) } }
@@ -20,7 +26,16 @@ final class PreferencesStore {
     var hasSeenScanTips: Bool { didSet { save(hasSeenScanTips, for: Keys.scanTips) } }
     var guestScansUsed: Int { didSet { save(guestScansUsed, for: Keys.guestScans) } }
     var hasRequestedReview: Bool { didSet { save(hasRequestedReview, for: Keys.reviewRequested) } }
+    var referralCompletionUserID: String? { didSet { defaults.set(referralCompletionUserID, forKey: "brickvalue_referral_completion_user_id") } }
     var referralOnboardingCompletionPending: Bool { didSet { save(referralOnboardingCompletionPending, for: Keys.referralOnboardingCompletionPending) } }
+
+    var effectiveLanguage: BrickValLanguage {
+        BrickValLocalization.effectiveLanguage(for: languageOverride)
+    }
+
+    var effectiveCurrency: BrickValCurrency {
+        BrickValCurrency.effective(for: currencyOverride)
+    }
 
     @ObservationIgnored private let defaults: UserDefaults
 
@@ -32,6 +47,10 @@ final class PreferencesStore {
         scanImprovementConsent = defaults.bool(forKey: Keys.consent)
         theme = defaults.string(forKey: Keys.theme).flatMap(ThemePreference.init(rawValue:)) ?? .dark
         accent = defaults.string(forKey: Keys.accent).flatMap(AccentPreference.init(rawValue:)) ?? .green
+        languageOverride = defaults.string(forKey: BrickValLocalization.languageOverrideKey)
+            .flatMap(BrickValLanguage.init(rawValue:))
+        currencyOverride = defaults.string(forKey: Keys.currency)
+            .flatMap(BrickValCurrency.init(rawValue:))
         avatarName = defaults.string(forKey: Keys.avatar)
         avatarBackground = defaults.string(forKey: Keys.avatarBackground).flatMap(AvatarBackgroundPreference.init(rawValue:)) ?? .accent
         hasSeenHistoryTip = defaults.bool(forKey: Keys.historyTip)
@@ -39,6 +58,7 @@ final class PreferencesStore {
         hasSeenScanTips = defaults.bool(forKey: Keys.scanTips)
         guestScansUsed = defaults.integer(forKey: Keys.guestScans)
         hasRequestedReview = defaults.bool(forKey: Keys.reviewRequested)
+        referralCompletionUserID = defaults.string(forKey: "brickvalue_referral_completion_user_id")
         referralOnboardingCompletionPending = defaults.bool(forKey: Keys.referralOnboardingCompletionPending)
     }
 
@@ -69,6 +89,7 @@ final class PreferencesStore {
         static let consent = "brickval_scan_improvement_consent"
         static let theme = "brickval_theme_preference"
         static let accent = "brickval_accent_preference"
+        static let currency = "brickval_currency_override"
         static let avatar = "brickval_account_avatar"
         static let avatarBackground = "brickval_account_avatar_background"
         static let avatarCustomColor = "brickval_account_avatar_custom_color"

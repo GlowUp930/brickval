@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { supabase } from "@/lib/supabase";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -40,13 +42,19 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const { data: withinLimit, error: limitError } = await supabase.rpc("consume_service_rate_limit", {
+      p_key: `referral:${createHash("sha256").update(userId).digest("hex")}`,
+      p_limit: 30, p_now: new Date().toISOString(), p_window_seconds: 3600,
+    });
+    if (limitError) throw limitError;
+    if (withinLimit !== true) return NextResponse.json({ error: "rate_limited", message: "Please wait before trying another invite code." }, { status: 429 });
     if (body.action === "create_code") {
       const code = await getOrCreateReferralCode(userId);
       return NextResponse.json({ code });
     }
 
     if (body.action === "claim") {
-      const code = body.code?.trim().toUpperCase() ?? "";
+      const code = typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
       if (!/^[A-Z0-9]{8}$/.test(code)) {
         return NextResponse.json(
           { error: "invalid_code", message: "Enter a valid BrickVal invite code." },
@@ -54,8 +62,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const installationID = body.installationID?.trim();
-      if (installationID && installationID.length > 128) {
+      const installationID = typeof body.installationID === "string" ? body.installationID.trim() : "";
+      if (!installationID || installationID.length > 128) {
         return NextResponse.json(
           { error: "invalid_installation", message: "The installation could not be verified." },
           { status: 422 },

@@ -14,9 +14,12 @@ struct NativeAudit {
     @MainActor static func main() async throws {
         let item = CollectionItem(setNumber: "12345", itemType: .set, name: "Audit", theme: "Audit", marketValueUSD: 100)
         let series = PortfolioHistoryBuilder.build(items: [item], horizon: .month)
-        let router = AppRouter()
+        let suite = "bv-native-audit-\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let router = AppRouter(defaults: defaults)
         router.handle(url: URL(string: "https://brickvalue.live/r/ABCD2345")!)
-        let restartedRouter = AppRouter()
+        let restartedRouter = AppRouter(defaults: defaults)
         let ebay = try JSONDecoder().decode(LookupPricing.self, from: Data("{\"ebay_new_avg_usd\":100,\"ebay_used_avg_usd\":80,\"data_source\":\"sold\"}".utf8))
         let newOnly = try JSONDecoder().decode(LookupPricing.self, from: Data("{\"hero_new_avg_usd\":100}".utf8))
 
@@ -29,7 +32,7 @@ struct NativeAudit {
         let store = CollectionStore(repository: CollectionRepository(fileURL: file))
         await store.load()
         let loadFailed = store.errorMessage != nil
-        try await store.add(item, isPro: true)
+        do { try await store.add(item, isPro: true) } catch { /* Expected after a failed load. */ }
         let overwritten = try Data(contentsOf: file) != corrupt
 
         let failureStore = CollectionStore(repository: CollectionRepository(fileURL: directory))
