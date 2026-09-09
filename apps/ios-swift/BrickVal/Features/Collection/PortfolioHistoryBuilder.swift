@@ -1,9 +1,14 @@
 import Foundation
 
-struct PortfolioMarketHistory {
+struct PortfolioMarketHistory: Sendable {
     let points: [PortfolioHistoryPoint]
     let coveredItems: Int
     let totalItems: Int
+}
+
+struct PreparedCollectionHistory: Sendable {
+    var portfolios: [PortfolioHorizon: PortfolioMarketHistory] = [:]
+    var items: [String: [PortfolioHorizon: [StockChartPoint]]] = [:]
 }
 
 enum PortfolioHistoryBuilder {
@@ -18,8 +23,27 @@ enum PortfolioHistoryBuilder {
     }
 
     static func marketHistory(items: [CollectionItem], horizon: PortfolioHorizon, now: Date = .now) -> PortfolioMarketHistory {
-        let covered = items.compactMap { item -> (CollectionItem, [StockChartPoint])? in
-            let points = priceSeries(sales: item.marketSales, horizon: horizon, now: now)
+        portfolio(items: items, series: items.map { priceSeries(sales: $0.marketSales, horizon: horizon, now: now) })
+    }
+
+    /// Called by the store's background preparation task, never during view rendering.
+    static func prepare(items: [CollectionItem], now: Date = .now) -> PreparedCollectionHistory {
+        var result = PreparedCollectionHistory()
+        for item in items {
+            guard !Task.isCancelled else { return result }
+            let observations = dailyObservations(sales: item.marketSales, now: now)
+            result.items[item.id] = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
+                ($0, window(observations, horizon: $0, now: now))
+            })
+        }
+        for horizon in PortfolioHorizon.allCases {
+            result.portfolios[horizon] = portfolio(items: items, series: items.map { result.items[$0.id]?[horizon] ?? [] })
+        }
+        return result
+    }
+
+    private static func portfolio(items: [CollectionItem], series: [[StockChartPoint]]) -> PortfolioMarketHistory {
+        let covered = zip(items, series).compactMap { item, points -> (CollectionItem, [StockChartPoint])? in
             return points.count > 1 ? (item, points) : nil
         }
         guard let commonStart = covered.compactMap({ $0.1.first?.timestamp }).max() else {
@@ -27,17 +51,25 @@ enum PortfolioHistoryBuilder {
         }
         // Keep the same holdings throughout the graph; never backfill an item's unknown past.
         let dates = Set(covered.flatMap { $0.1.compactMap(\.timestamp) }).filter { $0 >= commonStart }.sorted()
+        var cursors = Array(repeating: 0, count: covered.count)
         let points = dates.map { date in
-            let value = covered.reduce(0.0) { total, entry in
-                total + (entry.1.last(where: { ($0.timestamp ?? .distantFuture) <= date })?.value ?? 0) * Double(entry.0.quantity)
+            let value = covered.indices.reduce(0.0) { total, index in
+                let entry = covered[index]
+                while cursors[index] + 1 < entry.1.count, entry.1[cursors[index] + 1].timestamp! <= date {
+                    cursors[index] += 1
+                }
+                return total + entry.1[cursors[index]].value * Double(entry.0.quantity)
             }
-            return PortfolioHistoryPoint(date: label(date), value: value, timestamp: date)
+            return PortfolioHistoryPoint(date: "", value: value, timestamp: date)
         }
         return PortfolioMarketHistory(points: points, coveredItems: covered.count, totalItems: items.count)
     }
 
     static func priceSeries(sales: [CollectionMarketSale], horizon: PortfolioHorizon, now: Date = .now) -> [StockChartPoint] {
-        let start = calendar.date(byAdding: .day, value: -horizon.days, to: calendar.startOfDay(for: now))!
+        window(dailyObservations(sales: sales, now: now), horizon: horizon, now: now)
+    }
+
+    private static func dailyObservations(sales: [CollectionMarketSale], now: Date) -> [StockChartPoint] {
         var days: [Date: (total: Double, quantity: Int)] = [:]
         for sale in sales {
             guard sale.priceUSD.isFinite, sale.priceUSD > 0, sale.quantity > 0,
@@ -46,12 +78,16 @@ enum PortfolioHistoryBuilder {
             let previous = days[day] ?? (0, 0)
             days[day] = (previous.total + sale.priceUSD * Double(sale.quantity), previous.quantity + sale.quantity)
         }
-        let observations = days.keys.sorted().map { date in
-            StockChartPoint(label: label(date), value: days[date]!.total / Double(days[date]!.quantity), timestamp: date)
+        return days.keys.sorted().map { date in
+            StockChartPoint(label: "", value: days[date]!.total / Double(days[date]!.quantity), timestamp: date)
         }
+    }
+
+    private static func window(_ observations: [StockChartPoint], horizon: PortfolioHorizon, now: Date) -> [StockChartPoint] {
+        let start = calendar.date(byAdding: .day, value: -horizon.days, to: calendar.startOfDay(for: now))!
         var window = observations.filter { $0.timestamp! >= start }
         if let baseline = observations.last(where: { $0.timestamp! < start }), window.first?.timestamp != start {
-            window.insert(StockChartPoint(label: label(start), value: baseline.value, timestamp: start), at: 0)
+            window.insert(StockChartPoint(label: "", value: baseline.value, timestamp: start), at: 0)
         }
         return window
     }
@@ -64,7 +100,4 @@ enum PortfolioHistoryBuilder {
         return fallbackValue.isFinite && fallbackValue > 0 ? [StockChartPoint(label: BrickValLocalization.localized("Saved value"), value: fallbackValue)] : []
     }
 
-    private static func label(_ date: Date) -> String {
-        date.formatted(.dateTime.month(.abbreviated).day().locale(BrickValLocalization.effectiveLanguage.locale))
-    }
 }

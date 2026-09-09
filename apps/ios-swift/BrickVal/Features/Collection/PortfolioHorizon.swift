@@ -1,6 +1,6 @@
 import Foundation
 
-enum PortfolioHorizon: String, CaseIterable, Identifiable {
+enum PortfolioHorizon: String, CaseIterable, Identifiable, Sendable {
     case month = "1M"
     case quarter = "3M"
     case half = "6M"

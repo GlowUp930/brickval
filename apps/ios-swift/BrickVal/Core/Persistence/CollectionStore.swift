@@ -12,6 +12,14 @@ final class CollectionStore {
     var errorMessage: String?
     private(set) var isRefreshingHistory = false
     private(set) var historyErrorMessage: String?
+    private(set) var preparedHistory = PreparedCollectionHistory()
+    private(set) var isPreparingHistory = false
+    private(set) var displayItems: [CollectionDisplayItem] = []
+    @ObservationIgnored private var preparation: Task<Void, Never>?
+    @ObservationIgnored private var preparationRevision = 0
+    @ObservationIgnored private var preparedDay: Date?
+    @ObservationIgnored private var historyRefreshTask: Task<Void, Never>?
+    @ObservationIgnored private var historyPriority: CollectionHistoryRequestItem?
 
     @ObservationIgnored private let repository: CollectionRepository
     @ObservationIgnored private let defaults: UserDefaults
@@ -35,7 +43,7 @@ final class CollectionStore {
                 try await repository.removeAll()
                 defaults.removeObject(forKey: deletionKey)
             }
-            items = try await repository.load()
+            install(try await repository.load())
             hasLoaded = true
             errorMessage = nil
         } catch {
@@ -81,11 +89,28 @@ final class CollectionStore {
         historyEpoch += 1
     }
 
-    func refreshMarketHistory(using api: BrickValAPIClient, force: Bool = false) async {
-        guard !isRefreshingHistory else { return }
+    func refreshMarketHistory(using api: BrickValAPIClient, force: Bool = false, only: CollectionHistoryRequestItem? = nil) async {
+        var force = force
+        while let running = historyRefreshTask {
+            if let only { historyPriority = only }
+            await running.value
+            // Reuse a completed refresh; only missing/stale rows still need work.
+            force = false
+        }
+        guard !Task.isCancelled else { return }
+        let task = Task {
+            await self.performHistoryRefresh(using: api, force: force, only: only)
+            self.historyRefreshTask = nil
+        }
+        historyRefreshTask = task
+        await task.value
+    }
+
+    private func performHistoryRefresh(using api: BrickValAPIClient, force: Bool, only: CollectionHistoryRequestItem?) async {
         if !hasLoaded { await load() }
         guard hasLoaded else { return }
         let pending = items.filter { item in
+            if let only, CollectionHistoryRequestItem(item) != only { return false }
             guard !force, let raw = item.marketHistoryFetchedAt,
                   let date = CollectionMarketSale(date: raw, priceUSD: 1, quantity: 1).timestamp else { return true }
             return Date.now.timeIntervalSince(date) >= 86400 || date > .now
@@ -101,9 +126,14 @@ final class CollectionStore {
             let key = CollectionHistoryRequestItem(item)
             if !requested.contains(key) { requested.append(key) }
         }
-        for offset in stride(from: 0, to: requested.count, by: 20) {
+        while !requested.isEmpty {
             do {
-                let batch = Array(requested[offset..<min(offset + 20, requested.count)])
+                if let priority = historyPriority, let index = requested.firstIndex(of: priority) {
+                    requested.insert(requested.remove(at: index), at: 0)
+                }
+                historyPriority = nil
+                let batch = Array(requested.prefix(20))
+                requested.removeFirst(batch.count)
                 let response = try await api.collectionHistory(batch)
                 try Task.checkCancellation()
                 guard epoch == historyEpoch else { return }
@@ -159,7 +189,7 @@ final class CollectionStore {
         do {
             try await clear()
         } catch {
-            items = []
+            install([])
             hasLoaded = false
             errorMessage = BrickValLocalization.localized("Your collection could not be loaded. Please try again.")
             throw error
@@ -173,7 +203,7 @@ final class CollectionStore {
         try await repository.removeAll()
         historyEpoch += 1
         defaults.removeObject(forKey: deletionKey)
-        items = []
+        install([])
         hasLoaded = true
         errorMessage = nil
     }
@@ -198,11 +228,63 @@ final class CollectionStore {
         defer { isSaving = false }
         do {
             try await repository.replace(with: updatedItems)
-            items = updatedItems
+            install(updatedItems)
             errorMessage = nil
         } catch {
             errorMessage = BrickValLocalization.localized("That change could not be saved.")
             throw error
+        }
+    }
+
+    private func install(_ updated: [CollectionItem]) {
+        let historyChanged = items.count != updated.count || zip(items, updated).contains {
+            $0.id != $1.id || $0.quantity != $1.quantity || $0.marketSales != $1.marketSales
+        }
+        items = updated
+        displayItems = CollectionDisplayItem.make(from: updated)
+        prepareHistoryIfNeeded(force: historyChanged)
+    }
+
+    func prepareHistoryIfNeeded(force: Bool = false, now: Date = .now) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let day = calendar.startOfDay(for: now)
+        guard force || preparedDay != day else { return }
+        preparedDay = day
+        preparationRevision += 1
+        let revision = preparationRevision
+        preparation?.cancel()
+        let snapshot = items
+        if snapshot.isEmpty {
+            preparedHistory = PreparedCollectionHistory()
+            isPreparingHistory = false
+            return
+        }
+        isPreparingHistory = true
+        preparation = Task { [weak self] in
+            let worker = Task.detached(priority: .userInitiated) {
+                PortfolioHistoryBuilder.prepare(items: snapshot, now: now)
+            }
+            let result = await withTaskCancellationHandler {
+                await worker.value
+            } onCancel: { worker.cancel() }
+            guard let self, !Task.isCancelled, revision == self.preparationRevision else { return }
+            self.preparedHistory = result
+            self.isPreparingHistory = false
+        }
+    }
+
+    func waitForPreparedHistory() async { await preparation?.value }
+
+    /// The market window uses UTC, which may roll over while the app stays open.
+    func refreshHistoryAtDayBoundary() async {
+        while !Task.isCancelled {
+            prepareHistoryIfNeeded()
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+            let nextDay = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: .now))!
+            do { try await Task.sleep(for: .seconds(max(1, nextDay.timeIntervalSinceNow))) }
+            catch { return }
         }
     }
 }

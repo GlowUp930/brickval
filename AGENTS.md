@@ -1,5 +1,9 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Collection performance — 2026-09-09
+
+Build 172 work removes synchronous history reconstruction from Collection/item rendering, prepares all timeframes off the main actor, shares chart data, and caches/downsamples public product images. Sentry BRICKVAL-M confirms build 171's 14–15 second main-thread hang in date parsing through `PortfolioSummaryView`; this is a real production defect. Keep history preparation out of view computed properties and preserve genuine dated sales, coverage, current valuation separation, and Pro rules. See `docs/audits/2026-09-09-collection-performance.md` for measurements and current release status. Device confirmation remains required; simulator timings do not establish recovery on the owner's phone.
+
 ## Purchase diagnostics — 2026-09-09
 
 Build 171 adds correlated purchase/restore attempts in PostHog and Sentry, with hashed RevenueCat identity, Apple permission/storefront, OS, elapsed time and original error codes. Purchase behavior, products and pricing remain unchanged; no automatic retries. Full native verification passes 222 tests / 448 runs on small and large simulators, plus all 13 locales. The original build-162/166 Apple purchase-not-allowed case remains unresolved: its customer is unidentified, and no physical test device is available. See `docs/audits/2026-09-09-purchase-attempts.md` for release status and recovery criteria. Never treat no new errors as proof that this customer recovered.

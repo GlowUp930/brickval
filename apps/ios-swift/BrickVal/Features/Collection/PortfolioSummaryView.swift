@@ -5,12 +5,8 @@ struct PortfolioSummaryView: View {
     @Environment(PreferencesStore.self) private var preferences
     @Environment(CurrencyStore.self) private var currency
     let value: Double
-    let items: [CollectionItem]
+    let history: [PortfolioHistoryPoint]
     let horizon: PortfolioHorizon
-
-    private var history: [PortfolioHistoryPoint] {
-        PortfolioHistoryBuilder.build(items: items, horizon: horizon)
-    }
 
     private var displayValue: Double { value }
     private var previousValue: Double { history.first?.value ?? displayValue }

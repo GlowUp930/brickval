@@ -7,7 +7,7 @@ struct CollectionHistoryStatusView: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            if store.isRefreshingHistory {
+            if store.isRefreshingHistory || store.isPreparingHistory {
                 ProgressView("Loading market history…")
             } else if let error = store.historyErrorMessage {
                 Text(error).font(.caption).foregroundStyle(.secondary)

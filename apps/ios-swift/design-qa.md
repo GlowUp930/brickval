@@ -1,5 +1,9 @@
 # Scan Result Card Visual QA
 
+## Collection responsiveness — build 172 work
+
+Preserve the existing Collection/item layout and real-history semantics. Timeframe switches select background-prepared results without replaying the reveal animation; touch selection resets on timeframe/condition changes. Initial Release-config fixture tests pass on the small iPhone: 21 switches per screen, p95 about 33 ms to the first display callback after chart data is applied. Captured multi-point graphs and largest-text controls remain visible/reachable. Image sharing/offline/downsampling are unit tested. This is provisional simulator evidence; see `docs/audits/2026-09-09-collection-performance.md` for final tests, release status, production stack evidence, and remaining physical-device checks.
+
 ## Purchase diagnostics — build 171
 
 No UI, subscription price, product, or recovery-copy changes. The purchase-controller tests confirm that Apple rejection returns the existing App Store/Screen Time recovery guidance without granting Pro; cancellation and pending approval remain distinct. Full native unit/UI suites pass on iPhone SE and iPhone 17 Pro (222 tests / 448 runs), with all 13 localization checks passing. Device restriction toggles and real Apple test purchases are blocked by unavailable paired iPhones. Do not mark the unidentified build-162/166 customer recovered. See `docs/audits/2026-09-09-purchase-attempts.md`.

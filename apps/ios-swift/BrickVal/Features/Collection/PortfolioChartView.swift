@@ -3,14 +3,13 @@ import SwiftUI
 struct PortfolioChartView: View {
     @Environment(\.brickValAccent) private var accent
     @Environment(CollectionStore.self) private var store
-    let items: [CollectionItem]
     @Binding var horizon: PortfolioHorizon
     var proHorizons: Set<PortfolioHorizon> = []
     var isPro = false
     var onProSelection: (PortfolioHorizon) -> Void = { _ in }
 
     private var points: [StockChartPoint] {
-        PortfolioHistoryBuilder.build(items: items, horizon: horizon).map {
+        (store.preparedHistory.portfolios[horizon]?.points ?? []).map {
             StockChartPoint(label: $0.date, value: $0.value, timestamp: $0.timestamp)
         }
     }
@@ -19,7 +18,7 @@ struct PortfolioChartView: View {
         VStack(spacing: BrickValStyle.Primitive.space8) {
             if points.count > 1 {
                 Text("Estimated market history").font(.caption).foregroundStyle(.secondary)
-                let history = PortfolioHistoryBuilder.marketHistory(items: items, horizon: horizon)
+                let history = store.preparedHistory.portfolios[horizon] ?? PortfolioMarketHistory(points: [], coveredItems: 0, totalItems: store.items.count)
                 Text("History available for \(history.coveredItems) of \(history.totalItems) items")
                     .font(.caption2).foregroundStyle(.secondary)
             }
@@ -30,9 +29,9 @@ struct PortfolioChartView: View {
                         lineColor: accent,
                         popupBackground: BrickValStyle.Semantic.textPrimary,
                         popupForeground: BrickValStyle.Semantic.canvas,
-                        showsFill: false
+                        showsFill: false,
+                        selectionID: horizon.rawValue
                     )
-                    .id(horizon)
                     .accessibilityIdentifier("collection.valueChart.\(horizon.rawValue).\(points.count)")
                 } else {
                     CollectionHistoryStatusView(hasHistory: false)

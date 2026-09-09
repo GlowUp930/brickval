@@ -6,9 +6,8 @@ struct CollectionMarketSale: Codable, Hashable, Sendable {
     let quantity: Int
 
     var timestamp: Date? {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.date(from: date) ?? ISO8601DateFormatter().date(from: date)
+        (try? Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse(date))
+            ?? (try? Date.ISO8601FormatStyle().parse(date))
     }
 
     enum CodingKeys: String, CodingKey {

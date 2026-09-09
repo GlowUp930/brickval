@@ -1,15 +1,14 @@
 import Charts
 import SwiftUI
 
-struct StockChartPoint: Identifiable, Equatable {
+struct StockChartPoint: Identifiable, Equatable, Sendable {
     let label: String
     let value: Double
     var timestamp: Date? = nil
-    var id: String { label }
+    var id: String { timestamp.map { String($0.timeIntervalSince1970) } ?? label }
 }
 
 struct InteractiveStockChart: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(PreferencesStore.self) private var preferences
     @Environment(CurrencyStore.self) private var currency
 
@@ -18,14 +17,12 @@ struct InteractiveStockChart: View {
     let popupBackground: Color
     let popupForeground: Color
     var showsFill = false
-
-    @State private var selectedSampleID: Int?
-    @State private var didReveal = false
+    var selectionID: String? = nil
 
     private var samples: [StockChartSample] {
         let requestedCurrency = preferences.effectiveCurrency
         let displayCurrency = currency.displayCurrency(for: requestedCurrency)
-        return Self.resample(points, count: 140).map {
+        return StockChartPlot.resample(points, count: 140, locale: preferences.effectiveLanguage.locale).map {
             StockChartSample(
                 id: $0.id,
                 label: $0.label,
@@ -34,26 +31,59 @@ struct InteractiveStockChart: View {
         }
     }
 
+    var body: some View {
+        let prepared = samples
+        let low = prepared.map(\.value).min() ?? 0
+        let high = prepared.map(\.value).max() ?? 1
+        let padding = max((high - low) * 0.14, max(high * 0.018, 1))
+        StockChartPlot(samples: prepared, pointCount: points.count, lineColor: lineColor,
+                       popupBackground: popupBackground, popupForeground: popupForeground, showsFill: showsFill,
+                       yDomain: max(0, low - padding)...(high + padding), selectionID: selectionID)
+            .onChange(of: points) { _, _ in
+#if DEBUG
+                ChartInteractionTiming.shared.applied()
+#endif
+            }
+            .onChange(of: selectionID) { _, _ in
+#if DEBUG
+                ChartInteractionTiming.shared.applied()
+#endif
+            }
+    }
+
+    static func resample(_ points: [StockChartPoint], count: Int, locale: Locale = BrickValLocalization.effectiveLanguage.locale) -> [StockChartSample] {
+        StockChartPlot.resample(points, count: count, locale: locale)
+    }
+}
+
+/// Touch selection is local to the plot: dragging never reprocesses its input data.
+private struct StockChartPlot: View {
+    @Environment(PreferencesStore.self) private var preferences
+    @Environment(CurrencyStore.self) private var currency
+    let samples: [StockChartSample]
+    let pointCount: Int
+    let lineColor: Color
+    let popupBackground: Color
+    let popupForeground: Color
+    let showsFill: Bool
+    let yDomain: ClosedRange<Double>
+    let selectionID: String?
+    @State private var selectedSampleID: Int?
+
     private var selectedSample: StockChartSample? {
-        guard let selectedSampleID else { return nil }
-        return samples.first { $0.id == selectedSampleID }
+        guard let selectedSampleID, samples.indices.contains(selectedSampleID) else { return nil }
+        return samples[selectedSampleID]
     }
 
     private var chartColor: Color {
         lineColor
     }
 
-    private var yDomain: ClosedRange<Double> {
-        guard let low = samples.map(\.value).min(), let high = samples.map(\.value).max() else { return 0 ... 1 }
-        let padding = max((high - low) * 0.14, max(high * 0.018, 1))
-        return max(0, low - padding) ... high + padding
-    }
-
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .topLeading) {
                 Chart {
-                    if points.count == 1, let sample = samples.first {
+                    if pointCount == 1, let sample = samples.first {
                         RuleMark(y: .value("Value", sample.value))
                             .foregroundStyle(chartColor.opacity(0.55))
                             .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 5]))
@@ -111,24 +141,11 @@ struct InteractiveStockChart: View {
             .chartPlotStyle { plot in
                 plot
                     .background(.clear)
-                    .mask(alignment: .leading) {
-                        Rectangle()
-                            .frame(width: didReveal || reduceMotion ? geometry.size.width : 0)
-                    }
             }
             .chartXSelection(value: $selectedSampleID)
         }
-        .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.9, blendDuration: 0.12), value: samples)
-        .onAppear {
-            guard !didReveal else { return }
-            if reduceMotion {
-                didReveal = true
-            } else {
-                withAnimation(.easeOut(duration: 0.74)) {
-                    didReveal = true
-                }
-            }
-        }
+        .onChange(of: samples) { _, _ in selectedSampleID = nil }
+        .onChange(of: selectionID) { _, _ in selectedSampleID = nil }
         .clipped()
         .sensoryFeedback(.selection, trigger: selectedSampleID)
         .accessibilityLabel("Price history chart")
@@ -163,25 +180,30 @@ struct InteractiveStockChart: View {
         return (progress * width).clamped(to: estimatedHalfWidth ... max(estimatedHalfWidth, width - estimatedHalfWidth))
     }
 
-    static func resample(_ points: [StockChartPoint], count: Int) -> [StockChartSample] {
+    static func resample(_ points: [StockChartPoint], count: Int, locale: Locale = BrickValLocalization.effectiveLanguage.locale) -> [StockChartSample] {
         guard count > 0 else { return [] }
         guard points.count > 1 else {
             guard let point = points.first else { return [] }
             return [StockChartSample(id: 0, label: point.label, value: point.value)]
         }
 
+        let start = points.first?.timestamp
+        let end = points.last?.timestamp
+        let hasDates = start != nil && end != nil && end! > start! && points.allSatisfy { $0.timestamp != nil }
+        let dateStyle = Date.FormatStyle.dateTime.month(.abbreviated).day().locale(locale)
+        var cursor = 0
         return (0 ..< count).map { outputIndex in
             let fractionAcross = Double(outputIndex) / Double(max(count - 1, 1))
             var position = fractionAcross * Double(points.count - 1)
             var dateLabel: String?
-            if let start = points.first?.timestamp, let end = points.last?.timestamp, end > start,
-               points.allSatisfy({ $0.timestamp != nil }) {
+            if hasDates, let start, let end {
                 let date = start.addingTimeInterval(end.timeIntervalSince(start) * fractionAcross)
-                let lower = points.lastIndex(where: { $0.timestamp! <= date }) ?? 0
+                while cursor + 1 < points.count, points[cursor + 1].timestamp! <= date { cursor += 1 }
+                let lower = cursor
                 let upper = min(lower + 1, points.count - 1)
                 let span = points[upper].timestamp!.timeIntervalSince(points[lower].timestamp!)
                 position = Double(lower) + (span > 0 ? date.timeIntervalSince(points[lower].timestamp!) / span : 0)
-                dateLabel = date.formatted(.dateTime.month(.abbreviated).day().locale(BrickValLocalization.effectiveLanguage.locale))
+                dateLabel = date.formatted(dateStyle)
             }
             let lower = Int(floor(position))
             let upper = min(lower + 1, points.count - 1)
@@ -194,7 +216,7 @@ struct InteractiveStockChart: View {
 
 }
 
-struct StockChartSample: Identifiable, Equatable {
+struct StockChartSample: Identifiable, Equatable, Sendable {
     let id: Int
     let label: String
     let value: Double
@@ -208,6 +230,7 @@ private extension Comparable {
 
 struct ChartHorizonPicker: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(PreferencesStore.self) private var preferences
     @Binding var selection: PortfolioHorizon
     var timelinePoints: [StockChartPoint] = []
     let tint: Color
@@ -219,7 +242,7 @@ struct ChartHorizonPicker: View {
     private var timelineLabels: [String] {
         if let start = timelinePoints.first?.timestamp, let end = timelinePoints.last?.timestamp, end > start {
             return [start, start.addingTimeInterval(end.timeIntervalSince(start) / 2), end].map {
-                $0.formatted(.dateTime.month(.abbreviated).day().locale(BrickValLocalization.effectiveLanguage.locale))
+                $0.formatted(.dateTime.month(.abbreviated).day().locale(preferences.effectiveLanguage.locale))
             }
         }
         let uniquePoints = timelinePoints.reduce(into: [StockChartPoint]()) { result, point in
@@ -256,9 +279,10 @@ struct ChartHorizonPicker: View {
                             onProSelection(option)
                             return
                         }
-                        withAnimation(reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.82)) {
-                            selection = option
-                        }
+#if DEBUG
+                        ChartInteractionTiming.shared.begin()
+#endif
+                        selection = option
                     } label: {
                         VStack(spacing: BrickValStyle.Primitive.space4) {
                             HStack(spacing: BrickValStyle.Primitive.space4) {
@@ -287,5 +311,6 @@ struct ChartHorizonPicker: View {
             }
         }
         .sensoryFeedback(.selection, trigger: selection)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: selection)
     }
 }

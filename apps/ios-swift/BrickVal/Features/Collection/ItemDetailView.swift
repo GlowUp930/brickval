@@ -10,6 +10,7 @@ struct ItemDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.brickValAccent) private var accent
+    @Environment(\.scenePhase) private var scenePhase
     let item: CollectionItem
 
     @State private var selectedCondition: DetailConditionOption
@@ -88,9 +89,13 @@ struct ItemDetailView: View {
         .background(detailBackground.ignoresSafeArea())
         .task {
             guard let coordinator else { return }
-            await store.refreshMarketHistory(using: coordinator.apiClient)
+            store.prepareHistoryIfNeeded()
+            await store.refreshMarketHistory(using: coordinator.apiClient, only: CollectionHistoryRequestItem(item))
         }
         .navigationTitle("")
+        .task(id: scenePhase) {
+            if scenePhase == .active { await store.refreshHistoryAtDayBoundary() }
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbarBackground(.hidden, for: .navigationBar)
@@ -133,16 +138,12 @@ struct ItemDetailView: View {
     private var detailBackground: some View {
         ZStack {
             BrickValStyle.ScanResult.canvas
-            AsyncImage(url: item.imageURL) { image in
-                image
-                    .resizable()
-                    .scaledToFill()
+            ProductImage(url: item.imageURL, pointSize: 120, contentMode: .fill)
                     .blur(radius: 28)
                     .scaleEffect(1.18)
                     .opacity(0.34)
-            } placeholder: {
-                Color.clear
-            }
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
             LinearGradient(
                 colors: [
                     BrickValStyle.Primitive.black.opacity(0.2),
@@ -158,19 +159,8 @@ struct ItemDetailView: View {
     private var heroImage: some View {
         ZStack {
             productPhotoPlate
-            AsyncImage(url: item.imageURL) { image in
-                image
-                    .resizable()
-                    .scaledToFit()
-                    .padding(BrickValStyle.Primitive.space16)
-            } placeholder: {
-                SkeletonPlaceholder(
-                    cornerRadius: BrickValStyle.ScanResult.buttonRadius,
-                    fill: BrickValStyle.Primitive.white,
-                    highlight: BrickValStyle.Primitive.white
-                )
-                .frame(width: 180, height: 180)
-            }
+            ProductImage(url: item.imageURL, pointSize: 360)
+                .padding(BrickValStyle.Primitive.space16)
         }
         .frame(maxWidth: .infinity)
         .frame(height: 260)
@@ -271,9 +261,10 @@ struct ItemDetailView: View {
 
     private func itemTab(_ title: String, option: DetailConditionOption) -> some View {
         Button {
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.84)) {
-                selectedCondition = option
-            }
+#if DEBUG
+            ChartInteractionTiming.shared.begin()
+#endif
+            selectedCondition = option
         } label: {
             Text(title)
                 .font(.headline.weight(.bold))
@@ -295,9 +286,9 @@ struct ItemDetailView: View {
                 points: historyPoints,
                 lineColor: accent,
                 popupBackground: BrickValStyle.ScanResult.textPrimary,
-                popupForeground: BrickValStyle.ScanResult.canvas
+                popupForeground: BrickValStyle.ScanResult.canvas,
+                selectionID: "\(selectedCondition.rawValue)-\(horizon.rawValue)"
             )
-            .id(horizon)
             .accessibilityIdentifier("collectionItem.valueChart.\(historyPoints.count)")
             .frame(height: 330)
             }
@@ -629,7 +620,8 @@ struct ItemDetailView: View {
     private func conditionHistory(for option: DetailConditionOption, horizon: PortfolioHorizon) -> [StockChartPoint] {
         let sourceItem = matchingItems.first { $0.condition == option.condition }
             ?? (item.condition == option.condition ? item : nil)
-        return PortfolioHistoryBuilder.priceSeries(sales: sourceItem?.marketSales ?? [], horizon: horizon)
+        guard let sourceItem else { return [] }
+        return store.preparedHistory.items[sourceItem.id]?[horizon] ?? []
     }
 
 }

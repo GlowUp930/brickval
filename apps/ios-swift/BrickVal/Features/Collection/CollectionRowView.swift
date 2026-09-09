@@ -39,28 +39,8 @@ struct CollectionRowView: View {
                 .fill(productPlateFill)
                 .shadow(color: BrickValStyle.Primitive.black.opacity(colorScheme == .dark ? 0.26 : 0.08), radius: 12, y: 5)
 
-            AsyncImage(url: item.imageURL) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFit()
-                        .padding(BrickValStyle.Primitive.space12)
-                case .failure:
-                    Image(systemName: "shippingbox")
-                        .font(.system(size: 30, weight: .light))
-                        .foregroundStyle(BrickValStyle.Semantic.textSecondary)
-                case .empty:
-                    SkeletonPlaceholder(
-                        cornerRadius: 8,
-                        fill: BrickValStyle.Primitive.gray200,
-                        highlight: BrickValStyle.Primitive.white
-                    )
-                    .frame(width: 72, height: 72)
-                @unknown default:
-                    EmptyView()
-                }
-            }
+            ProductImage(url: item.imageURL, pointSize: 190)
+                .padding(BrickValStyle.Primitive.space12)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity)

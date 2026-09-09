@@ -77,10 +77,27 @@ struct CollectionHistoryDemoView: View {
         }
         .task {
             guard !ready else { return }
-            try? await store.add([
+            var items = [
                 CollectionItem(setNumber: "21367", itemType: .set, name: "Tintin Moon Rocket", theme: "Ideas", marketValueUSD: 150),
                 CollectionItem(setNumber: "70919", itemType: .set, name: "The Joker Manor", theme: "Batman", marketValueUSD: 120)
-            ], isPro: true)
+            ]
+            let arguments = ProcessInfo.processInfo.arguments
+            if let index = arguments.firstIndex(of: "-collectionPerformanceHoldings"), index + 1 < arguments.count,
+               let count = Int(arguments[index + 1]), (2...200).contains(count) {
+                items = (0..<count).map { index in
+                    let number = index < 2 ? "21367" : index < 4 ? "70919" : "fixture-\(index / 2)"
+                    var item = CollectionItem(setNumber: number, itemType: .set,
+                        name: index < 2 ? "Tintin Moon Rocket" : "The Joker Manor \(index / 2)", theme: "Performance fixture",
+                        imageURL: URL(string: "https://img.bricklink.com/ItemImage/SN/0/\(index < 2 ? "21367" : "70919")-1.png"),
+                        marketValueUSD: 150, condition: index.isMultiple(of: 2) ? .newSealed : .used)
+                    let row = CollectionHistoryDemo.response([CollectionHistoryRequestItem(item)]).items[0]
+                    item.marketSales = row.newSales
+                    item.marketHistoryFetchedAt = row.fetchedAt
+                    return item
+                }
+                items.reverse()
+            }
+            try? await store.add(items, isPro: true)
             ready = true
         }
     }

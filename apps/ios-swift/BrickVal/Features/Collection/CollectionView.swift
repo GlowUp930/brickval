@@ -9,6 +9,7 @@ struct CollectionView: View {
     @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.brickValAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @State private var searchText = ""
     @State private var filter: CollectionFilter = .all
     @State private var isSearchVisible = false
@@ -23,7 +24,7 @@ struct CollectionView: View {
     ]
 
     private var visibleItems: [CollectionDisplayItem] {
-        CollectionDisplayItem.make(from: store.items).filter { item in
+        store.displayItems.filter { item in
             filter.includes(item) && (
                 searchText.isEmpty ||
                 item.name.localizedStandardContains(searchText) ||
@@ -71,10 +72,9 @@ struct CollectionView: View {
                 if store.isLoading && store.items.isEmpty {
                     CollectionLoadingView()
                 } else {
-                    PortfolioSummaryView(value: store.totalValue, items: store.items, horizon: horizon)
+                    PortfolioSummaryView(value: store.totalValue, history: store.preparedHistory.portfolios[horizon]?.points ?? [], horizon: horizon)
                         .padding(.top, BrickValStyle.CollectionLayout.heroTop)
                     PortfolioChartView(
-                        items: store.items,
                         horizon: $horizon,
                         proHorizons: proHistoryHorizons,
                         isPro: entitlements.isPro,
@@ -127,8 +127,12 @@ struct CollectionView: View {
         .background(BrickValStyle.Semantic.canvas.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .task(id: store.items.map(\.id)) {
+            store.prepareHistoryIfNeeded()
             guard let coordinator else { return }
             await store.refreshMarketHistory(using: coordinator.apiClient)
+        }
+        .task(id: scenePhase) {
+            if scenePhase == .active { await store.refreshHistoryAtDayBoundary() }
         }
         .refreshable {
             await store.load()
