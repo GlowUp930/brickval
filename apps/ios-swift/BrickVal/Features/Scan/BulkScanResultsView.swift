@@ -68,6 +68,7 @@ struct BulkScanResultsView: View {
     @State private var itemStates: [BulkScanItemState]
     @State private var unresolvedRegions: [NormalizedBoundingBox]
     @State private var focusedResultID: String?
+    @State private var focusedPriceCalloutID: String?
     @State private var selectedMatchTarget: BulkMatchTarget?
     @State private var correctionRequestID = 0
     @State private var retriedRegionIDs: Set<String> = []
@@ -526,12 +527,19 @@ struct BulkScanResultsView: View {
                             EmptyView()
                         } else if presentationPhase == .completedReview {
                             completedDetectionOverlays(imageRect: imageRect)
-                            BulkFocusOverlay(
-                                regions: [],
+                            completedMatchHitTargets(
+                                imageRect: imageRect,
+                                containerSize: proxy.size,
+                            )
+                            BulkPriceTagsOverlay(
+                                callouts: completedPriceCallouts,
                                 imageRect: imageRect,
                                 containerSize: proxy.size,
                                 accent: accent,
-                                persistentCallouts: completedPriceCallouts
+                                reservedRects: completedPriceTagReservedRects(in: proxy.size),
+                                accessibilitySize: dynamicTypeSize.isAccessibilitySize,
+                                focusedID: focusedPriceCalloutID,
+                                onSelect: focusPriceCallout
                             )
                         } else if presentation.accessMode == .lockedPreview {
                             BulkFocusOverlay(
@@ -557,20 +565,12 @@ struct BulkScanResultsView: View {
                         if presentation.accessMode == .lockedPreview {
                             EmptyView()
                         } else if presentationPhase == .completedReview {
-                            ZStack {
-                                completedMatchHitTargets(
-                                    imageRect: imageRect,
-                                    containerSize: proxy.size
-                                )
-
-                                VStack(spacing: 0) {
-                                    summaryPill
-                                        .padding(.top, 14)
-                                    Spacer(minLength: 0)
-                                    resultCarousel
-                                        .padding(.bottom, 12)
-                                }
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            VStack(spacing: 0) {
+                                summaryPill
+                                    .padding(.top, 14)
+                                Spacer(minLength: 0)
+                                resultCarousel
+                                    .padding(.bottom, 12)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                         } else {
@@ -663,6 +663,25 @@ struct BulkScanResultsView: View {
         .accessibilityLabel(matchTargetLabel(for: regionID))
         .accessibilityHint("Opens possible matches for this figure")
         .accessibilityIdentifier("bulkMatch.region.\(regionID)")
+    }
+
+    private func completedPriceTagReservedRects(in size: CGSize) -> [CGRect] {
+        let summaryHeight: CGFloat = 78
+        let railHeight: CGFloat = dynamicTypeSize.isAccessibilitySize ? 370 : 150
+        return [
+            CGRect(x: 8, y: 8, width: max(0, size.width - 16), height: summaryHeight),
+            CGRect(
+                x: 0,
+                y: max(0, size.height - railHeight),
+                width: size.width,
+                height: railHeight
+            ),
+        ]
+    }
+
+    private func focusPriceCallout(_ id: String) {
+        focusedPriceCalloutID = id
+        focusedResultID = id
     }
 
     private var summaryPill: some View {
@@ -970,6 +989,7 @@ struct BulkScanResultsView: View {
         return BulkFocusCallout(
             id: entry.id,
             box: box,
+            number: entry.spatialNumber,
             text: isLoading ? BrickValLocalization.localized("Checking price") : visibleText,
             accessibilityText: isLoading ? nil : spokenText,
             isLoading: isLoading,
@@ -990,6 +1010,7 @@ struct BulkScanResultsView: View {
             return BulkFocusCallout(
                 id: entry.id,
                 box: box,
+                number: entry.spatialNumber,
                 text: visibleText,
                 accessibilityText: spokenText,
                 isLoading: false,

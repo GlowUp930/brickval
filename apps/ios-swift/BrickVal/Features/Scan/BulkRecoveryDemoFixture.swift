@@ -21,6 +21,28 @@ enum BulkRecoveryDemoFixture {
         ]
     }
 
+    static var denseItems: [BulkScanResultItem] {
+        (0 ..< 60).map { index in
+            let column = index % 10
+            let row = index / 10
+            let box = NormalizedBoundingBox(
+                x: 0.025 + Double(column) * 0.095,
+                y: 0.055 + Double(row) * 0.145,
+                width: 0.065,
+                height: 0.095
+            )
+            return BulkScanResultItem(
+                id: "dense-\(index + 1)",
+                result: result(
+                    identifier: "dense-\(index + 1)",
+                    name: "Figure \(index + 1)",
+                    price: Double((index % 17) + 2)
+                ),
+                boundingBox: box
+            )
+        }
+    }
+
     static var wideProcessingImageData: Data? {
         let size = CGSize(width: 1080, height: 620)
         let image = UIGraphicsImageRenderer(size: size).image { context in

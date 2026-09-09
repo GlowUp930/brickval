@@ -139,6 +139,7 @@
 		90D13C0C9147DBBEEE6ADCF3 /* CollectionHistoryStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46D428E59D94337D76EBC1F7 /* CollectionHistoryStatusView.swift */; };
 		91A57DAF26C519784493A008 /* ClerkAccountContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0BA1A0E8B533CF77961E977 /* ClerkAccountContentView.swift */; };
 		94D7F6284019927B8B4657E6 /* PartColorsPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF4C96148C09F13D5D5AB880 /* PartColorsPayload.swift */; };
+		94FAA1B4016FBD1A503F7A25 /* BulkPriceTagsOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = F94B31D7916CE405BF07E876 /* BulkPriceTagsOverlay.swift */; };
 		9C221DCCC031A7AC664B0E7F /* NotificationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42E5E422336034CFE8D0170 /* NotificationCoordinator.swift */; };
 		9C8C4D7BA6C10356B316672B /* ScanResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD4021F21C580E46CEC12F4C /* ScanResultView.swift */; };
 		9E6CCB46F1DFB8A42C38D1DB /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = F995837F375B4DC12C7F78F7 /* AppRoute.swift */; };
@@ -180,6 +181,7 @@
 		C3F238AAD9383F76416ECE0D /* DetectionObservation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 838575333B805A61A14C702C /* DetectionObservation.swift */; };
 		C44D3A2878BBD8D7658E9342 /* BulkDetectionTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 682C25B2470F84B42642FFD1 /* BulkDetectionTracker.swift */; };
 		C4DBC7173F5A46EB8A8181A4 /* BulkRevealSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C7ACF75A359CFFC7F7783C /* BulkRevealSession.swift */; };
+		C4E208DCC6EF1170980F1A31 /* BulkPriceTagLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D07D26137A84E97FDE0C2E5 /* BulkPriceTagLayout.swift */; };
 		C5D449AD90B548B9985E56EE /* BulkProcessingOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF73BA3EA5F7DB4F5C1820B8 /* BulkProcessingOverlayView.swift */; };
 		C71BF7F62BFCC9A628F2D8EB /* BulkFocusOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BFA316FF629A4E6A317927E /* BulkFocusOverlay.swift */; };
 		C71FE4BE1AE858D42B4F470E /* InstallationIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D1E7C39458E305F9F5B279 /* InstallationIdentity.swift */; };
@@ -191,6 +193,7 @@
 		CE62ABE582802A94A3FD72F0 /* ReferralTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B93A61FE27D0131685368F7 /* ReferralTests.swift */; };
 		CF99662BD385ECA5ED8D7906 /* SDKEnvironmentRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF5986CE67C8CCD199CAB39 /* SDKEnvironmentRootView.swift */; };
 		D1AFDF14E68AAF6CEE3635D9 /* BulkRevealOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ED72367906518C9E91CE0C5 /* BulkRevealOverlay.swift */; };
+		D478628A6FC28A7491717CA2 /* BulkPriceTagLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC4BD1858E1F223314B42DA0 /* BulkPriceTagLayoutTests.swift */; };
 		D5A1DDD064E9BE7F0E5DFFDC /* PartColorSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F4AEB722B741DCE2C9C67E5 /* PartColorSelectionView.swift */; };
 		D62760CA78B5BF94C3466CCD /* OfferCodeRedemption.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31F9057D5EB20B52943F223F /* OfferCodeRedemption.swift */; };
 		D86D0B9AB2207D672A921E86 /* BrickValStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 842B4A17C7F3C3CCD3B92C1A /* BrickValStyle.swift */; };
@@ -250,6 +253,7 @@
 		09D69ECFFDB07A185852CFA8 /* ScanReviewCandidate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanReviewCandidate.swift; sourceTree = "<group>"; };
 		0B6370B2721603AD443EF2AD /* ProWelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProWelcomeView.swift; sourceTree = "<group>"; };
 		0BD5CBC7EB973B1B43F9B4B1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		0D07D26137A84E97FDE0C2E5 /* BulkPriceTagLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkPriceTagLayout.swift; sourceTree = "<group>"; };
 		10FF7680D1CD08807EB3F84D /* DetectionSampleMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionSampleMode.swift; sourceTree = "<group>"; };
 		15F49EA7913BC8566455330A /* OfferCodeRedemptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferCodeRedemptionTests.swift; sourceTree = "<group>"; };
 		164EA408ECAC4D317632EE50 /* LocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationTests.swift; sourceTree = "<group>"; };
@@ -402,6 +406,7 @@
 		B42859537BC630597753FFD1 /* BulkShareCardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkShareCardTests.swift; sourceTree = "<group>"; };
 		B50BCC8C03FE362629D0F4BB /* PortfolioChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioChartView.swift; sourceTree = "<group>"; };
 		BA91C00010B7FE9351243FE7 /* MinifigureDetector.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = MinifigureDetector.mlmodel; sourceTree = "<group>"; };
+		BC4BD1858E1F223314B42DA0 /* BulkPriceTagLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkPriceTagLayoutTests.swift; sourceTree = "<group>"; };
 		BCEBEFD62589431068064A5A /* CollectionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionRowView.swift; sourceTree = "<group>"; };
 		BE6CC33FE02AEEC394A6BA95 /* PrimaryGoal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryGoal.swift; sourceTree = "<group>"; };
 		BED682995C15E75257E316FF /* ScannerStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerStatusView.swift; sourceTree = "<group>"; };
@@ -448,6 +453,7 @@
 		F3A7522AD3DE6294F75198F6 /* PhotoCaptureDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoCaptureDelegate.swift; sourceTree = "<group>"; };
 		F58A74CBD1731FD713C2A0D4 /* ScanMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanMode.swift; sourceTree = "<group>"; };
 		F6295409A248D8C25D6C56B9 /* CollectionLoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionLoadingView.swift; sourceTree = "<group>"; };
+		F94B31D7916CE405BF07E876 /* BulkPriceTagsOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkPriceTagsOverlay.swift; sourceTree = "<group>"; };
 		F97C42005396E72CD198755E /* CollectionHistoryRefreshTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionHistoryRefreshTests.swift; sourceTree = "<group>"; };
 		F995837F375B4DC12C7F78F7 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		FB0EBE4F1B2830A4DC3C769B /* CurrencySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencySettingsView.swift; sourceTree = "<group>"; };
@@ -568,6 +574,7 @@
 				8252484A128C31D174837A08 /* AutoScanSessionTests.swift */,
 				3F9372BB4AE52F24593EE363 /* BulkDetectionTrackerTests.swift */,
 				434FB52982A435613DC24C46 /* BulkImageGeometryTests.swift */,
+				BC4BD1858E1F223314B42DA0 /* BulkPriceTagLayoutTests.swift */,
 				0374015F9BD2157183F144A5 /* BulkRecoveryStateTests.swift */,
 				335A3A7C9BD9EAEF3DEC52C0 /* BulkRevealSessionTests.swift */,
 				B42859537BC630597753FFD1 /* BulkShareCardTests.swift */,
@@ -826,6 +833,8 @@
 				DF17751A3223381C740D00A1 /* AutoScanPhase.swift */,
 				7923F89B165DBE64790485D1 /* AutoScanSession.swift */,
 				6BFA316FF629A4E6A317927E /* BulkFocusOverlay.swift */,
+				0D07D26137A84E97FDE0C2E5 /* BulkPriceTagLayout.swift */,
+				F94B31D7916CE405BF07E876 /* BulkPriceTagsOverlay.swift */,
 				BF73BA3EA5F7DB4F5C1820B8 /* BulkProcessingOverlayView.swift */,
 				47B3934D078FDDBACD996FFC /* BulkRecoveryDemoFixture.swift */,
 				6FE889BCC15D13FA8FD8BC8C /* BulkRecoverySession.swift */,
@@ -1100,6 +1109,7 @@
 				83C8DECF87342144916542EE /* AutoScanSessionTests.swift in Sources */,
 				4C1707FBD9D657DAE41B9141 /* BulkDetectionTrackerTests.swift in Sources */,
 				FF9A8EB0FD1D66EC4AAFB8A6 /* BulkImageGeometryTests.swift in Sources */,
+				D478628A6FC28A7491717CA2 /* BulkPriceTagLayoutTests.swift in Sources */,
 				2500C998A95D1093F4439001 /* BulkRecoveryStateTests.swift in Sources */,
 				AA8906A726E982D4651D7516 /* BulkRevealSessionTests.swift in Sources */,
 				BEF66B9FEF44FAA656FAC3DE /* BulkShareCardTests.swift in Sources */,
@@ -1172,6 +1182,8 @@
 				AAA777803A3BA83E0F8D462A /* BulkMinifigLookupRow.swift in Sources */,
 				1EB721E15C336E9FE07190E4 /* BulkMinifigScanPayload.swift in Sources */,
 				81E23CEB89523800F6164D95 /* BulkMinifigureDetector.mlpackage in Sources */,
+				C4E208DCC6EF1170980F1A31 /* BulkPriceTagLayout.swift in Sources */,
+				94FAA1B4016FBD1A503F7A25 /* BulkPriceTagsOverlay.swift in Sources */,
 				C5D449AD90B548B9985E56EE /* BulkProcessingOverlayView.swift in Sources */,
 				BE087EBEF8D4F6BBD64960AD /* BulkRecoveryDemoFixture.swift in Sources */,
 				9FAE99A4329317ED4D97DDA7 /* BulkRecoveryPayload.swift in Sources */,
@@ -1333,7 +1345,7 @@
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution: HO LAM CHAN (4CQHLZBSU7)";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 172;
+				CURRENT_PROJECT_VERSION = 173;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1462,7 +1474,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 172;
+				CURRENT_PROJECT_VERSION = 173;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

@@ -234,6 +234,26 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         XCTAssertTrue(secondPriceCallout.label.contains("USD"))
     }
 
+    func testDenseBulkPriceMarkersKeepEveryFigureRepresented() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-showDenseBulkRecoveryDemo"]
+        app.launch()
+
+        let completedSummary = app.descendants(matching: .any).matching(identifier: "bulkResults.summary").firstMatch
+        XCTAssertTrue(completedSummary.waitForExistence(timeout: 35))
+
+        let tags = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "bulkResults.priceCallout.dense-"))
+        XCTAssertEqual(tags.count, 60)
+        XCTAssertTrue(tags.element(boundBy: 0).label.contains("Figure 1"))
+        XCTAssertTrue(tags.element(boundBy: 59).label.contains("Figure 60"))
+
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Dense bulk numbered price markers"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
     func testHardPaywallPreviewButtonPresentsOnboarding() {
         let app = XCUIApplication()
         app.launchArguments = ["-showHardPaywallPreviewRootDemo"]

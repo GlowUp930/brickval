@@ -20,6 +20,7 @@ struct BulkFocusRegion: Identifiable, Sendable {
 struct BulkFocusCallout: Identifiable, Equatable, Sendable {
     let id: String
     let box: NormalizedBoundingBox
+    let number: Int?
     let text: String
     let accessibilityText: String?
     let isLoading: Bool
@@ -28,6 +29,7 @@ struct BulkFocusCallout: Identifiable, Equatable, Sendable {
     init(
         id: String = "bulk-focus-callout",
         box: NormalizedBoundingBox,
+        number: Int? = nil,
         text: String,
         accessibilityText: String? = nil,
         isLoading: Bool,
@@ -35,6 +37,7 @@ struct BulkFocusCallout: Identifiable, Equatable, Sendable {
     ) {
         self.id = id
         self.box = box
+        self.number = number
         self.text = text
         self.accessibilityText = accessibilityText
         self.isLoading = isLoading

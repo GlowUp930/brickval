@@ -56,6 +56,8 @@ struct SDKEnvironmentRootView: View {
             AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showBulkRecoveryDemo") {
             AppShellView()
+        } else if ProcessInfo.processInfo.arguments.contains("-showDenseBulkRecoveryDemo") {
+            AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showLockedBulkPreviewDemo") {
             AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showHardAccessDemo") {

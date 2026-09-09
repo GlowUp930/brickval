@@ -53,6 +53,23 @@ struct PortfolioHistoryBuilderTests {
         #expect(samples.allSatisfy { (10...30).contains($0.value) })
     }
 
+    @Test func chartSamplesKeepTheirIdentityAcrossHorizonValues() {
+        let firstPoints = [
+            StockChartPoint(label: "A", value: 10, timestamp: now),
+            StockChartPoint(label: "B", value: 30, timestamp: now.addingTimeInterval(86400)),
+        ]
+        let secondPoints = [
+            StockChartPoint(label: "A", value: 12, timestamp: now),
+            StockChartPoint(label: "B", value: 26, timestamp: now.addingTimeInterval(86400)),
+        ]
+        let first = InteractiveStockChart.resample(firstPoints, count: 140)
+        let second = InteractiveStockChart.resample(secondPoints, count: 140)
+
+        #expect(first.map(\.id) == second.map(\.id))
+        #expect(first.map(\.id) == Array(0 ..< 140))
+        #expect(first.map(\.value) != second.map(\.value))
+    }
+
     private func sale(_ date: String, _ price: Double, _ quantity: Int = 1) -> CollectionMarketSale {
         CollectionMarketSale(date: date + "T00:00:00Z", priceUSD: price, quantity: quantity)
     }

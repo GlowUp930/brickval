@@ -146,6 +146,21 @@ final class ScanStore {
         )
     }
 
+    func configureDenseBulkRecoveryDemo() {
+        guard let imageData = BulkRecoveryDemoFixture.imageData else { return }
+        intent = .bulk
+        authorizationStatus = .authorized
+        frozenImageData = imageData
+        phase = .review
+        presentedBulkResults = BulkScanPresentation(
+            imageData: imageData,
+            items: BulkRecoveryDemoFixture.denseItems,
+            unresolvedRegions: [],
+            recoveryToken: "debug-dense-recovery-token",
+            source: .camera
+        )
+    }
+
     func configureLockedBulkPreviewDemo() {
         guard let imageData = BulkRecoveryDemoFixture.imageData else { return }
         let regions = BulkRecoveryDemoFixture.lockedPreviewRegions

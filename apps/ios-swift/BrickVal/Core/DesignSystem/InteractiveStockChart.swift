@@ -58,6 +58,7 @@ struct InteractiveStockChart: View {
 
 /// Touch selection is local to the plot: dragging never reprocesses its input data.
 private struct StockChartPlot: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(PreferencesStore.self) private var preferences
     @Environment(CurrencyStore.self) private var currency
     let samples: [StockChartSample]
@@ -69,6 +70,10 @@ private struct StockChartPlot: View {
     let yDomain: ClosedRange<Double>
     let selectionID: String?
     @State private var selectedSampleID: Int?
+
+    private var chartTransition: Animation? {
+        reduceMotion ? nil : .timingCurve(0.25, 1.0, 0.5, 1.0, duration: 0.24)
+    }
 
     private var selectedSample: StockChartSample? {
         guard let selectedSampleID, samples.indices.contains(selectedSampleID) else { return nil }
@@ -144,6 +149,8 @@ private struct StockChartPlot: View {
             }
             .chartXSelection(value: $selectedSampleID)
         }
+        .animation(chartTransition, value: samples)
+        .animation(chartTransition, value: yDomain)
         .onChange(of: samples) { _, _ in selectedSampleID = nil }
         .onChange(of: selectionID) { _, _ in selectedSampleID = nil }
         .clipped()

@@ -1,5 +1,15 @@
 # Scan Result Card Visual QA
 
+## Smooth charts and adaptive bulk pricing — build 173 work
+
+The Collection and item charts now use a stable 140-sample identity and a 240 ms smooth line/y-axis morph when switching 1M, 3M, or 6M. Timeframe taps still select prepared data immediately, reset touch inspection, and make no history request; Reduce Motion disables the morph. The same behavior is used by the Collection and item-detail charts, without replaying the old reveal animation.
+
+Completed bulk results now place per-figure prices with a bounded collision planner. Up to 12 results use regular chips, 13–30 use compact chips, and larger scans use micro chips. Tags prefer the figure perimeter, avoid the summary/result rail and neighboring tags, draw a short leader line when moved, and fall back to a numbered marker that expands when selected. Visible tags keep the existing currency-code omission; VoiceOver labels and the result rail retain the full localized amount and currency.
+
+Verification on the BrickVal Small iPhone: 217 native unit tests in 36 suites and all 16 UI tests passed, including stable chart identities, planner cases for 2, 10, 30, and 60 figures, and a dense 60-marker screenshot. The 200-holding performance UI test completed 21 rapid timeframe switches, item navigation, chart inspection, and New/Used switching; bulk completed-price, correction, and largest-text accessibility checks passed. The selected chart/bulk checks also passed on BrickVal iPhone 17 Pro. The 13-language localization audit passed (794 strings plus four Info.plist strings). Physical iPhone verification remains pending.
+
+Release 1.0.8 (173) was archived at `/tmp/BrickVal173.xcarchive`, passed strict code-signature validation, and uploaded to App Store Connect with delivery `e813f2e5-d6fb-48fa-8777-8e15a2985c0d`. Apple reports version 1.0.8 build 173 as `VALID` and on App Store Connect. The BrickVal app dSYM was accepted by Sentry (UUID `b99b8f1f-04e4-395a-a72e-c06a07381801`); the temporary upload token was revoked immediately afterward. The build is uploaded for TestFlight processing; physical iPhone verification remains the final release gap.
+
 ## Collection responsiveness — build 172 work
 
 Preserve the existing Collection/item layout and real-history semantics. Timeframe switches select background-prepared results without replaying the reveal animation; touch selection resets on timeframe/condition changes. Initial Release-config fixture tests pass on the small iPhone: 21 switches per screen, p95 about 33 ms to the first display callback after chart data is applied. The large-screen navigation test and the follow-up fixture that waits for all prepared windows pass locally. Captured multi-point graphs and largest-text controls remain visible/reachable. Image sharing/offline/downsampling are unit tested. This is provisional simulator evidence; see `docs/audits/2026-09-09-collection-performance.md` for final tests, release status, production stack evidence, and remaining physical-device checks.

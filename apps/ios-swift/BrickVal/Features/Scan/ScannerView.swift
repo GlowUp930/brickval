@@ -25,6 +25,7 @@ struct ScannerView: View {
         let isProcessingLayoutDemo = ProcessInfo.processInfo.arguments.contains("-showScannerProcessingLayoutDemo")
         let isWideBulkProcessingLayoutDemo = ProcessInfo.processInfo.arguments.contains("-showWideBulkProcessingLayoutDemo")
         let isBulkRecoveryDemo = ProcessInfo.processInfo.arguments.contains("-showBulkRecoveryDemo")
+        let isDenseBulkRecoveryDemo = ProcessInfo.processInfo.arguments.contains("-showDenseBulkRecoveryDemo")
         let isLockedBulkPreviewDemo = ProcessInfo.processInfo.arguments.contains("-showLockedBulkPreviewDemo")
         if isWideBulkProcessingLayoutDemo,
            let imageData = BulkRecoveryDemoFixture.wideProcessingImageData {
@@ -36,6 +37,9 @@ struct ScannerView: View {
         if isBulkRecoveryDemo {
             store.configureBulkRecoveryDemo()
         }
+        if isDenseBulkRecoveryDemo {
+            store.configureDenseBulkRecoveryDemo()
+        }
         if isLockedBulkPreviewDemo {
             store.configureLockedBulkPreviewDemo()
         }
@@ -45,6 +49,7 @@ struct ScannerView: View {
         runsCameraLoop = !isProcessingLayoutDemo &&
             !isWideBulkProcessingLayoutDemo &&
             !isBulkRecoveryDemo &&
+            !isDenseBulkRecoveryDemo &&
             !isLockedBulkPreviewDemo
 #else
         runsCameraLoop = true

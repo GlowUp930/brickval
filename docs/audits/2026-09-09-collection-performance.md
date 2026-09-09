@@ -1,4 +1,16 @@
-# Collection responsiveness — build 172 work
+# Collection responsiveness — build 173 follow-up
+
+## Smooth chart and bulk-tag follow-up
+
+The build-171 freeze fix remains in place: prepared history is still reused for all three windows, and timeframe selection does not rebuild market history or request the network. This follow-up restores the build-166 feel with a stable 140-sample chart identity and a non-bouncy 240 ms curve/y-axis morph. Reduce Motion takes the immediate path. Touch inspection remains local to the chart and is cleared when the selected window changes.
+
+Completed bulk results now use a density-aware placement planner. It keeps regular, compact, and micro chips inside the photo stage, reserves the summary and result rail, avoids collisions with nearby chips and figures, and uses a short leader line for moved labels. When space is exhausted, every detection receives a numbered marker; selecting it expands the price and focuses the matching result card. Existing identifiers, reveal timing, New/Used behavior, currency formatting, and scan allowances are unchanged.
+
+The new planner tests cover 2, 10, 30, and 60 figures, deterministic coordinates, bounds, leader-edge connections, and dense marker fallback. Native unit verification now passes 217 tests in 36 suites. The full small-simulator UI suite passes all 16 tests, including the 200-holding/21-switch performance flow, the dense 60-marker screenshot, completed bulk price and correction flows, largest Dynamic Type, item chart inspection, and existing purchase/referral/scanner checks. The selected chart and bulk flows also passed on the iPhone 17 Pro simulator. The 13-language localization audit passed.
+
+This is simulator evidence. A physical iPhone run is still required before claiming the reported lag is resolved on hardware. Release 1.0.8 (173) is uploaded and Apple reports the build as `VALID` on App Store Connect; the BrickVal app dSYM was accepted by Sentry. Delivery and symbol-upload logs are `/tmp/brickval173-upload-api.log` and `/tmp/brickval173-symbol-upload.log`.
+
+## Build 172 baseline and prepared-history fix
 
 ## Finding and changes
 
