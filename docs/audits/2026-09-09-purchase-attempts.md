@@ -33,7 +33,13 @@ Apple's exact restriction/account condition is unknown. **Keep the original case
 
 ## Release
 
-Build 1.0.8 (171) is being archived for TestFlight. Symbol upload and Apple processing must be verified before recording release completion here. No backend deployment is needed.
+- Product source: `bfabdf7`, pushed to `codex/swift-repo-structure`.
+- Signed archive: `/tmp/BrickVal171.xcarchive`; archive and export passed. `/tmp/brickval171-upload.log` records successful upload at 13:39 AEST on September 9.
+- Apple processing is Complete. Build ID `cc796f1e-f5ff-4ec3-8c47-b12b157dc738`, version **1.0.8 (171)**, is assigned to both **Team (Expo)** and **v1** internal groups. Test details visibly showed both groups, and the What to Test save control confirmed **Saved**.
+- Sentry accepted three debug files. The executable and main dSYM both have UUID `c77f9720-642f-3f18-b34b-1ab037d34678`, and Sentry's Debug Files page visibly lists that UUID for BrickVal with debug/symtab/unwind data. Both Sentry framework architectures were also uploaded. Upload evidence: `/tmp/brickval171-symbol-upload.log`. The temporary `org:ci` upload token was revoked after use; rejection was confirmed and the owner-only local credential file removed.
+- GitHub run `34307745722` passed backend, type checking, localization, dependency checks, isolated database checks and all native unit tests. Its existing graph UI test failed trying to tap an offscreen 3M control (computed hit point `{-1, -1}`), as in the preceding build-170 run. The test now scrolls outside the chart's inspection gesture, requires a hittable control, and brings the selected graph back into view. Its first local revision also exposed the same central-drag problem when reaching the item; the final interaction fix passes on both sizes in `/tmp/BrickVal171ChartInteraction2.xcresult`. The visible multi-point and item-graph assertions remain intact. This changes test code only; final CI confirmation is pending.
+
+No backend deployment was needed. Physical-device and original-customer checks remain blocked as recorded above.
 
 ## How to assess subsequent attempts
 

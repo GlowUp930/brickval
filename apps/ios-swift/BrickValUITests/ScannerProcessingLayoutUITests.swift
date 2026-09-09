@@ -11,10 +11,21 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         let monthCount = Int(month.identifier.split(separator: ".").last ?? "0") ?? 0
         XCTAssertGreaterThan(monthCount, 2)
         let quarterButton = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Show 3M price history")).firstMatch
-        for _ in 0..<3 where !quarterButton.isHittable { app.swipeUp() }
+        // Scroll in the outer margin, away from the chart's touch-inspection gesture.
+        // CI previously tapped a still-offscreen control (computed hit point {-1, -1}).
+        for _ in 0..<6 where !quarterButton.isHittable {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.75))
+                .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.35)))
+        }
+        guard quarterButton.isHittable else { XCTFail("3M control must be visible before tapping"); return }
         quarterButton.tap()
         let quarter = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "collection.valueChart.3M.")).firstMatch
-        XCTAssertTrue(quarter.waitForExistence(timeout: 5))
+        for _ in 0..<6 {
+            if quarter.exists && quarter.frame.minY >= 0 { break }
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.35))
+                .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.75)))
+        }
+        guard quarter.waitForExistence(timeout: 5) else { XCTFail("Expected real 3M graph after selection"); return }
         XCTAssertGreaterThan(Int(quarter.identifier.split(separator: ".").last ?? "0") ?? 0, monthCount)
         quarter.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.4))
             .press(forDuration: 0.3, thenDragTo: quarter.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.4)), withVelocity: .slow, thenHoldForDuration: 1)
@@ -23,11 +34,11 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         screenshot.lifetime = .keepAlways
         add(screenshot)
         let item = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Tintin Moon Rocket")).firstMatch
-        for _ in 0..<5 where !item.isHittable {
-            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.65))
-                .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)))
+        for _ in 0..<8 where !item.isHittable {
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.75))
+                .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.35)))
         }
-        XCTAssertTrue(item.waitForExistence(timeout: 5))
+        guard item.isHittable else { XCTFail("Tintin item must be visible before tapping"); return }
         item.tap()
         let detail = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "collectionItem.valueChart.")).firstMatch
         for _ in 0..<8 {
