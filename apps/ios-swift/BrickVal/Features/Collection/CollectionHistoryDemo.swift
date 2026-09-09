@@ -98,6 +98,7 @@ struct CollectionHistoryDemoView: View {
                 items.reverse()
             }
             try? await store.add(items, isPro: true)
+            await store.waitForPreparedHistory()
             ready = true
         }
     }
