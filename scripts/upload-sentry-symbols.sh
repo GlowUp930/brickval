@@ -16,7 +16,7 @@ for variable in SENTRY_AUTH_TOKEN SENTRY_ORG SENTRY_PROJECT; do
   fi
 done
 
-SENTRY_CLI="${SENTRY_CLI:-$SCRIPT_DIR/node_modules/.bin/sentry-cli}"
+SENTRY_CLI="${SENTRY_CLI:-$SCRIPT_DIR/../node_modules/.bin/sentry-cli}"
 if [[ ! -x "$SENTRY_CLI" ]]; then
   echo "sentry-cli was not found at $SENTRY_CLI" >&2
   exit 2

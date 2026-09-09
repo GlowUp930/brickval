@@ -1,5 +1,9 @@
 # BrickVal Native iOS Context
 
+## Purchase attempt diagnostics — build 171
+
+Purchase and restore now emit correlated start/finish events to existing PostHog analytics and Sentry breadcrumbs; failures include matching attempt/customer-hash tags and context. The customer field is a SHA-256 RevenueCat ID, captured before the operation; no raw identity or payment/receipt payload is added. Apple permission, cached storefront, OS, build, product and monotonic elapsed time accompany separate purchased/cancelled/pending/failed/restored outcomes. Existing SDK behavior and product configuration are unchanged. Full small/large native verification passes 222 tests / 448 runs, including seven new controller/diagnostic tests, plus the 13-language audit. Original customer recovery and physical Apple restriction testing remain blocked. Release evidence and correlation instructions: `docs/audits/2026-09-09-purchase-attempts.md`.
+
 ## Real market-history restoration — build 170
 
 Collection now requests real dated sales automatically, including for existing items with empty history. `/api/mobile/collection-history` is deployed and promoted at `dpl_F4aceFoU4FMhHuMd9okhhdw8g3qV`. Live checks returned 20 New/2 Used sales for Joker 70919 and 22 New/0 Used for Tintin 21367, without per-item errors; invalid bearer authentication returns 401. History uses an independent request budget, not scan or referral credits.

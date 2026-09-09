@@ -1,5 +1,9 @@
 # Scan Result Card Visual QA
 
+## Purchase diagnostics — build 171
+
+No UI, subscription price, product, or recovery-copy changes. The purchase-controller tests confirm that Apple rejection returns the existing App Store/Screen Time recovery guidance without granting Pro; cancellation and pending approval remain distinct. Full native unit/UI suites pass on iPhone SE and iPhone 17 Pro (222 tests / 448 runs), with all 13 localization checks passing. Device restriction toggles and real Apple test purchases are blocked by unavailable paired iPhones. Do not mark the unidentified build-162/166 customer recovered. See `docs/audits/2026-09-09-purchase-attempts.md`.
+
 ## Real market-history graphs — build 170
 
 Collection and item detail now render multi-point graphs from dated BrickLink sales. Current valuation stays above a separately labelled market trend; the chart identifies covered holdings. Single prices no longer occupy a full-height history graph. The DEBUG-only Joker/Tintin fixture starts with empty stored history and loads automatically, matching the reported old-collection failure. Apple's chart selection replaces the custom drag recognizer so vertical scrolling remains usable. The local full suite passes 215 tests / 434 runs across iPhone SE and iPhone 17 Pro. Visible collection/item graphs were inspected on both sizes; largest-text timeframe controls pass, while existing entitlement badges still truncate at that size. Build 170 is processed and available to both internal TestFlight groups. Physical-device confirmation remains pending. See `docs/audits/2026-09-08-real-market-history.md` for release evidence.

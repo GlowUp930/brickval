@@ -29,6 +29,10 @@ final class RevenueCatPurchaseController: PurchaseController, OfferCodeRedemptio
     private let notificationCoordinator: NotificationCoordinator
     private let purchaseClient: any RevenueCatPurchaseClient
     private let errorReporter: any PurchaseErrorReporting
+    private let attemptFactory: @MainActor (String?, String?, String) -> PurchaseAttempt
+    private let uptime: () -> TimeInterval
+    private let recordAttempt: (String, [String: Any]) -> Void
+    private let publishSubscription: (RevenueCat.CustomerInfo) -> Void
     private var syncTasks: [Task<Void, Never>] = []
     private(set) var purchasePlacement: String?
 
@@ -36,12 +40,25 @@ final class RevenueCatPurchaseController: PurchaseController, OfferCodeRedemptio
         entitlementStore: EntitlementStore,
         notificationCoordinator: NotificationCoordinator,
         purchaseClient: (any RevenueCatPurchaseClient)? = nil,
-        errorReporter: (any PurchaseErrorReporting)? = nil
+        errorReporter: (any PurchaseErrorReporting)? = nil,
+        attemptFactory: @escaping @MainActor (String?, String?, String) -> PurchaseAttempt = PurchaseAttempt.live,
+        uptime: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
+        recordAttempt: @escaping (String, [String: Any]) -> Void = { _, _ in },
+        publishSubscription: ((RevenueCat.CustomerInfo) -> Void)? = nil
     ) {
         self.entitlementStore = entitlementStore
         self.notificationCoordinator = notificationCoordinator
         self.purchaseClient = purchaseClient ?? LiveRevenueCatPurchaseClient()
         self.errorReporter = errorReporter ?? SentryPurchaseErrorReporter()
+        self.attemptFactory = attemptFactory
+        self.uptime = uptime
+        self.recordAttempt = recordAttempt
+        self.publishSubscription = publishSubscription ?? { customerInfo in
+            let identifiers = customerInfo.entitlements.activeInCurrentEnvironment.keys
+            let entitlements = Set(identifiers.map { Entitlement(id: $0) })
+                .union(Superwall.shared.entitlements.web)
+            Superwall.shared.subscriptionStatus = entitlements.isEmpty ? .inactive : .active(entitlements)
+        }
     }
 
     func setPurchasePlacement(_ placement: String?) {
@@ -72,39 +89,73 @@ final class RevenueCatPurchaseController: PurchaseController, OfferCodeRedemptio
     }
 
     func purchase(product: SuperwallKit.StoreProduct) async -> PurchaseResult {
-        do {
-            let productID = product.productIdentifier
+        await performPurchase(productID: product.productIdentifier) {
             guard let sk2Product = product.sk2Product else { throw PurchasingError.storeKitProductMissing }
-            let result = try await purchaseClient.purchase(
+            return try await self.purchaseClient.purchase(
                 product: RevenueCat.StoreProduct(sk2Product: sk2Product)
             )
-            if result.userCancelled { return .cancelled }
+        }
+    }
+
+    // Both the live SDK adapter and controlled rejection tests run this exact state transition.
+    func performPurchase(productID: String,
+                         operation: () async throws -> RevenueCatPurchaseOutcome) async -> PurchaseResult {
+        let placement = purchasePlacement
+        let attempt = attemptFactory(productID, placement, "purchase")
+        recordAttempt("purchase_attempt_started", attempt.properties(outcome: "started", uptime: uptime()))
+        do {
+            let result = try await operation()
+            if result.userCancelled {
+                recordAttempt("purchase_attempt_finished", attempt.properties(outcome: "cancelled", uptime: uptime()))
+                return .cancelled
+            }
             await apply(result.customerInfo)
             entitlementStore.recordNewPurchase(
                 productID: productID,
                 isTrial: result.customerInfo.entitlements["pro"]?.periodType == .trial
             )
+            recordAttempt("purchase_attempt_finished", attempt.properties(outcome: "purchased", uptime: uptime()))
             return .purchased
         } catch {
-            let failure = PurchaseFailure.from(error: error, productID: product.productIdentifier)
+            let failure = PurchaseFailure.from(error: error, productID: productID)
+            let outcome = failure.category == .cancelled ? "cancelled" : failure.category == .pending ? "pending" : "failed"
+            let fields = attempt.properties(outcome: outcome, uptime: uptime(), error: error)
+            recordAttempt("purchase_attempt_finished", fields)
             switch failure.category {
             case .cancelled:
                 return .cancelled
             case .pending:
                 return .pending
             case .notAllowed, .productUnavailable, .network, .store, .configuration, .unknown:
-                errorReporter.capture(failure: failure, placement: purchasePlacement)
+                errorReporter.capture(failure: failure, placement: placement, attempt: fields)
                 return .failed(failure)
             }
         }
     }
 
     func restorePurchases() async -> RestorationResult {
+        await performRestoration { try await Purchases.shared.restorePurchases() }
+    }
+
+    func performRestoration(operation: () async throws -> RevenueCat.CustomerInfo) async -> RestorationResult {
+        let placement = purchasePlacement
+        let attempt = attemptFactory(nil, placement, "restore")
+        recordAttempt("purchase_attempt_started", attempt.properties(outcome: "started", uptime: uptime()))
         do {
-            let info = try await Purchases.shared.restorePurchases()
+            let info = try await operation()
             await apply(info)
+            var fields = attempt.properties(outcome: "restored", uptime: uptime())
+            fields["pro_active"] = info.entitlements["pro"]?.isActive == true
+            recordAttempt("purchase_attempt_finished", fields)
             return .restored
         } catch {
+            let failure = PurchaseFailure.from(error: error, productID: "restore")
+            let outcome = failure.category == .cancelled ? "cancelled" : failure.category == .pending ? "pending" : "failed"
+            let fields = attempt.properties(outcome: outcome, uptime: uptime(), error: error)
+            recordAttempt("purchase_attempt_finished", fields)
+            if outcome == "failed" {
+                errorReporter.capture(failure: failure, placement: placement, attempt: fields)
+            }
             return .failed(error)
         }
     }
@@ -116,10 +167,7 @@ final class RevenueCatPurchaseController: PurchaseController, OfferCodeRedemptio
     }
 
     private func apply(_ customerInfo: RevenueCat.CustomerInfo) async {
-        let identifiers = customerInfo.entitlements.activeInCurrentEnvironment.keys
-        let entitlements = Set(identifiers.map { Entitlement(id: $0) })
-            .union(Superwall.shared.entitlements.web)
-        Superwall.shared.subscriptionStatus = entitlements.isEmpty ? .inactive : .active(entitlements)
+        publishSubscription(customerInfo)
         let proEntitlement = customerInfo.entitlements["pro"]
         await notificationCoordinator.updateSubscription(
             SubscriptionReminderState(

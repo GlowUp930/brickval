@@ -61,17 +61,17 @@ final class SentryAppErrorReporter: AppErrorReporting {
 
 @MainActor
 protocol PurchaseErrorReporting: AnyObject {
-    func capture(failure: PurchaseFailure, placement: String?)
+    func capture(failure: PurchaseFailure, placement: String?, attempt: [String: Any])
 }
 
 @MainActor
 final class NoopPurchaseErrorReporter: PurchaseErrorReporting {
-    func capture(failure: PurchaseFailure, placement: String?) {}
+    func capture(failure: PurchaseFailure, placement: String?, attempt: [String: Any]) {}
 }
 
 @MainActor
 final class SentryPurchaseErrorReporter: PurchaseErrorReporting {
-    func capture(failure: PurchaseFailure, placement: String?) {
+    func capture(failure: PurchaseFailure, placement: String?, attempt: [String: Any]) {
 #if DEBUG
         return
 #else
@@ -81,6 +81,9 @@ final class SentryPurchaseErrorReporter: PurchaseErrorReporting {
         scope.setTag(value: failure.productID, key: "purchase_product_id")
         scope.setTag(value: placement ?? "unknown", key: "purchase_placement")
         scope.setTag(value: build, key: "app_build")
+        if let id = attempt["attempt_id"] as? String { scope.setTag(value: id, key: "purchase_attempt_id") }
+        if let hash = attempt["customer_hash"] as? String { scope.setTag(value: hash, key: "purchase_customer_hash") }
+        scope.setContext(value: attempt, key: "purchase_attempt")
         scope.setContext(value: failure.diagnosticProperties.reduce(into: [String: Any]()) { result, item in
             result[item.key] = item.value
         }, key: "purchase_failure")

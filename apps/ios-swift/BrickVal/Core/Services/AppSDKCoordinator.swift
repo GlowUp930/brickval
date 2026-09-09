@@ -92,7 +92,10 @@ final class AppSDKCoordinator: SuperwallDelegate {
         if let revenueCatKey {
             let controller = RevenueCatPurchaseController(
                 entitlementStore: entitlementStore,
-                notificationCoordinator: notificationCoordinator
+                notificationCoordinator: notificationCoordinator,
+                recordAttempt: { [analytics] event, fields in
+                    PurchaseAttempt.record(event: event, properties: fields, analytics: analytics)
+                }
             )
             purchaseController = controller
             if self.offerCodeClient == nil {

@@ -1,5 +1,9 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Purchase diagnostics — 2026-09-09
+
+Build 171 adds correlated purchase/restore attempts in PostHog and Sentry, with hashed RevenueCat identity, Apple permission/storefront, OS, elapsed time and original error codes. Purchase behavior, products and pricing remain unchanged; no automatic retries. Full native verification passes 222 tests / 448 runs on small and large simulators, plus all 13 locales. The original build-162/166 Apple purchase-not-allowed case remains unresolved: its customer is unidentified, and no physical test device is available. See `docs/audits/2026-09-09-purchase-attempts.md` for release status and recovery criteria. Never treat no new errors as proof that this customer recovered.
+
 ## Collection chart regression — 2026-09-08
 
 Build 170 replaces build 169's insufficient saved-value placeholder with real dated BrickLink sales. Collection automatically loads and persists history for existing items through `/api/mobile/collection-history`, separately from scan prices. Graphs use quantity-weighted daily observations, current holdings and explicit coverage; a single point is not a historical graph. History has a separate request budget and never spends scan/referral credits. See `docs/audits/2026-09-08-real-market-history.md` and native CONTEXT.md for verification and release status.
