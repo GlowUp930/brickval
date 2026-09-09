@@ -2,7 +2,7 @@
 
 ## Collection responsiveness — build 172 work
 
-Preserve the existing Collection/item layout and real-history semantics. Timeframe switches select background-prepared results without replaying the reveal animation; touch selection resets on timeframe/condition changes. Initial Release-config fixture tests pass on the small iPhone: 21 switches per screen, p95 about 33 ms to the first display callback after chart data is applied. Captured multi-point graphs and largest-text controls remain visible/reachable. Image sharing/offline/downsampling are unit tested. This is provisional simulator evidence; see `docs/audits/2026-09-09-collection-performance.md` for final tests, release status, production stack evidence, and remaining physical-device checks.
+Preserve the existing Collection/item layout and real-history semantics. Timeframe switches select background-prepared results without replaying the reveal animation; touch selection resets on timeframe/condition changes. Initial Release-config fixture tests pass on the small iPhone: 21 switches per screen, p95 about 33 ms to the first display callback after chart data is applied. The large-screen navigation test and the follow-up fixture that waits for all prepared windows pass locally. Captured multi-point graphs and largest-text controls remain visible/reachable. Image sharing/offline/downsampling are unit tested. This is provisional simulator evidence; see `docs/audits/2026-09-09-collection-performance.md` for final tests, release status, production stack evidence, and remaining physical-device checks.
 
 ## Purchase diagnostics — build 171
 
