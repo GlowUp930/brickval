@@ -25,11 +25,13 @@ Apple's exact restriction/account condition is unknown. **Keep the original case
 | Privacy and original nested error codes | Passed | Tests place private text in descriptions/user info and assert it is absent from serialized diagnostics |
 | Regression test sensitivity | Passed | Temporarily disabling the controller's diagnostic recorder produced nine failed assertions in `/tmp/BrickVal171NoDiagnosticsRed.xcresult`; mutation was reverted before final verification |
 | Focused purchase suites | Passed | 21 tests, zero failures: `/tmp/BrickVal171Purchase3.xcresult` |
-| Full native unit/UI suites, small and large iPhones | Passed | 222 tests / 448 runs; iPhone SE (3rd generation) and iPhone 17 Pro, iOS 26.5: `/tmp/BrickVal171Full.xcresult` |
+| Local full native unit/UI suites, small and large iPhones | Passed | 222 tests / 448 runs; iPhone SE (3rd generation) and iPhone 17 Pro, iOS 26.5: `/tmp/BrickVal171Full.xcresult` |
 | Localization | Passed | 794 strings + four permission strings across all 13 locales |
 | Physical-device restrictions enabled/disabled and Apple test purchase | Blocked | Both paired iPhones reported unavailable via `devicectl` on September 9; no available test device |
 | Original customer's recovery | Blocked | Customer remains unidentified; existing events have no RevenueCat correlation bridge |
 | Live failed-to-successful correlation from the new build | Pending | Local contract is verified; requires subsequent real attempts after installation. Absence of errors is not evidence of recovery |
+| Final GitHub purchase/unit and graph checks | Passed | Run `34310113931`: all 206 Swift tests and both first-launch graph UI tests pass |
+| Final GitHub whole native suite | Failed | The pre-existing `testBulkCorrectionUsesDetectedFigureContext` timed out waiting for `bulkResults.summary`; all following correction-sheet assertions passed. The same summary assertion failed before this task in build-170 run `34197294396`. Its cause remains unverified; do not report an entirely green CI run |
 
 ## Release
 
@@ -37,11 +39,15 @@ Apple's exact restriction/account condition is unknown. **Keep the original case
 - Signed archive: `/tmp/BrickVal171.xcarchive`; archive and export passed. `/tmp/brickval171-upload.log` records successful upload at 13:39 AEST on September 9.
 - Apple processing is Complete. Build ID `cc796f1e-f5ff-4ec3-8c47-b12b157dc738`, version **1.0.8 (171)**, is assigned to both **Team (Expo)** and **v1** internal groups. Test details visibly showed both groups, and the What to Test save control confirmed **Saved**.
 - Sentry accepted three debug files. The executable and main dSYM both have UUID `c77f9720-642f-3f18-b34b-1ab037d34678`, and Sentry's Debug Files page visibly lists that UUID for BrickVal with debug/symtab/unwind data. Both Sentry framework architectures were also uploaded. Upload evidence: `/tmp/brickval171-symbol-upload.log`. The temporary `org:ci` upload token was revoked after use; rejection was confirmed and the owner-only local credential file removed.
-- GitHub runs `34307745722` and `34308804172` passed backend, type checking, localization, dependency checks, isolated database checks and all native unit tests, but graph UI checks could not tap the timeframe controls. The first interpretation was an offscreen/scroll problem; scrolling changes passed on reused local simulators but did not fix fresh CI installations. A forced first-launch test then reproduced the failure locally (`/tmp/BrickVal171FreshInstallRed.xcresult`). Its captured accessibility hierarchy shows the **Collection quick start tips** panel covering the 6M button, with “Got it” available above it. The tests now explicitly launch with tips unseen and dismiss them through the real UI before checking the graphs. They retain visible multi-point, timeframe, touch and item-detail checks. This changes test code only; final CI confirmation is pending.
+- GitHub runs `34307745722` and `34308804172` passed backend, type checking, localization, dependency checks, isolated database checks and all native unit tests, but graph UI checks could not tap the timeframe controls. The first interpretation was an offscreen/scroll problem; scrolling changes passed on reused local simulators but did not fix fresh CI installations. A forced first-launch test then reproduced the failure locally (`/tmp/BrickVal171FreshInstallRed.xcresult`). Its captured accessibility hierarchy shows the **Collection quick start tips** panel covering the 6M button, with “Got it” available above it. The tests now explicitly launch with tips unseen and dismiss them through the real UI before checking the graphs. They retain visible multi-point, timeframe, touch and item-detail checks. This changes test code only. Final run `34310113931` confirms both corrected graph tests pass; its separate bulk-summary assertion failure is recorded above.
 
 No backend deployment was needed. Physical-device and original-customer checks remain blocked as recorded above.
 
 The corrected first-launch graph tests pass on both small and large simulators (two tests / four runs, including largest text): `/tmp/BrickVal171FreshInstallFixed.xcresult`. The change dismisses the real tips panel rather than hiding it in app code or removing graph assertions.
+
+## Separate verification follow-up
+
+Investigate the older bulk-summary UI failure with a captured CI hierarchy/screenshot before changing production code. The exact failing assertion is `ScannerProcessingLayoutUITests.testBulkCorrectionUsesDetectedFigureContext`, waiting 12 seconds for `bulkResults.summary` (line 161 in source `e31c1ba`). Evidence: `/tmp/brickval171-ci3-failure.log` and the [final GitHub run](https://github.com/GlowUp930/brickval/actions/runs/34310113931). This purchase-diagnostics release does not establish the cause of that separate failure or app-wide reliability sign-off.
 
 ## How to assess subsequent attempts
 
