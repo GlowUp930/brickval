@@ -4,6 +4,42 @@ import Testing
 
 @MainActor
 struct CollectionStoreTests {
+    @Test func legacyFalconRecoversBothQuotesWithoutChangingOwnership() async throws {
+        let repository = CollectionRepository(fileURL: temporaryURL())
+        let store = CollectionStore(repository: repository)
+        let item = CollectionItem(setNumber: "75192-1", itemType: .set, name: "Falcon", theme: "Star Wars", marketValueUSD: 682.58, quantity: 2)
+        try await store.add(item, isPro: true)
+        var api = BrickValAPIClient.live()
+        api.lookup = { _, _, _ in
+            let pricing = try JSONDecoder().decode(LookupPricing.self, from: Data(#"{"hero_new_avg_usd":682.58,"hero_used_avg_usd":520.82,"used_data_source":"sold"}"#.utf8))
+            return LookupResult(identifier: "75192-1", itemType: .set, name: "Falcon", theme: "Star Wars", pieces: nil, yearReleased: nil, isObsolete: nil, imageURL: nil, pricing: pricing, marketHistory: [], colorID: nil, colorName: nil)
+        }
+        try await store.recoverPricing(for: item, using: api)
+        let reopened = CollectionStore(repository: repository)
+        await reopened.load()
+        let saved = try #require(reopened.items.first)
+        #expect(DetailConditionOption.used.value(from: saved) == 520.82)
+        #expect(saved.quantity == 2 && saved.id == item.id)
+        #expect(reopened.totalValue == 1365.16)
+        api.lookup = { _, _, _ in throw URLError(.notConnectedToInternet) }
+        try await reopened.recoverPricing(for: saved, using: api)
+    }
+
+    @Test func falconUsedPriceSurvivesReopeningNewHolding() async throws {
+        let pricing = try JSONDecoder().decode(LookupPricing.self, from: Data(#"{"hero_new_avg_usd":682.58,"hero_used_avg_usd":520.82,"new_data_source":"sold","used_data_source":"sold"}"#.utf8))
+        let result = LookupResult(identifier: "75192-1", itemType: .set, name: "Millennium Falcon", theme: "Star Wars", pieces: nil, yearReleased: 2017, isObsolete: nil, imageURL: nil, pricing: pricing, marketHistory: [], colorID: nil, colorName: nil)
+        let repository = CollectionRepository(fileURL: temporaryURL())
+        let store = CollectionStore(repository: repository)
+        try await store.add(result.collectionItem(quantity: 1, condition: .newSealed), isPro: true)
+        let reopened = CollectionStore(repository: repository)
+        await reopened.load()
+        let saved = try #require(reopened.items.first)
+        #expect(DetailConditionOption.used.value(from: saved) == 520.82)
+        #expect(DetailConditionOption.used.collectionItem(from: saved).marketValueUSD == 520.82)
+        #expect(reopened.items.count == 1)
+        #expect(saved.condition == .newSealed)
+    }
+
     @Test func rescanningRetainsRecordedPricesAfterRestart() async throws {
         let repository = CollectionRepository(fileURL: temporaryURL())
         let store = CollectionStore(repository: repository)

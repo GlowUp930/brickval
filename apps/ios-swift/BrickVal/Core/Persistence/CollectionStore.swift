@@ -67,6 +67,8 @@ final class CollectionStore {
                 let combined = updatedItems[index].recordedHistory + updated.marketHistory
                 updated.marketHistory = Dictionary(combined.map { ($0.date, $0) }, uniquingKeysWith: { _, latest in latest })
                     .values.sorted { $0.date < $1.date }
+                updated.pricingSnapshot = updated.pricingSnapshot ?? updatedItems[index].pricingSnapshot
+                updated.alternateMarketSales = updatedItems[index].alternateMarketSales
                 updated.marketSales = updatedItems[index].marketSales
                 updated.marketHistoryFetchedAt = updatedItems[index].marketHistoryFetchedAt
                 updated.quantity += updatedItems[index].quantity
@@ -81,6 +83,21 @@ final class CollectionStore {
             throw CollectionStoreError.freeLimitReached(limit: freeLimit, used: uniqueItemCount)
         }
         try await persist(updatedItems)
+    }
+
+    func recoverPricing(for item: CollectionItem, using api: BrickValAPIClient) async throws {
+        guard items.contains(where: { $0.id == item.id && $0.pricingSnapshot == nil }) else { return }
+        let epoch = historyEpoch
+        let result = try await api.lookup(item.setNumber, item.itemType, item.colorID)
+        try Task.checkCancellation()
+        try await ensureReadyToWrite()
+        guard epoch == historyEpoch else { return }
+        var updated = items
+        for index in updated.indices where updated[index].collectionIdentity == item.collectionIdentity {
+            updated[index].pricingSnapshot = result.pricing
+            updated[index].marketHistoryFetchedAt = nil
+        }
+        if updated != items { try await persist(updated) }
     }
 
     func remove(_ item: CollectionItem) async throws {
@@ -151,6 +168,9 @@ final class CollectionStore {
                         continue
                     }
                     updated[index].marketSales = item.condition == .used ? row.usedSales : row.newSales
+                    if (item.condition == .used ? row.newError : row.usedError) == nil {
+                        updated[index].alternateMarketSales = item.condition == .used ? row.newSales : row.usedSales
+                    }
                     updated[index].marketHistoryFetchedAt = row.fetchedAt
                     changed = true
                 }
@@ -238,7 +258,7 @@ final class CollectionStore {
 
     private func install(_ updated: [CollectionItem]) {
         let historyChanged = items.count != updated.count || zip(items, updated).contains {
-            $0.id != $1.id || $0.quantity != $1.quantity || $0.marketSales != $1.marketSales
+            $0.id != $1.id || $0.quantity != $1.quantity || $0.marketSales != $1.marketSales || $0.alternateMarketSales != $1.alternateMarketSales
         }
         items = updated
         displayItems = CollectionDisplayItem.make(from: updated)

@@ -4,6 +4,28 @@ import Testing
 
 @MainActor
 struct CollectionHistoryRefreshTests {
+    @Test func unownedUsedHistorySurvivesRestartWithoutAddingHoldings() async throws {
+        let repository = CollectionRepository(fileURL: URL.temporaryDirectory.appending(path: UUID().uuidString))
+        let store = CollectionStore(repository: repository)
+        let item = CollectionItem(setNumber: "75192-1", itemType: .set, name: "Falcon", theme: "Star Wars", marketValueUSD: 682.58)
+        try await store.add(item, isPro: true)
+        var api = BrickValAPIClient.live()
+        api.collectionHistory = { _ in
+            CollectionHistoryResponse(items: [.init(identifier: "75192", itemType: .set, colorID: nil,
+                newSales: CollectionHistoryDemo.rocket, usedSales: CollectionHistoryDemo.joker,
+                fetchedAt: ISO8601DateFormatter().string(from: .now), newError: nil, usedError: nil)])
+        }
+        await store.refreshMarketHistory(using: api)
+        let reopened = CollectionStore(repository: repository)
+        await reopened.load()
+        let saved = try #require(reopened.items.first)
+        let used = DetailConditionOption.used.collectionItem(from: saved)
+        #expect(used.marketSales == CollectionHistoryDemo.joker)
+        let prepared = PortfolioHistoryBuilder.prepare(items: reopened.items, now: CollectionHistoryDemo.referenceDate)
+        #expect((prepared.items[used.id]?[.month]?.count ?? 0) > 1)
+        #expect(reopened.items.count == 1 && reopened.totalQuantity == 1)
+    }
+
     @Test func existingCollectionLoadsHistoryWithoutRescanningAndSurvivesRestart() async throws {
         let repository = CollectionRepository(fileURL: URL.temporaryDirectory.appending(path: "history-test-\(UUID().uuidString).json"))
         let original = CollectionItem(setNumber: "21367-1", itemType: .set, name: "Rocket", theme: "Ideas", marketValueUSD: 150, quantity: 3)

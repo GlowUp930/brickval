@@ -36,6 +36,14 @@ enum PortfolioHistoryBuilder {
                 ($0, window(observations, horizon: $0, now: now))
             })
         }
+        for item in items {
+            let alternate = (item.condition == .used ? DetailConditionOption.new : .used).collectionItem(from: item)
+            guard result.items[alternate.id] == nil else { continue }
+            let observations = dailyObservations(sales: alternate.marketSales, now: now)
+            result.items[alternate.id] = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
+                ($0, window(observations, horizon: $0, now: now))
+            })
+        }
         for horizon in PortfolioHorizon.allCases {
             result.portfolios[horizon] = portfolio(items: items, series: items.map { result.items[$0.id]?[horizon] ?? [] })
         }

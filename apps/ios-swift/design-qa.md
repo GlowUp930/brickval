@@ -1,5 +1,11 @@
 # Scan Result Card Visual QA
 
+## Collection condition quote recovery — 2026-09-09 (after build 173)
+
+Reproduced 75192-1: save a New holding from a result containing New $682.58 and Used $520.82, restart, then select Used. The old detail conversion returned nil: only the owned condition quote was persisted, and the detail screen required an owned slot. The fix persists the complete pricing snapshot, displays the selected condition independently of ownership, and recovers absent snapshots for legacy items through the authenticated lookup on detail opening. This lookup uses the existing provider-request rate limit; it does not grant or spend referral credits. Failed recovery surfaces the existing alert and retains saved data; reopening retries. Both conditions' dated sales now persist, with alternate detail windows prepared off-thread and excluded from portfolio ownership totals. No invented history or duplicate holdings.
+
+Regression command: `xcodebuild -project apps/ios-swift/BrickVal.xcodeproj -scheme BrickVal -destination 'platform=iOS Simulator,id=D72A48E4-D384-47D8-8A5E-E9EE9C0B0668' -only-testing:BrickValTests/CollectionStoreTests test`. Red log `/tmp/falcon-red2.log` records two nil-versus-520.82 failures. Green `/tmp/falcon-green2.log` passes 220 tests across 36 suites, including legacy recovery/offline reuse and alternate-history persistence. These are controlled fixtures matching the screenshot amounts, not a live provider quote. Physical-device verification and a new TestFlight release remain pending. The prevention gap was missing cross-condition save/reopen coverage; the regression now exercises persistence plus the actual detail condition conversion.
+
 ## Smooth charts and adaptive bulk pricing — build 173 work
 
 The Collection and item charts now use a stable 140-sample identity and a 240 ms smooth line/y-axis morph when switching 1M, 3M, or 6M. Timeframe taps still select prepared data immediately, reset touch inspection, and make no history request; Reduce Motion disables the morph. The same behavior is used by the Collection and item-detail charts, without replaying the old reveal animation.

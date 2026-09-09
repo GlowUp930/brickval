@@ -1,6 +1,6 @@
 import Foundation
 
-struct LookupPricing: Decodable, Sendable {
+struct LookupPricing: Codable, Hashable, Sendable {
     let heroNewAverageUSD: Double?
     let rrpUSD: Double?
     let gainPercent: Double?

@@ -20,6 +20,8 @@ struct CollectionItem: Codable, Hashable, Identifiable, Sendable {
     var marketHistory: [MarketHistoryPoint]
     let marketRows: [MarketRow]
     let addedAt: String
+    var pricingSnapshot: LookupPricing? = nil
+    var alternateMarketSales: [CollectionMarketSale] = []
     var marketSales: [CollectionMarketSale] = []
     var marketHistoryFetchedAt: String? = nil
 
@@ -100,6 +102,8 @@ struct CollectionItem: Codable, Hashable, Identifiable, Sendable {
         marketRows = try container.decodeIfPresent([MarketRow].self, forKey: .marketRows) ?? []
         addedAt = try container.decodeIfPresent(String.self, forKey: .addedAt)
             ?? ISO8601DateFormatter().string(from: .now)
+        pricingSnapshot = try container.decodeIfPresent(LookupPricing.self, forKey: .pricingSnapshot)
+        alternateMarketSales = try container.decodeIfPresent([CollectionMarketSale].self, forKey: .alternateMarketSales) ?? []
         marketSales = try container.decodeIfPresent([CollectionMarketSale].self, forKey: .marketSales) ?? []
         marketHistoryFetchedAt = try container.decodeIfPresent(String.self, forKey: .marketHistoryFetchedAt)
     }
@@ -124,6 +128,8 @@ struct CollectionItem: Codable, Hashable, Identifiable, Sendable {
         case marketHistory = "market_history"
         case marketRows = "market_rows"
         case addedAt = "added_at"
+        case pricingSnapshot = "pricing_snapshot"
+        case alternateMarketSales = "alternate_market_sales"
         case marketSales = "market_sales"
         case marketHistoryFetchedAt = "market_history_fetched_at"
     }

@@ -17,7 +17,7 @@ struct LookupResult: Identifiable, Sendable {
     var id: String { "\(itemType.rawValue)-\(identifier)" }
 
     func collectionItem(quantity: Int, condition: CollectionCondition) -> CollectionItem {
-        CollectionItem(
+        var item = CollectionItem(
             setNumber: identifier,
             itemType: itemType,
             name: name,
@@ -36,5 +36,7 @@ struct LookupResult: Identifiable, Sendable {
             colorName: colorName,
             marketHistory: condition == .newSealed ? marketHistory : []
         )
+        item.pricingSnapshot = pricing
+        return item
     }
 }

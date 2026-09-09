@@ -25,11 +25,11 @@ struct ItemDetailView: View {
     }
 
     private var sourceLabel: String {
-        MarketPriceSourceCopy.title(for: selectedItem?.dataSource)
+        MarketPriceSourceCopy.title(for: selectedItem?.dataSource ?? selectedItem?.pricingSnapshot?.source(for: selectedCondition.condition))
     }
 
     private var sourceDetail: String {
-        MarketPriceSourceCopy.detail(for: selectedItem?.dataSource)
+        MarketPriceSourceCopy.detail(for: selectedItem?.dataSource ?? selectedItem?.pricingSnapshot?.source(for: selectedCondition.condition))
     }
 
     private var itemTypeLabel: String {
@@ -42,10 +42,10 @@ struct ItemDetailView: View {
 
     private var selectedItem: CollectionItem? {
         matchingItems.first { $0.condition == selectedCondition.condition }
-            ?? (currentItem.condition == selectedCondition.condition ? currentItem : nil)
+            ?? selectedCondition.collectionItem(from: currentItem)
     }
 
-    private var selectedValue: Double? { selectedItem?.marketValueUSD }
+    private var selectedValue: Double? { selectedItem.flatMap { selectedCondition.value(from: $0) } }
 
     private var retailDelta: Double? {
         guard let selectedValue, let retailPrice = item.rrpUSD, retailPrice > 0 else { return nil }
@@ -90,6 +90,9 @@ struct ItemDetailView: View {
         .task {
             guard let coordinator else { return }
             store.prepareHistoryIfNeeded()
+            do {
+                try await store.recoverPricing(for: item, using: coordinator.apiClient)
+            } catch { errorMessage = error.localizedDescription }
             await store.refreshMarketHistory(using: coordinator.apiClient, only: CollectionHistoryRequestItem(item))
         }
         .navigationTitle("")
@@ -619,14 +622,13 @@ struct ItemDetailView: View {
 
     private func conditionHistory(for option: DetailConditionOption, horizon: PortfolioHorizon) -> [StockChartPoint] {
         let sourceItem = matchingItems.first { $0.condition == option.condition }
-            ?? (item.condition == option.condition ? item : nil)
-        guard let sourceItem else { return [] }
+            ?? option.collectionItem(from: currentItem)
         return store.preparedHistory.items[sourceItem.id]?[horizon] ?? []
     }
 
 }
 
-private enum DetailConditionOption: String, CaseIterable, Identifiable {
+enum DetailConditionOption: String, CaseIterable, Identifiable {
     case new
     case used
 
@@ -651,11 +653,12 @@ private enum DetailConditionOption: String, CaseIterable, Identifiable {
     }
 
     func value(from item: CollectionItem) -> Double? {
-        item.condition == condition ? item.marketValueUSD : nil
+        if item.condition == condition, let value = item.marketValueUSD { return value }
+        return condition == .used ? item.pricingSnapshot?.preferredUsedValue : item.pricingSnapshot?.preferredNewValue
     }
 
     func collectionItem(from item: CollectionItem) -> CollectionItem {
-        CollectionItem(
+        var result = CollectionItem(
             setNumber: item.setNumber,
             itemType: item.itemType,
             name: item.name,
@@ -667,7 +670,7 @@ private enum DetailConditionOption: String, CaseIterable, Identifiable {
             marketValueUSD: value(from: item),
             rrpUSD: item.rrpUSD,
             gainPercent: item.condition == condition ? item.gainPercent : nil,
-            dataSource: item.condition == condition ? item.dataSource : nil,
+            dataSource: item.condition == condition ? (item.dataSource ?? item.pricingSnapshot?.source(for: condition)) : item.pricingSnapshot?.source(for: condition),
             quantity: 1,
             condition: condition,
             colorID: item.colorID,
@@ -676,5 +679,10 @@ private enum DetailConditionOption: String, CaseIterable, Identifiable {
             marketRows: item.condition == condition ? item.marketRows : [],
             addedAt: item.addedAt
         )
+        result.pricingSnapshot = item.pricingSnapshot
+        result.marketSales = item.condition == condition ? item.marketSales : item.alternateMarketSales
+        result.alternateMarketSales = item.condition == condition ? item.alternateMarketSales : item.marketSales
+        result.marketHistoryFetchedAt = item.marketHistoryFetchedAt
+        return result
     }
 }
