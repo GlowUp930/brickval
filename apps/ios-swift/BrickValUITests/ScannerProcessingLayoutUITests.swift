@@ -4,15 +4,18 @@ import XCTest
 final class ScannerProcessingLayoutUITests: XCTestCase {
     func testExistingCollectionFetchesRealHistoryAndChangesTimeframe() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showCollectionHistoryDemo", "-showProGatingDemo", "-brickval_language_override", "en"]
+        app.launchArguments = ["-showCollectionHistoryDemo", "-showProGatingDemo", "-brickval_language_override", "en", "-brickval_collection_tips_seen", "NO"]
         app.launch()
+        let tips = app.buttons["Got it"]
+        guard tips.waitForExistence(timeout: 5) else { XCTFail("Expected first-launch collection tips"); return }
+        tips.tap()
         let month = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "collection.valueChart.1M.")).firstMatch
         XCTAssertTrue(month.waitForExistence(timeout: 15))
         let monthCount = Int(month.identifier.split(separator: ".").last ?? "0") ?? 0
         XCTAssertGreaterThan(monthCount, 2)
         let quarterButton = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Show 3M price history")).firstMatch
         // Scroll in the outer margin, away from the chart's touch-inspection gesture.
-        // CI previously tapped a still-offscreen control (computed hit point {-1, -1}).
+        // Do not ask XCTest to synthesize a tap until the control is actually reachable.
         for _ in 0..<6 where !quarterButton.isHittable {
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.75))
                 .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.35)))
@@ -57,8 +60,11 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
 
     func testMarketHistoryLargeTextControlsRemainReachable() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showCollectionHistoryDemo", "-showProGatingDemo", "-brickval_language_override", "en", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launchArguments = ["-showCollectionHistoryDemo", "-showProGatingDemo", "-brickval_language_override", "en", "-brickval_collection_tips_seen", "NO", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         app.launch()
+        let tips = app.buttons["Got it"]
+        guard tips.waitForExistence(timeout: 5) else { XCTFail("Expected first-launch collection tips"); return }
+        tips.tap()
         let chart = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "collection.valueChart.")).firstMatch
         XCTAssertTrue(chart.waitForExistence(timeout: 15))
         let half = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Show 6M price history")).firstMatch
