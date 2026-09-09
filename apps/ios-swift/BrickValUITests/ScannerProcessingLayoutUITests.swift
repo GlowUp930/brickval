@@ -52,6 +52,14 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         XCTAssertGreaterThanOrEqual(detail.frame.minY, 0)
         XCTAssertLessThan(detail.frame.maxY, app.windows.firstMatch.frame.height * 0.85)
         XCTAssertGreaterThan(Int(detail.identifier.split(separator: ".").last ?? "0") ?? 0, 1)
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "collectionItem.soldListingsLegend").firstMatch.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "collectionItem.marketSnapshot.1M").firstMatch.waitForExistence(timeout: 3))
+        XCTAssertFalse(app.staticTexts["Estimated market history"].isHittable)
+        let detailQuarterButton = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Show 3M price history")).firstMatch
+        for _ in 0..<8 where !detailQuarterButton.isHittable { app.swipeUp() }
+        XCTAssertTrue(detailQuarterButton.isHittable)
+        detailQuarterButton.tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "collectionItem.marketSnapshot.3M").firstMatch.waitForExistence(timeout: 3))
         let detailScreenshot = XCTAttachment(screenshot: app.screenshot())
         detailScreenshot.name = "Item real market history"
         detailScreenshot.lifetime = .keepAlways

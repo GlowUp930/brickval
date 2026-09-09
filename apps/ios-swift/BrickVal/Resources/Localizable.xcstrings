@@ -68072,6 +68072,142 @@
           }
         }
       }
+    },
+    "Market snapshot": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Market snapshot"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Resumen del mercado"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Aperçu du marché"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Marktübersicht"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Panoramica del mercato"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Visão geral do mercado"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Marktoverzicht"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "市場スナップショット"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "시장 스냅샷"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "市场概览"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "市場概覽"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "لقطة السوق"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "बाज़ार स्नैपशॉट"}}
+      }
+    },
+    "Times sold": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Times sold"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Veces vendido"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Ventes réalisées"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Verkäufe"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Vendite"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Vezes vendido"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Verkocht"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "販売回数"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "판매 횟수"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "售出次数"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "售出次數"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "مرات البيع"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "बिक्री की संख्या"}}
+      }
+    },
+    "Total qty": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Total qty"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Cantidad total"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Quantité totale"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Gesamtmenge"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Quantità totale"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Quantidade total"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Totale aantal"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "合計数量"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "총 수량"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "总数量"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "總數量"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "الكمية الإجمالية"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "कुल मात्रा"}}
+      }
+    },
+    "Min price": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Min price"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Precio mínimo"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Prix min."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Mindestpreis"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Prezzo min."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Preço mín."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Minimumprijs"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "最低価格"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "최저가"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "最低价格"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "最低價格"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "الحد الأدنى للسعر"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "न्यूनतम कीमत"}}
+      }
+    },
+    "Avg price": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Avg price"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Precio medio"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Prix moyen"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Durchschnittspreis"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Prezzo medio"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Preço médio"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Gemiddelde prijs"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "平均価格"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "평균 가격"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "平均价格"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "平均價格"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "متوسط السعر"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "औसत कीमत"}}
+      }
+    },
+    "Qty avg price": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Qty avg price"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Precio medio ponderado"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Prix moyen pondéré"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Mengenmittelpreis"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Prezzo medio ponderato"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Preço médio ponderado"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Gewogen gemiddelde prijs"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "数量加重平均価格"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "수량 가중 평균가"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "数量加权平均价"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "數量加權平均價"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "متوسط السعر المرجح بالكمية"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "मात्रा-भारित औसत कीमत"}}
+      }
+    },
+    "Max price": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Max price"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Precio máximo"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Prix max."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Höchstpreis"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Prezzo max."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Preço máx."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Maximumprijs"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "最高価格"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "최고가"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "最高价格"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "最高價格"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "الحد الأقصى للسعر"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "अधिकतम कीमत"}}
+      }
+    },
+    "No sales in this period": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "No sales in this period"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Sin ventas en este período"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Aucune vente sur cette période"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Keine Verkäufe in diesem Zeitraum"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Nessuna vendita in questo periodo"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Nenhuma venda neste período"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Geen verkopen in deze periode"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "この期間の販売なし"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "이 기간에 판매 없음"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "此期间无销售"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "此期間無銷售"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "لا توجد مبيعات في هذه الفترة"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "इस अवधि में कोई बिक्री नहीं"}}
+      }
     }
   },
   "version": "1.0"

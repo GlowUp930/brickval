@@ -27,6 +27,41 @@ struct PortfolioHistoryBuilderTests {
         #expect(values == [17.5, 30])
     }
 
+    @Test func marketSnapshotCountsRowsAndWeightsQuantitiesSeparately() {
+        let sales = [
+            sale("2026-09-08", 10, 1),
+            sale("2026-09-07", 20, 3),
+            sale("2026-08-15", 40, 2),
+            sale("2026-09-09", 999, 0),
+            sale("bad", 100, 1),
+            sale("2026-09-10", 500, 1)
+        ]
+
+        let snapshot = PortfolioHistoryBuilder.marketSnapshot(sales: sales, horizon: .month, now: now)
+
+        #expect(snapshot.timesSold == 3)
+        #expect(snapshot.totalQuantity == 6)
+        #expect(snapshot.minimumPriceUSD == 10)
+        #expect(snapshot.averagePriceUSD == 70.0 / 3.0)
+        #expect(snapshot.quantityAveragePriceUSD == 150.0 / 6.0)
+        #expect(snapshot.maximumPriceUSD == 40)
+    }
+
+    @Test func marketSnapshotUsesInclusiveWindowBoundaryAndEmptyPeriods() {
+        let boundary = sale("2026-08-09", 25)
+        let outside = sale("2026-08-08", 30)
+
+        let inWindow = PortfolioHistoryBuilder.marketSnapshot(sales: [boundary, outside], horizon: .month, now: now)
+        let empty = PortfolioHistoryBuilder.marketSnapshot(sales: [outside], horizon: .month, now: now)
+
+        #expect(inWindow.timesSold == 1)
+        #expect(inWindow.averagePriceUSD == 25)
+        #expect(empty.timesSold == 0)
+        #expect(empty.totalQuantity == 0)
+        #expect(empty.averagePriceUSD == nil)
+        #expect(!empty.hasSales)
+    }
+
     @Test func missingHistoryDoesNotHideCoveredItemsOrInventOldPrices() {
         var first = fixture(); first.quantity = 2
         first.marketSales = [sale("2026-08-15", 10), sale("2026-09-01", 20)]

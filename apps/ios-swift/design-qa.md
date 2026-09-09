@@ -1,5 +1,13 @@
 # Scan Result Card Visual QA
 
+## Collection item market snapshot — 2026-09-09
+
+The item detail keeps the rainbow outlined `Average sold price` badge and its tick icon. Only the standalone grey `Average sold price` source title and the grey `Estimated market history` heading were removed. The completed-sales explanation, current price, market-change percentage, currency conversion, retail comparison, graph, and 1M/3M/6M controls remain.
+
+The chart controls are followed by a timeframe-aware Market snapshot with separate New and Used columns. It shows times sold, total quantity, minimum, arithmetic average, quantity-weighted average, and maximum price from saved BrickLink completed-sale rows. Invalid, future, and out-of-window rows are ignored; empty conditions show an explicit empty state. All values use the active currency formatter and ISO code. Snapshot data is prepared with the chart data, so changing the timeframe makes no history request and remains responsive. Reduce Motion applies the values immediately.
+
+Verification: the focused item-detail UI check confirms the rainbow badge is present, both removed labels are absent, and the 3M snapshot appears after switching. The full native suite passed 240 tests on the BrickVal Small iPhone and 240 on the BrickVal iPhone 17 Pro. The 13-language audit passed with 802 strings plus four Info.plist strings, and the Release configuration compiled successfully. Physical iPhone verification and the separate TestFlight upload remain pending.
+
 ## Collection condition quote recovery — 2026-09-09 (after build 173)
 
 Reproduced 75192-1: save a New holding from a result containing New $682.58 and Used $520.82, restart, then select Used. The old detail conversion returned nil: only the owned condition quote was persisted, and the detail screen required an owned slot. The fix persists the complete pricing snapshot, displays the selected condition independently of ownership, and recovers absent snapshots for legacy items through the authenticated lookup on detail opening. This lookup uses the existing provider-request rate limit; it does not grant or spend referral credits. Failed recovery surfaces the existing alert and retains saved data; reopening retries. Both conditions' dated sales now persist, with alternate detail windows prepared off-thread and excluded from portfolio ownership totals. No invented history or duplicate holdings.

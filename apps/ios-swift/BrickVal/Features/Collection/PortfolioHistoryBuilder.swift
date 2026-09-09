@@ -6,9 +6,21 @@ struct PortfolioMarketHistory: Sendable {
     let totalItems: Int
 }
 
+struct MarketSnapshot: Equatable, Sendable {
+    let timesSold: Int
+    let totalQuantity: Int
+    let minimumPriceUSD: Double?
+    let averagePriceUSD: Double?
+    let quantityAveragePriceUSD: Double?
+    let maximumPriceUSD: Double?
+
+    var hasSales: Bool { timesSold > 0 }
+}
+
 struct PreparedCollectionHistory: Sendable {
     var portfolios: [PortfolioHorizon: PortfolioMarketHistory] = [:]
     var items: [String: [PortfolioHorizon: [StockChartPoint]]] = [:]
+    var snapshots: [String: [PortfolioHorizon: MarketSnapshot]] = [:]
 }
 
 enum PortfolioHistoryBuilder {
@@ -31,17 +43,25 @@ enum PortfolioHistoryBuilder {
         var result = PreparedCollectionHistory()
         for item in items {
             guard !Task.isCancelled else { return result }
-            let observations = dailyObservations(sales: item.marketSales, now: now)
+            let preparedSales = prepareSales(item.marketSales, now: now)
+            let observations = dailyObservations(preparedSales)
             result.items[item.id] = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
                 ($0, window(observations, horizon: $0, now: now))
+            })
+            result.snapshots[item.id] = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
+                ($0, marketSnapshot(preparedSales, horizon: $0, now: now))
             })
         }
         for item in items {
             let alternate = (item.condition == .used ? DetailConditionOption.new : .used).collectionItem(from: item)
             guard result.items[alternate.id] == nil else { continue }
-            let observations = dailyObservations(sales: alternate.marketSales, now: now)
+            let preparedSales = prepareSales(alternate.marketSales, now: now)
+            let observations = dailyObservations(preparedSales)
             result.items[alternate.id] = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
                 ($0, window(observations, horizon: $0, now: now))
+            })
+            result.snapshots[alternate.id] = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
+                ($0, marketSnapshot(preparedSales, horizon: $0, now: now))
             })
         }
         for horizon in PortfolioHorizon.allCases {
@@ -74,21 +94,57 @@ enum PortfolioHistoryBuilder {
     }
 
     static func priceSeries(sales: [CollectionMarketSale], horizon: PortfolioHorizon, now: Date = .now) -> [StockChartPoint] {
-        window(dailyObservations(sales: sales, now: now), horizon: horizon, now: now)
+        window(dailyObservations(prepareSales(sales, now: now)), horizon: horizon, now: now)
     }
 
-    private static func dailyObservations(sales: [CollectionMarketSale], now: Date) -> [StockChartPoint] {
+    static func marketSnapshot(sales: [CollectionMarketSale], horizon: PortfolioHorizon, now: Date = .now) -> MarketSnapshot {
+        marketSnapshot(prepareSales(sales, now: now), horizon: horizon, now: now)
+    }
+
+    private struct PreparedSale: Sendable {
+        let date: Date
+        let priceUSD: Double
+        let quantity: Int
+    }
+
+    private static func prepareSales(_ sales: [CollectionMarketSale], now: Date) -> [PreparedSale] {
+        sales.compactMap { sale in
+            guard sale.priceUSD.isFinite, sale.priceUSD > 0, sale.quantity > 0,
+                  let date = sale.timestamp, date <= now else { return nil }
+            return PreparedSale(date: date, priceUSD: sale.priceUSD, quantity: sale.quantity)
+        }
+    }
+
+    private static func dailyObservations(_ sales: [PreparedSale]) -> [StockChartPoint] {
         var days: [Date: (total: Double, quantity: Int)] = [:]
         for sale in sales {
-            guard sale.priceUSD.isFinite, sale.priceUSD > 0, sale.quantity > 0,
-                  let date = sale.timestamp, date <= now else { continue }
-            let day = calendar.startOfDay(for: date)
+            let day = calendar.startOfDay(for: sale.date)
             let previous = days[day] ?? (0, 0)
             days[day] = (previous.total + sale.priceUSD * Double(sale.quantity), previous.quantity + sale.quantity)
         }
         return days.keys.sorted().map { date in
             StockChartPoint(label: "", value: days[date]!.total / Double(days[date]!.quantity), timestamp: date)
         }
+    }
+
+    private static func marketSnapshot(_ sales: [PreparedSale], horizon: PortfolioHorizon, now: Date) -> MarketSnapshot {
+        let start = calendar.date(byAdding: .day, value: -horizon.days, to: calendar.startOfDay(for: now))!
+        let windowSales = sales.filter { $0.date >= start && $0.date <= now }
+        guard !windowSales.isEmpty else {
+            return MarketSnapshot(timesSold: 0, totalQuantity: 0, minimumPriceUSD: nil, averagePriceUSD: nil,
+                                  quantityAveragePriceUSD: nil, maximumPriceUSD: nil)
+        }
+        let totalQuantity = windowSales.reduce(0) { $0 + $1.quantity }
+        let total = windowSales.reduce(0.0) { $0 + $1.priceUSD }
+        let weightedTotal = windowSales.reduce(0.0) { $0 + ($1.priceUSD * Double($1.quantity)) }
+        return MarketSnapshot(
+            timesSold: windowSales.count,
+            totalQuantity: totalQuantity,
+            minimumPriceUSD: windowSales.map(\.priceUSD).min(),
+            averagePriceUSD: total / Double(windowSales.count),
+            quantityAveragePriceUSD: weightedTotal / Double(totalQuantity),
+            maximumPriceUSD: windowSales.map(\.priceUSD).max()
+        )
     }
 
     private static func window(_ observations: [StockChartPoint], horizon: PortfolioHorizon, now: Date) -> [StockChartPoint] {

@@ -17,7 +17,6 @@ struct PortfolioChartView: View {
     var body: some View {
         VStack(spacing: BrickValStyle.Primitive.space8) {
             if points.count > 1 {
-                Text("Estimated market history").font(.caption).foregroundStyle(.secondary)
                 let history = store.preparedHistory.portfolios[horizon] ?? PortfolioMarketHistory(points: [], coveredItems: 0, totalItems: store.items.count)
                 Text("History available for \(history.coveredItems) of \(history.totalItems) items")
                     .font(.caption2).foregroundStyle(.secondary)

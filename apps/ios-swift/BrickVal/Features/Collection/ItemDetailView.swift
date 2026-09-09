@@ -11,6 +11,7 @@ struct ItemDetailView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.brickValAccent) private var accent
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let item: CollectionItem
 
     @State private var selectedCondition: DetailConditionOption
@@ -74,6 +75,10 @@ struct ItemDetailView: View {
 
     private var historyPoints: [StockChartPoint] {
         conditionHistory(for: selectedCondition, horizon: horizon)
+    }
+
+    private var snapshotAnimation: Animation? {
+        reduceMotion ? nil : .timingCurve(0.25, 1.0, 0.5, 1.0, duration: 0.24)
     }
 
     var body: some View {
@@ -214,9 +219,6 @@ struct ItemDetailView: View {
     private var priceSummaryRow: some View {
         HStack(alignment: .center) {
             VStack(alignment: .trailing, spacing: BrickValStyle.Primitive.space4) {
-                Text(sourceLabel)
-                    .font(.caption)
-                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
                 Text(sourceDetail)
                     .font(.caption2)
                     .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
@@ -283,7 +285,6 @@ struct ItemDetailView: View {
     private var chartBlock: some View {
         VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space16) {
             soldListingsLegend
-            Text("Estimated market history").font(.caption).foregroundStyle(.secondary)
             if historyPoints.count > 1 {
             InteractiveStockChart(
                 points: historyPoints,
@@ -308,6 +309,7 @@ struct ItemDetailView: View {
                 isPro: entitlements.isPro,
                 onProSelection: { _ in presentHistoryUpgrade() }
             )
+            marketSnapshotPanel
         }
     }
 
@@ -336,6 +338,109 @@ struct ItemDetailView: View {
             }
             .shadow(color: accent.opacity(0.18), radius: 10, y: 4)
             .accessibilityLabel(sourceDetail)
+            .accessibilityIdentifier("collectionItem.soldListingsLegend")
+    }
+
+    private var marketSnapshotPanel: some View {
+        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Market snapshot")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(BrickValStyle.ScanResult.textPrimary)
+                Spacer(minLength: BrickValStyle.Primitive.space8)
+                Text(horizon.summaryLabel)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                    .lineLimit(1)
+            }
+
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: BrickValStyle.Primitive.space12) {
+                    snapshotColumn(for: .new)
+                    Divider()
+                        .overlay(BrickValStyle.ScanResult.border)
+                    snapshotColumn(for: .used)
+                }
+                VStack(spacing: BrickValStyle.Primitive.space12) {
+                    snapshotColumn(for: .new)
+                    Divider()
+                        .overlay(BrickValStyle.ScanResult.border)
+                    snapshotColumn(for: .used)
+                }
+            }
+        }
+        .padding(BrickValStyle.Primitive.space16)
+        .background(BrickValStyle.ScanResult.surface.opacity(0.82), in: RoundedRectangle(cornerRadius: BrickValStyle.ScanResult.buttonRadius))
+        .overlay {
+            RoundedRectangle(cornerRadius: BrickValStyle.ScanResult.buttonRadius)
+                .stroke(BrickValStyle.ScanResult.border)
+        }
+        .accessibilityIdentifier("collectionItem.marketSnapshot.\(horizon.rawValue)")
+        .animation(snapshotAnimation, value: horizon)
+    }
+
+    private func snapshotColumn(for option: DetailConditionOption) -> some View {
+        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space8) {
+            Text(option.title)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(BrickValStyle.ScanResult.textPrimary)
+                .accessibilityAddTraits(.isHeader)
+
+            if let snapshot = marketSnapshot(for: option), snapshot.hasSales {
+                snapshotCountRow("Times sold", value: snapshot.timesSold, option: option)
+                snapshotCountRow("Total qty", value: snapshot.totalQuantity, option: option)
+                snapshotPriceRow("Min price", value: snapshot.minimumPriceUSD, option: option)
+                snapshotPriceRow("Avg price", value: snapshot.averagePriceUSD, option: option)
+                snapshotPriceRow("Qty avg price", value: snapshot.quantityAveragePriceUSD, option: option)
+                snapshotPriceRow("Max price", value: snapshot.maximumPriceUSD, option: option)
+            } else if store.isPreparingHistory || store.isRefreshingHistory {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityLabel("Loading market snapshot")
+            } else {
+                Text("No sales in this period")
+                    .font(.caption)
+                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("collectionItem.marketSnapshot.\(horizon.rawValue).\(option.rawValue).empty")
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityIdentifier("collectionItem.marketSnapshot.\(horizon.rawValue).\(option.rawValue)")
+    }
+
+    private func snapshotCountRow(_ label: LocalizedStringKey, value: Int, option: DetailConditionOption) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: BrickValStyle.Primitive.space8) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+            Spacer(minLength: BrickValStyle.Primitive.space4)
+            Text(value.formatted(.number.locale(BrickValLocalization.effectiveLanguage.locale)))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(BrickValStyle.ScanResult.textPrimary)
+                .monospacedDigit()
+                .contentTransition(.numericText())
+        }
+    }
+
+    private func snapshotPriceRow(_ label: LocalizedStringKey, value: Double?, option: DetailConditionOption) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: BrickValStyle.Primitive.space8) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+            Spacer(minLength: BrickValStyle.Primitive.space4)
+            if let value {
+                BrickValCurrencyText(value)
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+            } else {
+                Text("—")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+            }
+        }
     }
 
     private var productPhotoPlate: some View {
@@ -621,9 +726,18 @@ struct ItemDetailView: View {
     }
 
     private func conditionHistory(for option: DetailConditionOption, horizon: PortfolioHorizon) -> [StockChartPoint] {
-        let sourceItem = matchingItems.first { $0.condition == option.condition }
-            ?? option.collectionItem(from: currentItem)
+        let sourceItem = conditionItem(for: option)
         return store.preparedHistory.items[sourceItem.id]?[horizon] ?? []
+    }
+
+    private func conditionItem(for option: DetailConditionOption) -> CollectionItem {
+        matchingItems.first { $0.condition == option.condition }
+            ?? option.collectionItem(from: currentItem)
+    }
+
+    private func marketSnapshot(for option: DetailConditionOption) -> MarketSnapshot? {
+        let sourceItem = conditionItem(for: option)
+        return store.preparedHistory.snapshots[sourceItem.id]?[horizon]
     }
 
 }

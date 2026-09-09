@@ -9,6 +9,9 @@ struct PreparedHistoryTests {
         let store = CollectionStore(repository: repository)
         var joker = CollectionItem(setNumber: "70919", itemType: .set, name: "Joker", theme: "Batman")
         joker.marketSales = CollectionHistoryDemo.joker
+        joker.alternateMarketSales = [
+            CollectionMarketSale(date: "2026-09-03T12:00:00Z", priceUSD: 42, quantity: 2)
+        ]
         var rocket = CollectionItem(setNumber: "21367", itemType: .set, name: "Rocket", theme: "Ideas", condition: .used)
         rocket.marketSales = CollectionHistoryDemo.rocket
         try await store.add([joker, rocket], isPro: true)
@@ -18,7 +21,11 @@ struct PreparedHistoryTests {
             let expected = PortfolioHistoryBuilder.marketHistory(items: store.items, horizon: horizon, now: CollectionHistoryDemo.referenceDate)
             #expect(store.preparedHistory.portfolios[horizon]?.points.map(\.value) == expected.points.map(\.value))
             #expect(store.preparedHistory.items[joker.id]?[horizon] != store.preparedHistory.items[rocket.id]?[horizon])
+            #expect(store.preparedHistory.snapshots[joker.id]?[horizon] != nil)
         }
+        let jokerUsed = DetailConditionOption.used.collectionItem(from: joker)
+        #expect(store.preparedHistory.snapshots[jokerUsed.id]?[.month]?.timesSold == 1)
+        #expect(store.preparedHistory.snapshots[jokerUsed.id]?[.month]?.totalQuantity == 2)
         // Several mutations while background work is active must only publish the latest state.
         try await store.setQuantity(4, for: joker, isPro: true)
         try await store.remove(rocket)
@@ -29,6 +36,7 @@ struct PreparedHistoryTests {
         await restarted.load()
         await restarted.waitForPreparedHistory()
         #expect(restarted.preparedHistory.portfolios[.month]?.points.map(\.value) == store.preparedHistory.portfolios[.month]?.points.map(\.value))
+        #expect(restarted.preparedHistory.snapshots[joker.id]?[.month]?.timesSold == store.preparedHistory.snapshots[joker.id]?[.month]?.timesSold)
         try await store.clear()
         await store.waitForPreparedHistory()
         #expect(store.preparedHistory.items.isEmpty)
