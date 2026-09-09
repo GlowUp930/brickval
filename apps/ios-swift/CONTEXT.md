@@ -8,7 +8,7 @@ Release complete: Apple processed **1.0.8 (171)** (`cc796f1e-f5ff-4ec3-8c47-b12b
 
 ## Responsive charts and image loading — build 172
 
-Build 172 is archived as version 1.0.8 (172) from the normal Release configuration. History preparation now waits off the main actor, chart timeframe selection reuses prepared windows, and public product images use shared memory/disk caching with background downsampling. The production Sentry hang report for build 171 points to the exact synchronous date-parsing path removed here. Local focused small/large interaction checks pass; physical-device confirmation remains required. Sentry has all three build 172 debug files. Xcode Organizer uploaded build 172 successfully; App Store Connect processing and internal-group assignment remain pending.
+Build 172 is archived as version 1.0.8 (172) from the normal Release configuration. History preparation now waits off the main actor, chart timeframe selection reuses prepared windows, and public product images use shared memory/disk caching with background downsampling. The production Sentry hang report for build 171 points to the exact synchronous date-parsing path removed here. Local focused small/large interaction checks pass; physical-device confirmation remains required. Sentry has all three build 172 debug files. Xcode Organizer uploaded build 172 successfully; App Store Connect processed it as Ready to Submit (build ID `f69f63a0-77e2-48e5-9629-7b86b423620e`) and attached both internal groups. Testing notes are saved.
 
 ## Real market-history restoration — build 170
 
