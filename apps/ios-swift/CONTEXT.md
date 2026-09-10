@@ -4,7 +4,7 @@
 
 Onboarding now starts on the demo screen, so Get Started is available as soon as the onboarding surface is shown. The old roughly one-second branded step and its delayed transition were removed; the launch logo remains the branded handoff. The CTA advances to the first detail screen immediately. Settings no longer contains the temporary hard-paywall onboarding preview, its isolated sheet, or its run mode; the debug-only Settings fixture is now named `-showSettingsRootDemo`.
 
-Production onboarding, referral, account, paywall, subscription, and scan behavior are unchanged. Focused onboarding/Settings checks pass on both simulator sizes. The full small simulator suite is green; two large-simulator collection-navigation checks still encounter the pre-existing fixture alert and are tracked as a separate test gap. Build 176 is the TestFlight candidate; physical-device verification remains pending until upload and device testing.
+Production onboarding, referral, account, paywall, subscription, and scan behavior are unchanged. Focused onboarding/Settings checks pass on both simulator sizes. The 229-test unit suite passes on both sizes. The full UI run still has two existing collection-navigation failures on each size because the fixture presents the pre-existing “Could not remove item” alert; this is separate from onboarding. The signed 1.0.8 (176) archive passed validation and was uploaded to App Store Connect; delivery `5ee44d02-2242-440f-9e4d-6e89ad84f49f` is processing for TestFlight. Physical-device verification remains pending.
 
 ## Smooth charts and first-launch guidance — 2026-09-10
 
@@ -12,7 +12,7 @@ Collection and item charts keep their stable prepared samples and now use bounde
 
 First-launch Collection and Scan guidance now presents a clearer Quick start / scan-mode card with concise action copy, numbered icon tiles, a large dismiss target, and reduced-motion-safe presentation. Existing localized strings are reused across all 13 languages; the active multi-step onboarding flow is unchanged.
 
-Verification: 229 native unit tests and 16 UI tests pass on both simulator sizes, the focused chart suite passes 11 tests, localization passes with 807 app strings plus four Info.plist strings, and the Release simulator build succeeds. The final Collection tip card was inspected on the small simulator. Physical iPhone confirmation and a new TestFlight upload remain pending.
+Verification: the 229-test native unit suite passes on both simulator sizes, the focused chart suite passes 11 tests, localization passes with 807 app strings plus four Info.plist strings, and the Release archive succeeds. The full UI run retains two existing collection-navigation fixture failures on each size. The final Collection tip card was inspected on the small simulator. Build 1.0.8 (176) was uploaded to App Store Connect and is processing for TestFlight; physical iPhone confirmation remains pending.
 
 ## TestFlight build 175 — 2026-09-10
 

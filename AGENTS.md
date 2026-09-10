@@ -6,7 +6,7 @@ The first onboarding surface now opens directly on the demo and keeps Get Starte
 
 Settings no longer exposes the temporary hard-paywall onboarding preview. Its isolated preview sheet and mode were removed, and the remaining debug-only Settings fixture was renamed to `-showSettingsRootDemo` so no production path depends on the preview.
 
-Focused onboarding/Settings checks pass on both simulator sizes. The full small-simulator suite is green; the large suite's two collection-navigation failures are existing reachability/fixture-alert issues and are recorded separately. Build 176 is the TestFlight candidate; physical-device verification and upload evidence are recorded below after release.
+Focused onboarding/Settings checks pass on both simulator sizes. The 229-test unit suite passes on both sizes, while the full UI run still has two existing collection-navigation failures on each size caused by the fixture's “Could not remove item” alert; they are unrelated to onboarding and are recorded separately. The signed 1.0.8 (176) archive passed validation and was uploaded to App Store Connect; delivery `5ee44d02-2242-440f-9e4d-6e89ad84f49f` is processing for TestFlight. Physical-device verification remains pending.
 
 ## Smooth market charts and first-launch guidance — 2026-09-10
 
@@ -14,7 +14,7 @@ Collection and item charts now use bounded monotone Hermite sampling before the 
 
 The first-launch Collection and Scan tips now use shorter action-focused copy, numbered icon tiles, a clearer card hierarchy, 44-point dismissal targets, and reduced-motion-safe transitions. The copy reuses the existing 13-language catalog. The full multi-step onboarding flow and scan behavior are unchanged.
 
-Verification: 229 native unit tests and 16 UI tests pass on both the BrickVal Small iPhone and BrickVal iPhone 17 Pro simulators; the focused chart regression passes 11 tests; the 13-language audit passes with 807 app strings plus four Info.plist strings; and the Release simulator build succeeds. Final tip cards were visually inspected on the small simulator. Physical iPhone confirmation remains pending. This working-tree change has not been uploaded to TestFlight.
+Verification: the 229-test native unit suite passes on both the BrickVal Small iPhone and BrickVal iPhone 17 Pro simulators; the focused chart regression passes 11 tests; the 13-language audit passes with 807 app strings plus four Info.plist strings; and the Release archive succeeds. The full UI run retains two existing collection-navigation fixture failures on each size. Final tip cards were visually inspected on the small simulator. Build 1.0.8 (176) was uploaded to App Store Connect and is processing for TestFlight; physical iPhone confirmation remains pending.
 
 ## Regional history release — build 175 — 2026-09-10
 

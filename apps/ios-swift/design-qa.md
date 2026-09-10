@@ -5,14 +5,14 @@
 - Onboarding opens directly on the demo screen with Get Started visible in the first onboarding surface. The old roughly one-second branded gate was removed; the app launch logo remains the brand handoff.
 - The CTA advances to the first detail screen immediately. Its existing large tap target, sign-in path, referral path, and production onboarding behavior remain unchanged.
 - Settings no longer shows the temporary hard-paywall onboarding preview. The old preview sheet and isolated mode were deleted; the debug-only Settings root fixture is now `-showSettingsRootDemo`.
-- Focused onboarding/Settings checks pass on the small and large simulators. The full small suite is green. Two large collection-navigation checks remain a separate fixture-alert/reachability gap; physical-device confirmation is pending.
+- Focused onboarding/Settings checks pass on the small and large simulators. The 229-test unit suite passes on both sizes. The full UI run still has two existing collection-navigation failures on each size because the fixture presents the pre-existing “Could not remove item” alert; this is a separate fixture gap. The signed 1.0.8 (176) archive passed validation and was uploaded to App Store Connect; delivery `5ee44d02-2242-440f-9e4d-6e89ad84f49f` is processing for TestFlight. Physical-device confirmation remains pending.
 
 ## Smooth chart and first-launch tip pass — 2026-09-10
 
 - Collection and item graphs use a bounded monotone curve over the existing real-sale samples. The curve remains within each pair of recorded values, keeps actual date spacing, and retains the stable 140-sample identity and short transition used by the live-app direction.
 - The Collection and Scan first-launch cards now use a stronger header, concise action copy, numbered icon tiles, clearer spacing, and 44-point dismissal controls. Reduce Motion uses the opacity-only path.
 - Final Collection tip screenshot: `/tmp/brickval176-collection-tips-final.png`. The chart and item-detail graphs were inspected in the existing small/large simulator UI captures; the line visibly turns smoothly while keeping the same data.
-- Verification after the final source cleanup: 229 native unit tests and 16 UI tests passed on each simulator size; the focused chart regression passed 11 tests; the 13-language audit passed with 807 app strings plus four Info.plist strings; Release compilation succeeded. Physical iPhone and TestFlight checks remain pending.
+- Verification after the final source cleanup: the 229-test native unit suite passed on each simulator size; the focused chart regression passed 11 tests; the 13-language audit passed with 807 app strings plus four Info.plist strings; and the Release archive succeeded. The full UI run retains two existing collection-navigation fixture failures on each size. Build 1.0.8 (176) was uploaded to App Store Connect and is processing for TestFlight. Physical iPhone confirmation remains pending.
 
 ## TestFlight build 175 — 2026-09-10
 

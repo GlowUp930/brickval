@@ -4,7 +4,7 @@
 
 The reported first-launch “unresponsive” Get Started state was reproducible in the onboarding flow: the first screen intentionally showed a branded step for about 1.05 seconds before revealing the demo and CTA. The button action itself completed in under 30 ms once visible; no network request or entitlement check was on that tap path. Build 176 removes that redundant gate and starts onboarding on the demo, while the launch logo remains the branded handoff. The Settings hard-paywall preview and its isolated mode were removed at the same time.
 
-Focused onboarding/Settings checks pass on both simulator sizes and the full small simulator suite is green. The large simulator has two separate collection-navigation checks blocked by the existing fixture’s “Could not remove item” alert; this does not involve onboarding. Physical-device confirmation remains required.
+Focused onboarding/Settings checks pass on both simulator sizes. The 229-test unit suite passes on both sizes. The full UI run still has two existing collection-navigation checks failing on each size because the fixture presents the pre-existing “Could not remove item” alert; this does not involve onboarding. The signed 1.0.8 (176) archive passed validation and was uploaded to App Store Connect; delivery `5ee44d02-2242-440f-9e4d-6e89ad84f49f` is processing for TestFlight. Physical-device confirmation remains required.
 
 ## Smooth chart and onboarding follow-up — 2026-09-10
 
