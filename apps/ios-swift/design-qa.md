@@ -1,5 +1,9 @@
 # Scan Result Card Visual QA
 
+## Sentry app-hang diagnosis — 2026-09-11
+
+The supplied `BRICKVAL-T` issue is a build-166 app hang on a physical iPhone 11 Pro Max, not a confirmed Core ML recognition defect. The main stack is UIKit/SwiftUI transaction work and the app dSYM is missing; PhotosUI and foreground refresh activity surround the event. A temporary simulator benchmark measured about 8.5 seconds for the current 102-tile imported-photo detector pass, so the detector workload and frozen-photo decoding are follow-up performance risks. Physical picker reproduction and constrained-device verification remain open. See [`docs/audits/2026-09-11-sentry-app-hang-model.md`](../../docs/audits/2026-09-11-sentry-app-hang-model.md).
+
 ## Dense bulk pricing — 2026-09-11
 
 Every resolved figure in a completed bulk scan keeps its actual localized amount visible. Regular, compact, and micro chips respond to result density and photo area. The placement planner uses stable lanes, reserves the summary and result rail, keeps chips inside the image, and adds a subtle solid leader line when a chip moves away from its figure. The amount is never replaced by a number-only marker. Tap targets stay at least 44 points and accessibility labels keep the full currency-qualified amount.

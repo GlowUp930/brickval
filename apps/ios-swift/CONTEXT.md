@@ -1,5 +1,9 @@
 # BrickVal Native iOS Context
 
+## Sentry app-hang and detector diagnosis — 2026-09-11
+
+The supplied Sentry issue `BRICKVAL-T` groups two build-166 production hangs (4.8–8.2 seconds) on a physical iPhone 11 Pro Max with roughly 64.5 MiB free memory and serious thermal state. The main stack is unsymbolicated SwiftUI/UIKit transaction work; the build-166 app dSYM is missing. PhotosUI picker/background transitions are present, while Core ML appears only on a worker thread. Do not retrain the detector from this evidence. The current imported-photo pipeline still performs 102 serial tile inferences (a controlled simulator benchmark measured 8.5 seconds), so detector workload and main-thread photo decoding should be profiled separately. See [`docs/audits/2026-09-11-sentry-app-hang-model.md`](../../docs/audits/2026-09-11-sentry-app-hang-model.md). Physical iPhone reproduction, exact source mapping, and current-build constrained-device verification remain blocked.
+
 ## Dense bulk price labels — 2026-09-11
 
 Completed bulk results now retain a readable, full price for every resolved figure at every density. Result count and available photo area select regular, compact, or micro chips. A deterministic lane planner keeps chips in bounds, separated from one another, clear of the summary/result rail, and connected to moved figures with short leader lines. The old numbered-only dense marker is no longer used. Price tags remain 44-point controls with full VoiceOver price and currency labels; unavailable prices still announce their state.
