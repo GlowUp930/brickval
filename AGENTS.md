@@ -1,5 +1,9 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Collection Used-history recovery — 2026-09-10
+
+Build 174 can show a valid Used sold-price headline while leaving the graph empty when an earlier incomplete history response saved a fresh timestamp. The live 75192 cache contains 17 Used sales in the 3M window, and its New counts exactly match the affected screen, so the provider and public history payload are healthy. Native refresh now treats empty dated rows as incomplete whenever the saved pricing source says completed sales exist, and refetches those rows without rescanning or consuming scan/referral credits. The regression and all 224 native unit tests pass on the small simulator; this source fix still needs a later TestFlight build and physical-device confirmation.
+
 ## Collection performance — 2026-09-09
 
 Build 172 work removes synchronous history reconstruction from Collection/item rendering, prepares all timeframes off the main actor, shares chart data, and caches/downsamples public product images. Sentry BRICKVAL-M confirms build 171's 14–15 second main-thread hang in date parsing through `PortfolioSummaryView`; this is a real production defect. Keep history preparation out of view computed properties and preserve genuine dated sales, coverage, current valuation separation, and Pro rules. The large-screen navigation test and follow-up prepared-fixture rerun pass locally; a fresh CI run is in progress. See `docs/audits/2026-09-09-collection-performance.md` for measurements and current release status. Device confirmation remains required; simulator timings do not establish recovery on the owner's phone.

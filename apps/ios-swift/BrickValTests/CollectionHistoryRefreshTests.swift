@@ -4,6 +4,78 @@ import Testing
 
 @MainActor
 struct CollectionHistoryRefreshTests {
+    @Test func freshButMissingSoldRowsAreRefetched() async throws {
+        let repository = CollectionRepository(fileURL: URL.temporaryDirectory.appending(path: UUID().uuidString))
+        let store = CollectionStore(repository: repository)
+        var item = CollectionItem(
+            setNumber: "75192-1",
+            itemType: .set,
+            name: "Millennium Falcon",
+            theme: "Star Wars",
+            marketValueUSD: 520.82,
+            dataSource: "sold",
+            condition: .used
+        )
+        item.marketHistoryFetchedAt = ISO8601DateFormatter().string(from: .now)
+        try await store.add(item, isPro: true)
+        var api = BrickValAPIClient.live()
+        api.collectionHistory = { _ in
+            CollectionHistoryResponse(items: [.init(
+                identifier: "75192",
+                itemType: .set,
+                colorID: nil,
+                newSales: CollectionHistoryDemo.rocket,
+                usedSales: CollectionHistoryDemo.joker,
+                fetchedAt: ISO8601DateFormatter().string(from: .now),
+                newError: nil,
+                usedError: nil
+            )])
+        }
+
+        await store.refreshMarketHistory(using: api, only: CollectionHistoryRequestItem(item))
+
+        #expect(store.items.first?.marketSales == CollectionHistoryDemo.joker)
+    }
+
+    @Test func usedHoldingKeepsUsedSoldHistoryAfterRefreshAndRestart() async throws {
+        let repository = CollectionRepository(fileURL: URL.temporaryDirectory.appending(path: UUID().uuidString))
+        let store = CollectionStore(repository: repository)
+        let item = CollectionItem(
+            setNumber: "75192-1",
+            itemType: .set,
+            name: "Millennium Falcon",
+            theme: "Star Wars",
+            marketValueUSD: 520.82,
+            condition: .used
+        )
+        try await store.add(item, isPro: true)
+        var api = BrickValAPIClient.live()
+        api.collectionHistory = { _ in
+            CollectionHistoryResponse(items: [.init(
+                identifier: "75192",
+                itemType: .set,
+                colorID: nil,
+                newSales: CollectionHistoryDemo.rocket,
+                usedSales: CollectionHistoryDemo.joker,
+                fetchedAt: ISO8601DateFormatter().string(from: .now),
+                newError: nil,
+                usedError: nil
+            )])
+        }
+
+        await store.refreshMarketHistory(using: api)
+        let reopened = CollectionStore(repository: repository)
+        await reopened.load()
+        await reopened.waitForPreparedHistory()
+
+        let saved = try #require(reopened.items.first)
+        #expect(saved.condition == .used)
+        #expect(saved.marketSales == CollectionHistoryDemo.joker)
+        #expect(saved.alternateMarketSales == CollectionHistoryDemo.rocket)
+        #expect((reopened.preparedHistory.items[saved.id]?[.quarter]?.count ?? 0) > 1)
+        #expect((reopened.preparedHistory.snapshots[saved.id]?[.quarter]?.timesSold ?? 0) > 0)
+    }
+
     @Test func unownedUsedHistorySurvivesRestartWithoutAddingHoldings() async throws {
         let repository = CollectionRepository(fileURL: URL.temporaryDirectory.appending(path: UUID().uuidString))
         let store = CollectionStore(repository: repository)

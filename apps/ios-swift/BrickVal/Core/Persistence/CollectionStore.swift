@@ -128,6 +128,13 @@ final class CollectionStore {
         guard hasLoaded else { return }
         let pending = items.filter { item in
             if let only, CollectionHistoryRequestItem(item) != only { return false }
+            let ownSource = item.dataSource ?? item.pricingSnapshot?.source(for: item.condition)
+            let alternateCondition: CollectionCondition = item.condition == .used ? .newSealed : .used
+            let alternateSource = item.pricingSnapshot?.source(for: alternateCondition)
+            let isMissingExpectedSoldRows =
+                (ownSource == "sold" && item.marketSales.isEmpty) ||
+                (alternateSource == "sold" && item.alternateMarketSales.isEmpty)
+            if isMissingExpectedSoldRows { return true }
             guard !force, let raw = item.marketHistoryFetchedAt,
                   let date = CollectionMarketSale(date: raw, priceUSD: 1, quantity: 1).timestamp else { return true }
             return Date.now.timeIntervalSince(date) >= 86400 || date > .now

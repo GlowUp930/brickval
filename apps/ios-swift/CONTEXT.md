@@ -1,5 +1,11 @@
 # BrickVal Native iOS Context
 
+## Collection Used-history recovery — after build 174
+
+The affected 75192 screen showed the current Used sold average but no Used graph. Direct BrickLink evidence returned 27 Used rows; the live `collection-history:v1:set:75192:none` cache held 26 valid Used rows, including 17 in 3M. Its New 3M counts (10 sales, 19 units) exactly matched the screenshot, proving the endpoint payload reached the app. The reproducible native defect was freshness handling: a prior empty history plus a recent fetch timestamp suppressed recovery for 24 hours even when the pricing snapshot said completed sales existed.
+
+`CollectionStore` now considers that state incomplete and refreshes it on Collection/detail opening. Complete cached histories keep their existing 24-hour behavior. The exact Used 75192 save/reopen path and the stale-empty recovery both have regressions; the complete small-simulator unit suite passes 224 tests across 36 suites, the collection-history backend tests pass, and all 13 locales pass. No backend, database, pricing, or allowance change was needed. A new TestFlight build and confirmation on the affected device remain pending.
+
 ## TestFlight build 174 — 2026-09-10
 
 The native Release archive is version 1.0.8 build 174, signed with the BrickVal App Store profile and passing strict code-signature validation. The full small-iPhone suite passed after making the collection-history fixture use a stable test clock; localization passed with 802 strings plus four Info.plist strings. App Store Connect accepted the IPA upload with delivery ID `3a379c51-c08e-4fbd-9d65-918f4bc94a4b`; package processing is asynchronous. Physical-device verification remains pending.
