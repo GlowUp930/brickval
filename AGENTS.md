@@ -1,5 +1,13 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Onboarding startup and preview cleanup — 2026-09-10
+
+The first onboarding surface now opens directly on the demo and keeps Get Started available as soon as that surface appears. The old roughly one-second branded gate was removed; the launch logo still provides the branded handoff. The Get Started action advances to the first detail screen immediately, while the production account, referral, paywall, and subscription paths remain unchanged.
+
+Settings no longer exposes the temporary hard-paywall onboarding preview. Its isolated preview sheet and mode were removed, and the remaining debug-only Settings fixture was renamed to `-showSettingsRootDemo` so no production path depends on the preview.
+
+Focused onboarding/Settings checks pass on both simulator sizes. The full small-simulator suite is green; the large suite's two collection-navigation failures are existing reachability/fixture-alert issues and are recorded separately. Build 176 is the TestFlight candidate; physical-device verification and upload evidence are recorded below after release.
+
 ## Smooth market charts and first-launch guidance — 2026-09-10
 
 Collection and item charts now use bounded monotone Hermite sampling before the existing Swift Charts monotone interpolation. The line has a smoother live-app shape while preserving stable sample identities, real date spacing, the 240 ms transition, Reduce Motion behavior, touch inspection, and the rule that values cannot overshoot recorded sales. Pricing and history sources are unchanged.

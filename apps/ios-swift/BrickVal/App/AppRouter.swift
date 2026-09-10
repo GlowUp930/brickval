@@ -20,7 +20,7 @@ final class AppRouter {
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-showCollectionGatingDemo") || ProcessInfo.processInfo.arguments.contains("-showCollectionHistoryDemo") {
             selectedTab = .collection
-        } else if ProcessInfo.processInfo.arguments.contains("-showHardPaywallPreviewRootDemo") {
+        } else if ProcessInfo.processInfo.arguments.contains("-showSettingsRootDemo") {
             selectedTab = .settings
         }
 #endif

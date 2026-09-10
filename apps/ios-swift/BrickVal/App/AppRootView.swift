@@ -31,7 +31,7 @@ struct AppRootView: View {
                             minimumBuild: monetization.minimumSupportedBuild,
                             updateURL: monetization.appUpdateURL ?? AppLinks.appStore
                         )
-                    } else if (preferences.hasCompletedOnboarding || isHardPaywallPreviewRootFixture) &&
+                    } else if (preferences.hasCompletedOnboarding || isSettingsRootFixture) &&
                                 !preferences.isReplayingOnboarding {
                         if monetization.accessCohort == .hardTrial && entitlements.isLoading && !entitlements.isPro {
                             HardAccessStatusView()
@@ -151,9 +151,9 @@ struct AppRootView: View {
             router.selectedTab == .scan
     }
 
-    private var isHardPaywallPreviewRootFixture: Bool {
+    private var isSettingsRootFixture: Bool {
 #if DEBUG
-        ProcessInfo.processInfo.arguments.contains("-showHardPaywallPreviewRootDemo")
+        ProcessInfo.processInfo.arguments.contains("-showSettingsRootDemo")
 #else
         false
 #endif

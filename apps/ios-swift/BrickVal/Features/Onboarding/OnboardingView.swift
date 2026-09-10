@@ -9,15 +9,6 @@ enum OnboardingEntryPoint {
     case account
 }
 
-enum OnboardingRunMode: Equatable {
-    case standard
-    case isolatedHardPaywallPreview
-
-    var isIsolatedPreview: Bool {
-        self == .isolatedHardPaywallPreview
-    }
-}
-
 struct OnboardingView: View {
     @Environment(PreferencesStore.self) private var preferences
     @Environment(MonetizationStore.self) private var monetization
@@ -26,7 +17,7 @@ struct OnboardingView: View {
     @Environment(AppRouter.self) private var router
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.requestReview) private var requestReview
-    @State private var step: OnboardingStep = .brand
+    @State private var step: OnboardingStep = .video
     @State private var goal: PrimaryGoal?
     @State private var presentedSheet: OnboardingSheet?
     @State private var authenticatingProvider: OnboardingAuthProvider?
@@ -37,17 +28,14 @@ struct OnboardingView: View {
     @State private var isClaimingReferral = false
     @State private var didFinishOnboarding = false
     @State private var didRequestOnboardingReview = false
-    private let runMode: OnboardingRunMode
     private let onFinish: () -> Void
 
     init(
         entryPoint: OnboardingEntryPoint = .beginning,
-        runMode: OnboardingRunMode = .standard,
         onFinish: @escaping () -> Void = {}
     ) {
-        self.runMode = runMode
         self.onFinish = onFinish
-        _step = State(initialValue: entryPoint == .account ? .account : .brand)
+        _step = State(initialValue: entryPoint == .account ? .account : .video)
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-showOnboardingAccountDemo") {
             _step = State(initialValue: .account)
@@ -63,7 +51,7 @@ struct OnboardingView: View {
                 .ignoresSafeArea()
 
             OnboardingDemoScreen(
-                playsVideo: step == .brand || step == .video,
+                playsVideo: step == .video,
                 getStarted: showValueStep,
                 signIn: presentSignIn
             )
@@ -100,7 +88,7 @@ struct OnboardingView: View {
                 message: referralMessage,
                 isClaiming: isClaimingReferral,
                 isSignedIn: coordinator?.clerk?.user != nil,
-                isPreview: runMode.isIsolatedPreview,
+                isPreview: false,
                 back: showAccountStep,
                 apply: applyReferralCode,
                 signIn: presentSignIn,
@@ -111,32 +99,16 @@ struct OnboardingView: View {
             .allowsHitTesting(step == .referral)
             .accessibilityHidden(step != .referral)
 
-            OnboardingBrandScreen()
-                .opacity(step == .brand ? 1 : 0)
-                .scaleEffect(reduceMotion || step == .brand ? 1 : 1.025)
-                .allowsHitTesting(step == .brand)
-                .accessibilityHidden(step != .brand)
         }
         .preferredColorScheme(.light)
         .interactiveDismissDisabled()
         .onAppear {
-            guard !runMode.isIsolatedPreview else { return }
             guard !didCaptureAnalytics else { return }
             didCaptureAnalytics = true
             coordinator?.analytics.capture(
                 PostHogEvent.onboardingStarted,
                 properties: ["is_replay": preferences.isReplayingOnboarding]
             )
-        }
-        .task(id: step) {
-            guard step == .brand else { return }
-            if !reduceMotion {
-                try? await Task.sleep(for: .milliseconds(1_050))
-            }
-            guard !Task.isCancelled else { return }
-            withAnimation(reduceMotion ? nil : .timingCurve(0.22, 1, 0.36, 1, duration: 0.48)) {
-                step = .video
-            }
         }
         .sheet(item: $presentedSheet) { sheet in
             switch sheet {
@@ -188,10 +160,6 @@ struct OnboardingView: View {
     }
 
     private func presentSignIn() {
-        guard !runMode.isIsolatedPreview else {
-            alertMessage = BrickValLocalization.localized("Sign-in is disabled in preview. Use Skip to continue.")
-            return
-        }
         guard coordinator?.clerk != nil else {
             alertMessage = BrickValLocalization.localized("Sign-in is unavailable in this build. You can continue and sign in later from Profile.")
             return
@@ -218,7 +186,6 @@ struct OnboardingView: View {
     }
 
     private func requestOnboardingReview() {
-        guard !runMode.isIsolatedPreview else { return }
         guard !didRequestOnboardingReview, !preferences.hasRequestedReview else { return }
         didRequestOnboardingReview = true
         preferences.hasRequestedReview = true
@@ -226,17 +193,10 @@ struct OnboardingView: View {
     }
 
     private func leaveReview() {
-        guard !runMode.isIsolatedPreview else { return }
         requestReview()
     }
 
     private func continueFromAccount() {
-        if runMode.isIsolatedPreview {
-            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.28)) {
-                step = .referral
-            }
-            return
-        }
         guard !preferences.isReplayingOnboarding else {
             finishOnboarding()
             return
@@ -262,10 +222,6 @@ struct OnboardingView: View {
     }
 
     private func authenticate(with provider: OnboardingAuthProvider) {
-        guard !runMode.isIsolatedPreview else {
-            alertMessage = BrickValLocalization.localized("Sign-in is disabled in preview. Use Skip to continue.")
-            return
-        }
         guard let clerk = coordinator?.clerk else {
             alertMessage = BrickValLocalization.localized("Sign-in is unavailable in this build. You can continue and sign in later from Profile.")
             return
@@ -312,11 +268,6 @@ struct OnboardingView: View {
         guard !didFinishOnboarding else { return }
         didFinishOnboarding = true
 
-        guard !runMode.isIsolatedPreview else {
-            onFinish()
-            return
-        }
-
         let isReplay = preferences.isReplayingOnboarding
         preferences.primaryGoal = goal
         preferences.isReplayingOnboarding = false
@@ -346,10 +297,6 @@ struct OnboardingView: View {
             referralMessage = BrickValLocalization.localized("Enter the 8-character invite code.")
             return
         }
-        guard !runMode.isIsolatedPreview else {
-            referralMessage = BrickValLocalization.localized("Preview only — this invite code was not applied.")
-            return
-        }
         guard coordinator?.clerk?.user != nil else {
             referralMessage = BrickValLocalization.localized("Sign in to apply your invite code.")
             presentSignIn()
@@ -359,10 +306,6 @@ struct OnboardingView: View {
     }
 
     private func claimReferralCode() async {
-        guard !runMode.isIsolatedPreview else {
-            referralMessage = BrickValLocalization.localized("Preview only — this invite code was not applied.")
-            return
-        }
         let normalizedCode = referralCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard normalizedCode.count == 8 else { return }
         router.pendingReferralCode = normalizedCode
@@ -392,7 +335,6 @@ struct OnboardingView: View {
     }
 
     private func completeReferralOnboardingIfPossible() async {
-        guard !runMode.isIsolatedPreview else { return }
         guard coordinator?.clerk?.user != nil else { return }
         do {
             let response = try await api.completeReferralOnboarding()
@@ -409,7 +351,6 @@ struct OnboardingView: View {
 }
 
 private enum OnboardingStep: Int, CaseIterable, Identifiable {
-    case brand
     case video
     case value
     case scanReveal
@@ -451,35 +392,6 @@ private enum OnboardingSheet: String, Identifiable {
     case auth
 
     var id: String { rawValue }
-}
-
-private struct OnboardingBrandScreen: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var visible = false
-
-    var body: some View {
-        VStack(spacing: BrickValStyle.Primitive.space16) {
-            Image("OnboardingLogo")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 112, height: 112)
-                .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-
-            Text("BrickValue")
-                .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                .foregroundStyle(.black)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("BrickValue")
-        .accessibilityIdentifier("onboarding.brand")
-        .scaleEffect(reduceMotion || visible ? 1 : 0.94)
-        .opacity(visible ? 1 : 0)
-        .onAppear {
-            withAnimation(reduceMotion ? nil : .timingCurve(0.16, 1, 0.3, 1, duration: 0.46)) {
-                visible = true
-            }
-        }
-    }
 }
 
 private struct OnboardingDemoScreen: View {

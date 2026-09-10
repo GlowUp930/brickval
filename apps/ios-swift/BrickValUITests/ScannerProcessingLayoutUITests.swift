@@ -2,6 +2,31 @@ import XCTest
 
 @MainActor
 final class ScannerProcessingLayoutUITests: XCTestCase {
+    func testOnboardingGetStartedRespondsWithoutStartupDelay() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-showOnboardingDemo", "-brickval_language_override", "en"]
+        app.launch()
+
+        let getStarted = app.buttons["onboarding.getStarted"]
+        XCTAssertTrue(getStarted.waitForExistence(timeout: 4))
+        XCTAssertTrue(getStarted.isHittable)
+
+        getStarted.tap()
+        let detailContinue = app.buttons["onboarding.detailContinue"]
+        Thread.sleep(forTimeInterval: 0.25)
+        XCTAssertTrue(detailContinue.exists)
+        XCTAssertTrue(detailContinue.isHittable)
+    }
+
+    func testSettingsDoesNotExposeTemporaryOnboardingPreview() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-showSettingsRootDemo", "-brickval_language_override", "en"]
+        app.launch()
+
+        let previewButton = app.buttons["settings.hardPaywallOnboardingPreview"]
+        XCTAssertFalse(previewButton.waitForExistence(timeout: 2))
+    }
+
     func testExistingCollectionFetchesRealHistoryAndChangesTimeframe() {
         let app = XCUIApplication()
         app.launchArguments = ["-showCollectionHistoryDemo", "-showProGatingDemo", "-brickval_language_override", "en", "-brickval_collection_tips_seen", "NO"]
@@ -262,44 +287,9 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         add(screenshot)
     }
 
-    func testHardPaywallPreviewButtonPresentsOnboarding() {
-        let app = XCUIApplication()
-        app.launchArguments = ["-showHardPaywallPreviewRootDemo"]
-        app.launch()
-
-        let previewButton = app.buttons["settings.hardPaywallOnboardingPreview"]
-        XCTAssertTrue(previewButton.waitForExistence(timeout: 3))
-        app.swipeUp()
-        XCTAssertTrue(previewButton.waitForExistence(timeout: 3))
-        previewButton.tap()
-
-        XCTAssertTrue(app.buttons["Close preview"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.buttons["onboarding.getStarted"].waitForExistence(timeout: 5))
-
-        app.buttons["onboarding.getStarted"].tap()
-        XCTAssertTrue(app.buttons["onboarding.detailContinue"].waitForExistence(timeout: 3))
-        app.buttons["onboarding.detailContinue"].tap()
-        app.buttons["onboarding.detailContinue"].tap()
-        XCTAssertTrue(app.buttons["onboarding.goal.catalog"].waitForExistence(timeout: 3))
-        app.buttons["onboarding.goal.catalog"].tap()
-        app.buttons["onboarding.detailContinue"].tap()
-        app.buttons["onboarding.detailContinue"].tap()
-        XCTAssertTrue(app.buttons["onboarding.leaveReview"].waitForExistence(timeout: 3))
-        app.buttons["onboarding.detailContinue"].tap()
-        XCTAssertTrue(app.buttons["onboarding.account.skip"].waitForExistence(timeout: 3))
-        app.buttons["onboarding.account.skip"].tap()
-        XCTAssertTrue(app.buttons["onboarding.referral.skip"].waitForExistence(timeout: 3))
-        app.buttons["onboarding.referral.skip"].tap()
-        XCTAssertTrue(app.staticTexts["Scan with BrickValue Pro"].waitForExistence(timeout: 3))
-
-        app.buttons["Close preview"].tap()
-        XCTAssertTrue(app.navigationBars["Profile"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.buttons["settings.hardPaywallOnboardingPreview"].exists)
-    }
-
     func testProfileLanguageCanBeChangedInsideTheApp() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showHardPaywallPreviewRootDemo"]
+        app.launchArguments = ["-showSettingsRootDemo"]
         app.launch()
 
         let languageRow = app.descendants(matching: .any)
@@ -324,7 +314,7 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
 
     func testProfileCurrencyCanBeChangedInsideTheApp() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showHardPaywallPreviewRootDemo"]
+        app.launchArguments = ["-showSettingsRootDemo"]
         app.launch()
 
         let currencyRow = app.descendants(matching: .any)

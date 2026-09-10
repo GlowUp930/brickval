@@ -19,7 +19,7 @@ struct BrickValApp: App {
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-showProfileTabDemo") ||
             ProcessInfo.processInfo.arguments.contains("-showProGatingDemo") ||
-            ProcessInfo.processInfo.arguments.contains("-showHardPaywallPreviewRootDemo") {
+            ProcessInfo.processInfo.arguments.contains("-showSettingsRootDemo") {
             entitlementStore.update(isPro: true)
         }
 #endif

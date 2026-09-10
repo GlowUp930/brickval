@@ -1,5 +1,12 @@
 # Scan Result Card Visual QA
 
+## Onboarding startup and preview cleanup — build 176 source — 2026-09-10
+
+- Onboarding opens directly on the demo screen with Get Started visible in the first onboarding surface. The old roughly one-second branded gate was removed; the app launch logo remains the brand handoff.
+- The CTA advances to the first detail screen immediately. Its existing large tap target, sign-in path, referral path, and production onboarding behavior remain unchanged.
+- Settings no longer shows the temporary hard-paywall onboarding preview. The old preview sheet and isolated mode were deleted; the debug-only Settings root fixture is now `-showSettingsRootDemo`.
+- Focused onboarding/Settings checks pass on the small and large simulators. The full small suite is green. Two large collection-navigation checks remain a separate fixture-alert/reachability gap; physical-device confirmation is pending.
+
 ## Smooth chart and first-launch tip pass — 2026-09-10
 
 - Collection and item graphs use a bounded monotone curve over the existing real-sale samples. The curve remains within each pair of recorded values, keeps actual date spacing, and retains the stable 140-sample identity and short transition used by the live-app direction.

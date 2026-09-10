@@ -2,7 +2,6 @@ import SwiftUI
 
 private enum SettingsSheet: String, Identifiable {
     case account
-    case hardPaywallOnboardingPreview
 
     var id: String { rawValue }
 }
@@ -47,7 +46,6 @@ struct SettingsView: View {
                 appSettings
                 dataSettings
                 aboutSettings
-                previewSettings
             }
             .padding(.horizontal, BrickValStyle.Primitive.space16)
             .padding(.top, BrickValStyle.Primitive.space16)
@@ -74,8 +72,6 @@ struct SettingsView: View {
                 NavigationStack {
                     AccountView()
                 }
-            case .hardPaywallOnboardingPreview:
-                HardPaywallOnboardingPreviewView()
             }
         }
         .confirmationDialog("Clear your entire collection?", isPresented: $showClearConfirmation, titleVisibility: .visible) {
@@ -380,26 +376,6 @@ struct SettingsView: View {
         .profileCardStyle()
     }
 
-    private var previewSettings: some View {
-        VStack(spacing: BrickValStyle.Primitive.space12) {
-            sectionHeader("Temporary preview")
-            Button {
-                presentedSheet = .hardPaywallOnboardingPreview
-            } label: {
-                profileRow(
-                    icon: "lock.shield",
-                    title: "Preview hard-paywall onboarding",
-                    subtitle: "Review the new-user access flow",
-                    trailing: "Open"
-                )
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("settings.hardPaywallOnboardingPreview")
-        }
-        .padding(BrickValStyle.Primitive.space16)
-        .profileCardStyle()
-    }
-
     private func sectionHeader(_ title: LocalizedStringResource) -> some View {
         Text(title)
             .font(.caption.bold())
@@ -624,39 +600,6 @@ struct SettingsView: View {
         } catch {
             clearError = error.localizedDescription
         }
-    }
-}
-
-private struct HardPaywallOnboardingPreviewView: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var isShowingHardAccess = false
-
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            if isShowingHardAccess {
-                HardScanAccessView()
-            } else {
-                OnboardingView(runMode: .isolatedHardPaywallPreview) {
-                    withAnimation(.easeOut(duration: 0.24)) {
-                        isShowingHardAccess = true
-                    }
-                }
-            }
-
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(isShowingHardAccess ? .white : .black)
-                    .frame(width: 36, height: 36)
-                    .background(.ultraThinMaterial, in: Circle())
-            }
-            .padding(.top, 12)
-            .padding(.trailing, 16)
-            .accessibilityLabel("Close preview")
-        }
-        .interactiveDismissDisabled()
     }
 }
 

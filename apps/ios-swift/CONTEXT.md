@@ -1,5 +1,11 @@
 # BrickVal Native iOS Context
 
+## Onboarding startup and preview cleanup — build 176 source — 2026-09-10
+
+Onboarding now starts on the demo screen, so Get Started is available as soon as the onboarding surface is shown. The old roughly one-second branded step and its delayed transition were removed; the launch logo remains the branded handoff. The CTA advances to the first detail screen immediately. Settings no longer contains the temporary hard-paywall onboarding preview, its isolated sheet, or its run mode; the debug-only Settings fixture is now named `-showSettingsRootDemo`.
+
+Production onboarding, referral, account, paywall, subscription, and scan behavior are unchanged. Focused onboarding/Settings checks pass on both simulator sizes. The full small simulator suite is green; two large-simulator collection-navigation checks still encounter the pre-existing fixture alert and are tracked as a separate test gap. Build 176 is the TestFlight candidate; physical-device verification remains pending until upload and device testing.
+
 ## Smooth charts and first-launch guidance — 2026-09-10
 
 Collection and item charts keep their stable prepared samples and now use bounded monotone Hermite sampling so the line reads as a smooth live-app curve without inventing prices or overshooting real BrickLink observations. The existing 240 ms transition, actual date spacing, touch inspection, timeframe behavior, and Reduce Motion path remain intact.

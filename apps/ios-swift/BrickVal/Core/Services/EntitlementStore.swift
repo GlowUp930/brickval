@@ -24,7 +24,7 @@ final class EntitlementStore {
         ProcessInfo.processInfo.arguments.contains("-showProfileTabDemo") ||
         ProcessInfo.processInfo.arguments.contains("-showProGatingDemo") ||
         ProcessInfo.processInfo.arguments.contains("-showProWelcomeDemo") ||
-        ProcessInfo.processInfo.arguments.contains("-showHardPaywallPreviewRootDemo")
+        ProcessInfo.processInfo.arguments.contains("-showSettingsRootDemo")
 
     @ObservationIgnored private let forcesWelcomeForDemo =
         ProcessInfo.processInfo.arguments.contains("-showProWelcomeDemo")
