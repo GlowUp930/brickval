@@ -27,7 +27,7 @@ struct HistoryPerformanceTests {
             durations = []
             for index in 0..<20 {
                 let start = ProcessInfo.processInfo.systemUptime
-                let history = prepared.portfolios[PortfolioHorizon.allCases[index % 3]]!
+                let history = prepared.portfolios[.all]![PortfolioHorizon.allCases[index % 3]]!
                 let points = history.points.map { StockChartPoint(label: $0.date, value: $0.value, timestamp: $0.timestamp) }
                 checksum += InteractiveStockChart.resample(points, count: 140).last?.value ?? 0
                 durations.append((ProcessInfo.processInfo.systemUptime - start) * 1000)

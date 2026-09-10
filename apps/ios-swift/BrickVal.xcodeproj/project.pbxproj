@@ -110,6 +110,7 @@
 		71D38D001E9778EFB4C0B0DF /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 921AE9C9AE50E9CEFD8135C7 /* InfoPlist.xcstrings */; };
 		7348B6C5F98AD275CE2CFC66 /* CurrencyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DCBDB354B656A0332DB8B8 /* CurrencyTests.swift */; };
 		734FBC5490962110FA2DCCAF /* AccentPreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F8395A4685E831B69CB7D85 /* AccentPreference.swift */; };
+		7926450967FDD396D59E0C46 /* MarketRegionMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A771C392B17839740522F09 /* MarketRegionMenu.swift */; };
 		792EB8C9A434D2579BB8244D /* CollectionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84F68F865B6CD3BE103A436D /* CollectionRepository.swift */; };
 		7939BB65BC6EE7798C7E8CE6 /* PaywallRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A57BE1D38F7C3C404466EE /* PaywallRoutingTests.swift */; };
 		794EF8201C2AF331D6E2AF80 /* ManualLookupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE2A5D5E9763EEBE9C4EDE7 /* ManualLookupView.swift */; };
@@ -191,8 +192,10 @@
 		CC972C6B6B681A66ACD02CAC /* BulkShareCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2709B02949B308441BEDBABB /* BulkShareCard.swift */; };
 		CC990AE74A1BECC5AB724822 /* MinifigureDetecting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E425BFAF3639759CF05EF19 /* MinifigureDetecting.swift */; };
 		CE62ABE582802A94A3FD72F0 /* ReferralTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B93A61FE27D0131685368F7 /* ReferralTests.swift */; };
+		CF041116257A1F4F98DBA803 /* MarketRegion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 355FA93D3DBDE45C6B344158 /* MarketRegion.swift */; };
 		CF99662BD385ECA5ED8D7906 /* SDKEnvironmentRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF5986CE67C8CCD199CAB39 /* SDKEnvironmentRootView.swift */; };
 		D1AFDF14E68AAF6CEE3635D9 /* BulkRevealOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ED72367906518C9E91CE0C5 /* BulkRevealOverlay.swift */; };
+		D302B603403F1B2BA8F69248 /* MarketRegionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E69E1A6F756DD9E095A54AF /* MarketRegionTests.swift */; };
 		D478628A6FC28A7491717CA2 /* BulkPriceTagLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC4BD1858E1F223314B42DA0 /* BulkPriceTagLayoutTests.swift */; };
 		D5A1DDD064E9BE7F0E5DFFDC /* PartColorSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F4AEB722B741DCE2C9C67E5 /* PartColorSelectionView.swift */; };
 		D62760CA78B5BF94C3466CCD /* OfferCodeRedemption.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31F9057D5EB20B52943F223F /* OfferCodeRedemption.swift */; };
@@ -281,6 +284,7 @@
 		32E00FF36212FF566E311D3C /* BrickValAPIEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrickValAPIEnvironment.swift; sourceTree = "<group>"; };
 		33393ED0233F29E4CCA2BD7F /* PartLookupPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartLookupPayload.swift; sourceTree = "<group>"; };
 		335A3A7C9BD9EAEF3DEC52C0 /* BulkRevealSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkRevealSessionTests.swift; sourceTree = "<group>"; };
+		355FA93D3DBDE45C6B344158 /* MarketRegion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketRegion.swift; sourceTree = "<group>"; };
 		35805650FAB79618409E2604 /* HardScanAccessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardScanAccessView.swift; sourceTree = "<group>"; };
 		3591356803BD2A4BD06722E4 /* DetectionSamplePlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectionSamplePlanner.swift; sourceTree = "<group>"; };
 		36AC261DF2ECD56A13E0D952 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
@@ -354,6 +358,7 @@
 		7678708E98DD4F22CD74FAB7 /* PortfolioHorizon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioHorizon.swift; sourceTree = "<group>"; };
 		77B23589E4D5336F6D289E2C /* MonetizationStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonetizationStoreTests.swift; sourceTree = "<group>"; };
 		7923F89B165DBE64790485D1 /* AutoScanSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoScanSession.swift; sourceTree = "<group>"; };
+		7A771C392B17839740522F09 /* MarketRegionMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketRegionMenu.swift; sourceTree = "<group>"; };
 		7A9C146533B1F9D2F68E0DBD /* BrickVal.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BrickVal.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7E35B79843A4B14E2B919817 /* AppSDKEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSDKEnvironment.swift; sourceTree = "<group>"; };
 		80571E569B420291019CDB48 /* AppearanceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsView.swift; sourceTree = "<group>"; };
@@ -383,6 +388,7 @@
 		99DD4A69B686D7B8FF0FA128 /* PurchaseAttemptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseAttemptTests.swift; sourceTree = "<group>"; };
 		9A6A953A43B8A32D4B291AEB /* MonetizationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonetizationStore.swift; sourceTree = "<group>"; };
 		9AC93EB5323AAFAD9C548A53 /* ItemType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemType.swift; sourceTree = "<group>"; };
+		9E69E1A6F756DD9E095A54AF /* MarketRegionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketRegionTests.swift; sourceTree = "<group>"; };
 		9F6E8C925C6457ED1766DE95 /* ImageProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageProcessor.swift; sourceTree = "<group>"; };
 		9F99944E7D24003E2898C447 /* BulkRecoveryPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkRecoveryPayload.swift; sourceTree = "<group>"; };
 		A098D219DADDE29AFD694ADA /* CameraAuthorizationStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraAuthorizationStatus.swift; sourceTree = "<group>"; };
@@ -589,6 +595,7 @@
 				6CA43A508737EB95B359A1A2 /* LegacyExpoMigrationTests.swift */,
 				9273D6960556EA50BAD93374 /* LocalDetectionScheduleTests.swift */,
 				164EA408ECAC4D317632EE50 /* LocalizationTests.swift */,
+				9E69E1A6F756DD9E095A54AF /* MarketRegionTests.swift */,
 				77B23589E4D5336F6D289E2C /* MonetizationStoreTests.swift */,
 				8C4AD99E109E65E48613E586 /* MultipartFormDataTests.swift */,
 				5A95320472022CBED5A5F5AD /* NetworkPayloadDecodingTests.swift */,
@@ -668,6 +675,7 @@
 				838575333B805A61A14C702C /* DetectionObservation.swift */,
 				9AC93EB5323AAFAD9C548A53 /* ItemType.swift */,
 				232011E5F645BADB3192F34B /* MarketHistoryPoint.swift */,
+				355FA93D3DBDE45C6B344158 /* MarketRegion.swift */,
 				5B0949D3B7A39994F2848E89 /* MarketRow.swift */,
 				FCFB10D8CCEC6DC4223F6D69 /* NormalizedBoundingBox.swift */,
 				E29E9A9DE0362A16AF205AD1 /* ScanIntent.swift */,
@@ -707,6 +715,7 @@
 				AF513E65F25EFDFFCFCF0B6B /* CollectionView.swift */,
 				706356F3011820760559C3B3 /* ItemDetailView.swift */,
 				70BEA2066B1A6BF1D07EFC0F /* ManualSetEntryView.swift */,
+				7A771C392B17839740522F09 /* MarketRegionMenu.swift */,
 				B50BCC8C03FE362629D0F4BB /* PortfolioChartView.swift */,
 				27F265F5D62B021D33D73070 /* PortfolioHistoryBuilder.swift */,
 				7355DBB384CE2D0E2589B915 /* PortfolioHistoryPoint.swift */,
@@ -1124,6 +1133,7 @@
 				E2515733856A1E290C61C6D9 /* LegacyExpoMigrationTests.swift in Sources */,
 				AAD19EE9622D5BF72C418607 /* LocalDetectionScheduleTests.swift in Sources */,
 				4137B449257C1217C8ECE3EC /* LocalizationTests.swift in Sources */,
+				D302B603403F1B2BA8F69248 /* MarketRegionTests.swift in Sources */,
 				04EF67ABE7F1556296CF3FC6 /* MonetizationStoreTests.swift in Sources */,
 				4B941308784B85F6EB5DA3D7 /* MultipartFormDataTests.swift in Sources */,
 				B27807ED55B5EBDB3A7BA4C2 /* NetworkPayloadDecodingTests.swift in Sources */,
@@ -1248,6 +1258,8 @@
 				794EF8201C2AF331D6E2AF80 /* ManualLookupView.swift in Sources */,
 				C3CDD43E8EDE4C3F3E680AFC /* ManualSetEntryView.swift in Sources */,
 				4CA729E6FA224629338A0316 /* MarketHistoryPoint.swift in Sources */,
+				CF041116257A1F4F98DBA803 /* MarketRegion.swift in Sources */,
+				7926450967FDD396D59E0C46 /* MarketRegionMenu.swift in Sources */,
 				2AD9924B85122F2FEB2B1A60 /* MarketRow.swift in Sources */,
 				44BF39068A4FAF5E26E41301 /* MinifigFeedback.swift in Sources */,
 				20440890F69807F8318B32FB /* MinifigLookupPayload.swift in Sources */,

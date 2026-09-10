@@ -62,6 +62,43 @@ struct PortfolioHistoryBuilderTests {
         #expect(!empty.hasSales)
     }
 
+    @Test func sellerCountryFilteringKeepsMissingRowsInAllRegionsOnly() {
+        let sales = [
+            sale("2026-09-01", 10, 1, country: "US"),
+            sale("2026-09-02", 20, 3, country: "ca"),
+            sale("2026-09-03", 40, 1),
+        ]
+        let canada = MarketRegion.sellerCountry("CA")!
+        let us = MarketRegion.sellerCountry("US")!
+        let unitedKingdom = MarketRegion.sellerCountry("GB")!
+
+        #expect(PortfolioHistoryBuilder.marketSnapshot(sales: sales, horizon: .month, now: now).timesSold == 3)
+        #expect(PortfolioHistoryBuilder.marketSnapshot(sales: sales, horizon: .month, now: now, region: .all).totalQuantity == 5)
+        #expect(PortfolioHistoryBuilder.marketSnapshot(sales: sales, horizon: .month, now: now, region: canada).timesSold == 1)
+        #expect(PortfolioHistoryBuilder.marketSnapshot(sales: sales, horizon: .month, now: now, region: canada).quantityAveragePriceUSD == 20)
+        #expect(PortfolioHistoryBuilder.marketSnapshot(sales: sales, horizon: .month, now: now, region: us).timesSold == 1)
+        #expect(PortfolioHistoryBuilder.marketSnapshot(sales: sales, horizon: .month, now: now, region: unitedKingdom).hasSales == false)
+        #expect(PortfolioHistoryBuilder.priceSeries(sales: sales, horizon: .month, now: now, region: canada).map(\.value) == [20])
+    }
+
+    @Test func preparedHistoryContainsEveryObservedSellerCountryWithoutChangingCurrentPortfolio() {
+        var item = fixture()
+        item.marketSales = [
+            sale("2026-09-01", 10, country: "US"), sale("2026-09-02", 12, country: "US"),
+            sale("2026-09-03", 30, country: "CA"), sale("2026-09-04", 32, country: "CA"),
+        ]
+        let prepared = PortfolioHistoryBuilder.prepare(items: [item], now: now)
+        let canada = MarketRegion.sellerCountry("CA")!
+        let us = MarketRegion.sellerCountry("US")!
+
+        #expect(prepared.items[item.id]?[us]?[.month]?.count == 2)
+        #expect(prepared.items[item.id]?[canada]?[.month]?.count == 2)
+        #expect(prepared.snapshots[item.id]?[us]?[.month]?.timesSold == 2)
+        #expect(prepared.snapshots[item.id]?[canada]?[.month]?.timesSold == 2)
+        #expect(prepared.portfolios[.all]?[.month]?.points.last?.value == 32)
+        #expect(prepared.portfolios[us]?[.month]?.points.last?.value == 12)
+    }
+
     @Test func missingHistoryDoesNotHideCoveredItemsOrInventOldPrices() {
         var first = fixture(); first.quantity = 2
         first.marketSales = [sale("2026-08-15", 10), sale("2026-09-01", 20)]
@@ -105,8 +142,8 @@ struct PortfolioHistoryBuilderTests {
         #expect(first.map(\.value) != second.map(\.value))
     }
 
-    private func sale(_ date: String, _ price: Double, _ quantity: Int = 1) -> CollectionMarketSale {
-        CollectionMarketSale(date: date + "T00:00:00Z", priceUSD: price, quantity: quantity)
+    private func sale(_ date: String, _ price: Double, _ quantity: Int = 1, country: String? = nil) -> CollectionMarketSale {
+        CollectionMarketSale(date: date + "T00:00:00Z", priceUSD: price, quantity: quantity, sellerCountryCode: country)
     }
     private func fixture(number: String = "21367") -> CollectionItem {
         CollectionItem(setNumber: number, itemType: .set, name: "Fixture", theme: "LEGO", marketValueUSD: 30)

@@ -1,5 +1,11 @@
 # Scan Result Card Visual QA
 
+## Seller-country market filters — 2026-09-10
+
+The Collection and item-detail charts include a compact globe menu. It starts at All regions and lists the seller countries returned by BrickLink for the saved rows (for example Canada, the United Kingdom, Australia, or the United States), rather than limiting the product to one country. Selecting a country updates the existing dated graph, 1M/3M/6M snapshot values, coverage text, and chart-derived change with the current short smooth transition; it makes no network request. Current headline values and collection valuation remain unchanged. Missing-country sales remain visible under All regions only. The menu keeps a 44-point target, supports Dynamic Type and Reduce Motion, and restores its choice after restart.
+
+Verification: regional filtering, missing-country handling, persistence, and country-aware history decoding pass native/backend tests. Simulator UI and physical-device TestFlight verification remain release checks for the next build.
+
 ## TestFlight build 174 — 2026-09-10
 
 The native release archive for version 1.0.8 (174) passed signing and strict code-signature validation. The full small-iPhone suite passed after stabilizing the date-sensitive collection-history fixture; the localization audit passed with 802 strings plus four Info.plist strings. App Store Connect accepted the IPA upload with delivery ID `3a379c51-c08e-4fbd-9d65-918f4bc94a4b`; Apple processing is asynchronous and physical-device verification remains pending.

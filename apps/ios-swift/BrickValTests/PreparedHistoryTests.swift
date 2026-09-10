@@ -19,24 +19,24 @@ struct PreparedHistoryTests {
         await store.waitForPreparedHistory()
         for horizon in PortfolioHorizon.allCases {
             let expected = PortfolioHistoryBuilder.marketHistory(items: store.items, horizon: horizon, now: CollectionHistoryDemo.referenceDate)
-            #expect(store.preparedHistory.portfolios[horizon]?.points.map(\.value) == expected.points.map(\.value))
-            #expect(store.preparedHistory.items[joker.id]?[horizon] != store.preparedHistory.items[rocket.id]?[horizon])
-            #expect(store.preparedHistory.snapshots[joker.id]?[horizon] != nil)
+            #expect(store.preparedHistory.portfolios[.all]?[horizon]?.points.map(\.value) == expected.points.map(\.value))
+            #expect(store.preparedHistory.items[joker.id]?[.all]?[horizon] != store.preparedHistory.items[rocket.id]?[.all]?[horizon])
+            #expect(store.preparedHistory.snapshots[joker.id]?[.all]?[horizon] != nil)
         }
         let jokerUsed = DetailConditionOption.used.collectionItem(from: joker)
-        #expect(store.preparedHistory.snapshots[jokerUsed.id]?[.month]?.timesSold == 1)
-        #expect(store.preparedHistory.snapshots[jokerUsed.id]?[.month]?.totalQuantity == 2)
+        #expect(store.preparedHistory.snapshots[jokerUsed.id]?[.all]?[.month]?.timesSold == 1)
+        #expect(store.preparedHistory.snapshots[jokerUsed.id]?[.all]?[.month]?.totalQuantity == 2)
         // Several mutations while background work is active must only publish the latest state.
         try await store.setQuantity(4, for: joker, isPro: true)
         try await store.remove(rocket)
         await store.waitForPreparedHistory()
         #expect(store.preparedHistory.items[rocket.id] == nil)
-        #expect(store.preparedHistory.portfolios[.month]?.points.last?.value == CollectionHistoryDemo.joker[0].priceUSD * 4)
+        #expect(store.preparedHistory.portfolios[.all]?[.month]?.points.last?.value == CollectionHistoryDemo.joker[0].priceUSD * 4)
         let restarted = CollectionStore(repository: repository)
         await restarted.load()
         await restarted.waitForPreparedHistory()
-        #expect(restarted.preparedHistory.portfolios[.month]?.points.map(\.value) == store.preparedHistory.portfolios[.month]?.points.map(\.value))
-        #expect(restarted.preparedHistory.snapshots[joker.id]?[.month]?.timesSold == store.preparedHistory.snapshots[joker.id]?[.month]?.timesSold)
+        #expect(restarted.preparedHistory.portfolios[.all]?[.month]?.points.map(\.value) == store.preparedHistory.portfolios[.all]?[.month]?.points.map(\.value))
+        #expect(restarted.preparedHistory.snapshots[joker.id]?[.all]?[.month]?.timesSold == store.preparedHistory.snapshots[joker.id]?[.all]?[.month]?.timesSold)
         try await store.clear()
         await store.waitForPreparedHistory()
         #expect(store.preparedHistory.items.isEmpty)
@@ -49,10 +49,10 @@ struct PreparedHistoryTests {
         try await store.add(item, isPro: true)
         store.prepareHistoryIfNeeded(force: true, now: CollectionHistoryDemo.referenceDate)
         await store.waitForPreparedHistory()
-        let before = store.preparedHistory.items[item.id]?[.month]?.first?.timestamp
+        let before = store.preparedHistory.items[item.id]?[.all]?[.month]?.first?.timestamp
         store.prepareHistoryIfNeeded(now: CollectionHistoryDemo.referenceDate.addingTimeInterval(86400))
         await store.waitForPreparedHistory()
-        #expect(store.preparedHistory.items[item.id]?[.month]?.first?.timestamp != before)
+        #expect(store.preparedHistory.items[item.id]?[.all]?[.month]?.first?.timestamp != before)
         #expect(CollectionMarketSale(date: "bad", priceUSD: 1, quantity: 1).timestamp == nil)
         #expect(CollectionMarketSale(date: "2026-09-01T01:02:03.123Z", priceUSD: 1, quantity: 1).timestamp != nil)
         #expect(CollectionMarketSale(date: "2026-09-01T01:02:03Z", priceUSD: 1, quantity: 1).timestamp != nil)
@@ -82,7 +82,7 @@ struct PreparedHistoryTests {
         #expect(Set(batches.flatMap { $0 }).count == 25)
         let count = batches.count
         for _ in 0..<20 {
-            for horizon in PortfolioHorizon.allCases { _ = store.preparedHistory.portfolios[horizon] }
+            for horizon in PortfolioHorizon.allCases { _ = store.preparedHistory.portfolios[.all]?[horizon] }
         }
         await store.refreshMarketHistory(using: client, only: CollectionHistoryRequestItem(items[0]))
         #expect(await requests.batches.count == count)

@@ -68208,6 +68208,91 @@
         "ar": {"stringUnit": {"state": "translated", "value": "لا توجد مبيعات في هذه الفترة"}},
         "hi": {"stringUnit": {"state": "translated", "value": "इस अवधि में कोई बिक्री नहीं"}}
       }
+    },
+    "All regions": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "All regions"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Todas las regiones"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Toutes les régions"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Alle Regionen"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Tutte le regioni"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Todas as regiões"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Alle regio's"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "すべての地域"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "모든 지역"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "所有地区"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "所有地區"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "كل المناطق"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "सभी क्षेत्र"}}
+      }
+    },
+    "Seller country": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Seller country"}},
+        "es": {"stringUnit": {"state": "translated", "value": "País del vendedor"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Pays du vendeur"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Verkäuferland"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Paese del venditore"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "País do vendedor"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Verkopersland"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "販売者の国"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "판매자 국가"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "卖家国家"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "賣家國家"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "بلد البائع"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "विक्रेता का देश"}}
+      }
+    },
+    "Choose which seller countries are included in market history": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Choose which seller countries are included in market history"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Elige qué países de vendedores se incluyen en el historial del mercado"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Choisissez les pays des vendeurs inclus dans l'historique du marché"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Wähle, welche Verkäuferländer in der Marktgeschichte enthalten sind"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Scegli i paesi dei venditori inclusi nello storico del mercato"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Escolha quais países dos vendedores entram no histórico do mercado"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Kies welke verkoperslanden in de marktgeschiedenis worden opgenomen"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "市場履歴に含める販売者の国を選択"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "시장 기록에 포함할 판매자 국가를 선택하세요"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "选择要纳入市场历史的卖家国家"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "選擇要納入市場歷史的賣家國家"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "اختر دول البائعين التي ستُدرج في سجل السوق"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "बाज़ार इतिहास में शामिल विक्रेता देशों को चुनें"}}
+      }
+    },
+    "Market region: %@": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Market region: %@"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Región del mercado: %@"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Région du marché : %@"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Marktregion: %@"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Regione di mercato: %@"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Região do mercado: %@"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Marktregio: %@"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "市場地域: %@"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "시장 지역: %@"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "市场地区：%@"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "市場地區：%@"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "منطقة السوق: %@"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "बाज़ार क्षेत्र: %@"}}
+      }
+    },
+    "No %@ seller sales in this period.": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "No %@ seller sales in this period."}},
+        "es": {"stringUnit": {"state": "translated", "value": "En este período no hay ventas de vendedores de %@."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Aucune vente de vendeurs de %@ sur cette période."}},
+        "de": {"stringUnit": {"state": "translated", "value": "In diesem Zeitraum gibt es keine Verkäufe von Verkäufern aus %@."}},
+        "it": {"stringUnit": {"state": "translated", "value": "Nessuna vendita di venditori di %@ in questo periodo."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Não há vendas de vendedores de %@ neste período."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Geen verkopen van verkopers uit %@ in deze periode."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "この期間に%@の販売者による販売はありません。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "이 기간에는 %@ 판매자의 판매가 없습니다."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "此期间没有来自%@卖家的销售。"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "此期間沒有來自%@賣家的銷售。"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "لا توجد مبيعات من بائعي %@ خلال هذه الفترة."}},
+        "hi": {"stringUnit": {"state": "translated", "value": "इस अवधि में %@ विक्रेताओं की कोई बिक्री नहीं है।"}}
+      }
     }
   },
   "version": "1.0"

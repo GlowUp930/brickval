@@ -72,8 +72,8 @@ struct CollectionHistoryRefreshTests {
         #expect(saved.condition == .used)
         #expect(saved.marketSales == CollectionHistoryDemo.joker)
         #expect(saved.alternateMarketSales == CollectionHistoryDemo.rocket)
-        #expect((reopened.preparedHistory.items[saved.id]?[.quarter]?.count ?? 0) > 1)
-        #expect((reopened.preparedHistory.snapshots[saved.id]?[.quarter]?.timesSold ?? 0) > 0)
+        #expect((reopened.preparedHistory.items[saved.id]?[.all]?[.quarter]?.count ?? 0) > 1)
+        #expect((reopened.preparedHistory.snapshots[saved.id]?[.all]?[.quarter]?.timesSold ?? 0) > 0)
     }
 
     @Test func unownedUsedHistorySurvivesRestartWithoutAddingHoldings() async throws {
@@ -94,7 +94,7 @@ struct CollectionHistoryRefreshTests {
         let used = DetailConditionOption.used.collectionItem(from: saved)
         #expect(used.marketSales == CollectionHistoryDemo.joker)
         let prepared = PortfolioHistoryBuilder.prepare(items: reopened.items, now: CollectionHistoryDemo.referenceDate)
-        #expect((prepared.items[used.id]?[.month]?.count ?? 0) > 1)
+        #expect((prepared.items[used.id]?[.all]?[.month]?.count ?? 0) > 1)
         #expect(reopened.items.count == 1 && reopened.totalQuantity == 1)
     }
 
@@ -108,11 +108,13 @@ struct CollectionHistoryRefreshTests {
         api.collectionHistory = { CollectionHistoryDemo.response($0, now: testNow) }
         await store.refreshMarketHistory(using: api)
         #expect(store.items[0].marketSales.count == 22)
+        #expect(store.items[0].marketSales.first?.sellerCountryCode == "US")
         #expect(store.items[0].quantity == 3 && store.items[0].id == original.id)
         #expect(PortfolioHistoryBuilder.marketHistory(items: store.items, horizon: .month, now: testNow).points.count > 1)
         let restarted = CollectionStore(repository: repository)
         await restarted.load()
         #expect(restarted.items[0].marketSales == store.items[0].marketSales)
+        #expect(restarted.items[0].marketSales.first?.sellerCountryCode == "US")
         api.collectionHistory = { _ in throw URLError(.notConnectedToInternet) }
         await restarted.refreshMarketHistory(using: api)
         #expect(restarted.historyErrorMessage == nil) // Fresh data needs no request.

@@ -1,6 +1,8 @@
 import Foundation
 
 struct CollectionItem: Codable, Hashable, Identifiable, Sendable {
+    static let marketHistoryMetadataVersionCurrent = 2
+
     let setNumber: String
     let itemType: ItemType
     let name: String
@@ -24,9 +26,15 @@ struct CollectionItem: Codable, Hashable, Identifiable, Sendable {
     var alternateMarketSales: [CollectionMarketSale] = []
     var marketSales: [CollectionMarketSale] = []
     var marketHistoryFetchedAt: String? = nil
+    var marketHistoryMetadataVersion: Int? = nil
 
     var id: String {
         "\(itemType.rawValue)-\(setNumber)-\(condition.rawValue)-\(colorID.map(String.init) ?? "none")"
+    }
+
+    /// Stable across New/Used rows so both condition tabs share one item choice.
+    var marketRegionPreferenceKey: String {
+        "\(itemType.rawValue)-\(setNumber.lowercased())-\(colorID.map(String.init) ?? "none")"
     }
 
     var totalValue: Double { (marketValueUSD ?? 0) * Double(quantity) }
@@ -106,6 +114,7 @@ struct CollectionItem: Codable, Hashable, Identifiable, Sendable {
         alternateMarketSales = try container.decodeIfPresent([CollectionMarketSale].self, forKey: .alternateMarketSales) ?? []
         marketSales = try container.decodeIfPresent([CollectionMarketSale].self, forKey: .marketSales) ?? []
         marketHistoryFetchedAt = try container.decodeIfPresent(String.self, forKey: .marketHistoryFetchedAt)
+        marketHistoryMetadataVersion = try container.decodeIfPresent(Int.self, forKey: .marketHistoryMetadataVersion)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -132,5 +141,6 @@ struct CollectionItem: Codable, Hashable, Identifiable, Sendable {
         case alternateMarketSales = "alternate_market_sales"
         case marketSales = "market_sales"
         case marketHistoryFetchedAt = "market_history_fetched_at"
+        case marketHistoryMetadataVersion = "market_history_metadata_version"
     }
 }

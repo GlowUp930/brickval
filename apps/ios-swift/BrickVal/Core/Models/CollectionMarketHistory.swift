@@ -4,6 +4,14 @@ struct CollectionMarketSale: Codable, Hashable, Sendable {
     let date: String
     let priceUSD: Double
     let quantity: Int
+    let sellerCountryCode: String?
+
+    init(date: String, priceUSD: Double, quantity: Int, sellerCountryCode: String? = nil) {
+        self.date = date
+        self.priceUSD = priceUSD
+        self.quantity = quantity
+        self.sellerCountryCode = sellerCountryCode
+    }
 
     var timestamp: Date? {
         (try? Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse(date))
@@ -13,6 +21,7 @@ struct CollectionMarketSale: Codable, Hashable, Sendable {
     enum CodingKeys: String, CodingKey {
         case date, quantity
         case priceUSD = "price_usd"
+        case sellerCountryCode = "seller_country_code"
     }
 }
 

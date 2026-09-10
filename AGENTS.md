@@ -1,5 +1,9 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Seller-country market filters — 2026-09-10
+
+Regional history is seller-country driven rather than US-only. The history response keeps a normalized two-letter `seller_country_code`; the native cache contract is `collection-history:v2`. Collection and item charts prepare All regions plus every seller country present in saved BrickLink rows in one background pass. Users can choose a country from the globe menu, and the choice is remembered separately for Collection and each item. The filter changes only dated graphs, snapshots, coverage, and graph-derived change; current headline prices, valuation, retail comparisons, ownership, and scan pricing stay unchanged. Rows without a country remain in All regions and are never treated as belonging to a country. Backend/native regression coverage passes; the change still needs a new release and physical-device verification.
+
 ## Collection Used-history recovery — 2026-09-10
 
 Build 174 can show a valid Used sold-price headline while leaving the graph empty when an earlier incomplete history response saved a fresh timestamp. The live 75192 cache contains 17 Used sales in the 3M window, and its New counts exactly match the affected screen, so the provider and public history payload are healthy. Native refresh now treats empty dated rows as incomplete whenever the saved pricing source says completed sales exist, and refetches those rows without rescanning or consuming scan/referral credits. The regression and all 224 native unit tests pass on the small simulator; this source fix still needs a later TestFlight build and physical-device confirmation.

@@ -1,5 +1,9 @@
 # BrickVal Native iOS Context
 
+## Seller-country market filters — implementation after build 174
+
+Market history now preserves BrickLink seller-country codes and exposes a globe menu with All regions plus every country present in the saved sales. This is intentionally general; the earlier US option was only an example. Collection and each item detail screen remember their own selection. The selected country filters dated charts, snapshots, coverage, and chart-derived change while current prices and ownership valuation remain unchanged. Missing-country rows are included only in All regions. The native cache metadata version is `2`, so existing local rows refresh once to obtain country metadata. Backend and native tests pass; a new TestFlight build and physical-device check are still pending.
+
 ## Collection Used-history recovery — after build 174
 
 The affected 75192 screen showed the current Used sold average but no Used graph. Direct BrickLink evidence returned 27 Used rows; the live `collection-history:v1:set:75192:none` cache held 26 valid Used rows, including 17 in 3M. Its New 3M counts (10 sales, 19 units) exactly matched the screenshot, proving the endpoint payload reached the app. The reproducible native defect was freshness handling: a prior empty history plus a recent fetch timestamp suppressed recovery for 24 hours even when the pricing snapshot said completed sales existed.

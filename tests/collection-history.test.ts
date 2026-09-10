@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { collectionHistory, historySales, parseHistoryItems, type HistoryItem } from "../src/lib/collection-history";
+import { collectionHistory, historyKey, historySales, parseHistoryItems, type HistoryItem } from "../src/lib/collection-history";
 import type { BrickLinkPriceGuide } from "../src/lib/bricklink";
 
 test("history validates bounded batches, canonical set IDs and part colours", () => {
@@ -20,8 +20,32 @@ test("only valid dated USD sales cross the public boundary", () => {
       { unit_price: "99", quantity: 1, date_ordered: "2027-09-01T00:00:00Z" },
     ] };
   const result = historySales(guide, new Date("2026-09-08T00:00:00Z"));
-  assert.deepEqual(result, [{ date: "2026-09-01T00:00:00.000Z", price_usd: 10, quantity: 1 }, { date: "2026-09-02T05:00:00.000Z", price_usd: 20, quantity: 2 }]);
+  assert.deepEqual(result, [
+    { date: "2026-09-01T00:00:00.000Z", price_usd: 10, quantity: 1 },
+    { date: "2026-09-02T05:00:00.000Z", price_usd: 20, quantity: 2, seller_country_code: "US" },
+  ]);
   assert.deepEqual(historySales({ ...guide, currency_code: "EUR" }, new Date()), []);
+});
+
+test("seller countries are normalized without exposing invalid provider values", () => {
+  const guide: BrickLinkPriceGuide = {
+    item: { no: "21367", type: "SET" }, new_or_used: "U", currency_code: "USD",
+    min_price: "1", max_price: "3", avg_price: "2", qty_avg_price: "2", unit_quantity: 3, total_quantity: 3,
+    price_detail: [
+      { unit_price: "1", quantity: 1, date_ordered: "2026-09-01", seller_country_code: " ca " },
+      { unit_price: "2", quantity: 1, date_ordered: "2026-09-02", seller_country_code: "USA" },
+      { unit_price: "3", quantity: 1, date_ordered: "2026-09-03", seller_country_code: "" },
+    ],
+  };
+  assert.deepEqual(historySales(guide, new Date("2026-09-08T00:00:00Z")), [
+    { date: "2026-09-01T00:00:00.000Z", price_usd: 1, quantity: 1, seller_country_code: "CA" },
+    { date: "2026-09-02T00:00:00.000Z", price_usd: 2, quantity: 1 },
+    { date: "2026-09-03T00:00:00.000Z", price_usd: 3, quantity: 1 },
+  ]);
+});
+
+test("history cache keys use the country-aware response version", () => {
+  assert.equal(historyKey({ identifier: "21367", item_type: "set" }), "collection-history:v2:set:21367:none");
 });
 
 test("batch concurrency is bounded and failed items do not discard successes", async () => {

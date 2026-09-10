@@ -18,9 +18,9 @@ struct MarketSnapshot: Equatable, Sendable {
 }
 
 struct PreparedCollectionHistory: Sendable {
-    var portfolios: [PortfolioHorizon: PortfolioMarketHistory] = [:]
-    var items: [String: [PortfolioHorizon: [StockChartPoint]]] = [:]
-    var snapshots: [String: [PortfolioHorizon: MarketSnapshot]] = [:]
+    var portfolios: [MarketRegion: [PortfolioHorizon: PortfolioMarketHistory]] = [:]
+    var items: [String: [MarketRegion: [PortfolioHorizon: [StockChartPoint]]]] = [:]
+    var snapshots: [String: [MarketRegion: [PortfolioHorizon: MarketSnapshot]]] = [:]
 }
 
 enum PortfolioHistoryBuilder {
@@ -34,38 +34,62 @@ enum PortfolioHistoryBuilder {
         marketHistory(items: items, horizon: horizon).points
     }
 
-    static func marketHistory(items: [CollectionItem], horizon: PortfolioHorizon, now: Date = .now) -> PortfolioMarketHistory {
-        portfolio(items: items, series: items.map { priceSeries(sales: $0.marketSales, horizon: horizon, now: now) })
+    static func marketHistory(items: [CollectionItem], horizon: PortfolioHorizon, now: Date = .now, region: MarketRegion = .all) -> PortfolioMarketHistory {
+        portfolio(items: items, series: items.map { priceSeries(sales: $0.marketSales, horizon: horizon, now: now, region: region) })
+    }
+
+    static func availableRegions(items: [CollectionItem]) -> [MarketRegion] {
+        let regions = items
+            .flatMap { $0.marketSales + $0.alternateMarketSales }
+            .compactMap { $0.sellerCountryCode.flatMap(MarketRegion.sellerCountry) }
+        return [MarketRegion.all] + Array(Set(regions)).sorted { lhs, rhs in
+            (lhs.countryCode ?? "") < (rhs.countryCode ?? "")
+        }
     }
 
     /// Called by the store's background preparation task, never during view rendering.
     static func prepare(items: [CollectionItem], now: Date = .now) -> PreparedCollectionHistory {
         var result = PreparedCollectionHistory()
+        let regions = availableRegions(items: items)
+        var sourceItems: [CollectionItem] = []
         for item in items {
             guard !Task.isCancelled else { return result }
-            let preparedSales = prepareSales(item.marketSales, now: now)
-            let observations = dailyObservations(preparedSales)
-            result.items[item.id] = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
-                ($0, window(observations, horizon: $0, now: now))
-            })
-            result.snapshots[item.id] = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
-                ($0, marketSnapshot(preparedSales, horizon: $0, now: now))
-            })
+            sourceItems.append(item)
         }
         for item in items {
             let alternate = (item.condition == .used ? DetailConditionOption.new : .used).collectionItem(from: item)
-            guard result.items[alternate.id] == nil else { continue }
-            let preparedSales = prepareSales(alternate.marketSales, now: now)
-            let observations = dailyObservations(preparedSales)
-            result.items[alternate.id] = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
-                ($0, window(observations, horizon: $0, now: now))
-            })
-            result.snapshots[alternate.id] = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
-                ($0, marketSnapshot(preparedSales, horizon: $0, now: now))
-            })
+            if !sourceItems.contains(where: { $0.id == alternate.id }) {
+                sourceItems.append(alternate)
+            }
         }
-        for horizon in PortfolioHorizon.allCases {
-            result.portfolios[horizon] = portfolio(items: items, series: items.map { result.items[$0.id]?[horizon] ?? [] })
+
+        for sourceItem in sourceItems {
+            guard !Task.isCancelled else { return result }
+            let preparedSales = prepareSales(sourceItem.marketSales, now: now)
+            let regionalSeries = Dictionary(uniqueKeysWithValues: regions.map { region in
+                let regionalSales = preparedSales.filter { region.includes(sellerCountryCode: $0.sellerCountryCode) }
+                let observations = dailyObservations(regionalSales)
+                let horizons = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
+                    ($0, window(observations, horizon: $0, now: now))
+                })
+                return (region, horizons)
+            })
+            let regionalSnapshots = Dictionary(uniqueKeysWithValues: regions.map { region in
+                let regionalSales = preparedSales.filter { region.includes(sellerCountryCode: $0.sellerCountryCode) }
+                let horizons = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
+                    ($0, marketSnapshot(regionalSales, horizon: $0, now: now))
+                })
+                return (region, horizons)
+            })
+            result.items[sourceItem.id] = regionalSeries
+            result.snapshots[sourceItem.id] = regionalSnapshots
+        }
+
+        for region in regions {
+            result.portfolios[region] = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map { horizon in
+                let series = items.map { result.items[$0.id]?[region]?[horizon] ?? [] }
+                return (horizon, portfolio(items: items, series: series))
+            })
         }
         return result
     }
@@ -93,25 +117,28 @@ enum PortfolioHistoryBuilder {
         return PortfolioMarketHistory(points: points, coveredItems: covered.count, totalItems: items.count)
     }
 
-    static func priceSeries(sales: [CollectionMarketSale], horizon: PortfolioHorizon, now: Date = .now) -> [StockChartPoint] {
-        window(dailyObservations(prepareSales(sales, now: now)), horizon: horizon, now: now)
+    static func priceSeries(sales: [CollectionMarketSale], horizon: PortfolioHorizon, now: Date = .now, region: MarketRegion = .all) -> [StockChartPoint] {
+        let preparedSales = prepareSales(sales, now: now).filter { region.includes(sellerCountryCode: $0.sellerCountryCode) }
+        return window(dailyObservations(preparedSales), horizon: horizon, now: now)
     }
 
-    static func marketSnapshot(sales: [CollectionMarketSale], horizon: PortfolioHorizon, now: Date = .now) -> MarketSnapshot {
-        marketSnapshot(prepareSales(sales, now: now), horizon: horizon, now: now)
+    static func marketSnapshot(sales: [CollectionMarketSale], horizon: PortfolioHorizon, now: Date = .now, region: MarketRegion = .all) -> MarketSnapshot {
+        let preparedSales = prepareSales(sales, now: now).filter { region.includes(sellerCountryCode: $0.sellerCountryCode) }
+        return marketSnapshot(preparedSales, horizon: horizon, now: now)
     }
 
     private struct PreparedSale: Sendable {
         let date: Date
         let priceUSD: Double
         let quantity: Int
+        let sellerCountryCode: String?
     }
 
     private static func prepareSales(_ sales: [CollectionMarketSale], now: Date) -> [PreparedSale] {
         sales.compactMap { sale in
             guard sale.priceUSD.isFinite, sale.priceUSD > 0, sale.quantity > 0,
                   let date = sale.timestamp, date <= now else { return nil }
-            return PreparedSale(date: date, priceUSD: sale.priceUSD, quantity: sale.quantity)
+            return PreparedSale(date: date, priceUSD: sale.priceUSD, quantity: sale.quantity, sellerCountryCode: sale.sellerCountryCode)
         }
     }
 

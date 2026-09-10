@@ -19,6 +19,16 @@ final class PreferencesStore {
     var currencyOverride: BrickValCurrency? {
         didSet { save(currencyOverride?.rawValue, for: Keys.currency) }
     }
+    var collectionMarketRegion: MarketRegion {
+        didSet { save(collectionMarketRegion.rawValue, for: Keys.collectionMarketRegion) }
+    }
+    var itemMarketRegions: [String: MarketRegion] {
+        didSet {
+            if let data = try? JSONEncoder().encode(itemMarketRegions) {
+                defaults.set(data, forKey: Keys.itemMarketRegions)
+            }
+        }
+    }
     var avatarName: String? { didSet { save(avatarName, for: Keys.avatar) } }
     var avatarBackground: AvatarBackgroundPreference { didSet { save(avatarBackground.rawValue, for: Keys.avatarBackground) } }
     var hasSeenHistoryTip: Bool { didSet { save(hasSeenHistoryTip, for: Keys.historyTip) } }
@@ -51,6 +61,14 @@ final class PreferencesStore {
             .flatMap(BrickValLanguage.init(rawValue:))
         currencyOverride = defaults.string(forKey: Keys.currency)
             .flatMap(BrickValCurrency.init(rawValue:))
+        collectionMarketRegion = defaults.string(forKey: Keys.collectionMarketRegion)
+            .flatMap(MarketRegion.init(rawValue:)) ?? .all
+        if let data = defaults.data(forKey: Keys.itemMarketRegions),
+           let stored = try? JSONDecoder().decode([String: MarketRegion].self, from: data) {
+            itemMarketRegions = stored
+        } else {
+            itemMarketRegions = [:]
+        }
         avatarName = defaults.string(forKey: Keys.avatar)
         avatarBackground = defaults.string(forKey: Keys.avatarBackground).flatMap(AvatarBackgroundPreference.init(rawValue:)) ?? .accent
         hasSeenHistoryTip = defaults.bool(forKey: Keys.historyTip)
@@ -74,6 +92,18 @@ final class PreferencesStore {
         if let value = values.guestScansUsed { guestScansUsed = value }
     }
 
+    func marketRegion(for item: CollectionItem) -> MarketRegion {
+        itemMarketRegions[item.marketRegionPreferenceKey] ?? .all
+    }
+
+    func setMarketRegion(_ region: MarketRegion, for item: CollectionItem) {
+        if region.isAll {
+            itemMarketRegions.removeValue(forKey: item.marketRegionPreferenceKey)
+        } else {
+            itemMarketRegions[item.marketRegionPreferenceKey] = region
+        }
+    }
+
     private func save(_ value: Any?, for key: String) {
         if let value {
             defaults.set(value, forKey: key)
@@ -90,6 +120,8 @@ final class PreferencesStore {
         static let theme = "brickval_theme_preference"
         static let accent = "brickval_accent_preference"
         static let currency = "brickval_currency_override"
+        static let collectionMarketRegion = "brickval_collection_market_region"
+        static let itemMarketRegions = "brickval_item_market_regions"
         static let avatar = "brickval_account_avatar"
         static let avatarBackground = "brickval_account_avatar_background"
         static let avatarCustomColor = "brickval_account_avatar_custom_color"

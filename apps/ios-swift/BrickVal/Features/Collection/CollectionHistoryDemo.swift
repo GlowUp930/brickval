@@ -55,8 +55,9 @@ enum CollectionHistoryDemo {
         let shift = now.timeIntervalSince(referenceDate)
         let formatter = ISO8601DateFormatter()
         return CollectionHistoryResponse(items: requests.map { request in
-            let sales = (request.identifier == "21367" ? rocket : joker).map {
-                CollectionMarketSale(date: formatter.string(from: $0.timestamp!.addingTimeInterval(shift)), priceUSD: $0.priceUSD, quantity: $0.quantity)
+            let sales = (request.identifier == "21367" ? rocket : joker).enumerated().map { index, sale in
+                let country = ["US", "CA", "GB", "AU"][index % 4]
+                return CollectionMarketSale(date: formatter.string(from: sale.timestamp!.addingTimeInterval(shift)), priceUSD: sale.priceUSD, quantity: sale.quantity, sellerCountryCode: country)
             }
             return CollectionHistoryResponse.Row(identifier: request.identifier, itemType: request.itemType, colorID: request.colorID,
                 newSales: sales, usedSales: [], fetchedAt: formatter.string(from: now), newError: nil, usedError: nil)
@@ -93,6 +94,7 @@ struct CollectionHistoryDemoView: View {
                     let row = CollectionHistoryDemo.response([CollectionHistoryRequestItem(item)]).items[0]
                     item.marketSales = row.newSales
                     item.marketHistoryFetchedAt = row.fetchedAt
+                    item.marketHistoryMetadataVersion = CollectionItem.marketHistoryMetadataVersionCurrent
                     return item
                 }
                 items.reverse()

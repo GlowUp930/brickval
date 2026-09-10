@@ -34,6 +34,7 @@ struct CollectionView: View {
     }
 
     var body: some View {
+        @Bindable var preferences = preferences
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: BrickValStyle.Primitive.space8) {
@@ -72,10 +73,11 @@ struct CollectionView: View {
                 if store.isLoading && store.items.isEmpty {
                     CollectionLoadingView()
                 } else {
-                    PortfolioSummaryView(value: store.totalValue, history: store.preparedHistory.portfolios[horizon]?.points ?? [], horizon: horizon)
+                    PortfolioSummaryView(value: store.totalValue, history: store.preparedHistory.portfolios[preferences.collectionMarketRegion]?[horizon]?.points ?? [], horizon: horizon)
                         .padding(.top, BrickValStyle.CollectionLayout.heroTop)
                     PortfolioChartView(
                         horizon: $horizon,
+                        region: $preferences.collectionMarketRegion,
                         proHorizons: proHistoryHorizons,
                         isPro: entitlements.isPro,
                         onProSelection: { _ in presentHistoryUpgrade() }

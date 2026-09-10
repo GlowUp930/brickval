@@ -71,6 +71,7 @@ final class CollectionStore {
                 updated.alternateMarketSales = updatedItems[index].alternateMarketSales
                 updated.marketSales = updatedItems[index].marketSales
                 updated.marketHistoryFetchedAt = updatedItems[index].marketHistoryFetchedAt
+                updated.marketHistoryMetadataVersion = updatedItems[index].marketHistoryMetadataVersion
                 updated.quantity += updatedItems[index].quantity
                 updatedItems.remove(at: index)
                 updatedItems.insert(updated, at: 0)
@@ -134,6 +135,8 @@ final class CollectionStore {
             let isMissingExpectedSoldRows =
                 (ownSource == "sold" && item.marketSales.isEmpty) ||
                 (alternateSource == "sold" && item.alternateMarketSales.isEmpty)
+            let needsRegionalHistoryRefresh = item.marketHistoryMetadataVersion != CollectionItem.marketHistoryMetadataVersionCurrent
+            if needsRegionalHistoryRefresh { return true }
             if isMissingExpectedSoldRows { return true }
             guard !force, let raw = item.marketHistoryFetchedAt,
                   let date = CollectionMarketSale(date: raw, priceUSD: 1, quantity: 1).timestamp else { return true }
@@ -179,6 +182,7 @@ final class CollectionStore {
                         updated[index].alternateMarketSales = item.condition == .used ? row.newSales : row.usedSales
                     }
                     updated[index].marketHistoryFetchedAt = row.fetchedAt
+                    updated[index].marketHistoryMetadataVersion = CollectionItem.marketHistoryMetadataVersionCurrent
                     changed = true
                 }
                 if changed { try await persist(updated) }

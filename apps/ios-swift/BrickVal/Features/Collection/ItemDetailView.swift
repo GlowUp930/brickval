@@ -74,7 +74,22 @@ struct ItemDetailView: View {
     }
 
     private var historyPoints: [StockChartPoint] {
-        conditionHistory(for: selectedCondition, horizon: horizon)
+        conditionHistory(for: selectedCondition, horizon: horizon, region: selectedMarketRegion)
+    }
+
+    private var selectedMarketRegion: MarketRegion {
+        preferences.marketRegion(for: currentItem)
+    }
+
+    private var availableMarketRegions: [MarketRegion] {
+        PortfolioHistoryBuilder.availableRegions(items: matchingItems)
+    }
+
+    private var marketRegionBinding: Binding<MarketRegion> {
+        Binding(
+            get: { preferences.marketRegion(for: currentItem) },
+            set: { preferences.setMarketRegion($0, for: currentItem) }
+        )
     }
 
     private var snapshotAnimation: Animation? {
@@ -291,24 +306,30 @@ struct ItemDetailView: View {
                 lineColor: accent,
                 popupBackground: BrickValStyle.ScanResult.textPrimary,
                 popupForeground: BrickValStyle.ScanResult.canvas,
-                selectionID: "\(selectedCondition.rawValue)-\(horizon.rawValue)"
+                selectionID: "\(selectedCondition.rawValue)-\(horizon.rawValue)-\(selectedMarketRegion.rawValue)"
             )
             .accessibilityIdentifier("collectionItem.valueChart.\(historyPoints.count)")
             .frame(height: 330)
             }
             if historyPoints.count < 2 || store.isRefreshingHistory || store.historyErrorMessage != nil {
-                CollectionHistoryStatusView(hasHistory: historyPoints.count > 1)
+                CollectionHistoryStatusView(hasHistory: historyPoints.count > 1, region: selectedMarketRegion, pointCount: historyPoints.count)
             }
 
-            ChartHorizonPicker(
-                selection: $horizon,
-                timelinePoints: historyPoints,
-                tint: BrickValStyle.ScanResult.textPrimary,
-                inactive: BrickValStyle.ScanResult.textSecondary,
-                proHorizons: proHistoryHorizons,
-                isPro: entitlements.isPro,
-                onProSelection: { _ in presentHistoryUpgrade() }
-            )
+            VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space8) {
+                HStack {
+                    Spacer(minLength: 0)
+                    MarketRegionMenu(selection: marketRegionBinding, regions: availableMarketRegions, tint: BrickValStyle.ScanResult.textPrimary)
+                }
+                ChartHorizonPicker(
+                    selection: $horizon,
+                    timelinePoints: historyPoints,
+                    tint: BrickValStyle.ScanResult.textPrimary,
+                    inactive: BrickValStyle.ScanResult.textSecondary,
+                    proHorizons: proHistoryHorizons,
+                    isPro: entitlements.isPro,
+                    onProSelection: { _ in presentHistoryUpgrade() }
+                )
+            }
             marketSnapshotPanel
         }
     }
@@ -376,7 +397,7 @@ struct ItemDetailView: View {
                 .stroke(BrickValStyle.ScanResult.border)
         }
         .accessibilityIdentifier("collectionItem.marketSnapshot.\(horizon.rawValue)")
-        .animation(snapshotAnimation, value: horizon)
+        .animation(snapshotAnimation, value: "\(horizon.rawValue)-\(selectedMarketRegion.rawValue)")
     }
 
     private func snapshotColumn(for option: DetailConditionOption) -> some View {
@@ -399,7 +420,9 @@ struct ItemDetailView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityLabel("Loading market snapshot")
             } else {
-                Text("No sales in this period")
+                Text(selectedMarketRegion.isAll
+                    ? "No sales in this period"
+                    : "No \(selectedMarketRegion.displayName(locale: preferences.effectiveLanguage.locale)) seller sales in this period.")
                     .font(.caption)
                     .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -725,9 +748,9 @@ struct ItemDetailView: View {
         }
     }
 
-    private func conditionHistory(for option: DetailConditionOption, horizon: PortfolioHorizon) -> [StockChartPoint] {
+    private func conditionHistory(for option: DetailConditionOption, horizon: PortfolioHorizon, region: MarketRegion = .all) -> [StockChartPoint] {
         let sourceItem = conditionItem(for: option)
-        return store.preparedHistory.items[sourceItem.id]?[horizon] ?? []
+        return store.preparedHistory.items[sourceItem.id]?[region]?[horizon] ?? []
     }
 
     private func conditionItem(for option: DetailConditionOption) -> CollectionItem {
@@ -737,7 +760,7 @@ struct ItemDetailView: View {
 
     private func marketSnapshot(for option: DetailConditionOption) -> MarketSnapshot? {
         let sourceItem = conditionItem(for: option)
-        return store.preparedHistory.snapshots[sourceItem.id]?[horizon]
+        return store.preparedHistory.snapshots[sourceItem.id]?[selectedMarketRegion]?[horizon]
     }
 
 }
@@ -797,6 +820,7 @@ enum DetailConditionOption: String, CaseIterable, Identifiable {
         result.marketSales = item.condition == condition ? item.marketSales : item.alternateMarketSales
         result.alternateMarketSales = item.condition == condition ? item.alternateMarketSales : item.marketSales
         result.marketHistoryFetchedAt = item.marketHistoryFetchedAt
+        result.marketHistoryMetadataVersion = item.marketHistoryMetadataVersion
         return result
     }
 }

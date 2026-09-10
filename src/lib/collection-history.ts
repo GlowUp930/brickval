@@ -1,7 +1,7 @@
 import type { BrickLinkPriceGuide } from "./bricklink";
 
 export type HistoryItem = { identifier: string; item_type: "set" | "minifig" | "part"; color_id?: number };
-export type HistorySale = { date: string; price_usd: number; quantity: number };
+export type HistorySale = { date: string; price_usd: number; quantity: number; seller_country_code?: string };
 export type HistoryResult = HistoryItem & { new_sales: HistorySale[]; used_sales: HistorySale[]; fetched_at: string; new_error: string | null; used_error: string | null };
 export type SoldGuides = { sold_new: BrickLinkPriceGuide | null; sold_used: BrickLinkPriceGuide | null };
 
@@ -22,7 +22,7 @@ export function parseHistoryItems(body: unknown): HistoryItem[] | null {
 }
 
 export function historyKey(item: HistoryItem) {
-  return `collection-history:v1:${item.item_type}:${item.identifier}:${item.color_id ?? "none"}`;
+  return `collection-history:v2:${item.item_type}:${item.identifier}:${item.color_id ?? "none"}`;
 }
 
 export function historySales(guide: BrickLinkPriceGuide | null, now: Date): HistorySale[] {
@@ -31,7 +31,15 @@ export function historySales(guide: BrickLinkPriceGuide | null, now: Date): Hist
     const date = new Date(row.date_ordered ?? "");
     const price = Number(row.unit_price);
     if (!Number.isFinite(date.getTime()) || date > now || !Number.isFinite(price) || price <= 0 || !Number.isSafeInteger(row.quantity) || row.quantity <= 0) return [];
-    return [{ date: date.toISOString(), price_usd: price, quantity: row.quantity }];
+    const sellerCountry = typeof row.seller_country_code === "string"
+      ? row.seller_country_code.trim().toUpperCase()
+      : "";
+    return [{
+      date: date.toISOString(),
+      price_usd: price,
+      quantity: row.quantity,
+      ...(/^[A-Z]{2}$/.test(sellerCountry) ? { seller_country_code: sellerCountry } : {}),
+    }];
   }).sort((a, b) => a.date.localeCompare(b.date));
 }
 
