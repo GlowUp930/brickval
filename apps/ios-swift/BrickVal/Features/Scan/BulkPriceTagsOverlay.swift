@@ -13,7 +13,11 @@ struct BulkPriceTagsOverlay: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var density: BulkPriceTagDensity {
-        BulkPriceTagDensity.forResultCount(callouts.count, accessibilitySize: accessibilitySize)
+        BulkPriceTagDensity.forResultCount(
+            callouts.count,
+            accessibilitySize: accessibilitySize,
+            availableArea: imageRect.width * imageRect.height
+        )
     }
 
     private var placements: [BulkPriceTagPlacement] {
@@ -41,14 +45,18 @@ struct BulkPriceTagsOverlay: View {
         let calloutByID = Dictionary(uniqueKeysWithValues: callouts.map { ($0.id, $0) })
         ZStack {
             ForEach(resolvedPlacements) { placement in
-                Path { path in
-                    path.move(to: placement.labelAnchor)
-                    path.addLine(to: placement.anchor)
+                Group {
+                    if placement.requiresLeaderLine {
+                        Path { path in
+                            path.move(to: placement.labelAnchor)
+                            path.addLine(to: placement.anchor)
+                        }
+                        .stroke(
+                            accent.opacity(0.48),
+                            style: StrokeStyle(lineWidth: 1)
+                        )
+                    }
                 }
-                .stroke(
-                    accent.opacity(placement.isCollapsed ? 0.36 : 0.48),
-                    style: StrokeStyle(lineWidth: 1, dash: placement.isCollapsed ? [2, 2] : [])
-                )
                 .accessibilityHidden(true)
             }
 
@@ -71,23 +79,18 @@ struct BulkPriceTagsOverlay: View {
     private func priceTag(_ callout: BulkFocusCallout, placement: BulkPriceTagPlacement) -> some View {
         let isFocused = callout.id == focusedID
         let spokenPrice = callout.accessibilityText ?? callout.text
-        let displayText = placement.isCollapsed
-            ? "\(placement.number)"
-            : callout.text
-        let foreground: Color = callout.isUnavailable || placement.isCollapsed ? .white : .black
+        let foreground: Color = callout.isUnavailable ? .white : .black
         let background: Color = callout.isUnavailable
             ? .white.opacity(0.25)
-            : placement.isCollapsed
-                ? .black.opacity(0.84)
-                : accent
+            : accent
 
         return Button {
             onSelect(callout.id)
         } label: {
-            Text(displayText)
+            Text(callout.text)
                 .font(
                     .system(
-                        size: placement.isCollapsed ? max(placement.density.fontSize, 10) : placement.density.fontSize,
+                        size: placement.density.fontSize,
                         weight: .bold,
                         design: .rounded
                     )
@@ -95,7 +98,8 @@ struct BulkPriceTagsOverlay: View {
                 )
                 .foregroundStyle(foreground)
                 .lineLimit(1)
-                .minimumScaleFactor(0.62)
+                .allowsTightening(true)
+                .minimumScaleFactor(0.42)
                 .frame(width: placement.frame.width, height: placement.frame.height)
                 .background(
                     background,

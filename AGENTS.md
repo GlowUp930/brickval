@@ -8,6 +8,12 @@ Settings no longer exposes the temporary hard-paywall onboarding preview. Its is
 
 Focused onboarding/Settings checks pass on both simulator sizes. The 229-test unit suite passes on both sizes, while the full UI run still has two existing collection-navigation failures on each size caused by the fixture's “Could not remove item” alert; they are unrelated to onboarding and are recorded separately. The signed 1.0.8 (176) archive passed validation and was uploaded to App Store Connect; delivery `5ee44d02-2242-440f-9e4d-6e89ad84f49f` is processing for TestFlight. Physical-device verification remains pending.
 
+## Dense bulk price labels — 2026-09-11
+
+Completed bulk scans keep the full localized price on every resolved figure, including dense 60-result photos. Labels adapt between regular, compact, and micro sizes using result count and photo area, then use deterministic lanes around the detected figure. The planner reserves the summary and result rail, keeps chips inside the photo stage, and draws a short leader line when a label moves away from its figure. There is no numbered-only fallback, so the amount remains visible; VoiceOver labels retain the currency code and the 44-point tap target remains available.
+
+Focused layout tests cover 2, 10, 30, and 60 figures, bounds, spacing, reserved areas, stable placement, and leader anchors. The dense bulk UI check passed on the small simulator and was visually inspected on the iPhone 17 Pro simulator. The full 229-test unit suite passed on the small simulator; the iPhone 17 Pro run had one pre-existing time-dependent `portfolioHistoryUsesAddedItemMarketHistory` expectation (`216` versus `240`) and is unrelated to the bulk layout. The large dense UI run reached the completed screen and captured all prices, but its 35-second readiness assertion timed out on the slower simulator; the screenshot shows the full-price chips. Physical-device confirmation remains pending.
+
 ## Smooth market charts and first-launch guidance — 2026-09-10
 
 Collection and item charts now use bounded monotone Hermite sampling before the existing Swift Charts monotone interpolation. The line has a smoother live-app shape while preserving stable sample identities, real date spacing, the 240 ms transition, Reduce Motion behavior, touch inspection, and the rule that values cannot overshoot recorded sales. Pricing and history sources are unchanged.

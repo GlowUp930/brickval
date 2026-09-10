@@ -1,5 +1,11 @@
 # BrickVal Native iOS Context
 
+## Dense bulk price labels — 2026-09-11
+
+Completed bulk results now retain a readable, full price for every resolved figure at every density. Result count and available photo area select regular, compact, or micro chips. A deterministic lane planner keeps chips in bounds, separated from one another, clear of the summary/result rail, and connected to moved figures with short leader lines. The old numbered-only dense marker is no longer used. Price tags remain 44-point controls with full VoiceOver price and currency labels; unavailable prices still announce their state.
+
+Focused planner coverage passes for 2, 10, 30, and 60 figures, including stable coordinates, bounds, reserved areas, spacing, and leader anchors. The dense UI flow passed on the small simulator and the captured iPhone 17 Pro screenshot shows all 60 full prices. The full small-simulator unit suite passed 229 tests. The large-simulator unit run has one unrelated, time-sensitive collection-history assertion (`portfolioHistoryUsesAddedItemMarketHistory`), and the large dense UI readiness assertion timed out before its completed screen; the resulting screenshot still contains all full-price chips. Physical-device confirmation remains pending.
+
 ## Onboarding startup and preview cleanup — build 176 source — 2026-09-10
 
 Onboarding now starts on the demo screen, so Get Started is available as soon as the onboarding surface is shown. The old roughly one-second branded step and its delayed transition were removed; the launch logo remains the branded handoff. The CTA advances to the first detail screen immediately. Settings no longer contains the temporary hard-paywall onboarding preview, its isolated sheet, or its run mode; the debug-only Settings fixture is now named `-showSettingsRootDemo`.

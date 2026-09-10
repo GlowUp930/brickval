@@ -1,5 +1,11 @@
 # Scan Result Card Visual QA
 
+## Dense bulk pricing — 2026-09-11
+
+Every resolved figure in a completed bulk scan keeps its actual localized amount visible. Regular, compact, and micro chips respond to result density and photo area. The placement planner uses stable lanes, reserves the summary and result rail, keeps chips inside the image, and adds a subtle solid leader line when a chip moves away from its figure. The amount is never replaced by a number-only marker. Tap targets stay at least 44 points and accessibility labels keep the full currency-qualified amount.
+
+The 60-result fixture was visually checked on the small simulator: all prices are visible in separated green chips with clear figure relationships, and the bottom result rail remains unobstructed. The same completed screenshot was captured on the iPhone 17 Pro simulator. Focused layout and dense UI checks pass on the small simulator; large-simulator readiness is slower than the current test timeout, so hardware verification remains open.
+
 ## Onboarding startup and preview cleanup — build 176 source — 2026-09-10
 
 - Onboarding opens directly on the demo screen with Get Started visible in the first onboarding surface. The old roughly one-second branded gate was removed; the app launch logo remains the brand handoff.

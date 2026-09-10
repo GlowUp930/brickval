@@ -267,7 +267,7 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         XCTAssertTrue(secondPriceCallout.label.contains("USD"))
     }
 
-    func testDenseBulkPriceMarkersKeepEveryFigureRepresented() {
+    func testDenseBulkPricesKeepEveryFigureVisible() {
         let app = XCUIApplication()
         app.launchArguments = ["-showDenseBulkRecoveryDemo"]
         app.launch()
@@ -280,9 +280,12 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         XCTAssertEqual(tags.count, 60)
         XCTAssertTrue(tags.element(boundBy: 0).label.contains("Figure 1"))
         XCTAssertTrue(tags.element(boundBy: 59).label.contains("Figure 60"))
+        for index in 0 ..< tags.count {
+            XCTAssertTrue(tags.element(boundBy: index).label.contains("price $"))
+        }
 
         let screenshot = XCTAttachment(screenshot: app.screenshot())
-        screenshot.name = "Dense bulk numbered price markers"
+        screenshot.name = "Dense bulk full price labels"
         screenshot.lifetime = .keepAlways
         add(screenshot)
     }

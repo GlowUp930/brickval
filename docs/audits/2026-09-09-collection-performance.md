@@ -1,5 +1,11 @@
 # Collection responsiveness — build 173 follow-up
 
+## Dense bulk price labels — 2026-09-11
+
+The completed bulk overlay now shows every resolved figure's full price, even for dense photos. Density-aware regular, compact, and micro chips use the result count and available image area. The deterministic planner keeps chips bounded and separated, reserves the summary/result rail, and uses a short leader line for labels moved into a lane. Numbered-only markers were removed, while 44-point controls and full accessibility values remain.
+
+Evidence: the layout suite covers 2, 10, 30, and 60 figures with collision, bounds, reserved-space, stability, and leader-anchor assertions. The focused dense UI check passed on the small simulator; its captured screenshot shows 60 visible price amounts. The iPhone 17 Pro screenshot also shows all 60 amounts after the slower reveal, although the current 35-second readiness wait timed out. The small simulator's full 229-test unit suite passed. The large unit run has one unrelated time-dependent collection-history expectation failure. Physical-device confirmation and release-build verification remain pending.
+
 ## Onboarding startup diagnosis — build 176 source — 2026-09-10
 
 The reported first-launch “unresponsive” Get Started state was reproducible in the onboarding flow: the first screen intentionally showed a branded step for about 1.05 seconds before revealing the demo and CTA. The button action itself completed in under 30 ms once visible; no network request or entitlement check was on that tap path. Build 176 removes that redundant gate and starts onboarding on the demo, while the launch logo remains the branded handoff. The Settings hard-paywall preview and its isolated mode were removed at the same time.

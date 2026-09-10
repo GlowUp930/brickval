@@ -43,7 +43,7 @@ struct BulkPriceTagLayoutTests {
     }
 
     @Test
-    func denseResultsUseMicroDensityAndCollapseWhenSpaceRunsOut() {
+    func denseResultsUseMicroDensityAndKeepEveryPriceVisible() {
         let items = makeItems(count: 60).map {
             BulkPriceTagLayoutItem(
                 id: $0.id,
@@ -54,16 +54,26 @@ struct BulkPriceTagLayoutTests {
                 density: .micro
             )
         }
+        let reserved = [CGRect(x: 0, y: 0, width: 220, height: 54)]
         let placements = BulkPriceTagPlacementPlanner.placements(
             for: items,
             in: CGRect(x: 0, y: 0, width: 220, height: 300),
-            reservedRects: [CGRect(x: 0, y: 0, width: 220, height: 54)],
+            reservedRects: reserved,
             minimumSpacing: 4
         )
 
         #expect(placements.count == 60)
         #expect(placements.allSatisfy { $0.density == .micro })
-        #expect(placements.allSatisfy { $0.isCollapsed })
+        #expect(placements.allSatisfy { !$0.isCollapsed })
+        #expect(placements.allSatisfy { $0.frame.width >= 28 && $0.frame.height >= 17 })
+        #expect(placements.allSatisfy { placement in
+            reserved.allSatisfy { !placement.frame.intersects($0) }
+        })
+        for (index, placement) in placements.enumerated() {
+            for other in placements.dropFirst(index + 1) {
+                #expect(!placement.frame.insetBy(dx: -2, dy: -2).intersects(other.frame.insetBy(dx: -2, dy: -2)))
+            }
+        }
     }
 
     @Test
