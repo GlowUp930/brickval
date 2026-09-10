@@ -298,7 +298,7 @@ struct ScannerView: View {
                 ScanTipsCallout(dismiss: dismissScanTips)
                     .padding(.top, 76)
                     .padding(.horizontal, 12)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                     .zIndex(2)
             }
         }
@@ -524,53 +524,59 @@ private struct ScanTipsCallout: View {
     private let surface = Color(.secondarySystemBackground)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space12) {
-            HStack(alignment: .top, spacing: BrickValStyle.Primitive.space8) {
-                Label("Choose your scan mode", systemImage: "sparkles")
-                    .font(.headline)
+        VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space16) {
+            HStack(alignment: .center, spacing: BrickValStyle.Primitive.space12) {
+                Image(systemName: "viewfinder")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(accent)
+                    .frame(width: 40, height: 40)
+                    .background(accent.opacity(0.14), in: .rect(cornerRadius: 12))
+                    .accessibilityHidden(true)
+
+                Text("Choose your scan mode")
+                    .font(.title3.weight(.bold))
                     .foregroundStyle(BrickValStyle.Semantic.textPrimary)
                 Spacer(minLength: 0)
                 Button(action: dismiss) {
                     Image(systemName: "xmark")
                         .font(.caption.weight(.bold))
-                        .frame(width: 30, height: 30)
+                        .frame(width: 44, height: 44)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(BrickValStyle.Semantic.textSecondary)
                 .accessibilityLabel("Dismiss scan tips")
             }
 
-            Text("Two focused ways to find value, depending on what is in front of you.")
-                .font(.subheadline)
+            Text("Frame up to 60 figures, then tap the shutter")
+                .font(.subheadline.weight(.medium))
                 .foregroundStyle(BrickValStyle.Semantic.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            tipRow(
-                "chart.line.uptrend.xyaxis",
-                title: "What the price means",
-                detail: "We use the average of recent sold prices. If sold data isn't available, we clearly label the average asking price from active listings."
-            )
+            Divider()
+                .overlay(BrickValStyle.Semantic.divider)
 
             tipRow(
+                1,
                 "person.crop.rectangle",
                 title: "Minifigure · one figure",
                 detail: "Auto-detection watches for one figure and captures when the frame is ready for a faster result."
             )
             tipRow(
+                2,
                 "square.stack.3d.up",
-                title: "Bulk · up to 60 figures",
-                detail: "Place front-facing figures apart from each other, then tap the shutter. Boxes help confirm they are visible."
+                title: "Bulk scan",
+                detail: "Frame up to 60 figures, then tap the shutter"
             )
 
             Button("Got it", action: dismiss)
                 .buttonStyle(.borderedProminent)
                 .tint(accent)
                 .foregroundStyle(BrickValStyle.Primitive.black)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, minHeight: 48)
                 .accessibilityHint("Dismisses the scan tips")
         }
         .padding(BrickValStyle.Primitive.space16)
-        .frame(maxWidth: 340, alignment: .leading)
+        .frame(maxWidth: 350, alignment: .leading)
         .background(surface, in: .rect(cornerRadius: 18))
         .overlay {
             RoundedRectangle(cornerRadius: 18)
@@ -585,15 +591,26 @@ private struct ScanTipsCallout: View {
         .shadow(color: BrickValStyle.Primitive.black.opacity(0.24), radius: 18, y: 8)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Scan mode tips")
+        .accessibilityIdentifier("scanner.quickStartTips")
     }
 
-    private func tipRow(_ icon: String, title: LocalizedStringResource, detail: LocalizedStringResource) -> some View {
+    private func tipRow(_ number: Int, _ icon: String, title: LocalizedStringResource, detail: LocalizedStringResource) -> some View {
         HStack(alignment: .top, spacing: BrickValStyle.Primitive.space8) {
-            Image(systemName: icon)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(accent)
-                .frame(width: 24)
-                .accessibilityHidden(true)
+            ZStack(alignment: .topLeading) {
+                Image(systemName: icon)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(accent)
+                    .frame(width: 34, height: 34)
+                    .background(accent.opacity(0.14), in: .rect(cornerRadius: 10))
+                Text("\(number)")
+                    .font(.caption2.weight(.bold).monospacedDigit())
+                    .foregroundStyle(BrickValStyle.Primitive.black)
+                    .frame(width: 17, height: 17)
+                    .background(accent, in: .circle)
+                    .offset(x: -5, y: -5)
+            }
+            .frame(width: 34, height: 34)
+            .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))

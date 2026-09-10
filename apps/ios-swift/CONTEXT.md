@@ -1,5 +1,13 @@
 # BrickVal Native iOS Context
 
+## Smooth charts and first-launch guidance — 2026-09-10
+
+Collection and item charts keep their stable prepared samples and now use bounded monotone Hermite sampling so the line reads as a smooth live-app curve without inventing prices or overshooting real BrickLink observations. The existing 240 ms transition, actual date spacing, touch inspection, timeframe behavior, and Reduce Motion path remain intact.
+
+First-launch Collection and Scan guidance now presents a clearer Quick start / scan-mode card with concise action copy, numbered icon tiles, a large dismiss target, and reduced-motion-safe presentation. Existing localized strings are reused across all 13 languages; the active multi-step onboarding flow is unchanged.
+
+Verification: 229 native unit tests and 16 UI tests pass on both simulator sizes, the focused chart suite passes 11 tests, localization passes with 807 app strings plus four Info.plist strings, and the Release simulator build succeeds. The final Collection tip card was inspected on the small simulator. Physical iPhone confirmation and a new TestFlight upload remain pending.
+
 ## TestFlight build 175 — 2026-09-10
 
 Build 1.0.8 (175) contains the general seller-country market filters and the 75192 Used-history recovery. The Release archive `/tmp/BrickVal175.xcarchive` is signed with the BrickVal App Store profile and passes strict code-signature validation. The native unit suite reports 230 tests with zero failures on both the BrickVal Small iPhone and BrickVal iPhone 17 Pro simulators; backend tests, type checking, and the 13-language audit also pass. Xcode Organizer completed the upload and shows `Uploaded to Apple`; Apple processing is asynchronous. The production backend is Vercel deployment `dpl_5gjKSf8pA9CrnHoioMJEQsTchzTG`, and the live history route returns seller-country metadata while rejecting expired sessions. Physical-device verification and Sentry symbol ingestion remain pending.

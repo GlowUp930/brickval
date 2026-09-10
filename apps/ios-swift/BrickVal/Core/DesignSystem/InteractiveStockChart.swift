@@ -198,10 +198,16 @@ private struct StockChartPlot: View {
         let end = points.last?.timestamp
         let hasDates = start != nil && end != nil && end! > start! && points.allSatisfy { $0.timestamp != nil }
         let dateStyle = Date.FormatStyle.dateTime.month(.abbreviated).day().locale(locale)
+        let sourceX: [Double] = hasDates
+            ? points.compactMap { $0.timestamp?.timeIntervalSince(start ?? .distantPast) }
+            : points.indices.map(Double.init)
+        let sourceValues = points.map(\.value)
+        let tangents = monotoneTangents(x: sourceX, values: sourceValues)
         var cursor = 0
         return (0 ..< count).map { outputIndex in
             let fractionAcross = Double(outputIndex) / Double(max(count - 1, 1))
             var position = fractionAcross * Double(points.count - 1)
+            var targetX = position
             var dateLabel: String?
             if hasDates, let start, let end {
                 let date = start.addingTimeInterval(end.timeIntervalSince(start) * fractionAcross)
@@ -210,15 +216,128 @@ private struct StockChartPlot: View {
                 let upper = min(lower + 1, points.count - 1)
                 let span = points[upper].timestamp!.timeIntervalSince(points[lower].timestamp!)
                 position = Double(lower) + (span > 0 ? date.timeIntervalSince(points[lower].timestamp!) / span : 0)
+                targetX = date.timeIntervalSince(start)
                 dateLabel = date.formatted(dateStyle)
             }
             let lower = Int(floor(position))
-            let upper = min(lower + 1, points.count - 1)
-            let fraction = position - Double(lower)
-            let value = points[lower].value + (points[upper].value - points[lower].value) * fraction
+            let value = monotoneValue(
+                at: targetX,
+                lowerIndex: lower,
+                x: sourceX,
+                values: sourceValues,
+                tangents: tangents
+            )
             let label = dateLabel ?? points[Int(position.rounded()).clamped(to: 0 ... points.count - 1)].label
             return StockChartSample(id: outputIndex, label: label, value: value)
         }
+    }
+
+    /// Returns shape-preserving cubic tangents. Unlike a Catmull-Rom curve,
+    /// the monotone Hermite form cannot create a price above or below either
+    /// recorded sale in an interval.
+    private static func monotoneTangents(x: [Double], values: [Double]) -> [Double] {
+        guard values.count > 1, x.count == values.count else { return Array(repeating: 0, count: values.count) }
+
+        let intervalCount = values.count - 1
+        var widths = Array(repeating: 0.0, count: intervalCount)
+        var secants = Array(repeating: 0.0, count: intervalCount)
+        for index in 0 ..< intervalCount {
+            let width = x[index + 1] - x[index]
+            widths[index] = width
+            if width > 0 {
+                secants[index] = (values[index + 1] - values[index]) / width
+            }
+        }
+
+        var tangents = Array(repeating: 0.0, count: values.count)
+        if intervalCount == 1 {
+            tangents[0] = secants[0]
+            tangents[1] = secants[0]
+            return tangents
+        }
+
+        tangents[0] = endpointTangent(width: widths[0], nextWidth: widths[1], slope: secants[0], nextSlope: secants[1])
+        tangents[values.count - 1] = endpointTangent(
+            width: widths[intervalCount - 1],
+            nextWidth: widths[intervalCount - 2],
+            slope: secants[intervalCount - 1],
+            nextSlope: secants[intervalCount - 2]
+        )
+
+        for index in 1 ..< values.count - 1 {
+            let previousSlope = secants[index - 1]
+            let nextSlope = secants[index]
+            guard previousSlope * nextSlope > 0, widths[index - 1] > 0, widths[index] > 0 else {
+                tangents[index] = 0
+                continue
+            }
+            let leftWeight = 2 * widths[index] + widths[index - 1]
+            let rightWeight = widths[index] + 2 * widths[index - 1]
+            tangents[index] = (leftWeight + rightWeight) /
+                (leftWeight / previousSlope + rightWeight / nextSlope)
+        }
+
+        // Fritsch-Carlson's limiter keeps every monotonic segment inside its
+        // endpoint range, including when an endpoint tangent is steep.
+        for index in 0 ..< intervalCount {
+            let slope = secants[index]
+            guard slope != 0, widths[index] > 0 else {
+                tangents[index] = 0
+                tangents[index + 1] = 0
+                continue
+            }
+            var alpha = tangents[index] / slope
+            var beta = tangents[index + 1] / slope
+            if alpha < 0 { alpha = 0 }
+            if beta < 0 { beta = 0 }
+            let magnitude = alpha * alpha + beta * beta
+            if magnitude > 9 {
+                let scale = 3 / sqrt(magnitude)
+                alpha *= scale
+                beta *= scale
+            }
+            tangents[index] = alpha * slope
+            tangents[index + 1] = beta * slope
+        }
+        return tangents
+    }
+
+    private static func endpointTangent(width: Double, nextWidth: Double, slope: Double, nextSlope: Double) -> Double {
+        guard width > 0, nextWidth > 0 else { return 0 }
+        var tangent = ((2 * width + nextWidth) * slope - width * nextSlope) / (width + nextWidth)
+        if tangent * slope <= 0 {
+            tangent = 0
+        } else if slope * nextSlope < 0, abs(tangent) > abs(3 * slope) {
+            tangent = 3 * slope
+        }
+        return tangent
+    }
+
+    private static func monotoneValue(
+        at targetX: Double,
+        lowerIndex: Int,
+        x: [Double],
+        values: [Double],
+        tangents: [Double]
+    ) -> Double {
+        guard !values.isEmpty else { return 0 }
+        guard lowerIndex < values.count - 1 else { return values.last ?? 0 }
+        let upperIndex = lowerIndex + 1
+        let width = x[upperIndex] - x[lowerIndex]
+        guard width > 0 else { return values[lowerIndex] }
+
+        let fraction = ((targetX - x[lowerIndex]) / width).clamped(to: 0 ... 1)
+        let fractionSquared = fraction * fraction
+        let fractionCubed = fractionSquared * fraction
+        let h00 = 2 * fractionCubed - 3 * fractionSquared + 1
+        let h10 = fractionCubed - 2 * fractionSquared + fraction
+        let h01 = -2 * fractionCubed + 3 * fractionSquared
+        let h11 = fractionCubed - fractionSquared
+        let interpolated = h00 * values[lowerIndex] +
+            h10 * width * tangents[lowerIndex] +
+            h01 * values[upperIndex] +
+            h11 * width * tangents[upperIndex]
+        return interpolated.clamped(to: min(values[lowerIndex], values[upperIndex]) ... max(values[lowerIndex], values[upperIndex]))
     }
 
 }

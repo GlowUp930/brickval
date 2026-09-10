@@ -1,5 +1,13 @@
 # Collection responsiveness — build 173 follow-up
 
+## Smooth chart and onboarding follow-up — 2026-09-10
+
+The prepared-history performance fix remains unchanged. Chart resampling now uses bounded monotone Hermite interpolation over the same dated, quantity-weighted observations, so the Collection and item lines feel smooth while never creating a value outside a recorded interval. Stable samples, the short 240 ms morph, touch inspection, and zero-request timeframe changes remain intact.
+
+First-launch Collection and Scan guidance was refreshed with concise action copy, numbered icon tiles, clearer hierarchy, and reduced-motion-safe presentation. No history, pricing, scan-credit, or backend behavior changed.
+
+Verification: 229 native unit tests and 16 UI tests passed on both simulator sizes; the focused chart regression passed 11 tests; localization passed with 807 app strings plus four Info.plist strings; and the Release simulator build succeeded. This is simulator evidence, and physical-device confirmation remains required before claiming the reported lag is resolved on hardware.
+
 ## Smooth chart and bulk-tag follow-up
 
 The build-171 freeze fix remains in place: prepared history is still reused for all three windows, and timeframe selection does not rebuild market history or request the network. This follow-up restores the build-166 feel with a stable 140-sample chart identity and a non-bouncy 240 ms curve/y-axis morph. Reduce Motion takes the immediate path. Touch inspection remains local to the chart and is cleared when the selected window changes.

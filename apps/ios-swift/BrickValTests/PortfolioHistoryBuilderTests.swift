@@ -125,6 +125,22 @@ struct PortfolioHistoryBuilderTests {
         #expect(samples.allSatisfy { (10...30).contains($0.value) })
     }
 
+    @Test func chartUsesAStableSmoothTurnWithoutInventingExtrema() {
+        let points = [
+            StockChartPoint(label: "A", value: 0, timestamp: now),
+            StockChartPoint(label: "B", value: 10, timestamp: now.addingTimeInterval(86400)),
+            StockChartPoint(label: "C", value: 0, timestamp: now.addingTimeInterval(172800)),
+        ]
+
+        let samples = InteractiveStockChart.resample(points, count: 9)
+
+        #expect(samples.map(\.id) == Array(0 ..< 9))
+        #expect(samples.allSatisfy { (0...10).contains($0.value) })
+        #expect(samples[2].value > 5)
+        #expect(samples[6].value > 5)
+        #expect(samples[4].value == 10)
+    }
+
     @Test func chartSamplesKeepTheirIdentityAcrossHorizonValues() {
         let firstPoints = [
             StockChartPoint(label: "A", value: 10, timestamp: now),

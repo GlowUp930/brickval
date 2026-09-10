@@ -1,5 +1,13 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Smooth market charts and first-launch guidance — 2026-09-10
+
+Collection and item charts now use bounded monotone Hermite sampling before the existing Swift Charts monotone interpolation. The line has a smoother live-app shape while preserving stable sample identities, real date spacing, the 240 ms transition, Reduce Motion behavior, touch inspection, and the rule that values cannot overshoot recorded sales. Pricing and history sources are unchanged.
+
+The first-launch Collection and Scan tips now use shorter action-focused copy, numbered icon tiles, a clearer card hierarchy, 44-point dismissal targets, and reduced-motion-safe transitions. The copy reuses the existing 13-language catalog. The full multi-step onboarding flow and scan behavior are unchanged.
+
+Verification: 229 native unit tests and 16 UI tests pass on both the BrickVal Small iPhone and BrickVal iPhone 17 Pro simulators; the focused chart regression passes 11 tests; the 13-language audit passes with 807 app strings plus four Info.plist strings; and the Release simulator build succeeds. Final tip cards were visually inspected on the small simulator. Physical iPhone confirmation remains pending. This working-tree change has not been uploaded to TestFlight.
+
 ## Regional history release — build 175 — 2026-09-10
 
 The seller-country market filter is now included in native release 1.0.8 (175). The backend is live at `brickvalue.live` from Vercel deployment `dpl_5gjKSf8pA9CrnHoioMJEQsTchzTG`; a live 75192 request returned 42 New and 26 Used dated rows across 17 seller countries, and an expired bearer session returned 401. Guest history access remains bounded by the existing request budget. The signed archive `/tmp/BrickVal175.xcarchive` passed code-signature verification, and Xcode Organizer shows build 175 as Uploaded to Apple for TestFlight processing. Physical-device verification and Sentry symbol ingestion remain explicit follow-up checks; no simulator result is treated as device sign-off.

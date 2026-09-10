@@ -1,5 +1,12 @@
 # Scan Result Card Visual QA
 
+## Smooth chart and first-launch tip pass — 2026-09-10
+
+- Collection and item graphs use a bounded monotone curve over the existing real-sale samples. The curve remains within each pair of recorded values, keeps actual date spacing, and retains the stable 140-sample identity and short transition used by the live-app direction.
+- The Collection and Scan first-launch cards now use a stronger header, concise action copy, numbered icon tiles, clearer spacing, and 44-point dismissal controls. Reduce Motion uses the opacity-only path.
+- Final Collection tip screenshot: `/tmp/brickval176-collection-tips-final.png`. The chart and item-detail graphs were inspected in the existing small/large simulator UI captures; the line visibly turns smoothly while keeping the same data.
+- Verification after the final source cleanup: 229 native unit tests and 16 UI tests passed on each simulator size; the focused chart regression passed 11 tests; the 13-language audit passed with 807 app strings plus four Info.plist strings; Release compilation succeeded. Physical iPhone and TestFlight checks remain pending.
+
 ## TestFlight build 175 — 2026-09-10
 
 Build 1.0.8 (175) includes the general seller-country filter and the stale-empty Used-history recovery. The Release archive `/tmp/BrickVal175.xcarchive` is signed and passes strict verification. The BrickVal unit suite reports 230 tests with zero failures on the small and large simulators; backend tests, type checking, and localization (807 app strings plus four Info.plist strings across 13 locales) pass. Xcode Organizer shows the package as `Uploaded to Apple`; Apple processing remains asynchronous. Live verification returned seller-country rows for 75192 and rejected an expired session with 401. Physical-device visual QA, real TestFlight onboarding, and Sentry symbol ingestion remain pending.
