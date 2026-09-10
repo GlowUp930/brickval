@@ -1,5 +1,9 @@
 # BrickVal Native iOS Context
 
+## TestFlight build 174 — 2026-09-10
+
+The native Release archive is version 1.0.8 build 174, signed with the BrickVal App Store profile and passing strict code-signature validation. The full small-iPhone suite passed after making the collection-history fixture use a stable test clock; localization passed with 802 strings plus four Info.plist strings. App Store Connect accepted the IPA upload with delivery ID `3a379c51-c08e-4fbd-9d65-918f4bc94a4b`; package processing is asynchronous. Physical-device verification remains pending.
+
 ## Collection item market snapshot — 2026-09-09
 
 Item detail now keeps the rainbow outlined `Average sold price` badge with its tick icon and removes only the standalone grey `Average sold price` title plus the grey `Estimated market history` heading. The completed-sales explanation, market-change percentage, current valuation, graph, and timeframe controls remain.

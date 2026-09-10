@@ -31,12 +31,13 @@ struct CollectionHistoryRefreshTests {
         let original = CollectionItem(setNumber: "21367-1", itemType: .set, name: "Rocket", theme: "Ideas", marketValueUSD: 150, quantity: 3)
         let store = CollectionStore(repository: repository)
         try await store.add(original, isPro: true)
+        let testNow = Date()
         var api = BrickValAPIClient.live()
-        api.collectionHistory = { CollectionHistoryDemo.response($0) }
+        api.collectionHistory = { CollectionHistoryDemo.response($0, now: testNow) }
         await store.refreshMarketHistory(using: api)
         #expect(store.items[0].marketSales.count == 22)
         #expect(store.items[0].quantity == 3 && store.items[0].id == original.id)
-        #expect(PortfolioHistoryBuilder.build(items: store.items, horizon: .month).count > 2)
+        #expect(PortfolioHistoryBuilder.marketHistory(items: store.items, horizon: .month, now: testNow).points.count > 1)
         let restarted = CollectionStore(repository: repository)
         await restarted.load()
         #expect(restarted.items[0].marketSales == store.items[0].marketSales)

@@ -1,5 +1,9 @@
 # Scan Result Card Visual QA
 
+## TestFlight build 174 — 2026-09-10
+
+The native release archive for version 1.0.8 (174) passed signing and strict code-signature validation. The full small-iPhone suite passed after stabilizing the date-sensitive collection-history fixture; the localization audit passed with 802 strings plus four Info.plist strings. App Store Connect accepted the IPA upload with delivery ID `3a379c51-c08e-4fbd-9d65-918f4bc94a4b`; Apple processing is asynchronous and physical-device verification remains pending.
+
 ## Collection item market snapshot — 2026-09-09
 
 The item detail keeps the rainbow outlined `Average sold price` badge and its tick icon. Only the standalone grey `Average sold price` source title and the grey `Estimated market history` heading were removed. The completed-sales explanation, current price, market-change percentage, currency conversion, retail comparison, graph, and 1M/3M/6M controls remain.
