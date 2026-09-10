@@ -2,6 +2,12 @@
 
 Build 169 displayed a saved-value reference line because the native app never fetched the dated sales already available through BrickLink. It did not restore market history. Build 170 introduces a backward-compatible history endpoint and automatic native collection refresh; existing items need no rescanning.
 
+## September 10 rollout: seller-country filters and build 175
+
+The regional filter is general-purpose: All regions includes every valid sale, including rows without country metadata, while each country menu entry includes only matching two-letter BrickLink seller codes. Collection and item detail prepare the country variants together with all three timeframes and New/Used snapshots. Switching country reuses prepared data and makes zero history requests; current headline prices, valuation, ownership quantities, retail comparisons, and scan pricing stay unchanged.
+
+Backend deployment `dpl_5gjKSf8pA9CrnHoioMJEQsTchzTG` is Ready and promoted to `brickvalue.live`. A live 75192 request returned 42 New and 26 Used dated rows with 17 distinct seller countries; an expired bearer session returned 401. The signed native archive `/tmp/BrickVal175.xcarchive` reports version 1.0.8 build 175 and passes strict code-signature verification. Xcode Organizer completed the App Store Connect upload and shows `Uploaded to Apple`; Apple processing is asynchronous. The native unit suite reports 230 tests with zero failures on both the BrickVal Small iPhone and BrickVal iPhone 17 Pro simulators. Physical-device country-switch, offline restart, and TestFlight visual verification remain open checks.
+
 ## Implementation
 
 - `src/app/api/mobile/collection-history/route.ts`: up to 20 canonical item/type/colour keys, fresh cache reuse, four workers and sequential New/Used provider calls. Successful complete results are cached for 24 hours; partial results are returned with condition-specific errors. Provider timeouts bound a full batch below the request deadline. Responses contain date, price, quantity, and the optional normalized seller country code; buyer/seller identities and other provider details stay private.
@@ -38,4 +44,4 @@ The regional filter is general-purpose: it offers All regions plus the seller co
 
 Collection and item detail prepare all observed countries, all three horizons, New/Used snapshots, coverage, and chart-derived change together off the main actor. Globe menus remember Collection separately from each item; changing a country reuses prepared data and makes zero history requests. Current hero prices, collection valuation, retail comparison, quantities, and scan prices are unchanged. Country-specific empty states identify the selected market.
 
-Verification: backend type checking, 74 backend tests, localization (807 app strings plus four Info.plist strings), and the full native unit suite pass on the BrickVal Small iPhone and BrickVal iPhone 17 Pro simulators. A new TestFlight build, visual country-switch checks, and physical-device verification remain pending. No backend deployment or production migration has been performed in this implementation step.
+Verification: backend type checking, 74 backend tests, localization (807 app strings plus four Info.plist strings), and the full native unit suite pass on the BrickVal Small iPhone and BrickVal iPhone 17 Pro simulators. The backend is deployed and native build 175 is uploaded to App Store Connect for processing. Visual country-switch checks on installed TestFlight devices and physical-device verification remain pending. No database migration or production schema change was needed.

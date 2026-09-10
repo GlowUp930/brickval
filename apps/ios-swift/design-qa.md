@@ -1,10 +1,14 @@
 # Scan Result Card Visual QA
 
+## TestFlight build 175 — 2026-09-10
+
+Build 1.0.8 (175) includes the general seller-country filter and the stale-empty Used-history recovery. The Release archive `/tmp/BrickVal175.xcarchive` is signed and passes strict verification. The BrickVal unit suite reports 230 tests with zero failures on the small and large simulators; backend tests, type checking, and localization (807 app strings plus four Info.plist strings across 13 locales) pass. Xcode Organizer shows the package as `Uploaded to Apple`; Apple processing remains asynchronous. Live verification returned seller-country rows for 75192 and rejected an expired session with 401. Physical-device visual QA, real TestFlight onboarding, and Sentry symbol ingestion remain pending.
+
 ## Seller-country market filters — 2026-09-10
 
 The Collection and item-detail charts include a compact globe menu. It starts at All regions and lists the seller countries returned by BrickLink for the saved rows (for example Canada, the United Kingdom, Australia, or the United States), rather than limiting the product to one country. Selecting a country updates the existing dated graph, 1M/3M/6M snapshot values, coverage text, and chart-derived change with the current short smooth transition; it makes no network request. Current headline values and collection valuation remain unchanged. Missing-country sales remain visible under All regions only. The menu keeps a 44-point target, supports Dynamic Type and Reduce Motion, and restores its choice after restart.
 
-Verification: regional filtering, missing-country handling, persistence, and country-aware history decoding pass native/backend tests. Simulator UI and physical-device TestFlight verification remain release checks for the next build.
+Verification: regional filtering, missing-country handling, persistence, and country-aware history decoding pass native/backend tests. The implementation is included in build 175. Simulator UI and physical-device TestFlight verification remain release checks.
 
 ## TestFlight build 174 — 2026-09-10
 

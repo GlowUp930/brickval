@@ -1,14 +1,18 @@
 # BrickVal Native iOS Context
 
-## Seller-country market filters — implementation after build 174
+## TestFlight build 175 — 2026-09-10
 
-Market history now preserves BrickLink seller-country codes and exposes a globe menu with All regions plus every country present in the saved sales. This is intentionally general; the earlier US option was only an example. Collection and each item detail screen remember their own selection. The selected country filters dated charts, snapshots, coverage, and chart-derived change while current prices and ownership valuation remain unchanged. Missing-country rows are included only in All regions. The native cache metadata version is `2`, so existing local rows refresh once to obtain country metadata. Backend and native tests pass; a new TestFlight build and physical-device check are still pending.
+Build 1.0.8 (175) contains the general seller-country market filters and the 75192 Used-history recovery. The Release archive `/tmp/BrickVal175.xcarchive` is signed with the BrickVal App Store profile and passes strict code-signature validation. The native unit suite reports 230 tests with zero failures on both the BrickVal Small iPhone and BrickVal iPhone 17 Pro simulators; backend tests, type checking, and the 13-language audit also pass. Xcode Organizer completed the upload and shows `Uploaded to Apple`; Apple processing is asynchronous. The production backend is Vercel deployment `dpl_5gjKSf8pA9CrnHoioMJEQsTchzTG`, and the live history route returns seller-country metadata while rejecting expired sessions. Physical-device verification and Sentry symbol ingestion remain pending.
+
+## Seller-country market filters — shipped in build 175
+
+Market history now preserves BrickLink seller-country codes and exposes a globe menu with All regions plus every country present in the saved sales. This is intentionally general; the earlier US option was only an example. Collection and each item detail screen remember their own selection. The selected country filters dated charts, snapshots, coverage, and chart-derived change while current prices and ownership valuation remain unchanged. Missing-country rows are included only in All regions. The native cache metadata version is `2`, so existing local rows refresh once to obtain country metadata. Backend and native tests pass; the implementation is included in build 175 and physical-device verification remains pending.
 
 ## Collection Used-history recovery — after build 174
 
 The affected 75192 screen showed the current Used sold average but no Used graph. Direct BrickLink evidence returned 27 Used rows; the live `collection-history:v1:set:75192:none` cache held 26 valid Used rows, including 17 in 3M. Its New 3M counts (10 sales, 19 units) exactly matched the screenshot, proving the endpoint payload reached the app. The reproducible native defect was freshness handling: a prior empty history plus a recent fetch timestamp suppressed recovery for 24 hours even when the pricing snapshot said completed sales existed.
 
-`CollectionStore` now considers that state incomplete and refreshes it on Collection/detail opening. Complete cached histories keep their existing 24-hour behavior. The exact Used 75192 save/reopen path and the stale-empty recovery both have regressions; the complete small-simulator unit suite passes 224 tests across 36 suites, the collection-history backend tests pass, and all 13 locales pass. No backend, database, pricing, or allowance change was needed. A new TestFlight build and confirmation on the affected device remain pending.
+`CollectionStore` now considers that state incomplete and refreshes it on Collection/detail opening. Complete cached histories keep their existing 24-hour behavior. The exact Used 75192 save/reopen path and the stale-empty recovery both have regressions; the complete small-simulator unit suite passes 224 tests across 36 suites, the collection-history backend tests pass, and all 13 locales pass. No backend, database, pricing, or allowance change was needed. The fix is included in build 175; confirmation on the affected device remains pending.
 
 ## TestFlight build 174 — 2026-09-10
 

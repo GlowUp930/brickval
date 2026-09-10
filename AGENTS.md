@@ -1,8 +1,12 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Regional history release — build 175 — 2026-09-10
+
+The seller-country market filter is now included in native release 1.0.8 (175). The backend is live at `brickvalue.live` from Vercel deployment `dpl_5gjKSf8pA9CrnHoioMJEQsTchzTG`; a live 75192 request returned 42 New and 26 Used dated rows across 17 seller countries, and an expired bearer session returned 401. Guest history access remains bounded by the existing request budget. The signed archive `/tmp/BrickVal175.xcarchive` passed code-signature verification, and Xcode Organizer shows build 175 as Uploaded to Apple for TestFlight processing. Physical-device verification and Sentry symbol ingestion remain explicit follow-up checks; no simulator result is treated as device sign-off.
+
 ## Seller-country market filters — 2026-09-10
 
-Regional history is seller-country driven rather than US-only. The history response keeps a normalized two-letter `seller_country_code`; the native cache contract is `collection-history:v2`. Collection and item charts prepare All regions plus every seller country present in saved BrickLink rows in one background pass. Users can choose a country from the globe menu, and the choice is remembered separately for Collection and each item. The filter changes only dated graphs, snapshots, coverage, and graph-derived change; current headline prices, valuation, retail comparisons, ownership, and scan pricing stay unchanged. Rows without a country remain in All regions and are never treated as belonging to a country. Backend/native regression coverage passes; the change still needs a new release and physical-device verification.
+Regional history is seller-country driven rather than US-only. The history response keeps a normalized two-letter `seller_country_code`; the native cache contract is `collection-history:v2`. Collection and item charts prepare All regions plus every seller country present in saved BrickLink rows in one background pass. Users can choose a country from the globe menu, and the choice is remembered separately for Collection and each item. The filter changes only dated graphs, snapshots, coverage, and graph-derived change; current headline prices, valuation, retail comparisons, ownership, and scan pricing stay unchanged. Rows without a country remain in All regions and are never treated as belonging to a country. Backend/native regression coverage passes and the implementation is shipped in build 175; physical-device verification remains pending.
 
 ## Collection Used-history recovery — 2026-09-10
 
@@ -347,7 +351,7 @@ This is not optional — it is in the success criteria.
 
 ## Dev Commands
 - From `apps/ios-swift`: `xcodegen generate` — regenerate the Xcode project after project.yml changes
-- From `apps/ios-swift`: `xcodebuild -project BrickVal.xcodeproj -scheme BrickVal -destination 'platform=iOS Simulator,name=iPhone 16' test` — run Swift unit tests
+- From `apps/ios-swift`: `xcodebuild -project BrickVal.xcodeproj -scheme BrickVal -destination 'platform=iOS Simulator,name=BrickVal Small iPhone' test` — run Swift unit tests
 - From `apps/expo-previous`: `npm test` — check the previous Expo app only when using it as reference
 - From repo root: `npm run dev` — start hosted Next.js backend/web app when needed
 
