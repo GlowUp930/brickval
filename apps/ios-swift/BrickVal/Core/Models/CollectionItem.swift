@@ -1,7 +1,7 @@
 import Foundation
 
 struct CollectionItem: Codable, Hashable, Identifiable, Sendable {
-    static let marketHistoryMetadataVersionCurrent = 2
+    static let marketHistoryMetadataVersionCurrent = 3
 
     let setNumber: String
     let itemType: ItemType

@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { scanRequestAccess } from "@/lib/scan-request-access";
 import { getCached, setCached } from "@/lib/cache";
 import { supabase } from "@/lib/supabase";
-import { fetchCollectionSoldGuides } from "@/lib/bricklink";
-import { collectionHistory, historyKey, historySales, parseHistoryItems, type HistoryResult, type SoldGuides } from "@/lib/collection-history";
+import { fetchCollectionMarketGuides } from "@/lib/bricklink";
+import { collectionHistory, historyKey, historySales, parseHistoryItems, type HistoryResult, type MarketGuides } from "@/lib/collection-history";
 
 export const maxDuration = 120;
 
@@ -21,17 +21,31 @@ export async function POST(request: Request) {
     const rawKey = item.item_type === "set" ? `bricklink:${item.identifier}` : item.item_type === "minifig" ? `bricklink-minifig:${item.identifier}` : `bricklink-part:${item.identifier}:${item.color_id}`;
     const now = new Date();
     const { data: raw } = await supabase.from("api_cache").select("data,expires_at").eq("cache_key", rawKey).gt("expires_at", now.toISOString()).maybeSingle();
-    let guides = raw?.data as SoldGuides | undefined;
+    let guides = raw?.data as MarketGuides | undefined;
     let fetchedAt = raw ? new Date(new Date(raw.expires_at).getTime() - 86400000).toISOString() : now.toISOString();
-    if (!guides?.sold_new || !guides?.sold_used) {
-      const fetched = await fetchCollectionSoldGuides(item.item_type, item.identifier, item.color_id);
-      guides = { sold_new: fetched.sold_new ?? guides?.sold_new ?? null, sold_used: fetched.sold_used ?? guides?.sold_used ?? null };
+    if (!guides?.sold_new || !guides?.sold_used || !guides?.stock_new || !guides?.stock_used) {
+      const fetched = await fetchCollectionMarketGuides(item.item_type, item.identifier, item.color_id);
+      guides = {
+        sold_new: fetched.sold_new ?? guides?.sold_new ?? null,
+        sold_used: fetched.sold_used ?? guides?.sold_used ?? null,
+        stock_new: fetched.stock_new ?? guides?.stock_new ?? null,
+        stock_used: fetched.stock_used ?? guides?.stock_used ?? null,
+      };
       // Keep the older timestamp when a cached condition participates in the result.
       if (!raw) fetchedAt = now.toISOString();
     }
-    const result: HistoryResult = { ...item, new_sales: historySales(guides.sold_new, now), used_sales: historySales(guides.sold_used, now), fetched_at: fetchedAt,
-      new_error: guides.sold_new?.currency_code === "USD" ? null : "upstream_unavailable",
-      used_error: guides.sold_used?.currency_code === "USD" ? null : "upstream_unavailable" };
+    const soldNew = historySales(guides?.sold_new ?? null, now);
+    const soldUsed = historySales(guides?.sold_used ?? null, now);
+    const listingNew = historySales(guides?.stock_new ?? null, now, "listing");
+    const listingUsed = historySales(guides?.stock_used ?? null, now, "listing");
+    // Keep a condition entirely sold or entirely asking so charts and tables
+    // never blend unlike sources. Listings are used only when no dated sales
+    // rows are available for that condition.
+    const newSales = soldNew.length ? soldNew : listingNew;
+    const usedSales = soldUsed.length ? soldUsed : listingUsed;
+    const result: HistoryResult = { ...item, new_sales: newSales, used_sales: usedSales, fetched_at: fetchedAt,
+      new_error: (guides?.sold_new?.currency_code === "USD" || guides?.stock_new?.currency_code === "USD") ? null : "upstream_unavailable",
+      used_error: (guides?.sold_used?.currency_code === "USD" || guides?.stock_used?.currency_code === "USD") ? null : "upstream_unavailable" };
     if (!result.new_error && !result.used_error) await setCached(key, result, Math.max(0.01, (new Date(fetchedAt).getTime() + 86400000 - now.getTime()) / 3600000));
     return result;
   });

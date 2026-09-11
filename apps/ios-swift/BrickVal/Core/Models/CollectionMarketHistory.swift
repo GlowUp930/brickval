@@ -5,12 +5,17 @@ struct CollectionMarketSale: Codable, Hashable, Sendable {
     let priceUSD: Double
     let quantity: Int
     let sellerCountryCode: String?
+    /// Nil is treated as a completed BrickLink sale for backwards compatibility.
+    /// Active listing rows are explicitly marked so they can be shown without
+    /// being mistaken for sold history.
+    let source: String?
 
-    init(date: String, priceUSD: Double, quantity: Int, sellerCountryCode: String? = nil) {
+    init(date: String, priceUSD: Double, quantity: Int, sellerCountryCode: String? = nil, source: String? = nil) {
         self.date = date
         self.priceUSD = priceUSD
         self.quantity = quantity
         self.sellerCountryCode = sellerCountryCode
+        self.source = source
     }
 
     var timestamp: Date? {
@@ -22,6 +27,7 @@ struct CollectionMarketSale: Codable, Hashable, Sendable {
         case date, quantity
         case priceUSD = "price_usd"
         case sellerCountryCode = "seller_country_code"
+        case source
     }
 }
 

@@ -233,22 +233,31 @@ async function fetchPriceGuide(
 
 // ── Get Item ─────────────────────────────────────────────────────────────────
 
-/** History requests fetch only sold guides, with two sequential calls per item.
- * Four batch workers therefore issue at most four upstream calls at once. */
-export async function fetchCollectionSoldGuides(type: "set" | "minifig" | "part", identifier: string, colorId?: number) {
+/** Collection history fetches sold and active-listing guides per item.
+ * Calls remain sequential per item so the four batch workers cap upstream
+ * concurrency while still allowing an asking-price fallback. */
+export async function fetchCollectionMarketGuides(type: "set" | "minifig" | "part", identifier: string, colorId?: number) {
   const itemNo = type === "set" && !identifier.includes("-") ? `${identifier}-1` : identifier;
-  const fetchSold = async (condition: "N" | "U") => {
+  const fetchGuide = async (guideType: "sold" | "stock", condition: "N" | "U") => {
     const color = type === "part" ? `&color_id=${colorId}` : "";
     // Bound even a full 20-item batch with failed suffix retries below the route deadline.
-    let guide = await brickLinkFetch<BrickLinkPriceGuide>(`/items/${type.toUpperCase()}/${itemNo}/price?guide_type=sold&new_or_used=${condition}&currency_code=USD${color}`, 4_000);
+    let guide = await brickLinkFetch<BrickLinkPriceGuide>(`/items/${type.toUpperCase()}/${itemNo}/price?guide_type=${guideType}&new_or_used=${condition}&currency_code=USD${color}`, 4_000);
     if (!guide && type === "set" && itemNo !== identifier) {
-      guide = await brickLinkFetch<BrickLinkPriceGuide>(`/items/SET/${identifier}/price?guide_type=sold&new_or_used=${condition}&currency_code=USD`, 4_000);
+      guide = await brickLinkFetch<BrickLinkPriceGuide>(`/items/SET/${identifier}/price?guide_type=${guideType}&new_or_used=${condition}&currency_code=USD`, 4_000);
     }
     return guide;
   };
-  const sold_new = await fetchSold("N");
-  const sold_used = await fetchSold("U");
-  return { sold_new, sold_used };
+  const sold_new = await fetchGuide("sold", "N");
+  const sold_used = await fetchGuide("sold", "U");
+  const stock_new = await fetchGuide("stock", "N");
+  const stock_used = await fetchGuide("stock", "U");
+  return { sold_new, sold_used, stock_new, stock_used };
+}
+
+/** Backwards-compatible sold-only helper for callers outside collection history. */
+export async function fetchCollectionSoldGuides(type: "set" | "minifig" | "part", identifier: string, colorId?: number) {
+  const guides = await fetchCollectionMarketGuides(type, identifier, colorId);
+  return { sold_new: guides.sold_new, sold_used: guides.sold_used };
 }
 
 async function fetchItem(setNo: string): Promise<BrickLinkItem | null> {

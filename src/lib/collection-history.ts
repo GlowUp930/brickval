@@ -1,9 +1,9 @@
 import type { BrickLinkPriceGuide } from "./bricklink";
 
 export type HistoryItem = { identifier: string; item_type: "set" | "minifig" | "part"; color_id?: number };
-export type HistorySale = { date: string; price_usd: number; quantity: number; seller_country_code?: string };
+export type HistorySale = { date: string; price_usd: number; quantity: number; seller_country_code?: string; source?: "listing" };
 export type HistoryResult = HistoryItem & { new_sales: HistorySale[]; used_sales: HistorySale[]; fetched_at: string; new_error: string | null; used_error: string | null };
-export type SoldGuides = { sold_new: BrickLinkPriceGuide | null; sold_used: BrickLinkPriceGuide | null };
+export type MarketGuides = { sold_new: BrickLinkPriceGuide | null; sold_used: BrickLinkPriceGuide | null; stock_new: BrickLinkPriceGuide | null; stock_used: BrickLinkPriceGuide | null };
 
 export function parseHistoryItems(body: unknown): HistoryItem[] | null {
   const input = (body as { items?: unknown } | null)?.items;
@@ -22,13 +22,15 @@ export function parseHistoryItems(body: unknown): HistoryItem[] | null {
 }
 
 export function historyKey(item: HistoryItem) {
-  return `collection-history:v2:${item.item_type}:${item.identifier}:${item.color_id ?? "none"}`;
+  return `collection-history:v3:${item.item_type}:${item.identifier}:${item.color_id ?? "none"}`;
 }
 
-export function historySales(guide: BrickLinkPriceGuide | null, now: Date): HistorySale[] {
+export function historySales(guide: BrickLinkPriceGuide | null, now: Date, source: "sold" | "listing" = "sold"): HistorySale[] {
   if (!guide || guide.currency_code !== "USD") return [];
   return (guide.price_detail ?? []).flatMap(row => {
-    const date = new Date(row.date_ordered ?? "");
+    // Active listings have no transaction date. They are a current market
+    // observation, so anchor them to the fetch time for the chart/table.
+    const date = new Date(row.date_ordered ?? (source === "listing" ? now.toISOString() : ""));
     const price = Number(row.unit_price);
     if (!Number.isFinite(date.getTime()) || date > now || !Number.isFinite(price) || price <= 0 || !Number.isSafeInteger(row.quantity) || row.quantity <= 0) return [];
     const sellerCountry = typeof row.seller_country_code === "string"
@@ -38,6 +40,7 @@ export function historySales(guide: BrickLinkPriceGuide | null, now: Date): Hist
       date: date.toISOString(),
       price_usd: price,
       quantity: row.quantity,
+      ...(source === "listing" ? { source: "listing" as const } : {}),
       ...(/^[A-Z]{2}$/.test(sellerCountry) ? { seller_country_code: sellerCountry } : {}),
     }];
   }).sort((a, b) => a.date.localeCompare(b.date));

@@ -1,5 +1,9 @@
 # BrickVal Native iOS Context
 
+## Collection listing fallback — 2026-09-11
+
+The collection-history response now includes active BrickLink listing rows when a condition has no completed-sale rows. Native history marks those rows as asking data, keeps them separate from sold rows, and prepares them with the existing chart/snapshot pass. The chart shows a current asking-price point with an honest “dated sales history is unavailable” note; the snapshot table reports Active listings, quantity, and price statistics. Existing local histories refresh through cache metadata version 3. Timeframe and region changes still make zero history requests.
+
 ## Sentry app-hang and detector diagnosis — 2026-09-11
 
 The supplied Sentry issue `BRICKVAL-T` groups two build-166 production hangs (4.8–8.2 seconds) on a physical iPhone 11 Pro Max with roughly 64.5 MiB free memory and serious thermal state. The main stack is unsymbolicated SwiftUI/UIKit transaction work; the build-166 app dSYM is missing. PhotosUI picker/background transitions are present, while Core ML appears only on a worker thread. Do not retrain the detector from this evidence. The current imported-photo pipeline still performs 102 serial tile inferences (a controlled simulator benchmark measured 8.5 seconds), so detector workload and main-thread photo decoding should be profiled separately. See [`docs/audits/2026-09-11-sentry-app-hang-model.md`](../../docs/audits/2026-09-11-sentry-app-hang-model.md). Physical iPhone reproduction, exact source mapping, and current-build constrained-device verification remain blocked.
@@ -30,7 +34,7 @@ Build 1.0.8 (175) contains the general seller-country market filters and the 751
 
 ## Seller-country market filters — shipped in build 175
 
-Market history now preserves BrickLink seller-country codes and exposes a globe menu with All regions plus every country present in the saved sales. This is intentionally general; the earlier US option was only an example. Collection and each item detail screen remember their own selection. The selected country filters dated charts, snapshots, coverage, and chart-derived change while current prices and ownership valuation remain unchanged. Missing-country rows are included only in All regions. The native cache metadata version is `2`, so existing local rows refresh once to obtain country metadata. Backend and native tests pass; the implementation is included in build 175 and physical-device verification remains pending.
+Market history now preserves BrickLink seller-country codes and exposes a globe menu with All regions plus every country present in the saved sales. This is intentionally general; the earlier US option was only an example. Collection and each item detail screen remember their own selection. The selected country filters dated charts, snapshots, coverage, and chart-derived change while current prices and ownership valuation remain unchanged. Missing-country rows are included only in All regions. The native cache metadata version is `3`, so existing local rows refresh once to obtain country metadata. Backend and native tests pass; the implementation is included in build 175 and physical-device verification remains pending.
 
 ## Collection Used-history recovery — after build 174
 

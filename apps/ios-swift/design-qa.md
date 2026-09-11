@@ -1,5 +1,9 @@
 # Scan Result Card Visual QA
 
+## Collection listing fallback — 2026-09-11
+
+When BrickLink has no completed rows for a condition, active listing rows now appear in the collection chart and Market snapshot table. The chart presents them as a current asking-price observation and states that dated sales history is unavailable; the table labels the count “Active listings.” Sold and asking rows remain separate, and the existing source badge, currency formatting, region filtering, and zero-request timeframe switching are preserved.
+
 ## Sentry app-hang diagnosis — 2026-09-11
 
 The supplied `BRICKVAL-T` issue is a build-166 app hang on a physical iPhone 11 Pro Max, not a confirmed Core ML recognition defect. The main stack is UIKit/SwiftUI transaction work and the app dSYM is missing; PhotosUI and foreground refresh activity surround the event. A temporary simulator benchmark measured about 8.5 seconds for the current 102-tile imported-photo detector pass, so the detector workload and frozen-photo decoding are follow-up performance risks. Physical picker reproduction and constrained-device verification remain open. See [`docs/audits/2026-09-11-sentry-app-hang-model.md`](../../docs/audits/2026-09-11-sentry-app-hang-model.md).

@@ -44,8 +44,21 @@ test("seller countries are normalized without exposing invalid provider values",
   ]);
 });
 
+test("active listing rows are exposed as current asking observations when requested", () => {
+  const guide: BrickLinkPriceGuide = {
+    item: { no: "21367", type: "SET" }, new_or_used: "U", currency_code: "USD",
+    min_price: "10", max_price: "20", avg_price: "15", qty_avg_price: "14", unit_quantity: 3, total_quantity: 3,
+    price_detail: [{ unit_price: "10", quantity: 2, seller_country_code: " au " }, { unit_price: "20", quantity: 1 }],
+  };
+  const now = new Date("2026-09-08T00:00:00Z");
+  assert.deepEqual(historySales(guide, now, "listing"), [
+    { date: now.toISOString(), price_usd: 10, quantity: 2, source: "listing", seller_country_code: "AU" },
+    { date: now.toISOString(), price_usd: 20, quantity: 1, source: "listing" },
+  ]);
+});
+
 test("history cache keys use the country-aware response version", () => {
-  assert.equal(historyKey({ identifier: "21367", item_type: "set" }), "collection-history:v2:set:21367:none");
+  assert.equal(historyKey({ identifier: "21367", item_type: "set" }), "collection-history:v3:set:21367:none");
 });
 
 test("batch concurrency is bounded and failed items do not discard successes", async () => {

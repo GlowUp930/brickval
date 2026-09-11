@@ -26,11 +26,19 @@ struct ItemDetailView: View {
     }
 
     private var sourceLabel: String {
-        MarketPriceSourceCopy.title(for: selectedItem?.dataSource ?? selectedItem?.pricingSnapshot?.source(for: selectedCondition.condition))
+        MarketPriceSourceCopy.title(for: selectedHistorySource)
     }
 
     private var sourceDetail: String {
-        MarketPriceSourceCopy.detail(for: selectedItem?.dataSource ?? selectedItem?.pricingSnapshot?.source(for: selectedCondition.condition))
+        MarketPriceSourceCopy.detail(for: selectedHistorySource)
+    }
+
+    private var selectedHistorySource: String? {
+        guard let selectedItem else { return nil }
+        if let first = selectedItem.marketSales.first {
+            return first.source == "listing" ? "listing" : "sold"
+        }
+        return selectedItem.dataSource ?? selectedItem.pricingSnapshot?.source(for: selectedCondition.condition)
     }
 
     private var itemTypeLabel: String {
@@ -75,6 +83,10 @@ struct ItemDetailView: View {
 
     private var historyPoints: [StockChartPoint] {
         conditionHistory(for: selectedCondition, horizon: horizon, region: selectedMarketRegion)
+    }
+
+    private var usesAskingHistory: Bool {
+        selectedItem?.marketSales.contains { $0.source == "listing" } == true
     }
 
     private var selectedMarketRegion: MarketRegion {
@@ -300,19 +312,27 @@ struct ItemDetailView: View {
     private var chartBlock: some View {
         VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space16) {
             soldListingsLegend
-            if historyPoints.count > 1 {
+            if historyPoints.count > 1 || (usesAskingHistory && !historyPoints.isEmpty) {
             InteractiveStockChart(
                 points: historyPoints,
                 lineColor: accent,
                 popupBackground: BrickValStyle.ScanResult.textPrimary,
                 popupForeground: BrickValStyle.ScanResult.canvas,
-                selectionID: "\(selectedCondition.rawValue)-\(horizon.rawValue)-\(selectedMarketRegion.rawValue)"
+                selectionID: "\(selectedCondition.rawValue)-\(horizon.rawValue)-\(selectedMarketRegion.rawValue)",
+                singlePointLabel: usesAskingHistory ? "Current asking price" : "Saved value"
             )
             .accessibilityIdentifier("collectionItem.valueChart.\(historyPoints.count)")
             .frame(height: 330)
             }
             if historyPoints.count < 2 || store.isRefreshingHistory || store.historyErrorMessage != nil {
-                CollectionHistoryStatusView(hasHistory: historyPoints.count > 1, region: selectedMarketRegion, pointCount: historyPoints.count)
+                if usesAskingHistory && !historyPoints.isEmpty && !store.isRefreshingHistory && store.historyErrorMessage == nil {
+                    Text("Current asking prices; dated sales history is unavailable")
+                        .font(.caption)
+                        .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                        .frame(maxWidth: .infinity)
+                } else {
+                    CollectionHistoryStatusView(hasHistory: historyPoints.count > 1, region: selectedMarketRegion, pointCount: historyPoints.count)
+                }
             }
 
             VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space8) {
@@ -335,7 +355,7 @@ struct ItemDetailView: View {
     }
 
     private var soldListingsLegend: some View {
-        Label(sourceLabel, systemImage: item.dataSource == "sold" ? "checkmark.seal.fill" : "tag.fill")
+        Label(sourceLabel, systemImage: selectedHistorySource == "sold" ? "checkmark.seal.fill" : "tag.fill")
             .font(.headline.weight(.semibold))
             .foregroundStyle(BrickValStyle.ScanResult.textPrimary)
             .padding(.horizontal, BrickValStyle.Primitive.space16)
@@ -408,7 +428,7 @@ struct ItemDetailView: View {
                 .accessibilityAddTraits(.isHeader)
 
             if let snapshot = marketSnapshot(for: option), snapshot.hasSales {
-                snapshotCountRow("Times sold", value: snapshot.timesSold, option: option)
+                snapshotCountRow(snapshot.source == "listing" ? "Active listings" : "Times sold", value: snapshot.timesSold, option: option)
                 snapshotCountRow("Total qty", value: snapshot.totalQuantity, option: option)
                 snapshotPriceRow("Min price", value: snapshot.minimumPriceUSD, option: option)
                 snapshotPriceRow("Avg price", value: snapshot.averagePriceUSD, option: option)

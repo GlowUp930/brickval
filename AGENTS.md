@@ -1,5 +1,9 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Collection listing fallback — 2026-09-11
+
+Collection history now uses the same per-condition fallback as the headline price: BrickLink completed rows first, then BrickLink active listings when no sold rows exist. Listing rows are marked separately, anchored to the fetch time because they have no transaction date, and shown in the chart as a current asking-price observation plus in the Market snapshot table. Sold and listing rows are never mixed; listing tables use “Active listings” instead of “Times sold,” and the chart explains when dated sales history is unavailable. The cache key is `collection-history:v3` so existing rows refresh for the source metadata.
+
 ## Onboarding startup and preview cleanup — 2026-09-10
 
 The first onboarding surface now opens directly on the demo and keeps Get Started available as soon as that surface appears. The old roughly one-second branded gate was removed; the launch logo still provides the branded handoff. The Get Started action advances to the first detail screen immediately, while the production account, referral, paywall, and subscription paths remain unchanged.
@@ -28,7 +32,7 @@ The seller-country market filter is now included in native release 1.0.8 (175). 
 
 ## Seller-country market filters — 2026-09-10
 
-Regional history is seller-country driven rather than US-only. The history response keeps a normalized two-letter `seller_country_code`; the native cache contract is `collection-history:v2`. Collection and item charts prepare All regions plus every seller country present in saved BrickLink rows in one background pass. Users can choose a country from the globe menu, and the choice is remembered separately for Collection and each item. The filter changes only dated graphs, snapshots, coverage, and graph-derived change; current headline prices, valuation, retail comparisons, ownership, and scan pricing stay unchanged. Rows without a country remain in All regions and are never treated as belonging to a country. Backend/native regression coverage passes and the implementation is shipped in build 175; physical-device verification remains pending.
+Regional history is seller-country driven rather than US-only. The history response keeps a normalized two-letter `seller_country_code`; the native cache contract is `collection-history:v3`. Collection and item charts prepare All regions plus every seller country present in saved BrickLink rows in one background pass. Users can choose a country from the globe menu, and the choice is remembered separately for Collection and each item. The filter changes only dated graphs, snapshots, coverage, and graph-derived change; current headline prices, valuation, retail comparisons, ownership, and scan pricing stay unchanged. Rows without a country remain in All regions and are never treated as belonging to a country. Backend/native regression coverage passes and the implementation is shipped in build 175; physical-device verification remains pending.
 
 ## Collection Used-history recovery — 2026-09-10
 

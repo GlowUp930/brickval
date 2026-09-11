@@ -18,6 +18,7 @@ struct InteractiveStockChart: View {
     let popupForeground: Color
     var showsFill = false
     var selectionID: String? = nil
+    var singlePointLabel: String = "Saved value"
 
     private var samples: [StockChartSample] {
         let requestedCurrency = preferences.effectiveCurrency
@@ -38,7 +39,8 @@ struct InteractiveStockChart: View {
         let padding = max((high - low) * 0.14, max(high * 0.018, 1))
         StockChartPlot(samples: prepared, pointCount: points.count, lineColor: lineColor,
                        popupBackground: popupBackground, popupForeground: popupForeground, showsFill: showsFill,
-                       yDomain: max(0, low - padding)...(high + padding), selectionID: selectionID)
+                       yDomain: max(0, low - padding)...(high + padding), selectionID: selectionID,
+                       singlePointLabel: singlePointLabel)
             .onChange(of: points) { _, _ in
 #if DEBUG
                 ChartInteractionTiming.shared.applied()
@@ -69,6 +71,7 @@ private struct StockChartPlot: View {
     let showsFill: Bool
     let yDomain: ClosedRange<Double>
     let selectionID: String?
+    let singlePointLabel: String
     @State private var selectedSampleID: Int?
 
     private var chartTransition: Animation? {
@@ -96,7 +99,7 @@ private struct StockChartPlot: View {
                             .foregroundStyle(chartColor)
                             .symbolSize(64)
                             .annotation(position: .top) {
-                                Text("Saved value")
+                                Text(singlePointLabel)
                                     .font(.caption)
                                     .foregroundStyle(chartColor)
                             }

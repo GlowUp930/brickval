@@ -101,7 +101,7 @@ try {
   const historyRoute=await load('src/app/api/mobile/collection-history/route.ts', {
     '@/lib/scan-request-access':`export async function scanRequestAccess(){return {userId:'audit-user'};}`,
     '@/lib/cache':`export async function getCached(){return globalThis.bvAudit.historyCache;} export async function setCached(){}`,
-    '@/lib/bricklink':`export async function fetchCollectionSoldGuides(){return globalThis.bvAudit.historyProvider();}`,
+    '@/lib/bricklink':`export async function fetchCollectionMarketGuides(){return globalThis.bvAudit.historyProvider();}`,
   });
   const historyResponse=await historyRoute.POST(request({items:[{identifier:'21367-1',item_type:'set'}]}));
   check(historyResponse.status,200);

@@ -81,6 +81,35 @@ struct PortfolioHistoryBuilderTests {
         #expect(PortfolioHistoryBuilder.priceSeries(sales: sales, horizon: .month, now: now, region: canada).map(\.value) == [20])
     }
 
+    @Test func activeListingFallbackAppearsInChartAndSnapshotWithoutBeingCalledSold() {
+        let listings = [
+            sale("2026-09-08", 40, 2, source: "listing"),
+            sale("2026-09-08", 60, 1, source: "listing")
+        ]
+        let points = PortfolioHistoryBuilder.priceSeries(sales: listings, horizon: .month, now: now)
+        let snapshot = PortfolioHistoryBuilder.marketSnapshot(sales: listings, horizon: .month, now: now)
+
+        #expect(points.count == 1)
+        #expect(points.first?.value == 46.666666666666664)
+        #expect(snapshot.source == "listing")
+        #expect(snapshot.timesSold == 2)
+        #expect(snapshot.totalQuantity == 3)
+        #expect(snapshot.averagePriceUSD == 50)
+        #expect(snapshot.quantityAveragePriceUSD == 140.0 / 3.0)
+    }
+
+    @Test func regionalFilterCanUseListingsWhenThatRegionHasNoSoldRows() {
+        let sales = [
+            sale("2026-09-08", 100, 1, country: "CA"),
+            sale("2026-09-08", 40, 2, country: "US", source: "listing")
+        ]
+        let us = MarketRegion.sellerCountry("US")!
+        let snapshot = PortfolioHistoryBuilder.marketSnapshot(sales: sales, horizon: .month, now: now, region: us)
+        #expect(snapshot.source == "listing")
+        #expect(snapshot.timesSold == 1)
+        #expect(snapshot.quantityAveragePriceUSD == 40)
+    }
+
     @Test func preparedHistoryContainsEveryObservedSellerCountryWithoutChangingCurrentPortfolio() {
         var item = fixture()
         item.marketSales = [
@@ -158,8 +187,8 @@ struct PortfolioHistoryBuilderTests {
         #expect(first.map(\.value) != second.map(\.value))
     }
 
-    private func sale(_ date: String, _ price: Double, _ quantity: Int = 1, country: String? = nil) -> CollectionMarketSale {
-        CollectionMarketSale(date: date + "T00:00:00Z", priceUSD: price, quantity: quantity, sellerCountryCode: country)
+    private func sale(_ date: String, _ price: Double, _ quantity: Int = 1, country: String? = nil, source: String? = nil) -> CollectionMarketSale {
+        CollectionMarketSale(date: date + "T00:00:00Z", priceUSD: price, quantity: quantity, sellerCountryCode: country, source: source)
     }
     private func fixture(number: String = "21367") -> CollectionItem {
         CollectionItem(setNumber: number, itemType: .set, name: "Fixture", theme: "LEGO", marketValueUSD: 30)

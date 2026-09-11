@@ -13,6 +13,18 @@ struct MarketSnapshot: Equatable, Sendable {
     let averagePriceUSD: Double?
     let quantityAveragePriceUSD: Double?
     let maximumPriceUSD: Double?
+    /// "sold" for completed transactions, "listing" for active asking prices.
+    let source: String
+
+    init(timesSold: Int, totalQuantity: Int, minimumPriceUSD: Double?, averagePriceUSD: Double?, quantityAveragePriceUSD: Double?, maximumPriceUSD: Double?, source: String = "sold") {
+        self.timesSold = timesSold
+        self.totalQuantity = totalQuantity
+        self.minimumPriceUSD = minimumPriceUSD
+        self.averagePriceUSD = averagePriceUSD
+        self.quantityAveragePriceUSD = quantityAveragePriceUSD
+        self.maximumPriceUSD = maximumPriceUSD
+        self.source = source
+    }
 
     var hasSales: Bool { timesSold > 0 }
 }
@@ -67,7 +79,7 @@ enum PortfolioHistoryBuilder {
             guard !Task.isCancelled else { return result }
             let preparedSales = prepareSales(sourceItem.marketSales, now: now)
             let regionalSeries = Dictionary(uniqueKeysWithValues: regions.map { region in
-                let regionalSales = preparedSales.filter { region.includes(sellerCountryCode: $0.sellerCountryCode) }
+                let regionalSales = salesForDisplay(preparedSales.filter { region.includes(sellerCountryCode: $0.sellerCountryCode) })
                 let observations = dailyObservations(regionalSales)
                 let horizons = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
                     ($0, window(observations, horizon: $0, now: now))
@@ -75,7 +87,7 @@ enum PortfolioHistoryBuilder {
                 return (region, horizons)
             })
             let regionalSnapshots = Dictionary(uniqueKeysWithValues: regions.map { region in
-                let regionalSales = preparedSales.filter { region.includes(sellerCountryCode: $0.sellerCountryCode) }
+                let regionalSales = salesForDisplay(preparedSales.filter { region.includes(sellerCountryCode: $0.sellerCountryCode) })
                 let horizons = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
                     ($0, marketSnapshot(regionalSales, horizon: $0, now: now))
                 })
@@ -96,7 +108,8 @@ enum PortfolioHistoryBuilder {
 
     private static func portfolio(items: [CollectionItem], series: [[StockChartPoint]]) -> PortfolioMarketHistory {
         let covered = zip(items, series).compactMap { item, points -> (CollectionItem, [StockChartPoint])? in
-            return points.count > 1 ? (item, points) : nil
+            let hasAskingObservation = item.marketSales.contains { $0.source == "listing" }
+            return points.count > 1 || (hasAskingObservation && !points.isEmpty) ? (item, points) : nil
         }
         guard let commonStart = covered.compactMap({ $0.1.first?.timestamp }).max() else {
             return PortfolioMarketHistory(points: [], coveredItems: 0, totalItems: items.count)
@@ -118,12 +131,12 @@ enum PortfolioHistoryBuilder {
     }
 
     static func priceSeries(sales: [CollectionMarketSale], horizon: PortfolioHorizon, now: Date = .now, region: MarketRegion = .all) -> [StockChartPoint] {
-        let preparedSales = prepareSales(sales, now: now).filter { region.includes(sellerCountryCode: $0.sellerCountryCode) }
+        let preparedSales = salesForDisplay(prepareSales(sales, now: now).filter { region.includes(sellerCountryCode: $0.sellerCountryCode) })
         return window(dailyObservations(preparedSales), horizon: horizon, now: now)
     }
 
     static func marketSnapshot(sales: [CollectionMarketSale], horizon: PortfolioHorizon, now: Date = .now, region: MarketRegion = .all) -> MarketSnapshot {
-        let preparedSales = prepareSales(sales, now: now).filter { region.includes(sellerCountryCode: $0.sellerCountryCode) }
+        let preparedSales = salesForDisplay(prepareSales(sales, now: now).filter { region.includes(sellerCountryCode: $0.sellerCountryCode) })
         return marketSnapshot(preparedSales, horizon: horizon, now: now)
     }
 
@@ -132,14 +145,22 @@ enum PortfolioHistoryBuilder {
         let priceUSD: Double
         let quantity: Int
         let sellerCountryCode: String?
+        let source: String
     }
 
     private static func prepareSales(_ sales: [CollectionMarketSale], now: Date) -> [PreparedSale] {
         sales.compactMap { sale in
             guard sale.priceUSD.isFinite, sale.priceUSD > 0, sale.quantity > 0,
                   let date = sale.timestamp, date <= now else { return nil }
-            return PreparedSale(date: date, priceUSD: sale.priceUSD, quantity: sale.quantity, sellerCountryCode: sale.sellerCountryCode)
+            return PreparedSale(date: date, priceUSD: sale.priceUSD, quantity: sale.quantity, sellerCountryCode: sale.sellerCountryCode, source: sale.source == "listing" ? "listing" : "sold")
         }
+    }
+
+    private static func salesForDisplay(_ sales: [PreparedSale]) -> [PreparedSale] {
+        // A condition uses one source at a time. Prefer real sales whenever
+        // both old and new rows are present in a saved collection.
+        let source = sales.contains { $0.source == "sold" } ? "sold" : "listing"
+        return sales.filter { $0.source == source }
     }
 
     private static func dailyObservations(_ sales: [PreparedSale]) -> [StockChartPoint] {
@@ -159,7 +180,7 @@ enum PortfolioHistoryBuilder {
         let windowSales = sales.filter { $0.date >= start && $0.date <= now }
         guard !windowSales.isEmpty else {
             return MarketSnapshot(timesSold: 0, totalQuantity: 0, minimumPriceUSD: nil, averagePriceUSD: nil,
-                                  quantityAveragePriceUSD: nil, maximumPriceUSD: nil)
+                                  quantityAveragePriceUSD: nil, maximumPriceUSD: nil, source: sales.first?.source ?? "sold")
         }
         let totalQuantity = windowSales.reduce(0) { $0 + $1.quantity }
         let total = windowSales.reduce(0.0) { $0 + $1.priceUSD }
@@ -170,7 +191,8 @@ enum PortfolioHistoryBuilder {
             minimumPriceUSD: windowSales.map(\.priceUSD).min(),
             averagePriceUSD: total / Double(windowSales.count),
             quantityAveragePriceUSD: weightedTotal / Double(totalQuantity),
-            maximumPriceUSD: windowSales.map(\.priceUSD).max()
+            maximumPriceUSD: windowSales.map(\.priceUSD).max(),
+            source: windowSales.first?.source ?? sales.first?.source ?? "sold"
         )
     }
 
