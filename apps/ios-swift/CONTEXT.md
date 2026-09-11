@@ -2,7 +2,7 @@
 
 ## Native performance follow-up — 2026-09-11
 
-The scanner, bulk processing overlay, and bulk results now share one background, orientation-correct display preview while recognition retains original bytes. Picker/capture/retry work is cancellation-owned and generation-checked. Portfolio history partitions each condition's rows once for All regions and observed seller countries, and ProductImage bounds concurrent decoding while deferring disk trimming. The 234-test unit suite and 17 focused scanner UI checks pass on the small and iPhone 17 Pro simulators. Physical Release profiling and the next archive remain pending. See [`docs/audits/2026-09-11-performance-followup.md`](../../docs/audits/2026-09-11-performance-followup.md).
+The scanner, bulk processing overlay, and bulk results now share one background, orientation-correct display preview while recognition retains original bytes. Picker/capture/retry work is cancellation-owned and generation-checked. Portfolio history partitions each condition's rows once for All regions and observed seller countries, and ProductImage bounds concurrent decoding while deferring disk trimming. The 234-test unit suite and 17 focused scanner UI checks pass on the small and iPhone 17 Pro simulators. A physical Release trace and constrained-device detector measurement remain pending. See [`docs/audits/2026-09-11-performance-followup.md`](../../docs/audits/2026-09-11-performance-followup.md).
 
 ## Build 178 — 2026-09-11
 

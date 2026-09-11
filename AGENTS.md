@@ -2,7 +2,7 @@
 
 ## Native performance follow-up — 2026-09-11
 
-Captured photos now use one background, orientation-correct preview shared by the scanner, processing overlay, and bulk results. Imported-photo and capture/retry work is cancellation-owned and generation-checked so stale detector or provider responses cannot reopen a screen. Country-aware history partitions rows once for charts and snapshots, and product-image decoding is bounded while disk trimming runs in the background. The 234-test native suite and 17 focused scanner UI checks pass on both simulator sizes. A Release physical-iPhone trace, constrained-device detector measurement, and the next archive remain required before claiming the reported lag is resolved on hardware. See [`docs/audits/2026-09-11-performance-followup.md`](docs/audits/2026-09-11-performance-followup.md).
+Captured photos now use one background, orientation-correct preview shared by the scanner, processing overlay, and bulk results. Imported-photo and capture/retry work is cancellation-owned and generation-checked so stale detector or provider responses cannot reopen a screen. Country-aware history partitions rows once for charts and snapshots, and product-image decoding is bounded while disk trimming runs in the background. The 234-test native suite and 17 focused scanner UI checks pass on both simulator sizes. A Release physical-iPhone trace and constrained-device detector measurement remain required before claiming the reported lag is resolved on hardware. See [`docs/audits/2026-09-11-performance-followup.md`](docs/audits/2026-09-11-performance-followup.md).
 
 ## Build 178 — 2026-09-11
 
