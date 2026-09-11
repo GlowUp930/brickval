@@ -1,5 +1,9 @@
 # BrickVal Native iOS Context
 
+## Build 177 — 2026-09-11
+
+Release archive `/tmp/BrickVal177.xcarchive` completed successfully for version 1.0.8 (177), signed with the Apple Distribution profile. It includes the failed-scan retry input-routing fix. Upload to App Store Connect remains pending because no command-line App Store Connect credentials are configured here; physical-device verification remains required.
+
 ## Failed-scan retry fix — 2026-09-11
 
 The apparent freeze after an unsuccessful single-minifigure scan was an input-routing defect: a transparent camera-stage accessibility surface covered the visible Try again control. The surface now ignores touch input and is hidden from accessibility during failure, while the failure overlay and retry button are exposed directly. The retry button has a stable UI-test identifier and a DEBUG-only failed-scan fixture. The red test reproduced a visible but non-hittable retry button; the same test now passes on BrickVal Small iPhone and iPhone 17 Pro simulators. Scan lifecycle tests pass 12/12. Physical-camera confirmation remains pending.

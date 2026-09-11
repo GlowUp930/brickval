@@ -1,5 +1,9 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Build 177 — 2026-09-11
+
+Release build 1.0.8 (177) was archived successfully from the failed-scan retry fix with the Apple Distribution profile. The archive is `/tmp/BrickVal177.xcarchive`; App Store Connect upload is still pending because no command-line upload credentials are configured in this environment. The archive passed Xcode validation. Physical-device retry verification remains required.
+
 ## Failed-scan retry — 2026-09-11
 
 The failed single-scan screen no longer traps taps behind its transparent camera-stage accessibility surface. Try again is directly hittable and accessible, and a deterministic UI regression verifies immediate recovery on small and large simulators. The focused scan lifecycle suite passes. Physical-camera confirmation remains required.

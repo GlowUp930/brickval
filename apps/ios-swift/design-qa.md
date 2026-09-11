@@ -1,5 +1,9 @@
 # Scan Result Card Visual QA
 
+## Build 177 release artifact — 2026-09-11
+
+The signed Release archive for build 177 was created successfully from the failed-scan retry fix and passed Xcode validation. TestFlight upload and physical-device confirmation remain pending.
+
 ## Failed-scan retry responsiveness — 2026-09-11
 
 The failed-scan message and Try again button remain over the captured photo. The camera-stage accessibility surface no longer accepts touches or covers the retry control, and the failure overlay is exposed directly to VoiceOver while it is present. A deterministic failed-scan UI fixture verifies that Try again is visible, hittable, and leaves the failure state immediately. The focused check passes on the small and large simulators; a physical-camera retry remains the final device check.
