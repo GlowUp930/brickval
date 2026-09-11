@@ -1,5 +1,9 @@
 # Scan Result Card Visual QA
 
+## Failed-scan retry responsiveness — 2026-09-11
+
+The failed-scan message and Try again button remain over the captured photo. The camera-stage accessibility surface no longer accepts touches or covers the retry control, and the failure overlay is exposed directly to VoiceOver while it is present. A deterministic failed-scan UI fixture verifies that Try again is visible, hittable, and leaves the failure state immediately. The focused check passes on the small and large simulators; a physical-camera retry remains the final device check.
+
 ## Collection listing fallback — 2026-09-11
 
 When BrickLink has no completed rows for a condition, active listing rows now appear in the collection chart and Market snapshot table. The chart presents them as a current asking-price observation and states that dated sales history is unavailable; the table labels the count “Active listings.” Sold and asking rows remain separate, and the existing source badge, currency formatting, region filtering, and zero-request timeframe switching are preserved.

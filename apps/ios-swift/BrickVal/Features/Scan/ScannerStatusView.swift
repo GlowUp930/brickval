@@ -25,6 +25,7 @@ struct ScannerStatusView: View {
                 Button("Try again", systemImage: "arrow.clockwise", action: retry)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
+                    .accessibilityIdentifier("scanner.retry")
                     .accessibilityHint(retryHint)
             }
         }

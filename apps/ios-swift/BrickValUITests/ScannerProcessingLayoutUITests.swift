@@ -2,6 +2,21 @@ import XCTest
 
 @MainActor
 final class ScannerProcessingLayoutUITests: XCTestCase {
+    func testFailedScanRetryRespondsImmediately() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-showScannerFailureDemo", "-brickval_language_override", "en"]
+        app.launch()
+
+        let retry = app.buttons["scanner.retry"]
+        XCTAssertTrue(retry.waitForExistence(timeout: 4))
+        XCTAssertTrue(retry.isHittable)
+
+        let startedAt = Date.now
+        retry.tap()
+        XCTAssertFalse(retry.exists)
+        XCTAssertLessThan(Date.now.timeIntervalSince(startedAt), 0.75)
+    }
+
     func testOnboardingGetStartedRespondsWithoutStartupDelay() {
         let app = XCUIApplication()
         app.launchArguments = ["-showOnboardingDemo", "-brickval_language_override", "en"]

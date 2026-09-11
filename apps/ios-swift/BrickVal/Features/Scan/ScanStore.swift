@@ -69,6 +69,9 @@ final class ScanStore {
     @ObservationIgnored private var detectorDetectionMilliseconds: Int?
     @ObservationIgnored private var autoScanStartedAt: Date?
     @ObservationIgnored private var firstDetectionAt: Date?
+#if DEBUG
+    @ObservationIgnored private var retriesWithoutCamera = false
+#endif
     @ObservationIgnored private let performanceLogger = Logger(
         subsystem: "com.brickval.app",
         category: "ScanPerformance"
@@ -113,6 +116,13 @@ final class ScanStore {
         authorizationStatus = .authorized
         frozenImageData = imageData
         phase = .identifying
+    }
+
+    func configureFailedScanDemo(imageData: Data) {
+        authorizationStatus = .authorized
+        frozenImageData = imageData
+        phase = .failed(BrickValLocalization.localized("No minifigure match was found. Try a closer, brighter photo."))
+        retriesWithoutCamera = true
     }
 
     func configureBulkProcessingLayoutDemo(imageData: Data) {
@@ -245,6 +255,12 @@ final class ScanStore {
         frozenImageData = nil
         frozenBulkRegions = []
         resetDetectionState()
+#if DEBUG
+        if retriesWithoutCamera {
+            phase = .searching
+            return
+        }
+#endif
         if cameraIsRunning {
             phase = .searching
         } else {

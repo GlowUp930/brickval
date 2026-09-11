@@ -1,5 +1,9 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Failed-scan retry — 2026-09-11
+
+The failed single-scan screen no longer traps taps behind its transparent camera-stage accessibility surface. Try again is directly hittable and accessible, and a deterministic UI regression verifies immediate recovery on small and large simulators. The focused scan lifecycle suite passes. Physical-camera confirmation remains required.
+
 ## Collection listing fallback — 2026-09-11
 
 Collection history now uses the same per-condition fallback as the headline price: BrickLink completed rows first, then BrickLink active listings when no sold rows exist. Listing rows are marked separately, anchored to the fetch time because they have no transaction date, and shown in the chart as a current asking-price observation plus in the Market snapshot table. Sold and listing rows are never mixed; listing tables use “Active listings” instead of “Times sold,” and the chart explains when dated sales history is unavailable. The cache key is `collection-history:v3` so existing rows refresh for the source metadata.

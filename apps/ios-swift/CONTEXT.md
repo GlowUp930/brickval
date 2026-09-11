@@ -1,5 +1,9 @@
 # BrickVal Native iOS Context
 
+## Failed-scan retry fix — 2026-09-11
+
+The apparent freeze after an unsuccessful single-minifigure scan was an input-routing defect: a transparent camera-stage accessibility surface covered the visible Try again control. The surface now ignores touch input and is hidden from accessibility during failure, while the failure overlay and retry button are exposed directly. The retry button has a stable UI-test identifier and a DEBUG-only failed-scan fixture. The red test reproduced a visible but non-hittable retry button; the same test now passes on BrickVal Small iPhone and iPhone 17 Pro simulators. Scan lifecycle tests pass 12/12. Physical-camera confirmation remains pending.
+
 ## Collection listing fallback — 2026-09-11
 
 The collection-history response now includes active BrickLink listing rows when a condition has no completed-sale rows. Native history marks those rows as asking data, keeps them separate from sold rows, and prepares them with the existing chart/snapshot pass. The chart shows a current asking-price point with an honest “dated sales history is unavailable” note; the snapshot table reports Active listings, quantity, and price statistics. Existing local histories refresh through cache metadata version 3. Timeframe and region changes still make zero history requests.

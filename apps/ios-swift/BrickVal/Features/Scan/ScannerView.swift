@@ -27,12 +27,16 @@ struct ScannerView: View {
         let isBulkRecoveryDemo = ProcessInfo.processInfo.arguments.contains("-showBulkRecoveryDemo")
         let isDenseBulkRecoveryDemo = ProcessInfo.processInfo.arguments.contains("-showDenseBulkRecoveryDemo")
         let isLockedBulkPreviewDemo = ProcessInfo.processInfo.arguments.contains("-showLockedBulkPreviewDemo")
+        let isFailedScanDemo = ProcessInfo.processInfo.arguments.contains("-showScannerFailureDemo")
         if isWideBulkProcessingLayoutDemo,
            let imageData = BulkRecoveryDemoFixture.wideProcessingImageData {
             store.configureBulkProcessingLayoutDemo(imageData: imageData)
         } else if isProcessingLayoutDemo,
            let imageData = UIImage(named: "AvatarClassic")?.jpegData(compressionQuality: 0.9) {
             store.configureProcessingLayoutDemo(imageData: imageData)
+        } else if isFailedScanDemo,
+                  let imageData = UIImage(named: "AvatarClassic")?.jpegData(compressionQuality: 0.9) {
+            store.configureFailedScanDemo(imageData: imageData)
         }
         if isBulkRecoveryDemo {
             store.configureBulkRecoveryDemo()
@@ -50,7 +54,8 @@ struct ScannerView: View {
             !isWideBulkProcessingLayoutDemo &&
             !isBulkRecoveryDemo &&
             !isDenseBulkRecoveryDemo &&
-            !isLockedBulkPreviewDemo
+            !isLockedBulkPreviewDemo &&
+            !isFailedScanDemo
 #else
         runsCameraLoop = true
 #endif
@@ -91,6 +96,10 @@ struct ScannerView: View {
                 let fullStageRect = CGRect(origin: .zero, size: cameraSize)
                 let isBulkProcessing = store.intent == .bulk &&
                     [.capturing, .identifying].contains(store.phase)
+                let isFailed: Bool = {
+                    if case .failed = store.phase { return true }
+                    return false
+                }()
                 let bulkImageRect: CGRect = {
                     guard store.intent == .bulk,
                           let data = store.frozenImageData,
@@ -174,11 +183,12 @@ struct ScannerView: View {
                     }
                     .frame(width: cameraSize.width, height: cameraSize.height)
                     .clipped()
-                    .accessibilityHidden(!isBulkProcessing)
+                    .accessibilityHidden(!isBulkProcessing && !isFailed)
 
                     Color.clear
                         .frame(width: cameraSize.width, height: cameraSize.height)
                         .contentShape(Rectangle())
+                        .allowsHitTesting(false)
                         .accessibilityElement()
                         .accessibilityLabel(
                             [.capturing, .identifying].contains(store.phase)
@@ -187,7 +197,7 @@ struct ScannerView: View {
                         )
                         .accessibilityValue(store.phase.statusText)
                         .accessibilityIdentifier("scanner.cameraStage")
-                        .accessibilityHidden(isBulkProcessing)
+                        .accessibilityHidden(isBulkProcessing || isFailed)
                 }
                 .frame(width: cameraSize.width, height: cameraSize.height)
                 .clipShape(.rect(cornerRadius: 24))
