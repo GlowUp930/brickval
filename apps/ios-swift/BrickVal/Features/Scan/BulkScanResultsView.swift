@@ -91,7 +91,8 @@ struct BulkScanResultsView: View {
     @State private var isPreviewOfferVisible = false
     @State private var showReferral = false
 
-    private let capturedImage: UIImage?
+    let preview: UIImage?
+    @State private var capturedImage: UIImage?
     private let canvas = BrickValStyle.ScanResult.canvas
 
     private static let correctionLogger = Logger(
@@ -99,10 +100,11 @@ struct BulkScanResultsView: View {
         category: "BulkMatchCorrection"
     )
 
-    init(presentation: BulkScanPresentation, store: ScanStore) {
+    init(presentation: BulkScanPresentation, store: ScanStore, preview: UIImage? = nil) {
         self.presentation = presentation
         self.store = store
-        capturedImage = UIImage(data: presentation.imageData)
+        self.preview = preview
+        _capturedImage = State(initialValue: preview)
         _itemStates = State(initialValue: presentation.resolvedItems.map { BulkScanItemState(item: $0) })
         _unresolvedRegions = State(initialValue: presentation.unresolvedRegions)
         _revealSession = State(initialValue: BulkRevealSession(
@@ -152,6 +154,12 @@ struct BulkScanResultsView: View {
         }
         .task(id: "\(presentation.id.uuidString)-\(presentation.accessMode.rawValue)") {
             await runRevealProgressively()
+        }
+        .task(id: "\(presentation.id.uuidString)-preview-\(preview != nil)") {
+            guard capturedImage == nil else { return }
+            let image = await ScanPreviewPipeline.shared.image(for: presentation.imageData)
+            guard !Task.isCancelled else { return }
+            capturedImage = image
         }
         .task(id: presentation.id) {
             guard presentation.accessMode == .real else { return }

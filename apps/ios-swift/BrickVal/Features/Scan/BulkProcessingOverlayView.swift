@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 struct BulkProcessingOverlayView: View {
-    let imageData: Data?
+    let image: UIImage?
     let regions: [NormalizedBoundingBox]
     let phase: ScanPhase
     let source: BulkScanSource
@@ -11,7 +11,6 @@ struct BulkProcessingOverlayView: View {
 
     @Environment(\.brickValAccent) private var accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var image: UIImage?
     @State private var showsAverageExplanation = false
 
     var body: some View {
@@ -64,9 +63,6 @@ struct BulkProcessingOverlayView: View {
             }
             .background(.black)
             .clipShape(.rect(cornerRadius: 24))
-        }
-        .task(id: imageData) {
-            image = imageData.flatMap(UIImage.init(data:))
         }
         .task(id: phase) {
             showsAverageExplanation = false

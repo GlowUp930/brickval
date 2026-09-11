@@ -68,9 +68,10 @@ enum PortfolioHistoryBuilder {
             guard !Task.isCancelled else { return result }
             sourceItems.append(item)
         }
+        var sourceIDs = Set(sourceItems.map(\.id))
         for item in items {
             let alternate = (item.condition == .used ? DetailConditionOption.new : .used).collectionItem(from: item)
-            if !sourceItems.contains(where: { $0.id == alternate.id }) {
+            if sourceIDs.insert(alternate.id).inserted {
                 sourceItems.append(alternate)
             }
         }
@@ -78,26 +79,43 @@ enum PortfolioHistoryBuilder {
         for sourceItem in sourceItems {
             guard !Task.isCancelled else { return result }
             let preparedSales = prepareSales(sourceItem.marketSales, now: now)
-            let regionalSeries = Dictionary(uniqueKeysWithValues: regions.map { region in
-                let regionalSales = salesForDisplay(preparedSales.filter { region.includes(sellerCountryCode: $0.sellerCountryCode) })
+            var allSales: [PreparedSale] = []
+            var countrySales: [MarketRegion: [PreparedSale]] = [:]
+            allSales.reserveCapacity(preparedSales.count)
+            for sale in preparedSales {
+                guard !Task.isCancelled else { return result }
+                allSales.append(sale)
+                if let country = sale.sellerCountryCode.flatMap(MarketRegion.sellerCountry) {
+                    countrySales[country, default: []].append(sale)
+                }
+            }
+            var salesByRegion: [MarketRegion: [PreparedSale]] = [:]
+            for region in regions {
+                guard !Task.isCancelled else { return result }
+                let rows = region.isAll ? allSales : countrySales[region, default: []]
+                salesByRegion[region] = salesForDisplay(rows)
+            }
+
+            var regionalSeries: [MarketRegion: [PortfolioHorizon: [StockChartPoint]]] = [:]
+            var regionalSnapshots: [MarketRegion: [PortfolioHorizon: MarketSnapshot]] = [:]
+            for region in regions {
+                guard !Task.isCancelled else { return result }
+                let regionalSales = salesByRegion[region] ?? []
                 let observations = dailyObservations(regionalSales)
                 let horizons = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
                     ($0, window(observations, horizon: $0, now: now))
                 })
-                return (region, horizons)
-            })
-            let regionalSnapshots = Dictionary(uniqueKeysWithValues: regions.map { region in
-                let regionalSales = salesForDisplay(preparedSales.filter { region.includes(sellerCountryCode: $0.sellerCountryCode) })
-                let horizons = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
+                regionalSeries[region] = horizons
+                regionalSnapshots[region] = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map {
                     ($0, marketSnapshot(regionalSales, horizon: $0, now: now))
                 })
-                return (region, horizons)
-            })
+            }
             result.items[sourceItem.id] = regionalSeries
             result.snapshots[sourceItem.id] = regionalSnapshots
         }
 
         for region in regions {
+            guard !Task.isCancelled else { return result }
             result.portfolios[region] = Dictionary(uniqueKeysWithValues: PortfolioHorizon.allCases.map { horizon in
                 let series = items.map { result.items[$0.id]?[region]?[horizon] ?? [] }
                 return (horizon, portfolio(items: items, series: series))

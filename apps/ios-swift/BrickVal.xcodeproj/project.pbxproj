@@ -150,6 +150,7 @@
 		9FAE99A4329317ED4D97DDA7 /* BulkRecoveryPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F99944E7D24003E2898C447 /* BulkRecoveryPayload.swift */; };
 		9FF20154425C05B1C13AE4A5 /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36AC261DF2ECD56A13E0D952 /* AppRouter.swift */; };
 		A0D00B4D091BFD668A179116 /* PartLookupPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33393ED0233F29E4CCA2BD7F /* PartLookupPayload.swift */; };
+		A104D744FEB84C81E8F6981F /* ScanPreviewPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = B449B6F6D40AB0BADE4AA3D2 /* ScanPreviewPipeline.swift */; };
 		A1BB76AC0EC0CCCDAEF92500 /* IdentificationDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DA331DC281100089FF5A7D1 /* IdentificationDetection.swift */; };
 		A2550AC4C969FF416E846386 /* CurrencySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0EBE4F1B2830A4DC3C769B /* CurrencySettingsView.swift */; };
 		A2A33506B6A5020EBBCF42B7 /* ScannerControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 838989477243CD0FC20DB626 /* ScannerControlsView.swift */; };
@@ -165,6 +166,7 @@
 		B27807ED55B5EBDB3A7BA4C2 /* NetworkPayloadDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A95320472022CBED5A5F5AD /* NetworkPayloadDecodingTests.swift */; };
 		B31C8FB33248FABE116BD07B /* OfferCodeRedemptionStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 235637548F2BFE985EBCD90F /* OfferCodeRedemptionStatusView.swift */; };
 		B51434B625915BDF68B156C2 /* ScanReviewCandidate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D69ECFFDB07A185852CFA8 /* ScanReviewCandidate.swift */; };
+		B5D1DEF12605EFB7C7765F7D /* ScanPreviewPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 637A01995655EC92927C95BC /* ScanPreviewPipelineTests.swift */; };
 		B5E5514786627ECC603173AA /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA9BCCFFE15F7960FCD15F5 /* CameraPreviewView.swift */; };
 		B634A5E956D918BC12C8266B /* CardModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = D79EB98B6A6EFEC3218BC682 /* CardModifier.swift */; };
 		B998F7083306F3358C97C411 /* ProductFeedbackModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E269B43E6C18167D91A7656 /* ProductFeedbackModelsTests.swift */; };
@@ -333,6 +335,7 @@
 		5E3EDA2C10E48CA7BA1CEA48 /* ProductImageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImageTests.swift; sourceTree = "<group>"; };
 		5F8395A4685E831B69CB7D85 /* AccentPreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentPreference.swift; sourceTree = "<group>"; };
 		5FA99ACAD38CD5000BB6D3AB /* CameraSessionBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSessionBox.swift; sourceTree = "<group>"; };
+		637A01995655EC92927C95BC /* ScanPreviewPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanPreviewPipelineTests.swift; sourceTree = "<group>"; };
 		647C9370C073104F93DE5060 /* ProductImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImage.swift; sourceTree = "<group>"; };
 		67E89950A8EB117E686AC7E6 /* MinifigLookupPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinifigLookupPayload.swift; sourceTree = "<group>"; };
 		682C25B2470F84B42642FFD1 /* BulkDetectionTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkDetectionTracker.swift; sourceTree = "<group>"; };
@@ -410,6 +413,7 @@
 		B1E535BDEA80BE24EE73AE67 /* BulkMinifigScanPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkMinifigScanPayload.swift; sourceTree = "<group>"; };
 		B2C02FA239DC1586A462BA9D /* NotificationModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationModelsTests.swift; sourceTree = "<group>"; };
 		B42859537BC630597753FFD1 /* BulkShareCardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkShareCardTests.swift; sourceTree = "<group>"; };
+		B449B6F6D40AB0BADE4AA3D2 /* ScanPreviewPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanPreviewPipeline.swift; sourceTree = "<group>"; };
 		B50BCC8C03FE362629D0F4BB /* PortfolioChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioChartView.swift; sourceTree = "<group>"; };
 		BA91C00010B7FE9351243FE7 /* MinifigureDetector.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = MinifigureDetector.mlmodel; sourceTree = "<group>"; };
 		BC4BD1858E1F223314B42DA0 /* BulkPriceTagLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkPriceTagLayoutTests.swift; sourceTree = "<group>"; };
@@ -496,6 +500,7 @@
 				5C2BBAF77E4513957B9721DA /* InteractiveStockChart.swift */,
 				8ACCFEA6B4DBD7F1DB888B1B /* ProBadge.swift */,
 				647C9370C073104F93DE5060 /* ProductImage.swift */,
+				B449B6F6D40AB0BADE4AA3D2 /* ScanPreviewPipeline.swift */,
 				4DD8191F11D45D599A79C607 /* SkeletonPlaceholder.swift */,
 			);
 			path = DesignSystem;
@@ -610,6 +615,7 @@
 				5E3EDA2C10E48CA7BA1CEA48 /* ProductImageTests.swift */,
 				99DD4A69B686D7B8FF0FA128 /* PurchaseAttemptTests.swift */,
 				8B93A61FE27D0131685368F7 /* ReferralTests.swift */,
+				637A01995655EC92927C95BC /* ScanPreviewPipelineTests.swift */,
 				6BC93CDDC526B5A5108C24B3 /* ScanReviewCandidateTests.swift */,
 				EF14A6205963EF1A3C89D344 /* ScanStoreLifecycleTests.swift */,
 				1F8FFDADE0664F531E574FC9 /* SentryConfigurationTests.swift */,
@@ -1148,6 +1154,7 @@
 				3A76524BD322BCDAD646B0F2 /* ProductImageTests.swift in Sources */,
 				497C2E49CA23F0A520BF6D06 /* PurchaseAttemptTests.swift in Sources */,
 				CE62ABE582802A94A3FD72F0 /* ReferralTests.swift in Sources */,
+				B5D1DEF12605EFB7C7765F7D /* ScanPreviewPipelineTests.swift in Sources */,
 				32D9EE523E52D277F4CDA579 /* ScanReviewCandidateTests.swift in Sources */,
 				4C1C4FDBEAAC1E91B4810175 /* ScanStoreLifecycleTests.swift in Sources */,
 				1C5AE498FA3C6B7C80651768 /* SentryConfigurationTests.swift in Sources */,
@@ -1309,6 +1316,7 @@
 				F43FC34EAB4C1D9D4E9255CC /* ScanIntent.swift in Sources */,
 				61F55C70DE98CC29ADAC8252 /* ScanMode.swift in Sources */,
 				11823ECFC522C0EEFBD648BF /* ScanPhase.swift in Sources */,
+				A104D744FEB84C81E8F6981F /* ScanPreviewPipeline.swift in Sources */,
 				BF013D0A4964914481031BC6 /* ScanProcessingOverlayView.swift in Sources */,
 				9C8C4D7BA6C10356B316672B /* ScanResultView.swift in Sources */,
 				9F892753B586CAE8BF4062BC /* ScanReview.swift in Sources */,
@@ -1357,7 +1365,7 @@
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution: HO LAM CHAN (4CQHLZBSU7)";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 177;
+				CURRENT_PROJECT_VERSION = 178;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1486,7 +1494,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 177;
+				CURRENT_PROJECT_VERSION = 178;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

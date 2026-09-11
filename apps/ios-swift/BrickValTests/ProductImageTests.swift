@@ -24,7 +24,7 @@ struct ProductImageTests {
         #expect(hero.cgImage?.width == 500)
         #expect(await counter.count == 1)
         await pipeline.clearMemory()
-        #expect(await pipeline.cachedImage(for: url) == nil)
+        #expect(await pipeline.cachedImage(for: url, pixels: 100) == nil)
         _ = try await pipeline.image(for: url, pixels: 100)
         #expect(await counter.count == 1)
         let offline = ProductImagePipeline(directory: directory) { _ in throw URLError(.notConnectedToInternet) }
@@ -47,6 +47,10 @@ struct ProductImageTests {
         do { _ = try await pipeline.image(for: url, pixels: 30); Issue.record("Expected offline failure") } catch {}
         _ = try await pipeline.image(for: url, pixels: 30)
         #expect(await counter.count == 2)
+        for _ in 0..<20 {
+            if try FileManager.default.contentsOfDirectory(atPath: directory.path).isEmpty { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
         #expect(try FileManager.default.contentsOfDirectory(atPath: directory.path).isEmpty)
     }
 }

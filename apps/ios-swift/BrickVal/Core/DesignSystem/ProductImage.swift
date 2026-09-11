@@ -1,4 +1,5 @@
 import CryptoKit
+import Dispatch
 import ImageIO
 import SwiftUI
 
@@ -10,6 +11,8 @@ actor ProductImagePipeline {
     private let directory: URL
     private let diskLimit: Int
     private let fetch: @Sendable (URL) async throws -> Data
+    private var lastDiskTrimAt = Date.distantPast
+    private let decodeLimiter = DispatchSemaphore(value: 2)
 
     init(directory: URL = URL.cachesDirectory.appending(path: "BrickValProductImages"), diskLimit: Int = 100 * 1024 * 1024,
          fetch: @escaping @Sendable (URL) async throws -> Data = { url in
@@ -26,7 +29,10 @@ actor ProductImagePipeline {
         memory.countLimit = 120
     }
 
-    func cachedImage(for url: URL) -> UIImage? { memory.object(forKey: url.absoluteString as NSString) }
+    func cachedImage(for url: URL, pixels: Int) -> UIImage? {
+        let boundedPixels = max(1, min(pixels, 1600))
+        return memory.object(forKey: "\(url.absoluteString)#\(boundedPixels)" as NSString)
+    }
 
     func image(for url: URL, pixels: Int) async throws -> UIImage {
         let pixels = max(1, min(pixels, 1600))
@@ -35,6 +41,22 @@ actor ProductImagePipeline {
         let data = try await data(for: url)
         // Another consumer may have decoded this size while the download was in flight.
         if let image = memory.object(forKey: key) { return image }
+        let limiter = decodeLimiter
+        let decodeTask: Task<UIImage?, Never> = Task.detached(priority: .userInitiated) {
+            Self.decode(data: data, pixels: pixels, limiter: limiter)
+        }
+        guard let image = await decodeTask.value else {
+            try? FileManager.default.removeItem(at: cacheFile(for: url))
+            throw URLError(.cannotDecodeContentData)
+        }
+        let cost = image.cgImage.map { $0.bytesPerRow * $0.height } ?? 1
+        memory.setObject(image, forKey: key, cost: cost)
+        return image
+    }
+
+    private nonisolated static func decode(data: Data, pixels: Int, limiter: DispatchSemaphore) -> UIImage? {
+        limiter.wait()
+        defer { limiter.signal() }
         guard let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
               let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, [
                 kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -42,14 +64,9 @@ actor ProductImagePipeline {
                 kCGImageSourceCreateThumbnailWithTransform: true,
                 kCGImageSourceShouldCacheImmediately: true
               ] as CFDictionary) else {
-            try? FileManager.default.removeItem(at: cacheFile(for: url))
-            throw URLError(.cannotDecodeContentData)
+            return nil
         }
-        let image = UIImage(cgImage: cgImage)
-        let cost = cgImage.bytesPerRow * cgImage.height
-        memory.setObject(image, forKey: key, cost: cost)
-        memory.setObject(image, forKey: url.absoluteString as NSString, cost: cost)
-        return image
+        return UIImage(cgImage: cgImage)
     }
 
     func clearMemory() { memory.removeAllObjects() }
@@ -72,7 +89,7 @@ actor ProductImagePipeline {
         // Cache failure must not prevent displaying a successfully downloaded image.
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try? data.write(to: file, options: .atomic)
-        trimDisk()
+        scheduleDiskTrimIfNeeded()
         return data
     }
 
@@ -81,7 +98,17 @@ actor ProductImagePipeline {
         return directory.appending(path: name)
     }
 
-    private func trimDisk() {
+    private func scheduleDiskTrimIfNeeded() {
+        guard Date.now.timeIntervalSince(lastDiskTrimAt) >= 30 else { return }
+        lastDiskTrimAt = .now
+        let directory = self.directory
+        let diskLimit = self.diskLimit
+        Task.detached(priority: .utility) {
+            Self.trimDisk(directory: directory, diskLimit: diskLimit)
+        }
+    }
+
+    private nonisolated static func trimDisk(directory: URL, diskLimit: Int) {
         let keys: Set<URLResourceKey> = [.contentModificationDateKey, .fileSizeKey, .isRegularFileKey]
         guard let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: Array(keys)) else { return }
         let entries = files.compactMap { url -> (URL, Date, Int)? in
@@ -124,7 +151,10 @@ struct ProductImage: View {
             image = nil
             failed = false
             guard let url else { return }
-            let cached = await ProductImagePipeline.shared.cachedImage(for: url)
+            let cached = await ProductImagePipeline.shared.cachedImage(
+                for: url,
+                pixels: Int(pointSize * displayScale)
+            )
             guard !Task.isCancelled else { return }
             image = cached
             do {

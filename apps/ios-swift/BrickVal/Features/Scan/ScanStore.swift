@@ -40,6 +40,10 @@ final class ScanStore {
     private(set) var detectorModelVersion: String?
     private(set) var isTorchEnabled = false
     private(set) var frozenImageData: Data?
+    /// Changes whenever the captured bytes change so views can request one
+    /// shared prepared preview without hashing large image data on the main
+    /// thread.
+    private(set) var frozenImageRevision = UUID()
     private(set) var bulkProcessingRegions: [NormalizedBoundingBox] = []
     private(set) var bulkProcessingSource: BulkScanSource = .camera
     private(set) var bulkProcessingCompleted = 0
@@ -69,6 +73,7 @@ final class ScanStore {
     @ObservationIgnored private var detectorDetectionMilliseconds: Int?
     @ObservationIgnored private var autoScanStartedAt: Date?
     @ObservationIgnored private var firstDetectionAt: Date?
+    @ObservationIgnored private var bulkScanGeneration = 0
 #if DEBUG
     @ObservationIgnored private var retriesWithoutCamera = false
 #endif
@@ -104,6 +109,27 @@ final class ScanStore {
 
     var captureSession: AVCaptureSession { camera.sessionBox.session }
 
+    private func setFrozenImageData(_ data: Data?) {
+        frozenImageData = data
+        frozenImageRevision = UUID()
+    }
+
+    private func beginBulkScan() -> Int {
+        bulkScanGeneration &+= 1
+        return bulkScanGeneration
+    }
+
+    /// Invalidates detector and provider work that belongs to a photo that is
+    /// no longer visible. The individual provider tasks also check their own
+    /// cancellation, so stale responses cannot reopen the results screen.
+    func cancelBulkScan() {
+        bulkScanGeneration &+= 1
+    }
+
+    private func isCurrentBulkScan(_ generation: Int) -> Bool {
+        !Task.isCancelled && generation == bulkScanGeneration
+    }
+
     var canUseSmartScan: Bool {
         mode == .minifig &&
             intent == .single &&
@@ -114,13 +140,13 @@ final class ScanStore {
 #if DEBUG
     func configureProcessingLayoutDemo(imageData: Data) {
         authorizationStatus = .authorized
-        frozenImageData = imageData
+        setFrozenImageData(imageData)
         phase = .identifying
     }
 
     func configureFailedScanDemo(imageData: Data) {
         authorizationStatus = .authorized
-        frozenImageData = imageData
+        setFrozenImageData(imageData)
         phase = .failed(BrickValLocalization.localized("No minifigure match was found. Try a closer, brighter photo."))
         retriesWithoutCamera = true
     }
@@ -128,7 +154,7 @@ final class ScanStore {
     func configureBulkProcessingLayoutDemo(imageData: Data) {
         intent = .bulk
         authorizationStatus = .authorized
-        frozenImageData = imageData
+        setFrozenImageData(imageData)
         frozenBulkSource = .photoLibrary
         bulkProcessingRegions = [
             NormalizedBoundingBox(x: 0.02, y: 0.18, width: 0.14, height: 0.55),
@@ -145,7 +171,7 @@ final class ScanStore {
         guard let imageData = BulkRecoveryDemoFixture.imageData else { return }
         intent = .bulk
         authorizationStatus = .authorized
-        frozenImageData = imageData
+        setFrozenImageData(imageData)
         phase = .review
         presentedBulkResults = BulkScanPresentation(
             imageData: imageData,
@@ -160,7 +186,7 @@ final class ScanStore {
         guard let imageData = BulkRecoveryDemoFixture.imageData else { return }
         intent = .bulk
         authorizationStatus = .authorized
-        frozenImageData = imageData
+        setFrozenImageData(imageData)
         phase = .review
         presentedBulkResults = BulkScanPresentation(
             imageData: imageData,
@@ -176,7 +202,7 @@ final class ScanStore {
         let regions = BulkRecoveryDemoFixture.lockedPreviewRegions
         intent = .bulk
         authorizationStatus = .authorized
-        frozenImageData = imageData
+        setFrozenImageData(imageData)
         frozenBulkRegions = regions
         frozenBulkSource = .camera
         phase = .review
@@ -252,7 +278,7 @@ final class ScanStore {
     func retryCamera() async {
         guard case .failed = phase else { return }
         let cameraIsRunning = await camera.isRunning()
-        frozenImageData = nil
+        setFrozenImageData(nil)
         frozenBulkRegions = []
         resetDetectionState()
 #if DEBUG
@@ -297,6 +323,7 @@ final class ScanStore {
         )
         do {
             phase = .capturing
+            let bulkGeneration = intent == .bulk ? beginBulkScan() : nil
             let captureStartedAt = Date.now
             let capture: (data: Data, regions: [BulkScanRegion])
             if intent == .bulk {
@@ -307,7 +334,7 @@ final class ScanStore {
                 capture = (try await camera.captureFrame(), [])
             }
             let data = capture.data
-            frozenImageData = data
+            setFrozenImageData(data)
             frozenBulkRegions = capture.regions
             frozenBulkSource = .camera
             bulkProcessingRegions = capture.regions.map(\.boundingBox)
@@ -316,8 +343,13 @@ final class ScanStore {
             bulkProcessingTotal = capture.regions.count
             attemptedProAccessRecovery = false
             logCaptureDuration(since: captureStartedAt, automatic: false)
-            try await identify(imageData: data, bulkRegions: capture.regions)
+            try await identify(
+                imageData: data,
+                bulkRegions: capture.regions,
+                bulkGeneration: bulkGeneration
+            )
         } catch {
+            if Task.isCancelled { return }
             await handleIdentificationError(error)
         }
     }
@@ -350,15 +382,18 @@ final class ScanStore {
             return
         }
 
+        let generation = beginBulkScan()
         do {
+            guard isCurrentBulkScan(generation) else { throw CancellationError() }
             phase = .capturing
             let captureStartedAt = Date.now
-            frozenImageData = data
+            setFrozenImageData(data)
             frozenBulkSource = .photoLibrary
             let detection = try await bulkPhotoDetector.detectBulkRegions(
                 in: data,
                 limit: BulkScanSource.maximumRegionCount
             )
+            guard isCurrentBulkScan(generation) else { throw CancellationError() }
             frozenBulkRegions = detection.regions
             bulkProcessingRegions = detection.regions.map(\.boundingBox)
             bulkProcessingSource = .photoLibrary
@@ -371,9 +406,11 @@ final class ScanStore {
             try await identify(
                 imageData: data,
                 bulkRegions: detection.regions,
-                bulkSource: .photoLibrary
+                bulkSource: .photoLibrary,
+                bulkGeneration: generation
             )
         } catch {
+            guard isCurrentBulkScan(generation) else { return }
             await handleIdentificationError(error)
         }
     }
@@ -389,14 +426,18 @@ final class ScanStore {
 
     func retryBulkScan() async {
         guard intent == .bulk, case .failed = phase, let frozenImageData else { return }
+        let generation = beginBulkScan()
         attemptedProAccessRecovery = false
         do {
+            guard isCurrentBulkScan(generation) else { throw CancellationError() }
             try await identify(
                 imageData: frozenImageData,
                 bulkRegions: frozenBulkRegions,
-                bulkSource: frozenBulkSource
+                bulkSource: frozenBulkSource,
+                bulkGeneration: generation
             )
         } catch {
+            guard isCurrentBulkScan(generation) else { return }
             await handleIdentificationError(error)
         }
     }
@@ -578,7 +619,7 @@ final class ScanStore {
     }
 
     private func returnToLiveScanner() {
-        frozenImageData = nil
+        setFrozenImageData(nil)
         frozenBulkRegions = []
         frozenBulkSource = .camera
         bulkProcessingRegions = []
@@ -664,7 +705,7 @@ final class ScanStore {
         do {
             let captureStartedAt = Date.now
             let data = try await camera.jpegData(for: frame)
-            frozenImageData = data
+            setFrozenImageData(data)
             frozenBulkRegions = []
             attemptedProAccessRecovery = false
             logCaptureDuration(since: captureStartedAt, automatic: true)
@@ -680,11 +721,15 @@ final class ScanStore {
         imageData: Data,
         focusBox: NormalizedBoundingBox? = nil,
         bulkRegions: [BulkScanRegion] = [],
-        bulkSource: BulkScanSource = .camera
+        bulkSource: BulkScanSource = .camera,
+        bulkGeneration: Int? = nil
     ) async throws {
         let startedAt = Date.now
+        if let bulkGeneration {
+            guard isCurrentBulkScan(bulkGeneration) else { throw CancellationError() }
+        }
         phase = .identifying
-        frozenImageData = imageData
+        setFrozenImageData(imageData)
         if mode == .minifig, intent == .bulk {
             if let monetization,
                monetization.shouldUseLockedBulkPreview(isPro: isProSubscriber) {
@@ -704,10 +749,16 @@ final class ScanStore {
                     )
                     return
                 }
+                if let bulkGeneration {
+                    guard isCurrentBulkScan(bulkGeneration) else { throw CancellationError() }
+                }
                 return
             }
 
             let image = try await imageProcessor.bulkScanImage(from: imageData)
+            if let bulkGeneration {
+                guard isCurrentBulkScan(bulkGeneration) else { throw CancellationError() }
+            }
 
             // New builds use the session contract when the local detector has
             // supplied physical regions. An empty region list intentionally
@@ -717,6 +768,9 @@ final class ScanStore {
                let startBulkScan = api.startBulkScan,
                api.identifyBulkRegion != nil {
                 let start = try await startBulkScan(image, bulkRegions, bulkSource)
+                if let bulkGeneration {
+                    guard isCurrentBulkScan(bulkGeneration) else { throw CancellationError() }
+                }
                 let regions = Array(start.regions.prefix(BulkScanSource.maximumRegionCount))
                 guard !regions.isEmpty else {
                     phase = .failed(BrickValLocalization.localized("No minifigures were found. Try a brighter photo with the figures separated and facing forward."))
@@ -750,11 +804,14 @@ final class ScanStore {
             bulkProcessingCompleted = 0
             bulkProcessingTotal = 0
             let response = try await api.scanBulkMinifigures(image, bulkRegions, bulkSource)
+            if let bulkGeneration {
+                guard isCurrentBulkScan(bulkGeneration) else { throw CancellationError() }
+            }
             let items = response.items.map(\.normalized) + response.reviewItems.compactMap(\.bestResultItem)
             guard let frozenImageData,
                   !items.isEmpty || !response.reviewItems.isEmpty || !response.unresolvedRegions.isEmpty
             else {
-                self.frozenImageData = nil
+                self.setFrozenImageData(nil)
                 phase = .failed(BrickValLocalization.localized("No priced minifigures were found. Try a brighter photo with the figures separated and facing forward."))
                 return
             }
@@ -885,7 +942,7 @@ final class ScanStore {
         }
         guard !previewRegions.isEmpty else { return false }
 
-        frozenImageData = imageData
+        setFrozenImageData(imageData)
         frozenBulkRegions = previewRegions
         frozenBulkSource = bulkSource
         bulkProcessingRegions = previewRegions.map(\.boundingBox)

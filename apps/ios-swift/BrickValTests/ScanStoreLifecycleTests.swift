@@ -146,6 +146,31 @@ struct ScanStoreLifecycleTests {
     }
 
     @Test @MainActor
+    func cancellingImportedPhotoDropsStaleDetectorResults() async throws {
+        let store = ScanStore(
+            api: .successfulLookupStub,
+            bulkPhotoDetector: StubBulkPhotoDetector(
+                regions: [BulkScanRegion(
+                    regionId: "cancelled-photo",
+                    boundingBox: NormalizedBoundingBox(x: 0.2, y: 0.2, width: 0.3, height: 0.5)
+                )],
+                delay: .milliseconds(80)
+            )
+        )
+        store.intent = .bulk
+        let imageData = try recoveryImageData()
+        let task = Task { @MainActor in
+            await store.importBulkPhoto(imageData)
+        }
+        try await Task.sleep(for: .milliseconds(10))
+        store.cancelBulkScan()
+        await task.value
+
+        #expect(store.presentedBulkResults == nil)
+        #expect(store.phase == .capturing)
+    }
+
+    @Test @MainActor
     func newSoftPhotoPreviewDoesNotCallBulkBackend() async throws {
         let suite = "ScanStoreLifecycleTests.lockedPreview.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
@@ -740,9 +765,13 @@ private actor BackendCallProbe {
 
 private struct StubBulkPhotoDetector: BulkPhotoDetecting {
     let regions: [BulkScanRegion]
+    var delay: Duration = .zero
 
     func detectBulkRegions(in imageData: Data, limit: Int) async throws -> BulkPhotoDetectionBatch {
-        BulkPhotoDetectionBatch(
+        if delay > .zero {
+            try await Task.sleep(for: delay)
+        }
+        return BulkPhotoDetectionBatch(
             regions: Array(regions.prefix(limit)),
             inferenceMilliseconds: 12,
             modelVersion: "test-detector",

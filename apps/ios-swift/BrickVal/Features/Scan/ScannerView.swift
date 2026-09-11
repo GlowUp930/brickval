@@ -16,6 +16,8 @@ struct ScannerView: View {
     @State private var isShowingScanTips = false
     @State private var selectedBulkPhoto: PhotosPickerItem?
     @State private var isImportingBulkPhoto = false
+    @State private var frozenPreview: UIImage?
+    @State private var scanOperation: Task<Void, Never>?
     @State private var purchaseMessage: String?
     private let runsCameraLoop: Bool
 
@@ -102,8 +104,7 @@ struct ScannerView: View {
                 }()
                 let bulkImageRect: CGRect = {
                     guard store.intent == .bulk,
-                          let data = store.frozenImageData,
-                          let image = UIImage(data: data)
+                          let image = frozenPreview
                     else {
                         return fullStageRect
                     }
@@ -117,9 +118,9 @@ struct ScannerView: View {
                     ZStack(alignment: .top) {
                         CameraPreview(session: store.captureSession)
                             .background(.black)
-                        if let data = store.frozenImageData {
+                        if store.frozenImageData != nil {
                             FrozenScanImageView(
-                                data: data,
+                                image: frozenPreview,
                                 usesAspectFit: store.intent == .bulk
                             )
                                 .transition(.opacity)
@@ -149,9 +150,9 @@ struct ScannerView: View {
                                 smartScanMessage: store.intent == .single ? store.smartScanMessage : nil,
                                 retry: {
                                     if store.intent == .bulk, store.frozenImageData != nil {
-                                        Task { await store.retryBulkScan() }
+                                        startScanOperation { await store.retryBulkScan() }
                                     } else {
-                                        Task { await store.retryCamera() }
+                                        startScanOperation { await store.retryCamera() }
                                     }
                                 }
                             )
@@ -169,13 +170,13 @@ struct ScannerView: View {
                         } else if [.capturing, .identifying].contains(store.phase) {
                             if store.intent == .bulk {
                                 BulkProcessingOverlayView(
-                                    imageData: store.frozenImageData,
-                                regions: store.bulkProcessingRegions,
-                                phase: store.phase,
-                                source: store.bulkProcessingSource,
-                                completed: store.bulkProcessingCompleted,
-                                total: store.bulkProcessingTotal
-                            )
+                                    image: frozenPreview,
+                                    regions: store.bulkProcessingRegions,
+                                    phase: store.phase,
+                                    source: store.bulkProcessingSource,
+                                    completed: store.bulkProcessingCompleted,
+                                    total: store.bulkProcessingTotal
+                                )
                             } else {
                                 ScanProcessingOverlayView(phase: store.phase, intent: store.intent)
                             }
@@ -225,7 +226,7 @@ struct ScannerView: View {
                 toggleTorch: { Task { await store.toggleTorch() } },
                 capture: {
                     dismissScanTips()
-                    Task { await store.captureManually() }
+                    startScanOperation { await store.captureManually() }
                 }
             )
             .accessibilityElement(children: .contain)
@@ -237,8 +238,20 @@ struct ScannerView: View {
             if scenePhase == .active {
                 await store.runCameraLoop()
             } else {
+                scanOperation?.cancel()
+                store.cancelBulkScan()
                 await store.stopCamera()
             }
+        }
+        .task(id: store.frozenImageRevision) {
+            guard let data = store.frozenImageData else {
+                frozenPreview = nil
+                return
+            }
+            frozenPreview = nil
+            let image = await ScanPreviewPipeline.shared.image(for: data)
+            guard !Task.isCancelled else { return }
+            frozenPreview = image
         }
         .task(id: preferences.scanImprovementConsent) {
             store.setFeedbackConsent(preferences.scanImprovementConsent)
@@ -265,24 +278,31 @@ struct ScannerView: View {
             guard [.capturing, .identifying, .review, .result].contains(phase) else { return }
             dismissScanTips()
         }
-        .onChange(of: selectedBulkPhoto) { _, item in
-            guard let item else { return }
+        .task(id: selectedBulkPhoto) {
+            guard let item = selectedBulkPhoto else { return }
+            store.cancelBulkScan()
             isImportingBulkPhoto = true
-            Task { @MainActor in
-                defer {
-                    isImportingBulkPhoto = false
-                    selectedBulkPhoto = nil
-                }
-                do {
-                    guard let data = try await item.loadTransferable(type: Data.self) else {
-                        await store.importBulkPhotoLoadFailed()
-                        return
-                    }
-                    await store.importBulkPhoto(data)
-                } catch {
-                    await store.importBulkPhotoLoadFailed()
-                }
+            defer {
+                isImportingBulkPhoto = false
+                selectedBulkPhoto = nil
             }
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self) else {
+                    await store.importBulkPhotoLoadFailed()
+                    return
+                }
+                try Task.checkCancellation()
+                await store.importBulkPhoto(data)
+            } catch is CancellationError {
+                return
+            } catch {
+                await store.importBulkPhotoLoadFailed()
+            }
+        }
+        .onDisappear {
+            scanOperation?.cancel()
+            scanOperation = nil
+            store.cancelBulkScan()
         }
         .onChange(of: store.proLimitFeature) { _, feature in
             guard let feature else { return }
@@ -300,7 +320,8 @@ struct ScannerView: View {
         .fullScreenCover(item: $store.presentedBulkResults) { presentation in
             BulkScanResultsView(
                 presentation: presentation,
-                store: store
+                store: store,
+                preview: frozenPreview
             )
         }
         .overlay(alignment: .top) {
@@ -373,6 +394,13 @@ struct ScannerView: View {
             isShowingScanTips = false
         }
         preferences.hasSeenScanTips = true
+    }
+
+    private func startScanOperation(_ operation: @escaping @MainActor () async -> Void) {
+        scanOperation?.cancel()
+        scanOperation = Task { @MainActor in
+            await operation()
+        }
     }
 }
 
@@ -470,10 +498,8 @@ enum ScannerCameraLayout {
 }
 
 private struct FrozenScanImageView: View {
-    let data: Data
+    let image: UIImage?
     let usesAspectFit: Bool
-
-    @State private var image: UIImage?
 
     var body: some View {
         Group {
@@ -495,9 +521,6 @@ private struct FrozenScanImageView: View {
             } else {
                 Color.black
             }
-        }
-        .task(id: data) {
-            image = UIImage(data: data)
         }
         .accessibilityHidden(true)
     }
