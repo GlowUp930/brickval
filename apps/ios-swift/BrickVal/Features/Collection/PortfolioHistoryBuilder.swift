@@ -111,7 +111,10 @@ enum PortfolioHistoryBuilder {
             let hasAskingObservation = item.marketSales.contains { $0.source == "listing" }
             return points.count > 1 || (hasAskingObservation && !points.isEmpty) ? (item, points) : nil
         }
-        guard let commonStart = covered.compactMap({ $0.1.first?.timestamp }).max() else {
+        let datedSales = covered.filter { $0.1.count > 1 }
+        let commonStart = datedSales.compactMap { $0.1.first?.timestamp }.max()
+            ?? covered.compactMap { $0.1.first?.timestamp }.min()
+        guard let commonStart else {
             return PortfolioMarketHistory(points: [], coveredItems: 0, totalItems: items.count)
         }
         // Keep the same holdings throughout the graph; never backfill an item's unknown past.
@@ -120,6 +123,7 @@ enum PortfolioHistoryBuilder {
         let points = dates.map { date in
             let value = covered.indices.reduce(0.0) { total, index in
                 let entry = covered[index]
+                guard let firstDate = entry.1.first?.timestamp, date >= firstDate else { return total }
                 while cursors[index] + 1 < entry.1.count, entry.1[cursors[index] + 1].timestamp! <= date {
                     cursors[index] += 1
                 }

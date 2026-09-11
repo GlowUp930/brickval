@@ -110,6 +110,19 @@ struct PortfolioHistoryBuilderTests {
         #expect(snapshot.quantityAveragePriceUSD == 40)
     }
 
+    @Test func currentListingObservationDoesNotEraseOlderPortfolioSales() {
+        var sold = fixture()
+        sold.marketSales = [sale("2026-08-15", 10), sale("2026-09-01", 20)]
+        var listing = fixture(number: "70919")
+        listing.marketSales = [sale("2026-09-08", 40, 1, source: "listing")]
+
+        let history = PortfolioHistoryBuilder.marketHistory(items: [sold, listing], horizon: .month, now: now)
+        #expect(history.coveredItems == 2)
+        #expect(history.points.count == 3)
+        #expect(history.points.first?.value == 10)
+        #expect(history.points.last?.value == 60)
+    }
+
     @Test func preparedHistoryContainsEveryObservedSellerCountryWithoutChangingCurrentPortfolio() {
         var item = fixture()
         item.marketSales = [
