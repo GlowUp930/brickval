@@ -1,5 +1,13 @@
 # Scan Result Card Visual QA
 
+## Native performance follow-up — 2026-09-11
+
+Captured-photo previews are now prepared once off the UI thread and reused by scanner, processing, and bulk results. Scan operations cancel when replaced, dismissed, or backgrounded, and stale results are ignored. History preparation and product-image decoding remain off the rendering path. The 234-test unit suite and 17 scanner/processing UI checks pass on both simulator sizes; physical Release-device profiling is still required. See [`docs/audits/2026-09-11-performance-followup.md`](../../docs/audits/2026-09-11-performance-followup.md).
+
+## Build 178 performance archive — 2026-09-11
+
+The performance follow-up is archived as signed Release build 1.0.8 (178) at `/tmp/BrickVal178.xcarchive`; strict code-signature verification passed and the BrickVal dSYM UUID is `8258915E-0ADC-37B1-B120-83E8357EFB75`. TestFlight upload and physical iPhone verification remain pending.
+
 ## Build 177 release artifact — 2026-09-11
 
 The signed Release archive for build 177 was created successfully from the failed-scan retry fix and passed Xcode validation. TestFlight upload and physical-device confirmation remain pending.

@@ -1,5 +1,13 @@
 # BrickVal Native iOS Context
 
+## Native performance follow-up — 2026-09-11
+
+The scanner, bulk processing overlay, and bulk results now share one background, orientation-correct display preview while recognition retains original bytes. Picker/capture/retry work is cancellation-owned and generation-checked. Portfolio history partitions each condition's rows once for All regions and observed seller countries, and ProductImage bounds concurrent decoding while deferring disk trimming. The 234-test unit suite and 17 focused scanner UI checks pass on the small and iPhone 17 Pro simulators. Physical Release profiling and the next archive remain pending. See [`docs/audits/2026-09-11-performance-followup.md`](../../docs/audits/2026-09-11-performance-followup.md).
+
+## Build 178 — 2026-09-11
+
+The performance follow-up is archived as signed Release build 1.0.8 (178) at `/tmp/BrickVal178.xcarchive`. Strict code-signature verification passed and the BrickVal dSYM UUID is `8258915E-0ADC-37B1-B120-83E8357EFB75`. TestFlight upload and physical-device verification remain pending.
+
 ## Build 177 — 2026-09-11
 
 Release archive `/tmp/BrickVal177.xcarchive` completed successfully for version 1.0.8 (177), signed with the Apple Distribution profile. It includes the failed-scan retry input-routing fix. Upload to App Store Connect remains pending because no command-line App Store Connect credentials are configured here; physical-device verification remains required.

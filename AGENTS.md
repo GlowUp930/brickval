@@ -1,5 +1,13 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Native performance follow-up — 2026-09-11
+
+Captured photos now use one background, orientation-correct preview shared by the scanner, processing overlay, and bulk results. Imported-photo and capture/retry work is cancellation-owned and generation-checked so stale detector or provider responses cannot reopen a screen. Country-aware history partitions rows once for charts and snapshots, and product-image decoding is bounded while disk trimming runs in the background. The 234-test native suite and 17 focused scanner UI checks pass on both simulator sizes. A Release physical-iPhone trace, constrained-device detector measurement, and the next archive remain required before claiming the reported lag is resolved on hardware. See [`docs/audits/2026-09-11-performance-followup.md`](docs/audits/2026-09-11-performance-followup.md).
+
+## Build 178 — 2026-09-11
+
+The performance follow-up is archived as signed Release build 1.0.8 (178) at `/tmp/BrickVal178.xcarchive`. Code-signature verification passed and the archive contains the BrickVal dSYM (UUID `8258915E-0ADC-37B1-B120-83E8357EFB75`). TestFlight upload and physical-device verification remain separate release checks.
+
 ## Build 177 — 2026-09-11
 
 Release build 1.0.8 (177) was archived successfully from the failed-scan retry fix with the Apple Distribution profile. The archive is `/tmp/BrickVal177.xcarchive`; App Store Connect upload is still pending because no command-line upload credentials are configured in this environment. The archive passed Xcode validation. Physical-device retry verification remains required.
