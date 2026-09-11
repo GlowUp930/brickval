@@ -108,6 +108,14 @@ try {
   check((await historyResponse.json()).items[0].new_sales.length,1);
   check(historyFetches,0);
   check((await historyRoute.POST(request({items:Array(21).fill({identifier:'21367',item_type:'set'})}))).status,400);
+  // A condition with no sold rows uses active listing rows and marks them as asking data.
+  globalThis.bvAudit.historyCache=null;
+  globalThis.bvAudit.historyProvider=()=>({
+    sold_new:null, sold_used:null, stock_new:null,
+    stock_used:{currency_code:'USD', price_detail:[{unit_price:'18',quantity:2}]},
+  });
+  const listingResponse=await historyRoute.POST(request({items:[{identifier:'21367',item_type:'set'}]}));
+  check((await listingResponse.json()).items[0].used_sales[0].source,'listing');
 
   const region=await load('src/app/api/minifig/bulk-scan/identify-region/route.ts',{
     '@/lib/scan-request-access':`export async function scanRequestAccess(){return {userId:'audit-user'};}`,
