@@ -249,8 +249,10 @@ export async function fetchCollectionMarketGuides(type: "set" | "minifig" | "par
   };
   const sold_new = await fetchGuide("sold", "N");
   const sold_used = await fetchGuide("sold", "U");
-  const stock_new = await fetchGuide("stock", "N");
-  const stock_used = await fetchGuide("stock", "U");
+  const hasUsableRows = (guide: BrickLinkPriceGuide | null) =>
+    guide?.currency_code === "USD" && (guide.price_detail?.length ?? 0) > 0;
+  const stock_new = hasUsableRows(sold_new) ? null : await fetchGuide("stock", "N");
+  const stock_used = hasUsableRows(sold_used) ? null : await fetchGuide("stock", "U");
   return { sold_new, sold_used, stock_new, stock_used };
 }
 
