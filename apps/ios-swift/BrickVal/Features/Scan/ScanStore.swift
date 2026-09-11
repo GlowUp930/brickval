@@ -729,7 +729,11 @@ final class ScanStore {
             guard isCurrentBulkScan(bulkGeneration) else { throw CancellationError() }
         }
         phase = .identifying
-        setFrozenImageData(imageData)
+        // Capture/import paths publish the bytes before entering identify. A
+        // retry reuses those bytes, so do not bump the preview revision again.
+        if frozenImageData == nil {
+            setFrozenImageData(imageData)
+        }
         if mode == .minifig, intent == .bulk {
             if let monetization,
                monetization.shouldUseLockedBulkPreview(isPro: isProSubscriber) {
@@ -942,7 +946,6 @@ final class ScanStore {
         }
         guard !previewRegions.isEmpty else { return false }
 
-        setFrozenImageData(imageData)
         frozenBulkRegions = previewRegions
         frozenBulkSource = bulkSource
         bulkProcessingRegions = previewRegions.map(\.boundingBox)

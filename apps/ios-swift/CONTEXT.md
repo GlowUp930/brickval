@@ -6,7 +6,7 @@ The scanner, bulk processing overlay, and bulk results now share one background,
 
 ## Build 178 — 2026-09-11
 
-The performance follow-up is archived as signed Release build 1.0.8 (178) at `/tmp/BrickVal178.xcarchive`. Strict code-signature verification passed and the BrickVal dSYM UUID is `8258915E-0ADC-37B1-B120-83E8357EFB75`. TestFlight upload and physical-device verification remain pending.
+The performance follow-up is archived as signed Release build 1.0.8 (178) at `/tmp/BrickVal178.xcarchive`. Strict code-signature verification passed and the BrickVal dSYM UUID is `E34108CE-5CD5-3456-833A-4A16804C4DDF`. TestFlight upload and physical-device verification remain pending.
 
 ## Build 177 — 2026-09-11
 
