@@ -6,7 +6,7 @@ Captured photos now use one background, orientation-correct preview shared by th
 
 ## Build 178 — 2026-09-11
 
-The performance follow-up is archived as signed Release build 1.0.8 (178) at `/tmp/BrickVal178.xcarchive`. Code-signature verification passed and the archive contains the BrickVal dSYM (UUID `E34108CE-5CD5-3456-833A-4A16804C4DDF`). TestFlight upload and physical-device verification remain separate release checks.
+The performance follow-up is archived as signed Release build 1.0.8 (178) at `/tmp/BrickVal178.xcarchive`. Code-signature verification passed and the archive contains the BrickVal dSYM (UUID `E34108CE-5CD5-3456-833A-4A16804C4DDF`). Xcode uploaded build 178 to App Store Connect on 12 Sep 2026; Apple processing/TestFlight availability remains asynchronous. Physical-device verification remains pending.
 
 ## Build 177 — 2026-09-11
 
