@@ -1,5 +1,9 @@
 # BrickVal Native iOS Context
 
+## TestFlight build 179 — 2026-09-13
+
+Build 1.0.8 (179) includes the revenue funnel instrumentation and trial activation prompt. The signed archive `/tmp/BrickVal179.xcarchive` passed native tests and Release compilation, and Xcode uploaded it successfully to App Store Connect. Apple processing and TestFlight availability are asynchronous. Physical-device verification remains pending.
+
 ## Live camera recovery and figure-anchored bulk prices — 2026-09-13
 
 When a single minifigure recognition response has no match, the captured image and stale boxes are cleared immediately while the failure message remains visible. The live camera continues underneath, the shutter is enabled for an explicit new capture, and automatic recognition stays paused until the user taps Try again. Camera permission, authentication, allowance, and bulk retry behavior are unchanged.
