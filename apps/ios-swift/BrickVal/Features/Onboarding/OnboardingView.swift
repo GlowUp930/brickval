@@ -168,6 +168,13 @@ struct OnboardingView: View {
     }
 
     private func showValueStep() {
+        coordinator?.analytics.capture(
+            PostHogEvent.onboardingGetStartedTapped,
+            properties: [
+                "from_step": "video",
+                "is_replay": preferences.isReplayingOnboarding,
+            ]
+        )
         withAnimation(reduceMotion ? nil : .timingCurve(0.22, 1, 0.36, 1, duration: 0.42)) {
             step = .value
         }

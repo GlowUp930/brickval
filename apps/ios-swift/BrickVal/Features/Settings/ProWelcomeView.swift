@@ -2,14 +2,18 @@ import SwiftUI
 import UIKit
 
 struct ProWelcomeView: View {
+    @Environment(AppRouter.self) private var router
     @Environment(EntitlementStore.self) private var entitlements
+    @Environment(MonetizationStore.self) private var monetization
     @Environment(NotificationCoordinator.self) private var notifications
     @Environment(ProductFeedbackStore.self) private var feedback
+    @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dismiss) private var dismiss
     @State private var heroVisible = false
     @State private var detailsVisible = false
     @State private var notificationMessage: String?
+    @State private var didCaptureTrialPrompt = false
 
     var body: some View {
         ZStack {
@@ -27,6 +31,7 @@ struct ProWelcomeView: View {
                 VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space24) {
                     header
                     hero
+                    trialActivationPrompt
                     PostPurchaseSurveyCard()
                     notificationOffer
                     unlockedFeatures
@@ -52,6 +57,19 @@ struct ProWelcomeView: View {
         .interactiveDismissDisabled()
         .task {
             await reveal()
+        }
+        .onAppear {
+            guard !didCaptureTrialPrompt,
+                  notifications.subscriptionState?.isTrial == true,
+                  monetization.successfulSingleScanCount == 0 else { return }
+            didCaptureTrialPrompt = true
+            coordinator?.analytics.capture(
+                PostHogEvent.trialActivationPromptShown,
+                properties: [
+                    "successful_single_scan_count": monetization.successfulSingleScanCount,
+                    "source": "pro_welcome",
+                ]
+            )
         }
     }
 
@@ -124,6 +142,42 @@ struct ProWelcomeView: View {
             unlockedRow("Unlimited collection items", icon: "shippingbox")
             Divider().overlay(BrickValStyle.Primitive.white.opacity(0.12))
             unlockedRow("Theme and accent controls", icon: "paintpalette")
+        }
+    }
+
+    @ViewBuilder
+    private var trialActivationPrompt: some View {
+        if notifications.subscriptionState?.isTrial == true,
+           monetization.successfulSingleScanCount == 0 {
+            VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space12) {
+                Label("Scan your first LEGO", systemImage: "viewfinder")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(BrickValStyle.Primitive.white)
+
+                Text("Scan your first LEGO item to start tracking its value.")
+                    .font(.subheadline)
+                    .foregroundStyle(BrickValStyle.Primitive.white.opacity(0.72))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    coordinator?.analytics.capture(
+                        PostHogEvent.trialActivationPromptTapped,
+                        properties: ["source": "pro_welcome"]
+                    )
+                    finish()
+                    router.scanPath.removeAll()
+                    router.selectedTab = .scan
+                } label: {
+                    Label("Scan", systemImage: "viewfinder")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(BrickValStyle.Primitive.black)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(BrickValStyle.Semantic.builderYellow, in: Capsule())
+                }
+                .accessibilityHint("Opens the scanner to start your trial")
+            }
+            .padding(BrickValStyle.Primitive.space16)
+            .background(BrickValStyle.Semantic.builderYellow.opacity(0.16), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
     }
 

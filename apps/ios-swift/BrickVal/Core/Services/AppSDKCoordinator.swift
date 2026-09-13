@@ -166,6 +166,13 @@ final class AppSDKCoordinator: SuperwallDelegate {
         params: [String: Any]? = nil,
         feature: @escaping @MainActor () -> Void
     ) -> Bool {
+        analytics.capture(
+            PostHogEvent.upgradeRequested,
+            properties: [
+                "placement": placement.rawValue,
+                "source": "pro_feature",
+            ]
+        )
         guard superwallConfigured else {
             showsSubscriptionFallback = true
             return true
@@ -252,6 +259,13 @@ final class AppSDKCoordinator: SuperwallDelegate {
 
     func didDismissPaywall(withInfo paywallInfo: PaywallInfo) {
         purchaseController?.setPurchasePlacement(nil)
+        analytics.capture(
+            PostHogEvent.paywallDismissed,
+            properties: [
+                "placement": String(describing: paywallInfo.presentedByPlacementWithName),
+                "close_reason": String(describing: paywallInfo.closeReason),
+            ]
+        )
         guard let pendingManualDismissal,
               pendingManualDismissalPlacement?.rawValue == paywallInfo.presentedByPlacementWithName else {
             return
@@ -265,6 +279,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
     }
 
     func setMonetizationCohort(_ cohort: MonetizationAccessCohort?) {
+        analytics.setAccessCohort(cohort?.rawValue)
         guard let cohort else { return }
         notificationCoordinator.setAccessCohort(cohort.rawValue)
         let attributes = [
@@ -398,18 +413,25 @@ final class AppSDKCoordinator: SuperwallDelegate {
         let presentationHandler = PaywallPresentationHandler()
         presentationHandler.onPresent { [weak self] _ in
             Task { @MainActor [weak self] in
+                self?.analytics.capture(
+                    PostHogEvent.paywallPresented,
+                    properties: [
+                        "placement": placement.rawValue,
+                        "source_placement": (params?["source_placement"] as? String) ?? placement.rawValue,
+                    ]
+                )
                 self?.showsSubscriptionFallback = false
                 self?.paywallPresentationError = nil
             }
         }
         presentationHandler.onSkip { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.handlePaywallPresentationFailure()
+                self?.handlePaywallPresentationFailure(placement: placement, reason: "skipped")
             }
         }
         presentationHandler.onError { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.handlePaywallPresentationFailure()
+                self?.handlePaywallPresentationFailure(placement: placement, reason: "error")
             }
         }
 
@@ -430,7 +452,14 @@ final class AppSDKCoordinator: SuperwallDelegate {
         }
     }
 
-    private func handlePaywallPresentationFailure() {
+    private func handlePaywallPresentationFailure(placement: ProPlacement, reason: String) {
+        analytics.capture(
+            PostHogEvent.paywallPresentationFailed,
+            properties: [
+                "placement": placement.rawValue,
+                "reason": reason,
+            ]
+        )
         purchaseController?.setPurchasePlacement(nil)
         pendingManualDismissal = nil
         pendingManualDismissalPlacement = nil

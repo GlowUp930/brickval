@@ -3,7 +3,10 @@ import PostHog
 
 enum PostHogEvent {
     static let onboardingStarted = "onboarding_started"
+    static let onboardingGetStartedTapped = "onboarding_get_started_tapped"
     static let onboardingCompleted = "onboarding_completed"
+    static let trialActivationPromptShown = "trial_activation_prompt_shown"
+    static let trialActivationPromptTapped = "trial_activation_prompt_tapped"
     static let signInCompleted = "sign_in_completed"
     static let scanStarted = "scan_started"
     static let scanCompleted = "scan_completed"
@@ -12,6 +15,9 @@ enum PostHogEvent {
     static let manualLookupStarted = "manual_lookup_started"
     static let manualLookupCompleted = "manual_lookup_completed"
     static let upgradeRequested = "upgrade_requested"
+    static let paywallPresented = "paywall_presented"
+    static let paywallDismissed = "paywall_dismissed"
+    static let paywallPresentationFailed = "paywall_presentation_failed"
     static let itemAddedToCollection = "item_added_to_collection"
     static let itemsAddedToCollection = "items_added_to_collection"
     static let referralOpened = "referral_opened"
@@ -33,6 +39,7 @@ final class PostHogAnalytics {
 
     private(set) var isConfigured = false
     private var identifiedUserID: String?
+    private var accessCohort: String?
 
     init(apiKey: String?) {
         guard let apiKey, apiKey.hasPrefix("phc_") else { return }
@@ -67,12 +74,47 @@ final class PostHogAnalytics {
     func reset() {
         guard isConfigured else { return }
         identifiedUserID = nil
+        accessCohort = nil
         PostHogSDK.shared.reset()
+    }
+
+    /// Adds the release and experiment context that is otherwise easy to lose
+    /// when comparing App Store, paywall, and product-analytics data.
+    func setAccessCohort(_ cohort: String?) {
+        accessCohort = cohort
     }
 
     func capture(_ event: String, properties: [String: Any] = [:]) {
         guard isConfigured else { return }
-        PostHogSDK.shared.capture(event, properties: properties)
+        var enrichedProperties = commonEventProperties
+        properties.forEach { enrichedProperties[$0.key] = $0.value }
+        PostHogSDK.shared.capture(event, properties: enrichedProperties)
+    }
+
+    private var commonEventProperties: [String: Any] {
+        let bundle = Bundle.main
+        let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+        let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+#if DEBUG
+        let environment = "debug"
+#else
+        let environment = "production"
+#endif
+#if targetEnvironment(simulator)
+        let isSimulator = true
+#else
+        let isSimulator = false
+#endif
+        return [
+            "analytics_schema_version": 2,
+            "app_version": version,
+            "app_build": build,
+            "os_version": ProcessInfo.processInfo.operatingSystemVersionString,
+            "platform": "ios",
+            "environment": environment,
+            "is_simulator": isSimulator,
+            "access_cohort": accessCohort ?? "unknown",
+        ]
     }
 
     func isFeatureEnabled(_ key: String) -> Bool {

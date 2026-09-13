@@ -8,6 +8,10 @@ Bulk result prices remain visible for every resolved figure on one screen. Regul
 
 Verification: actual no-match recovery, lifecycle, and planner tests pass; focused failed-scan and dense 60-price UI checks pass on both simulator sizes. The native unit target reports 238 test cases (243 parameterized runs) with zero failures on both sizes, and localization passes with 807 app strings plus four Info.plist strings. Physical camera recovery and real-device dense-photo layout remain pending.
 
+## Revenue funnel instrumentation — 2026-09-13
+
+PostHog custom events now include a schema version plus app version/build, OS, environment, simulator flag, and monetization cohort. Onboarding records the Get Started action, and the shared paywall coordinator records requested, presented, dismissed, and skipped/error outcomes. Feature-specific upgrade actions use the same request event. Prices, products, paywall campaigns, scan allowances, and purchase behavior are unchanged. See [`docs/audits/2026-09-13-revenue-optimization-implementation.md`](../../docs/audits/2026-09-13-revenue-optimization-implementation.md). Production dashboards must filter to production, non-simulator events before revenue decisions; mature trial and D14/D30 cohorts remain required.
+
 ## Native performance follow-up — 2026-09-11
 
 The scanner, bulk processing overlay, and bulk results now share one background, orientation-correct display preview while recognition retains original bytes. Picker/capture/retry work is cancellation-owned and generation-checked. Portfolio history partitions each condition's rows once for All regions and observed seller countries, and ProductImage bounds concurrent decoding while deferring disk trimming. The 234-test unit suite and 17 focused scanner UI checks pass on the small and iPhone 17 Pro simulators. A physical Release trace and constrained-device detector measurement remain pending. See [`docs/audits/2026-09-11-performance-followup.md`](../../docs/audits/2026-09-11-performance-followup.md).
