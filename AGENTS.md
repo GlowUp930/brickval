@@ -1,5 +1,13 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Live camera recovery and figure-anchored bulk prices — 2026-09-13
+
+Recognition failures in a single minifigure scan now release the captured photo and stale detection boxes immediately while keeping the error message visible over the live camera. The camera loop stays active, automatic submissions remain paused, and the shutter is available for an explicit new capture; Try again still resumes automatic scanning. Permission, authentication, allowance, and bulk retry states keep their existing behavior.
+
+Completed bulk results keep every full price on the annotated photo. Labels adapt their visual size to result density, stay near the top of their matching figure, avoid the summary/result rail, use stable positions when selected, and no longer draw price-to-figure lines. VoiceOver keeps the full price and currency, and the 44-point hit target remains available.
+
+Verification: the actual no-match response regression, ScanStore lifecycle checks, bulk planner cases for 2/10/30/60 figures, dense 60-price UI checks, and the focused failed-scan UI check pass on the BrickVal Small iPhone and iPhone 17 Pro simulators. The native unit target reports 238 test cases (243 parameterized runs) with zero failures on both sizes; localization passes with 807 app strings plus four Info.plist strings. Physical-camera confirmation remains required.
+
 ## Native performance follow-up — 2026-09-11
 
 Captured photos now use one background, orientation-correct preview shared by the scanner, processing overlay, and bulk results. Imported-photo and capture/retry work is cancellation-owned and generation-checked so stale detector or provider responses cannot reopen a screen. Country-aware history partitions rows once for charts and snapshots, and product-image decoding is bounded while disk trimming runs in the background. The 234-test native suite and 17 focused scanner UI checks pass on both simulator sizes. A Release physical-iPhone trace and constrained-device detector measurement remain required before claiming the reported lag is resolved on hardware. See [`docs/audits/2026-09-11-performance-followup.md`](docs/audits/2026-09-11-performance-followup.md).

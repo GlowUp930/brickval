@@ -50,6 +50,10 @@ final class ScanStore {
     private(set) var bulkProcessingTotal = 0
     private(set) var successMessage: String?
     private(set) var proLimitFeature: ProFeature?
+    /// A failed single scan keeps the error visible while the camera preview
+    /// remains live. Manual capture is enabled, but automatic detection stays
+    /// paused until the user starts a new scan.
+    private(set) var canCaptureAfterFailure = false
 
     @ObservationIgnored private let camera: CameraService
     @ObservationIgnored private let motion: MotionStabilityService
@@ -149,6 +153,7 @@ final class ScanStore {
         setFrozenImageData(imageData)
         phase = .failed(BrickValLocalization.localized("No minifigure match was found. Try a closer, brighter photo."))
         retriesWithoutCamera = true
+        resumeCameraAfterFailure()
     }
 
     func configureBulkProcessingLayoutDemo(imageData: Data) {
@@ -273,6 +278,23 @@ final class ScanStore {
         await camera.stop()
         await motion.stop()
         isTorchEnabled = false
+        canCaptureAfterFailure = false
+    }
+
+    /// Clears the failed photo and stale boxes while preserving the failure
+    /// message in `phase`. The camera loop remains responsible for keeping the
+    /// preview running; this method never resubmits the failed image.
+    func resumeCameraAfterFailure() {
+        guard intent == .single else { return }
+        setFrozenImageData(nil)
+        frozenBulkRegions = []
+        frozenBulkSource = .camera
+        bulkProcessingRegions = []
+        bulkProcessingSource = .camera
+        bulkProcessingCompleted = 0
+        bulkProcessingTotal = 0
+        resetDetectionState()
+        canCaptureAfterFailure = true
     }
 
     func retryCamera() async {
@@ -280,6 +302,7 @@ final class ScanStore {
         let cameraIsRunning = await camera.isRunning()
         setFrozenImageData(nil)
         frozenBulkRegions = []
+        canCaptureAfterFailure = false
         resetDetectionState()
 #if DEBUG
         if retriesWithoutCamera {
@@ -304,7 +327,7 @@ final class ScanStore {
     }
 
     func captureManually() async {
-        guard phase.allowsLiveDetection else { return }
+        guard phase.allowsLiveDetection || canCaptureAfterFailure else { return }
         guard canBeginCurrentScan else {
             proLimitFeature = intent == .bulk ? .bulkScan : .singleScan
             analytics?.capture(
@@ -322,6 +345,7 @@ final class ScanStore {
             ]
         )
         do {
+            canCaptureAfterFailure = false
             phase = .capturing
             let bulkGeneration = intent == .bulk ? beginBulkScan() : nil
             let captureStartedAt = Date.now
@@ -627,6 +651,7 @@ final class ScanStore {
         bulkProcessingCompleted = 0
         bulkProcessingTotal = 0
         attemptedProAccessRecovery = false
+        canCaptureAfterFailure = false
         phase = .searching
         resetDetectionState()
     }
@@ -865,7 +890,9 @@ final class ScanStore {
             case .review(let detections, let timings, let usage):
                 let candidates = ScanReviewCandidate.make(from: detections)
                 guard !candidates.isEmpty else {
-                    phase = .failed(BrickValLocalization.localized("No minifigure match was found. Try a closer, brighter photo."))
+                    failSingleRecognition(
+                        BrickValLocalization.localized("No minifigure match was found. Try a closer, brighter photo.")
+                    )
                     logResultTimings(timings, startedAt: startedAt)
                     submitFeedback(
                         outcome: .brickognizeRejected,
@@ -894,7 +921,9 @@ final class ScanStore {
                     properties: ["scan_type": ScanIntent.single.rawValue, "outcome": "needs_review"]
                 )
             case .notFound(let timings):
-                phase = .failed(BrickValLocalization.localized("No minifigure match was found. Try a closer, brighter photo."))
+                failSingleRecognition(
+                    BrickValLocalization.localized("No minifigure match was found. Try a closer, brighter photo.")
+                )
                 logResultTimings(timings, startedAt: startedAt)
                 submitFeedback(
                     outcome: .brickognizeRejected,
@@ -1131,6 +1160,16 @@ final class ScanStore {
         phase = .searching
     }
 
+    /// Recognition can return a valid response with no usable match. Keep the
+    /// message visible, but release the captured frame so the live camera is
+    /// immediately usable for the next explicit capture.
+    private func failSingleRecognition(_ message: String) {
+        if intent == .single {
+            resumeCameraAfterFailure()
+        }
+        phase = .failed(message)
+    }
+
     private func handleIdentificationError(_ error: Error) async {
         if error is CancellationError { return }
         if let apiError = error as? APIError, apiError.isProLimit {
@@ -1193,6 +1232,12 @@ final class ScanStore {
 
         let statusCode = (error as? APIError)?.statusCode ?? 0
         reportScanError(error, statusCode: statusCode)
+        if intent == .single,
+           !(error is CameraError),
+           statusCode != 401,
+           statusCode != 402 {
+            resumeCameraAfterFailure()
+        }
         phase = .failed(error.localizedDescription)
         analytics?.capture(
             PostHogEvent.scanFailed,

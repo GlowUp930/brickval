@@ -220,7 +220,7 @@ struct ScannerView: View {
                 automaticScanAvailable: store.canUseSmartScan,
                 isTorchEnabled: store.isTorchEnabled,
                 isBusy: [.capturing, .identifying].contains(store.phase),
-                isCameraReady: store.phase.allowsLiveDetection,
+                isCameraReady: store.phase.allowsLiveDetection || store.canCaptureAfterFailure,
                 isImportingPhoto: isImportingBulkPhoto,
                 bulkPhotoItem: $selectedBulkPhoto,
                 toggleTorch: { Task { await store.toggleTorch() } },

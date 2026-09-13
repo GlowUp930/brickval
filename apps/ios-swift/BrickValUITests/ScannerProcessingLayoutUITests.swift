@@ -10,6 +10,12 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         let retry = app.buttons["scanner.retry"]
         XCTAssertTrue(retry.waitForExistence(timeout: 4))
         XCTAssertTrue(retry.isHittable)
+        let cameraStage = app.otherElements["scanner.cameraStage"]
+        XCTAssertTrue(cameraStage.waitForExistence(timeout: 3))
+        XCTAssertEqual(cameraStage.label, "Camera preview")
+        let capture = app.buttons["scanner.capture"]
+        XCTAssertTrue(capture.waitForExistence(timeout: 3))
+        XCTAssertTrue(capture.isHittable)
 
         let startedAt = Date.now
         retry.tap()

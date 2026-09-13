@@ -29,7 +29,7 @@ struct BulkPriceTagsOverlay: View {
                 anchor: box.center,
                 obstacle: box,
                 text: callout.text,
-                density: callout.id == focusedID ? .regular : density
+                density: density
             )
         }
         return BulkPriceTagPlacementPlanner.placements(
@@ -44,22 +44,6 @@ struct BulkPriceTagsOverlay: View {
         let resolvedPlacements = placements
         let calloutByID = Dictionary(uniqueKeysWithValues: callouts.map { ($0.id, $0) })
         ZStack {
-            ForEach(resolvedPlacements) { placement in
-                Group {
-                    if placement.requiresLeaderLine {
-                        Path { path in
-                            path.move(to: placement.labelAnchor)
-                            path.addLine(to: placement.anchor)
-                        }
-                        .stroke(
-                            accent.opacity(0.48),
-                            style: StrokeStyle(lineWidth: 1)
-                        )
-                    }
-                }
-                .accessibilityHidden(true)
-            }
-
             ForEach(resolvedPlacements) { placement in
                 if let callout = calloutByID[placement.id] {
                     priceTag(callout, placement: placement)

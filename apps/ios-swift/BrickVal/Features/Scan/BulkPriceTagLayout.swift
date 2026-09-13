@@ -115,7 +115,7 @@ struct BulkPriceTagPlacement: Identifiable, Equatable {
     }
 
     var requiresLeaderLine: Bool {
-        hypot(labelAnchor.x - anchor.x, labelAnchor.y - anchor.y) > 12
+        false
     }
 }
 
@@ -150,53 +150,52 @@ enum BulkPriceTagPlacementPlanner {
         guard !items.isEmpty, contentRect.width > 0, contentRect.height > 0 else { return [] }
 
         let order = Dictionary(uniqueKeysWithValues: items.enumerated().map { ($1.id, $0) })
+        // Lay out from top to bottom so each tag stays visually attached to
+        // the figure below it. Stable input order breaks ties and keeps the
+        // result rail from jumping when prices finish in a different order.
         let orderedItems = items.sorted {
-            if $0.density == .regular, $1.density != .regular { return true }
-            if $1.density == .regular, $0.density != .regular { return false }
+            if $0.anchor.y != $1.anchor.y { return $0.anchor.y < $1.anchor.y }
+            if $0.anchor.x != $1.anchor.x { return $0.anchor.x < $1.anchor.x }
             return (order[$0.id] ?? 0) < (order[$1.id] ?? 0)
         }
 
-        let obstacles = items.map { $0.obstacle.insetBy(dx: -minimumSpacing, dy: -minimumSpacing) }
-        var occupied = reservedRects.map { $0.insetBy(dx: -minimumSpacing / 2, dy: -minimumSpacing / 2) }
+        var occupied = reservedRects.map { $0.insetBy(dx: -minimumSpacing, dy: -minimumSpacing) }
         var placements: [BulkPriceTagPlacement] = []
         let areaPerItem = contentRect.width * contentRect.height / CGFloat(max(items.count, 1))
         let useCompressedMicroTags = areaPerItem < 1_400
 
         for item in orderedItems {
             let naturalSize = estimatedSize(text: item.text, density: item.density)
-            let size = item.density == .micro && useCompressedMicroTags
+            let baseSize = item.density == .micro && useCompressedMicroTags
                 ? compressedSize(naturalSize, density: item.density)
                 : naturalSize
-            let preferredCandidates = candidates(
-                for: item,
-                size: size,
-                in: contentRect,
-                minimumSpacing: minimumSpacing
+            let nearestFigure = items
+                .filter { $0.id != item.id }
+                .map { hypot($0.anchor.x - item.anchor.x, $0.anchor.y - item.anchor.y) }
+                .min()
+            let widthLimit = nearestFigure.map { max(item.density.minimumWidth, $0 - minimumSpacing) }
+            let size = CGSize(
+                width: min(baseSize.width, widthLimit ?? baseSize.width),
+                height: baseSize.height
             )
-            let laneCandidates = gridCandidates(
-                size: size,
-                in: contentRect,
-                anchor: item.anchor,
-                spacing: minimumSpacing
-            )
-            let strictCandidates = preferredCandidates + laneCandidates
-            let chosen = strictCandidates.first {
-                isFree($0, from: occupied + obstacles)
-            }
-                // If the photo is crowded with figures, place the full price
-                // in a free lane rather than hiding it behind a marker. A
-                // leader line keeps the relationship to its figure clear.
-                ?? laneCandidates.first { isFree($0, from: occupied) }
-                ?? compressedLaneCandidate(
+            let anchored = (item.density == .micro && items.count >= 48
+                ? gridCandidates(size: size, in: contentRect, anchor: item.anchor, spacing: minimumSpacing)
+                : anchoredCandidates(
                     for: item,
-                    naturalSize: size,
+                    size: size,
                     in: contentRect,
-                    occupied: occupied,
                     minimumSpacing: minimumSpacing
-                )
+                ))
+            let chosen = anchored.first { isFree($0, from: occupied) }
+                ?? nearbyFallbackCandidates(
+                    for: item,
+                    size: size,
+                    in: contentRect,
+                    minimumSpacing: minimumSpacing
+                ).first { isFree($0, from: occupied) }
 
             if let chosen {
-                occupied.append(chosen.insetBy(dx: -minimumSpacing / 2, dy: -minimumSpacing / 2))
+                occupied.append(chosen.insetBy(dx: -minimumSpacing, dy: -minimumSpacing))
                 placements.append(
                     BulkPriceTagPlacement(
                         id: item.id,
@@ -210,18 +209,28 @@ enum BulkPriceTagPlacementPlanner {
                 continue
             }
 
-            // A pathological layout can exhaust every lane. Keep the result
-            // present with the smallest complete-price chip and choose the
-            // least-overlapping bounded location instead of dropping it.
+            // Keep every amount visible even when the reserved summary and
+            // result rail leave no collision-free local position. The closest
+            // anchored candidate is preferable to moving a tag into a side
+            // column or replacing it with a number-only marker.
             let fallbackSize = compressedSize(size, density: item.density)
-            let fallbackCandidates = gridCandidates(
+            let fallbackCandidates = anchoredCandidates(
+                for: item,
                 size: fallbackSize,
                 in: contentRect,
-                anchor: item.anchor,
-                spacing: minimumSpacing
+                minimumSpacing: minimumSpacing
+            ) + nearbyFallbackCandidates(
+                for: item,
+                size: fallbackSize,
+                in: contentRect,
+                minimumSpacing: minimumSpacing
             )
             let fallback = fallbackCandidates.min {
-                overlapScore($0, with: occupied) < overlapScore($1, with: occupied)
+                let left = overlapScore($0, with: occupied)
+                let right = overlapScore($1, with: occupied)
+                if left != right { return left < right }
+                return hypot($0.midX - item.anchor.x, $0.midY - item.anchor.y)
+                    < hypot($1.midX - item.anchor.x, $1.midY - item.anchor.y)
             } ?? clampedFrame(
                 CGRect(
                     x: item.anchor.x - fallbackSize.width / 2,
@@ -232,7 +241,7 @@ enum BulkPriceTagPlacementPlanner {
                 to: contentRect
             )
 
-            occupied.append(fallback.insetBy(dx: -minimumSpacing / 2, dy: -minimumSpacing / 2))
+            occupied.append(fallback.insetBy(dx: -minimumSpacing, dy: -minimumSpacing))
             placements.append(
                 BulkPriceTagPlacement(
                     id: item.id,
@@ -248,23 +257,60 @@ enum BulkPriceTagPlacementPlanner {
         return placements.sorted { (order[$0.id] ?? 0) < (order[$1.id] ?? 0) }
     }
 
-    private static func candidates(
+    private static func anchoredCandidates(
         for item: BulkPriceTagLayoutItem,
         size: CGSize,
         in contentRect: CGRect,
         minimumSpacing: CGFloat
     ) -> [CGRect] {
-        let anchor = item.anchor
-        let gap = minimumSpacing + 4
-        let preferred: [CGRect] = [
-            CGRect(x: anchor.x - size.width / 2, y: anchor.y - size.height - gap, width: size.width, height: size.height),
-            CGRect(x: anchor.x - size.width / 2, y: anchor.y + gap, width: size.width, height: size.height),
-            CGRect(x: anchor.x + gap, y: anchor.y - size.height / 2, width: size.width, height: size.height),
-            CGRect(x: anchor.x - size.width - gap, y: anchor.y - size.height / 2, width: size.width, height: size.height),
+        let figure = item.obstacle
+        let overlap = min(max(size.height * 0.30, 3), 8)
+        let xShift = max(2, min(size.width * 0.28, max(figure.width * 0.35, 2)))
+        let xOffsets = [0, -xShift, xShift, -xShift * 1.8, xShift * 1.8]
+        let yPositions = [
+            figure.minY - size.height + overlap,
+            figure.minY - size.height - minimumSpacing,
+            figure.minY + overlap,
+            figure.midY - size.height / 2,
+            figure.maxY - size.height - overlap,
         ]
 
-        let perimeter = perimeterCandidates(size: size, in: contentRect, anchor: anchor, spacing: minimumSpacing)
-        return (preferred + perimeter).map { clampedFrame($0, to: contentRect) }
+        return yPositions.flatMap { y in
+            xOffsets.map { offset in
+                clampedFrame(
+                    CGRect(
+                        x: figure.midX - size.width / 2 + offset,
+                        y: y,
+                        width: size.width,
+                        height: size.height
+                    ),
+                    to: contentRect
+                )
+            }
+        }
+    }
+
+    private static func nearbyFallbackCandidates(
+        for item: BulkPriceTagLayoutItem,
+        size: CGSize,
+        in contentRect: CGRect,
+        minimumSpacing: CGFloat
+    ) -> [CGRect] {
+        let xStep = max(size.width + minimumSpacing, 1)
+        let yStep = max(size.height + minimumSpacing, 1)
+        var candidates: [(CGRect, CGFloat)] = []
+        var y = contentRect.minY
+        while y <= contentRect.maxY - size.height + 0.5 {
+            var x = contentRect.minX
+            while x <= contentRect.maxX - size.width + 0.5 {
+                let frame = CGRect(x: x, y: y, width: size.width, height: size.height)
+                let distance = hypot(frame.midX - item.obstacle.midX, frame.midY - item.obstacle.minY)
+                candidates.append((frame, distance))
+                x += xStep
+            }
+            y += yStep
+        }
+        return candidates.sorted { $0.1 < $1.1 }.map(\.0)
     }
 
     private static func gridCandidates(
@@ -287,54 +333,6 @@ enum BulkPriceTagPlacementPlanner {
             y += yStep
         }
         return candidates.sorted { $0.1 < $1.1 }.map(\.0)
-    }
-
-    private static func perimeterCandidates(
-        size: CGSize,
-        in rect: CGRect,
-        anchor: CGPoint,
-        spacing: CGFloat
-    ) -> [CGRect] {
-        var candidates: [(CGRect, CGFloat)] = []
-        let xStep = max(size.width + spacing, 1)
-        let yStep = max(size.height + spacing, 1)
-
-        var x = rect.minX
-        while x <= rect.maxX - size.width + 0.5 {
-            let top = CGRect(x: x, y: rect.minY, width: size.width, height: size.height)
-            let bottom = CGRect(x: x, y: rect.maxY - size.height, width: size.width, height: size.height)
-            candidates.append((top, abs(top.midX - anchor.x) + abs(top.midY - anchor.y)))
-            candidates.append((bottom, abs(bottom.midX - anchor.x) + abs(bottom.midY - anchor.y)))
-            x += xStep
-        }
-
-        var y = rect.minY
-        while y <= rect.maxY - size.height + 0.5 {
-            let left = CGRect(x: rect.minX, y: y, width: size.width, height: size.height)
-            let right = CGRect(x: rect.maxX - size.width, y: y, width: size.width, height: size.height)
-            candidates.append((left, abs(left.midX - anchor.x) + abs(left.midY - anchor.y)))
-            candidates.append((right, abs(right.midX - anchor.x) + abs(right.midY - anchor.y)))
-            y += yStep
-        }
-
-        return candidates.sorted { $0.1 < $1.1 }.map(\.0)
-    }
-
-    private static func compressedLaneCandidate(
-        for item: BulkPriceTagLayoutItem,
-        naturalSize: CGSize,
-        in rect: CGRect,
-        occupied: [CGRect],
-        minimumSpacing: CGFloat
-    ) -> CGRect? {
-        let size = compressedSize(naturalSize, density: item.density)
-        let candidates = gridCandidates(
-            size: size,
-            in: rect,
-            anchor: item.anchor,
-            spacing: minimumSpacing
-        )
-        return candidates.first { isFree($0, from: occupied) }
     }
 
     private static func isFree(_ frame: CGRect, from occupied: [CGRect]) -> Bool {

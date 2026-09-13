@@ -1,5 +1,13 @@
 # BrickVal Native iOS Context
 
+## Live camera recovery and figure-anchored bulk prices — 2026-09-13
+
+When a single minifigure recognition response has no match, the captured image and stale boxes are cleared immediately while the failure message remains visible. The live camera continues underneath, the shutter is enabled for an explicit new capture, and automatic recognition stays paused until the user taps Try again. Camera permission, authentication, allowance, and bulk retry behavior are unchanged.
+
+Bulk result prices remain visible for every resolved figure on one screen. Regular, compact, and micro labels are selected from local crowding, figure geometry, and price length; labels prefer the top edge of their matching figure, keep stable positions when focused, avoid the summary/result rail, and never draw connecting lines. Full amounts remain in VoiceOver labels and 44-point controls.
+
+Verification: actual no-match recovery, lifecycle, and planner tests pass; focused failed-scan and dense 60-price UI checks pass on both simulator sizes. The native unit target reports 238 test cases (243 parameterized runs) with zero failures on both sizes, and localization passes with 807 app strings plus four Info.plist strings. Physical camera recovery and real-device dense-photo layout remain pending.
+
 ## Native performance follow-up — 2026-09-11
 
 The scanner, bulk processing overlay, and bulk results now share one background, orientation-correct display preview while recognition retains original bytes. Picker/capture/retry work is cancellation-owned and generation-checked. Portfolio history partitions each condition's rows once for All regions and observed seller countries, and ProductImage bounds concurrent decoding while deferring disk trimming. The 234-test unit suite and 17 focused scanner UI checks pass on the small and iPhone 17 Pro simulators. A physical Release trace and constrained-device detector measurement remain pending. See [`docs/audits/2026-09-11-performance-followup.md`](../../docs/audits/2026-09-11-performance-followup.md).

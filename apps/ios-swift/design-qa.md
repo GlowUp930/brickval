@@ -1,5 +1,13 @@
 # Scan Result Card Visual QA
 
+## Live camera recovery and figure-anchored bulk prices — 2026-09-13
+
+The failed single-scan state now keeps its concise error banner while showing the live camera again. The frozen photo and stale boxes are removed, the shutter is immediately usable for a new explicit capture, and automatic scan submission remains paused until Try again is chosen. The status overlay and accessibility labels remain visible; camera permission and bulk retry states are unchanged.
+
+Bulk completed results keep a full price chip over every matching figure. Chip typography and padding shrink together as the image becomes denser, placement stays near the figure's top edge, the summary and result rail remain clear, and no leader line is drawn. Selection highlights the existing chip without moving the other prices; the result rail and VoiceOver retain the full currency-qualified value.
+
+Focused checks pass on the small and large simulators for the real no-match recovery and dense 60-result layout. Layout tests cover 2, 10, 30, and 60 figures; the native unit target passes 238 test cases (243 parameterized runs), and localization passes all 13 supported languages. Physical iPhone camera and VoiceOver confirmation remain required.
+
 ## Native performance follow-up — 2026-09-11
 
 Captured-photo previews are now prepared once off the UI thread and reused by scanner, processing, and bulk results. Scan operations cancel when replaced, dismissed, or backgrounded, and stale results are ignored. History preparation and product-image decoding remain off the rendering path. The 234-test unit suite and 17 scanner/processing UI checks pass on both simulator sizes; physical Release-device profiling is still required. See [`docs/audits/2026-09-11-performance-followup.md`](../../docs/audits/2026-09-11-performance-followup.md).

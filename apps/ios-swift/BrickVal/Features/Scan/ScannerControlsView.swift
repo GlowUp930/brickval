@@ -20,6 +20,7 @@ struct ScannerControlsView: View {
                 .foregroundStyle(.white, .tint)
                 .disabled(isBusy || !isCameraReady || isImportingPhoto)
                 .accessibilityHint(captureHint)
+                .accessibilityIdentifier("scanner.capture")
 
             HStack {
                 if intent == .bulk {

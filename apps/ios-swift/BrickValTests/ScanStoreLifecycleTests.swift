@@ -13,6 +13,38 @@ struct ScanStoreLifecycleTests {
     }
 
     @Test @MainActor
+    func failedSingleScanReturnsToLivePreviewWithoutRetry() throws {
+        let store = ScanStore()
+        let imageData = try recoveryImageData()
+        store.configureFailedScanDemo(imageData: imageData)
+
+        store.resumeCameraAfterFailure()
+
+        #expect(store.frozenImageData == nil)
+        #expect(store.phase == .failed(BrickValLocalization.localized("No minifigure match was found. Try a closer, brighter photo.")))
+        #expect(store.canCaptureAfterFailure)
+    }
+
+    @Test @MainActor
+    func recognitionFailureReleasesCapturedPhotoWithoutRetry() async throws {
+        var api = BrickValAPIClient.successfulLookupStub
+        api.scanMinifigure = { _ in
+            .notFound(timings: MinifigScanTimings(
+                identificationMilliseconds: 20,
+                pricingMilliseconds: nil,
+                totalMilliseconds: 20
+            ))
+        }
+        let store = ScanStore(api: api)
+
+        await store.identifyGalleryImage(try recoveryImageData())
+
+        #expect(store.phase == .failed(BrickValLocalization.localized("No minifigure match was found. Try a closer, brighter photo.")))
+        #expect(store.frozenImageData == nil)
+        #expect(store.canCaptureAfterFailure)
+    }
+
+    @Test @MainActor
     func cameraPreparationFailureStaysOutOfHandledScanReporting() async {
         let reporter = RecordingAppErrorReporter()
         let store = ScanStore(errorReporter: reporter)

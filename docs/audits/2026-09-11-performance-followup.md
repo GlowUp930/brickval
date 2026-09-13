@@ -4,6 +4,14 @@
 
 The highest code-backed risks were repeated captured-photo decoding, uncancelled imported-photo work, repeated country filtering during history preparation, and foreground image-cache maintenance. The native source now shares a downsampled preview, cancels stale scan work, partitions market rows once, and moves image decoding and disk trimming away from view rendering. The remaining bulk detector duration and physical-device responsiveness are still measurement gaps; this change does not claim that a constrained iPhone hang is resolved until a device run confirms it.
 
+## Follow-up: failed-scan recovery and bulk label layout — 2026-09-13
+
+The reported single-scan “freeze” was also reproducible as held-photo recovery behavior: recognition could leave the captured frame in place and keep the shutter unavailable until Try again. Generic recognition failures now clear the frozen image and detection boxes, preserve the error message, leave the camera loop running, and pause automatic submissions until the user explicitly retries. Permission, authentication, allowance, and bulk failures retain their existing recovery paths. The actual no-match response regression now exercises the same state transition.
+
+Bulk result labels no longer use perimeter lanes or leader lines. The planner chooses regular, compact, or micro full-price chips from density and text width, prefers the figure's top edge, reserves the summary/result rail, and keeps selection positions stable. Planner tests cover 2, 10, 30, and 60 figures; focused dense UI checks pass on both simulator sizes. No provider, pricing, allowance, or backend behavior changed.
+
+Verification after this follow-up: the native unit target passed 238 test cases (243 parameterized runs) on the BrickVal Small iPhone and iPhone 17 Pro simulators; the focused failed-scan and dense-price UI checks passed on both; and localization passed with 807 app strings plus four Info.plist strings. Physical-camera recovery, VoiceOver on hardware, and Release traces on a real device remain open.
+
 ## Findings and changes
 
 1. **Captured photos were decoded in more than one view.**

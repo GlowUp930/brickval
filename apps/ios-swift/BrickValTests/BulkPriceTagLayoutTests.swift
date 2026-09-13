@@ -3,6 +3,14 @@ import Testing
 @testable import BrickVal
 
 struct BulkPriceTagLayoutTests {
+    @Test
+    func densityShrinksAsFigureCountRises() {
+        #expect(BulkPriceTagDensity.forResultCount(2, accessibilitySize: false) == .regular)
+        #expect(BulkPriceTagDensity.forResultCount(10, accessibilitySize: false) == .regular)
+        #expect(BulkPriceTagDensity.forResultCount(30, accessibilitySize: false) == .compact)
+        #expect(BulkPriceTagDensity.forResultCount(60, accessibilitySize: false) == .micro)
+    }
+
     @Test(arguments: [2, 10, 30, 60])
     func placesEveryFigureInsideTheStageWithoutDuplicateIDs(_ count: Int) {
         let items = makeItems(count: count)
@@ -24,6 +32,7 @@ struct BulkPriceTagLayoutTests {
         })
         #expect(placements.allSatisfy { $0.labelAnchor.x >= $0.frame.minX && $0.labelAnchor.x <= $0.frame.maxX })
         #expect(placements.allSatisfy { $0.labelAnchor.y >= $0.frame.minY && $0.labelAnchor.y <= $0.frame.maxY })
+        #expect(placements.allSatisfy { !$0.requiresLeaderLine })
         for (index, placement) in placements.enumerated() {
             for other in placements.dropFirst(index + 1) {
                 #expect(!placement.frame.insetBy(dx: -2, dy: -2).intersects(other.frame.insetBy(dx: -2, dy: -2)))
@@ -77,7 +86,7 @@ struct BulkPriceTagLayoutTests {
     }
 
     @Test
-    func leaderAnchorAlwaysTouchesTheNearestTagEdge() {
+    func pricesStayAnchoredToTheirFiguresWithoutLeaderLines() {
         let item = BulkPriceTagLayoutItem(
             id: "figure-1",
             number: 1,
@@ -100,6 +109,8 @@ struct BulkPriceTagLayoutTests {
             abs(placement.labelAnchor.y - placement.frame.maxY)
         )
         #expect(edgeDistance < 0.001)
+        #expect(!placement.requiresLeaderLine)
+        #expect(abs(placement.frame.midX - item.obstacle.midX) <= item.obstacle.width)
     }
 
     private func makeItems(count: Int) -> [BulkPriceTagLayoutItem] {
