@@ -1,5 +1,9 @@
 # BrickVal Native iOS Context
 
+## App Store metadata localization — 2026-09-14
+
+App Store Connect version 1.08 now has localized metadata for the first high-value, non-English storefront tier: Arabic, Brazilian Portuguese, Simplified Chinese, Traditional Chinese, Dutch, French, German, Italian, Japanese, Korean, and Spanish (Spain). Each locale has a translated description, promotional text, What's New text, keywords, app name, and subtitle. Terms, privacy, and marketing URLs remain the same so every storefront keeps the same legal and support destinations. The English (U.S.) primary metadata and screenshots were left unchanged. Apple will show a matching localization when the customer’s App Store language is supported; otherwise it falls back to the primary language. This is metadata-only and does not require a new binary.
+
 ## PostHog onboarding identity repair — 2026-09-14
 
 The apparent install-to-onboarding drop-off was a confirmed analytics join defect. On a fresh signed-out launch, the identity sync called `reset()` after PostHog had emitted its automatic `Application Installed` event; that rotated the anonymous ID before `onboarding_started`, so the two events were counted as different people. The reset is now guarded: a fresh anonymous launch keeps its install identity, while sign-out and account changes still reset. The last identified Clerk ID is persisted so switching accounts after an app restart cannot merge two accounts.
