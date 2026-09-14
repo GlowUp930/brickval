@@ -9,7 +9,7 @@ This is the first implementation step from the read-only analytics review. It im
 - Paywall presentation now records requested, presented, dismissed, and skipped/error outcomes. The existing correlated purchase-attempt events remain the source for StoreKit and RevenueCat outcomes.
 - Feature-specific upgrade actions now enter the same `upgrade_requested` funnel as the general subscription action.
 
-## Funnel dictionary
+## Funnel dictionary (superseded onboarding join)
 
 The current production funnel is:
 
@@ -17,7 +17,7 @@ The current production funnel is:
 
 `scan_completed` keeps the existing `outcome` and `scan_type` fields. A scan result is considered first value when the user reaches a successful result; PostHog cohorts should use the first occurrence rather than counting every scan. Collection-save events remain the stronger “saved value” milestone.
 
-All custom events include `analytics_schema_version: 2`, `app_build`, and `environment`. Production dashboards must filter `environment = production` and `is_simulator = false`; App Store and TestFlight traffic still need separate cohort properties before using the events for ARPU decisions.
+The implementation originally documented `analytics_schema_version: 2`. The 14 September onboarding repair supersedes that contract with schema `3`, a stable install/session context, and the explicit `app_ready` / `onboarding_screen_shown` events. Use [`docs/audits/2026-09-14-posthog-onboarding.md`](2026-09-14-posthog-onboarding.md) and the saved first-run funnel for onboarding conversion. Production dashboards must filter `environment = production`, `is_simulator = false`, and a released build before using events for ARPU decisions.
 
 ## Evidence and next step
 

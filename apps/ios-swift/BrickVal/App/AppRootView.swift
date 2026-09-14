@@ -18,6 +18,7 @@ struct AppRootView: View {
     @State private var launchIsHandingOff = false
     @State private var migrationError: String?
     @State private var purchaseFailureDemo: PurchaseFailure?
+    @State private var didCaptureAppReady = false
 
     var body: some View {
         ZStack {
@@ -122,7 +123,26 @@ struct AppRootView: View {
         await migrate()
         await minimumLaunchDisplay
         isReady = true
+        guard !didCaptureAppReady else {
+            await completeLaunch()
+            return
+        }
+        didCaptureAppReady = true
+        coordinator?.analytics.capture(
+            PostHogEvent.appReady,
+            properties: [
+                "launch_kind": launchAnalyticsKind,
+                "has_completed_onboarding": preferences.hasCompletedOnboarding,
+                "is_replay": preferences.isReplayingOnboarding,
+            ]
+        )
         await completeLaunch()
+    }
+
+    private var launchAnalyticsKind: String {
+        if preferences.isReplayingOnboarding { return "onboarding_replay" }
+        if preferences.hasCompletedOnboarding { return "returning" }
+        return "first_run"
     }
 
     private func holdLaunchAnimation() async {

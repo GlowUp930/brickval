@@ -1,5 +1,13 @@
 # BrickVal Native iOS Context
 
+## PostHog onboarding identity repair — 2026-09-14
+
+The apparent install-to-onboarding drop-off was a confirmed analytics join defect. On a fresh signed-out launch, the identity sync called `reset()` after PostHog had emitted its automatic `Application Installed` event; that rotated the anonymous ID before `onboarding_started`, so the two events were counted as different people. The reset is now guarded: a fresh anonymous launch keeps its install identity, while sign-out and account changes still reset. The last identified Clerk ID is persisted so switching accounts after an app restart cannot merge two accounts.
+
+Analytics now records `app_ready` and `onboarding_screen_shown`, adds a stable local install ID, session ID when available, `analytics_identity`, and schema version `3` to custom events. Onboarding events include a session ID, launch kind, replay flag, entry point, and completion path. Event properties contain no email addresses, receipts, payment details, passwords, provider credentials, or raw provider/error payloads; the existing opaque Clerk account ID remains the PostHog identity key and is not copied into event properties. The saved PostHog insight [First-run onboarding funnel](https://us.posthog.com/project/568935/insights/mlbWS207) is on the [Mobile app growth dashboard](https://us.posthog.com/project/568935/dashboard/2041521), filtered to `environment = production`, `launch_kind = first_run`, and `is_replay = false`.
+
+Verification: 237 native tests across 38 suites passed on the BrickVal Small iPhone and iPhone 17 Pro simulators; the focused onboarding Get Started UI regression passed on both; localization passed with 807 app strings plus four Info.plist strings. The old `Application Installed → onboarding_started` funnel and its 2.42% value remain historical and are not comparable or backfilled. The corrected funnel needs a new production/TestFlight build and real installs before it can report current conversion. Physical-device analytics delivery remains pending.
+
 ## TestFlight build 179 — 2026-09-13
 
 Build 1.0.8 (179) includes the revenue funnel instrumentation and trial activation prompt. The signed archive `/tmp/BrickVal179.xcarchive` passed native tests and Release compilation, and Xcode uploaded it successfully to App Store Connect. Apple processing and TestFlight availability are asynchronous. Physical-device verification remains pending.

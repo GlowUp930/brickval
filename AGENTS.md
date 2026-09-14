@@ -1,5 +1,9 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## PostHog onboarding identity repair — 2026-09-14
+
+The apparent install-to-onboarding drop-off was a confirmed analytics join defect: a fresh signed-out launch reset PostHog after its automatic `Application Installed` event, rotating the anonymous ID before `onboarding_started`. Native analytics now keeps a fresh anonymous identity stable, persists the last identified Clerk ID for safe account switching after restart, and records `app_ready` plus `onboarding_screen_shown` with schema version `3`, install/session context, launch kind, replay flag, and completion path. The saved [First-run onboarding funnel](https://us.posthog.com/project/568935/insights/mlbWS207) is on the [Mobile app growth dashboard](https://us.posthog.com/project/568935/dashboard/2041521) with production, `launch_kind=first_run`, and non-replay filters. The historical 2.42% funnel is not comparable; a new released build and real production installs are still required before using the corrected rate for revenue decisions. See `docs/audits/2026-09-14-posthog-onboarding.md`.
+
 ## Live camera recovery and figure-anchored bulk prices — 2026-09-13
 
 Recognition failures in a single minifigure scan now release the captured photo and stale detection boxes immediately while keeping the error message visible over the live camera. The camera loop stays active, automatic submissions remain paused, and the shutter is available for an explicit new capture; Try again still resumes automatic scanning. Permission, authentication, allowance, and bulk retry states keep their existing behavior.

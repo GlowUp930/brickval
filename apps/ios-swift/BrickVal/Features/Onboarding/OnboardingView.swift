@@ -23,6 +23,7 @@ struct OnboardingView: View {
     @State private var authenticatingProvider: OnboardingAuthProvider?
     @State private var alertMessage: String?
     @State private var didCaptureAnalytics = false
+    @State private var onboardingSessionID = UUID().uuidString
     @State private var referralCode = ""
     @State private var referralMessage: String?
     @State private var isClaimingReferral = false
@@ -105,9 +106,19 @@ struct OnboardingView: View {
         .onAppear {
             guard !didCaptureAnalytics else { return }
             didCaptureAnalytics = true
+            let properties: [String: Any] = [
+                "launch_kind": onboardingLaunchKind,
+                "is_replay": preferences.isReplayingOnboarding,
+                "entry_point": step == .account ? "account" : "video",
+                "onboarding_session_id": onboardingSessionID,
+            ]
+            coordinator?.analytics.capture(
+                PostHogEvent.onboardingScreenShown,
+                properties: properties
+            )
             coordinator?.analytics.capture(
                 PostHogEvent.onboardingStarted,
-                properties: ["is_replay": preferences.isReplayingOnboarding]
+                properties: properties
             )
         }
         .sheet(item: $presentedSheet) { sheet in
@@ -172,7 +183,9 @@ struct OnboardingView: View {
             PostHogEvent.onboardingGetStartedTapped,
             properties: [
                 "from_step": "video",
+                "launch_kind": onboardingLaunchKind,
                 "is_replay": preferences.isReplayingOnboarding,
+                "onboarding_session_id": onboardingSessionID,
             ]
         )
         withAnimation(reduceMotion ? nil : .timingCurve(0.22, 1, 0.36, 1, duration: 0.42)) {
@@ -276,6 +289,7 @@ struct OnboardingView: View {
         didFinishOnboarding = true
 
         let isReplay = preferences.isReplayingOnboarding
+        let launchKind = isReplay ? "onboarding_replay" : "first_run"
         preferences.primaryGoal = goal
         preferences.isReplayingOnboarding = false
         preferences.shouldReturnToOnboardingAccount = false
@@ -289,6 +303,10 @@ struct OnboardingView: View {
             properties: [
                 "signed_in": coordinator?.clerk?.user != nil,
                 "goal": goal?.rawValue ?? "not_set",
+                "launch_kind": launchKind,
+                "is_replay": isReplay,
+                "completion_path": coordinator?.clerk?.user != nil ? "signed_in" : "guest",
+                "onboarding_session_id": onboardingSessionID,
             ]
         )
         if !isReplay, coordinator?.clerk?.user != nil {
@@ -297,6 +315,12 @@ struct OnboardingView: View {
             Task { await completeReferralOnboardingIfPossible() }
         }
         onFinish()
+    }
+
+    private var onboardingLaunchKind: String {
+        if preferences.isReplayingOnboarding { return "onboarding_replay" }
+        if preferences.hasCompletedOnboarding { return "returning" }
+        return "first_run"
     }
 
     private func applyReferralCode() {

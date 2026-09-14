@@ -2,6 +2,8 @@ import Foundation
 import PostHog
 
 enum PostHogEvent {
+    static let appReady = "app_ready"
+    static let onboardingScreenShown = "onboarding_screen_shown"
     static let onboardingStarted = "onboarding_started"
     static let onboardingGetStartedTapped = "onboarding_get_started_tapped"
     static let onboardingCompleted = "onboarding_completed"
@@ -36,12 +38,25 @@ enum PostHogEvent {
 @MainActor
 final class PostHogAnalytics {
     static let host = "https://us.i.posthog.com"
+    private static let installIDKey = "brickvalue_posthog_install_id"
+    private static let identifiedUserIDKey = "brickvalue_posthog_identified_user_id"
 
     private(set) var isConfigured = false
+    private(set) var installID: String
+    private let defaults: UserDefaults
     private var identifiedUserID: String?
     private var accessCohort: String?
 
-    init(apiKey: String?) {
+    init(apiKey: String?, defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        if let storedInstallID = defaults.string(forKey: Self.installIDKey), !storedInstallID.isEmpty {
+            installID = storedInstallID
+        } else {
+            let newInstallID = UUID().uuidString
+            installID = newInstallID
+            defaults.set(newInstallID, forKey: Self.installIDKey)
+        }
+
         guard let apiKey, apiKey.hasPrefix("phc_") else { return }
 
         let config = PostHogConfig(projectToken: apiKey, host: Self.host)
@@ -50,12 +65,19 @@ final class PostHogAnalytics {
         config.personProfiles = .identifiedOnly
         PostHogSDK.shared.setup(config)
         isConfigured = true
+        registerInstallContext()
     }
 
     func identify(userID: String, isPro: Bool) {
         guard isConfigured else { return }
+        guard !userID.isEmpty else { return }
+        let previousUserID = identifiedUserID ?? defaults.string(forKey: Self.identifiedUserIDKey)
+        if let previousUserID, previousUserID != userID {
+            reset()
+        }
         guard identifiedUserID != userID else { return }
         identifiedUserID = userID
+        defaults.set(userID, forKey: Self.identifiedUserIDKey)
         PostHogSDK.shared.identify(
             userID,
             userProperties: ["plan": isPro ? "pro" : "free"]
@@ -73,9 +95,20 @@ final class PostHogAnalytics {
 
     func reset() {
         guard isConfigured else { return }
+        // The identity sync task also runs on a fresh signed-out launch. In
+        // that case PostHog is already using the install's anonymous ID and a
+        // reset would rotate it between the automatic install event and the
+        // first onboarding event. Only reset an identified account session.
+        guard Self.shouldResetIdentity(
+            identifiedUserID: identifiedUserID ?? defaults.string(forKey: Self.identifiedUserIDKey),
+            currentDistinctID: PostHogSDK.shared.getDistinctId(),
+            anonymousID: PostHogSDK.shared.getAnonymousId()
+        ) else { return }
         identifiedUserID = nil
+        defaults.removeObject(forKey: Self.identifiedUserIDKey)
         accessCohort = nil
         PostHogSDK.shared.reset()
+        registerInstallContext()
     }
 
     /// Adds the release and experiment context that is otherwise easy to lose
@@ -89,6 +122,27 @@ final class PostHogAnalytics {
         var enrichedProperties = commonEventProperties
         properties.forEach { enrichedProperties[$0.key] = $0.value }
         PostHogSDK.shared.capture(event, properties: enrichedProperties)
+    }
+
+    /// Returns whether the current PostHog session belongs to an identified
+    /// account and therefore needs to be reset when Clerk reports sign-out.
+    /// Keeping this decision pure makes the fresh-launch regression testable.
+    static func shouldResetIdentity(
+        identifiedUserID: String?,
+        currentDistinctID: String,
+        anonymousID: String
+    ) -> Bool {
+        if identifiedUserID != nil { return true }
+        guard !currentDistinctID.isEmpty, !anonymousID.isEmpty else { return false }
+        return currentDistinctID != anonymousID
+    }
+
+    private func registerInstallContext() {
+        guard isConfigured else { return }
+        PostHogSDK.shared.register([
+            "analytics_install_id": installID,
+            "analytics_schema_version": 3,
+        ])
     }
 
     private var commonEventProperties: [String: Any] {
@@ -105,8 +159,8 @@ final class PostHogAnalytics {
 #else
         let isSimulator = false
 #endif
-        return [
-            "analytics_schema_version": 2,
+        var properties: [String: Any] = [
+            "analytics_schema_version": 3,
             "app_version": version,
             "app_build": build,
             "os_version": ProcessInfo.processInfo.operatingSystemVersionString,
@@ -114,7 +168,17 @@ final class PostHogAnalytics {
             "environment": environment,
             "is_simulator": isSimulator,
             "access_cohort": accessCohort ?? "unknown",
+            "analytics_install_id": installID,
         ]
+
+        let distinctID = PostHogSDK.shared.getDistinctId()
+        let anonymousID = PostHogSDK.shared.getAnonymousId()
+        properties["analytics_identity"] =
+            (!distinctID.isEmpty && distinctID != anonymousID) ? "identified" : "anonymous"
+        if let sessionID = PostHogSDK.shared.getSessionId(), !sessionID.isEmpty {
+            properties["analytics_session_id"] = sessionID
+        }
+        return properties
     }
 
     func isFeatureEnabled(_ key: String) -> Bool {
