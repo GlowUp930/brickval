@@ -196,6 +196,7 @@
 		CE62ABE582802A94A3FD72F0 /* ReferralTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B93A61FE27D0131685368F7 /* ReferralTests.swift */; };
 		CF041116257A1F4F98DBA803 /* MarketRegion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 355FA93D3DBDE45C6B344158 /* MarketRegion.swift */; };
 		CF99662BD385ECA5ED8D7906 /* SDKEnvironmentRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF5986CE67C8CCD199CAB39 /* SDKEnvironmentRootView.swift */; };
+		D0F656913DDCF12FA43FAC81 /* PostHogAnalyticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2AEA85B7540CBDE2673A0C7 /* PostHogAnalyticsTests.swift */; };
 		D1AFDF14E68AAF6CEE3635D9 /* BulkRevealOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ED72367906518C9E91CE0C5 /* BulkRevealOverlay.swift */; };
 		D302B603403F1B2BA8F69248 /* MarketRegionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E69E1A6F756DD9E095A54AF /* MarketRegionTests.swift */; };
 		D478628A6FC28A7491717CA2 /* BulkPriceTagLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC4BD1858E1F223314B42DA0 /* BulkPriceTagLayoutTests.swift */; };
@@ -452,6 +453,7 @@
 		DF17751A3223381C740D00A1 /* AutoScanPhase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoScanPhase.swift; sourceTree = "<group>"; };
 		E0BA1A0E8B533CF77961E977 /* ClerkAccountContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClerkAccountContentView.swift; sourceTree = "<group>"; };
 		E29E9A9DE0362A16AF205AD1 /* ScanIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanIntent.swift; sourceTree = "<group>"; };
+		E2AEA85B7540CBDE2673A0C7 /* PostHogAnalyticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostHogAnalyticsTests.swift; sourceTree = "<group>"; };
 		ECC214FC2D145964E8A7B14A /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		EEA6E3C4140E799CD52D1894 /* MultipartFormData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultipartFormData.swift; sourceTree = "<group>"; };
 		EEA9BCCFFE15F7960FCD15F5 /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
@@ -609,6 +611,7 @@
 				15F49EA7913BC8566455330A /* OfferCodeRedemptionTests.swift */,
 				01A57BE1D38F7C3C404466EE /* PaywallRoutingTests.swift */,
 				DC6681761589E128E3CE875D /* PortfolioHistoryBuilderTests.swift */,
+				E2AEA85B7540CBDE2673A0C7 /* PostHogAnalyticsTests.swift */,
 				39EDE5583A0CC64D9924405E /* PreparedHistoryTests.swift */,
 				1E269B43E6C18167D91A7656 /* ProductFeedbackModelsTests.swift */,
 				464388EF246573C5CBA70B6D /* ProductFeedbackStoreTests.swift */,
@@ -1148,6 +1151,7 @@
 				103BD62B75F3F3D4BFE3DEFD /* OfferCodeRedemptionTests.swift in Sources */,
 				7939BB65BC6EE7798C7E8CE6 /* PaywallRoutingTests.swift in Sources */,
 				E678AFF00961291C9451128D /* PortfolioHistoryBuilderTests.swift in Sources */,
+				D0F656913DDCF12FA43FAC81 /* PostHogAnalyticsTests.swift in Sources */,
 				05C56BFCA4C3AA8B6AD76B19 /* PreparedHistoryTests.swift in Sources */,
 				B998F7083306F3358C97C411 /* ProductFeedbackModelsTests.swift in Sources */,
 				8353567F991A0A506E62958B /* ProductFeedbackStoreTests.swift in Sources */,
@@ -1365,13 +1369,13 @@
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution: HO LAM CHAN (4CQHLZBSU7)";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 179;
+				CURRENT_PROJECT_VERSION = 180;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.0.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.brickval.app;
 				PRODUCT_NAME = BrickVal;
 				PROVISIONING_PROFILE_SPECIFIER = "BrickVal App Store Build 125";
@@ -1494,13 +1498,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 179;
+				CURRENT_PROJECT_VERSION = 180;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.0.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.brickval.app;
 				PRODUCT_NAME = BrickVal;
 				SDKROOT = iphoneos;

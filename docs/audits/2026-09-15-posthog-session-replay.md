@@ -41,6 +41,16 @@ The project-side settings were checked in PostHog on 15 September 2026:
 - Source inspection confirms the replay integration is now included by the SDK
   setup and that SwiftUI screenshot mode is enabled before setup.
 
+Release build 1.0.9 (180) includes this fix. The signed archive
+`/tmp/BrickVal180-109.xcarchive` passed strict deep-signature verification and
+contains the matching BrickVal dSYM (UUID
+`B40E6B3E-60C7-314F-9F34-FDC0A52A9E70`). The 241-test native suite passed in 39
+suites on the BrickVal Small iPhone simulator. Xcode uploaded the build to App
+Store Connect successfully on 15 September; App Store Connect currently lists
+the upload as **Processing**. TestFlight availability and a real masked replay
+remain pending until Apple finishes processing and a physical device generates
+a session.
+
 The dashboard remains a pending production check. Install a new build that
 contains this change, use the app for at least a few seconds, navigate between
 screens, and then verify a real recording appears after PostHog processing.

@@ -1,5 +1,17 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Build 1.0.9 (180) — 2026-09-15
+
+The PostHog native session-replay fix is included in signed Release build
+1.0.9 (180). Archive `/tmp/BrickVal180-109.xcarchive` passed strict deep
+signature verification and contains the matching BrickVal dSYM (UUID
+`B40E6B3E-60C7-314F-9F34-FDC0A52A9E70`). The native unit suite passed 241 tests
+in 39 suites on the BrickVal Small iPhone simulator. Xcode uploaded the build
+to App Store Connect successfully; the TestFlight Build Uploads page currently
+reports **Processing**. Apple processing and TestFlight availability remain
+asynchronous. A physical-device session is still required to confirm that a
+real masked replay appears in PostHog.
+
 ## PostHog native session replay — 2026-09-15
 
 The PostHog project is configured for all mobile sessions at 100% sampling with
