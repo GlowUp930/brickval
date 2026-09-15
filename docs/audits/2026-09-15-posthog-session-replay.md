@@ -46,10 +46,10 @@ Release build 1.0.9 (180) includes this fix. The signed archive
 contains the matching BrickVal dSYM (UUID
 `B40E6B3E-60C7-314F-9F34-FDC0A52A9E70`). The 241-test native suite passed in 39
 suites on the BrickVal Small iPhone simulator. Xcode uploaded the build to App
-Store Connect successfully on 15 September; App Store Connect currently lists
-the upload as **Processing**. TestFlight availability and a real masked replay
-remain pending until Apple finishes processing and a physical device generates
-a session.
+Store Connect successfully on 15 September; App Store Connect now lists the
+upload as **Complete** and build 180 as **Ready to Submit** under version 1.0.9.
+A real masked replay remains pending until a physical device generates a
+session.
 
 The dashboard remains a pending production check. Install a new build that
 contains this change, use the app for at least a few seconds, navigate between

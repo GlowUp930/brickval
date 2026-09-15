@@ -6,9 +6,9 @@ Release build 1.0.9 (180) includes the native PostHog replay enablement and
 SwiftUI screenshot-mode privacy masking. The signed archive
 `/tmp/BrickVal180-109.xcarchive` passed strict verification and includes dSYM
 UUID `B40E6B3E-60C7-314F-9F34-FDC0A52A9E70`. Xcode uploaded it to App Store
-Connect; the TestFlight upload is currently **Processing**. The 241-test native
-suite passed on the small simulator. Physical-iPhone replay and visual checks
-remain required after Apple finishes processing.
+Connect; the upload is **Complete** and build 180 is **Ready to Submit** under
+version 1.0.9. The 241-test native suite passed on the small simulator.
+Physical-iPhone replay and visual checks remain required.
 
 ## PostHog native session replay — 2026-09-15
 

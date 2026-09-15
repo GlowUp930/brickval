@@ -6,8 +6,9 @@ The native PostHog session-replay configuration is included in signed Release
 build 1.0.9 (180). The archive is `/tmp/BrickVal180-109.xcarchive`; its app
 signature passed strict verification and its BrickVal dSYM UUID is
 `B40E6B3E-60C7-314F-9F34-FDC0A52A9E70`. Xcode uploaded the build successfully,
-and App Store Connect currently shows the upload as **Processing**. The 241
-test / 39-suite native unit run passed on the BrickVal Small iPhone simulator.
+and App Store Connect now shows the upload as **Complete** with build 180
+**Ready to Submit** under version 1.0.9. The 241-test / 39-suite native unit run
+passed on the BrickVal Small iPhone simulator.
 Install the processed build on a physical iPhone and use the app before
 confirming a real PostHog replay; simulator activity is not production replay
 evidence.
