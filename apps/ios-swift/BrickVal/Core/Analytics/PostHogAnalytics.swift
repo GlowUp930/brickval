@@ -63,6 +63,18 @@ final class PostHogAnalytics {
         config.captureScreenViews = true
         config.captureApplicationLifecycleEvents = true
         config.personProfiles = .identifiedOnly
+#if os(iOS)
+        // SwiftUI screens require screenshot mode for native session replay.
+        // Keep the SDK's privacy-first masking defaults explicit because the
+        // app displays account details, collection data, and user photos.
+        config.sessionReplay = true
+        config.sessionReplayConfig.screenshotMode = true
+        config.sessionReplayConfig.maskAllTextInputs = true
+        config.sessionReplayConfig.maskAllImages = true
+        config.sessionReplayConfig.maskAllSandboxedViews = true
+        config.sessionReplayConfig.captureNetworkTelemetry = true
+        config.sessionReplayConfig.captureLogs = false
+#endif
         PostHogSDK.shared.setup(config)
         isConfigured = true
         registerInstallContext()

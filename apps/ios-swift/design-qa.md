@@ -1,5 +1,13 @@
 # Scan Result Card Visual QA
 
+## PostHog native session replay — 2026-09-15
+
+The project-side replay switch is on for mobile at 100% sampling with no
+triggers. Native SwiftUI replay now uses screenshot mode with text-input,
+image, and sandboxed-view masking; network capture is timing-only and console
+logs are off. The next build must be installed and used before a real replay
+can be visually checked. See [`docs/audits/2026-09-15-posthog-session-replay.md`](../../docs/audits/2026-09-15-posthog-session-replay.md).
+
 ## Live camera recovery and figure-anchored bulk prices — 2026-09-13
 
 The failed single-scan state now keeps its concise error banner while showing the live camera again. The frozen photo and stale boxes are removed, the shutter is immediately usable for a new explicit capture, and automatic scan submission remains paused until Try again is chosen. The status overlay and accessibility labels remain visible; camera permission and bulk retry states are unchanged.

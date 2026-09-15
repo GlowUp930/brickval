@@ -1,5 +1,17 @@
 # BrickVal Native iOS Context
 
+## PostHog native session replay — 2026-09-15
+
+The PostHog project replay switch is on with 100% mobile sampling and no
+triggers. Native `PostHogAnalytics` now enables the PostHog replay integration
+and SwiftUI screenshot mode during app startup. Text inputs, images, and
+sandboxed system views are explicitly masked; network capture keeps timing and
+status metadata only, and console-log capture is off. The host and ignored
+`Secrets.xcconfig` key are unchanged. A new build must be installed and used
+before a real recording can be confirmed; the dashboard's waiting state is not
+an app-usage metric. See
+[`docs/audits/2026-09-15-posthog-session-replay.md`](../../docs/audits/2026-09-15-posthog-session-replay.md).
+
 ## App Store metadata localization — 2026-09-14
 
 App Store Connect version 1.08 now has localized metadata for the first high-value, non-English storefront tier: Arabic, Brazilian Portuguese, Simplified Chinese, Traditional Chinese, Dutch, French, German, Italian, Japanese, Korean, and Spanish (Spain). Each locale has a translated description, promotional text, What's New text, keywords, app name, and subtitle. Terms, privacy, and marketing URLs remain the same so every storefront keeps the same legal and support destinations. The English (U.S.) primary metadata and screenshots were left unchanged. Apple will show a matching localization when the customer’s App Store language is supported; otherwise it falls back to the primary language. This is metadata-only and does not require a new binary.

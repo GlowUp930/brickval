@@ -1,5 +1,15 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## PostHog native session replay — 2026-09-15
+
+The PostHog project is configured for all mobile sessions at 100% sampling with
+no triggers. Native `PostHogAnalytics` now enables session replay with SwiftUI
+screenshot mode and explicit masking for text inputs, images, and sandboxed
+system views. Network capture remains timing/metadata only and console logs are
+disabled. A new build and a real device session are required before the replay
+dashboard can be considered verified; simulator sessions must be excluded from
+product reports. See `docs/audits/2026-09-15-posthog-session-replay.md`.
+
 ## PostHog onboarding identity repair — 2026-09-14
 
 The apparent install-to-onboarding drop-off was a confirmed analytics join defect: a fresh signed-out launch reset PostHog after its automatic `Application Installed` event, rotating the anonymous ID before `onboarding_started`. Native analytics now keeps a fresh anonymous identity stable, persists the last identified Clerk ID for safe account switching after restart, and records `app_ready` plus `onboarding_screen_shown` with schema version `3`, install/session context, launch kind, replay flag, and completion path. The saved [First-run onboarding funnel](https://us.posthog.com/project/568935/insights/mlbWS207) is on the [Mobile app growth dashboard](https://us.posthog.com/project/568935/dashboard/2041521) with production, `launch_kind=first_run`, and non-replay filters. The historical 2.42% funnel is not comparable; a new released build and real production installs are still required before using the corrected rate for revenue decisions. See `docs/audits/2026-09-14-posthog-onboarding.md`.
