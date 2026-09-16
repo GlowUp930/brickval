@@ -110,13 +110,6 @@ export function classifyBrickLinkFailure(input: {
   finalURL?: string;
   contentType?: string;
 }): BrickLinkFailureKind | null {
-  // A JSON 404 is BrickLink's genuine not-found response. Keep this check
-  // ahead of content-type inspection because some provider error pages are
-  // HTML even when the item simply does not exist.
-  if (input.status === 404) return null;
-  if (input.status === 401 || input.status === 403) return "authentication";
-  if (input.status === 429 || input.status >= 500) return "temporary";
-
   let hostname = "";
   try {
     hostname = input.finalURL ? new URL(input.finalURL).hostname.toLowerCase() : "";
@@ -126,6 +119,14 @@ export function classifyBrickLinkFailure(input: {
   if (hostname === "maintenance.bricklink.com" || hostname.endsWith(".maintenance.bricklink.com")) {
     return "temporary";
   }
+
+  // A JSON 404 is BrickLink's genuine not-found response. Keep this check
+  // ahead of content-type inspection because some provider error pages are
+  // HTML even when the item simply does not exist. Maintenance hosts are
+  // handled above so a maintenance 404 cannot be mistaken for a missing item.
+  if (input.status === 404) return null;
+  if (input.status === 401 || input.status === 403) return "authentication";
+  if (input.status === 429 || input.status >= 500) return "temporary";
 
   if (input.contentType && !input.contentType.toLowerCase().includes("application/json")) {
     return "temporary";

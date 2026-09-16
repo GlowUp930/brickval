@@ -18,6 +18,14 @@ test("BrickLink maintenance redirects are classified as temporary", () => {
     }),
     "temporary",
   );
+  assert.equal(
+    classifyBrickLinkFailure({
+      status: 404,
+      finalURL: "https://maintenance.bricklink.com/",
+      contentType: "text/html",
+    }),
+    "temporary",
+  );
 });
 
 test("BrickLink non-JSON and retryable statuses are classified without exposing the body", () => {
