@@ -308,17 +308,25 @@ struct ScannerView: View {
             store.updateProStatus(isPro)
         }
         .task {
+            // A failure banner is the recovery surface. Do not place the
+            // first-run tips card over it while the camera is waiting for an
+            // explicit retry; this also keeps the retry action reachable on a
+            // first scan.
+            if case .failed = store.phase { return }
             guard !preferences.hasSeenScanTips else { return }
             if !reduceMotion {
                 try? await Task.sleep(for: .milliseconds(420))
             }
-            guard !Task.isCancelled, !preferences.hasSeenScanTips else { return }
+            guard !Task.isCancelled,
+                  !preferences.hasSeenScanTips,
+                  !isFailedScanPhase
+            else { return }
             withAnimation(reduceMotion ? nil : .snappy(duration: 0.28)) {
                 isShowingScanTips = true
             }
         }
         .onChange(of: store.phase) { _, phase in
-            guard [.capturing, .identifying, .review, .result].contains(phase) else { return }
+            guard [.capturing, .identifying, .review, .result].contains(phase) || isFailedPhase(phase) else { return }
             dismissScanTips()
         }
         .task(id: selectedBulkPhoto) {
@@ -472,6 +480,15 @@ struct ScannerView: View {
         scanOperation = Task { @MainActor in
             await operation()
         }
+    }
+
+    private var isFailedScanPhase: Bool {
+        isFailedPhase(store.phase)
+    }
+
+    private func isFailedPhase(_ phase: ScanPhase) -> Bool {
+        if case .failed = phase { return true }
+        return false
     }
 }
 
