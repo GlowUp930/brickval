@@ -214,8 +214,12 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         app.launchArguments = ["-showBulkRecoveryDemo"]
         app.launch()
 
+        // The production reveal can spend the maximum interval on each of
+        // the two fixture entries before returning to the completed screen.
+        // Include the fixed reveal phases and simulator scheduling margin.
+        let revealBudget = 1.60 + (2.0 * 0.75) + 1.40 + 0.45 + 10.0
         let completedSummary = app.descendants(matching: .any).matching(identifier: "bulkResults.summary").firstMatch
-        XCTAssertTrue(completedSummary.waitForExistence(timeout: 12))
+        XCTAssertTrue(completedSummary.waitForExistence(timeout: revealBudget))
         XCTAssertFalse(app.buttons["bulkRecovery.enter"].exists)
         XCTAssertFalse(app.buttons["Missed"].exists)
         XCTAssertFalse(app.buttons["Skip"].exists)
