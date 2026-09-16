@@ -6,7 +6,7 @@ struct OfferCodeRedemptionStatusView: View {
 
     var body: some View {
         switch state {
-        case .idle, .presenting:
+        case .idle, .preparing, .presenting:
             EmptyView()
         case .confirming:
             HStack(spacing: 8) {

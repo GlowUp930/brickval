@@ -38,6 +38,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
     @ObservationIgnored private var offerCodeClient: (any OfferCodeRedemptionClient)?
     @ObservationIgnored private let entitlementStore: EntitlementStore
     @ObservationIgnored private let notificationCoordinator: NotificationCoordinator
+    @ObservationIgnored private let dismissPresentedPaywall: @MainActor () async -> Void
     @ObservationIgnored private var pendingManualDismissal: (@MainActor () -> Void)?
     @ObservationIgnored private var pendingManualDismissalPlacement: ProPlacement?
 
@@ -45,11 +46,16 @@ final class AppSDKCoordinator: SuperwallDelegate {
         entitlementStore: EntitlementStore,
         notificationCoordinator: NotificationCoordinator = NotificationCoordinator(),
         offerCodeClient: (any OfferCodeRedemptionClient)? = nil,
-        purchaseServicesEnabled: Bool = true
+        purchaseServicesEnabled: Bool = true,
+        dismissPresentedPaywall: @escaping @MainActor () async -> Void = {
+            guard Superwall.isInitialized else { return }
+            await Superwall.shared.dismiss()
+        }
     ) {
         self.entitlementStore = entitlementStore
         self.notificationCoordinator = notificationCoordinator
         self.offerCodeClient = offerCodeClient
+        self.dismissPresentedPaywall = dismissPresentedPaywall
         analytics = PostHogAnalytics(apiKey: Self.configurationValue("PostHogAPIKey"))
         let clerkKey = Self.configurationValue("ClerkPublishableKey")
         if let clerkKey {
@@ -205,7 +211,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
 
     var isOfferCodeRedemptionBusy: Bool {
         switch offerCodeRedemptionState {
-        case .presenting, .confirming:
+        case .preparing, .presenting, .confirming:
             true
         case .idle, .failed:
             false
@@ -214,11 +220,26 @@ final class AppSDKCoordinator: SuperwallDelegate {
 
     func requestOfferCodeRedemption() {
         guard !isOfferCodeRedemptionBusy else { return }
-        offerCodeRedemptionState = .presenting
+        offerCodeRedemptionState = .preparing
+
+        // A custom Superwall action leaves the paywall on screen. StoreKit's
+        // redemption controller must be the only sheet in the presentation
+        // stack, otherwise a later paywall purchase can appear over the code
+        // form (or make the form look unresponsive). Wait for dismissal before
+        // allowing the root view to present StoreKit.
+        purchaseController?.setPurchasePlacement(nil)
+        pendingManualDismissal = nil
+        pendingManualDismissalPlacement = nil
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            await dismissPresentedPaywall()
+            guard offerCodeRedemptionState == .preparing else { return }
+            offerCodeRedemptionState = .presenting
+        }
     }
 
     func dismissOfferCodeRedemptionPresentation() {
-        guard offerCodeRedemptionState == .presenting else { return }
+        guard offerCodeRedemptionState == .preparing || offerCodeRedemptionState == .presenting else { return }
         offerCodeRedemptionState = .idle
     }
 

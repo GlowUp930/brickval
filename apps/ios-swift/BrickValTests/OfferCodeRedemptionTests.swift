@@ -5,7 +5,7 @@ import Testing
 
 @MainActor
 struct OfferCodeRedemptionTests {
-    @Test func requestPresentsOnlyOnceUntilTheSheetCompletes() {
+    @Test func requestPresentsOnlyOnceUntilTheSheetCompletes() async {
         let client = FakeOfferCodeRedemptionClient()
         let coordinator = AppSDKCoordinator(
             entitlementStore: EntitlementStore(defaults: testDefaults()),
@@ -14,9 +14,36 @@ struct OfferCodeRedemptionTests {
 
         coordinator.requestOfferCodeRedemption()
         coordinator.requestOfferCodeRedemption()
+        #expect(coordinator.offerCodeRedemptionState == .preparing)
+        await Task.yield()
 
         #expect(coordinator.offerCodeRedemptionState == .presenting)
         #expect(client.syncCallCount == 0)
+    }
+
+    @Test func paywallCustomActionDismissesPaywallBeforePresentingRedemptionSheet() async {
+        let dismissalGate = DismissalGate()
+        let coordinator = AppSDKCoordinator(
+            entitlementStore: EntitlementStore(defaults: testDefaults()),
+            purchaseServicesEnabled: false,
+            dismissPresentedPaywall: {
+                await dismissalGate.wait()
+            }
+        )
+
+        coordinator.handleCustomPaywallAction(withName: "showPromoRedeem")
+        #expect(coordinator.offerCodeRedemptionState == .preparing)
+        await Task.yield()
+
+        #expect(dismissalGate.waitCount == 1)
+        #expect(coordinator.offerCodeRedemptionState == .preparing)
+        coordinator.handleCustomPaywallAction(withName: "showPromoRedeem")
+        await Task.yield()
+        #expect(dismissalGate.waitCount == 1)
+
+        dismissalGate.resume()
+        await Task.yield()
+        #expect(coordinator.offerCodeRedemptionState == .presenting)
     }
 
     @Test func successfulRedemptionActivatesProAndReturnsToIdle() async {
@@ -49,7 +76,7 @@ struct OfferCodeRedemptionTests {
         #expect(coordinator.offerCodeRedemptionState == .idle)
     }
 
-    @Test func dismissingThePresentationResetsOnlyThePresentationState() {
+    @Test func dismissingThePresentationResetsOnlyThePresentationState() async {
         let client = FakeOfferCodeRedemptionClient()
         let coordinator = AppSDKCoordinator(
             entitlementStore: EntitlementStore(defaults: testDefaults()),
@@ -58,6 +85,7 @@ struct OfferCodeRedemptionTests {
 
         coordinator.requestOfferCodeRedemption()
         coordinator.dismissOfferCodeRedemptionPresentation()
+        await Task.yield()
 
         #expect(client.syncCallCount == 0)
         #expect(coordinator.offerCodeRedemptionState == .idle)
@@ -121,6 +149,24 @@ private final class FakeOfferCodeRedemptionClient: OfferCodeRedemptionClient {
         syncCallCount += 1
         if let syncError { throw syncError }
         return syncResult
+    }
+}
+
+@MainActor
+private final class DismissalGate {
+    private var continuation: CheckedContinuation<Void, Never>?
+    private(set) var waitCount = 0
+
+    func wait() async {
+        waitCount += 1
+        await withCheckedContinuation { continuation in
+            self.continuation = continuation
+        }
+    }
+
+    func resume() {
+        continuation?.resume()
+        continuation = nil
     }
 }
 

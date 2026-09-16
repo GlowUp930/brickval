@@ -130,7 +130,7 @@ struct SDKEnvironmentRootView: View {
             switch state {
             case .presenting:
                 isOfferCodeRedemptionPresented = true
-            case .idle, .failed:
+            case .idle, .preparing, .failed:
                 isOfferCodeRedemptionPresented = false
             case .confirming:
                 break

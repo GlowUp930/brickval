@@ -543,10 +543,11 @@ final result: passed
 - Upgrade actions now register the Superwall placement directly; Superwall skip/error callbacks no longer open the native `SubscriptionView` fallback page.
 - A genuine Superwall configuration failure remains visible as a concise retryable alert instead of a replacement subscription screen.
 - The `showPromoRedeem` custom paywall action opens the existing StoreKit offer-code redemption flow from the active app scene.
+- When that action is tapped, the active Superwall paywall is dismissed and its purchase placement is cleared before StoreKit is presented. The button is single-flight during this handoff, preventing a stacked monthly purchase sheet from covering the Redeem Offer Code form.
 - Published a visible `Redeem offer code` control that calls `showPromoRedeem` on both active Superwall paywalls: `Paywall test 1` (soft upgrade) and `hardpaywall` (hard access).
 - The soft paywall is published to the testing campaign and the hard paywall is published to the new-user hard-access campaign; both remain active in the Brickvalue application.
-- Added regression coverage for the promo action and unknown custom actions.
-- Full simulator test and on-device purchase/redeem verification remain required.
+- Added regression coverage for dismissal ordering, duplicate taps, the promo action, and unknown custom actions. The focused suite (21 tests) and full native suite (242 tests in 39 suites) pass on both simulator sizes.
+- Physical TestFlight redemption remains required; the StoreKit purchase sheet cannot be exercised by the simulator.
 
 final result: code and Superwall dashboard configuration complete; device verification pending
 

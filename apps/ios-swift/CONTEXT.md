@@ -1,5 +1,32 @@
 # BrickVal Native iOS Context
 
+## Offer-code redemption presentation fix — 2026-09-16
+
+The offer-code flow had a confirmed presentation-order defect. The
+`showPromoRedeem` Superwall custom action opened StoreKit immediately while
+the Superwall paywall was still presented. On repeated taps, iOS could leave a
+monthly purchase sheet above the Redeem Offer Code form, matching the supplied
+screen capture.
+
+`AppSDKCoordinator` now enters a short `preparing` state, clears the active
+purchase placement and pending feature-dismissal callback, awaits
+`Superwall.shared.dismiss()`, and only then presents the StoreKit redemption
+sheet. The preparation state is busy, so duplicate taps cannot start another
+handoff. If the root presentation is dismissed during preparation, the
+pending task is ignored and no sheet is reopened. Normal monthly/yearly
+purchases, products, pricing, and RevenueCat entitlement sync are unchanged.
+
+Verification: the regression was red before the fix (the custom action did not
+dismiss the paywall) and now passes. The focused offer/paywall suite passes 21
+tests on the BrickVal Small iPhone and iPhone 17 Pro simulators. The full
+native unit target passes 242 tests in 39 suites on both. The active Superwall
+paywall editor was inspected and its Redeem offer code control is configured
+as the `showPromoRedeem` custom action without a purchase action. Real Apple
+offer-code redemption still needs a physical TestFlight device check because
+the simulators cannot reproduce the App Store purchase sheet.
+
+See [`docs/audits/2026-09-16-offer-code-redemption.md`](../../docs/audits/2026-09-16-offer-code-redemption.md).
+
 ## One-year Pro offer code — 2026-09-16
 
 App Store Connect has an active **BrickValue Yearly Gift 2026** offer for

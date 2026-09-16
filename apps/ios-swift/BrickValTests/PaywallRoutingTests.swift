@@ -17,13 +17,14 @@ struct PaywallRoutingTests {
         #expect(coordinator.showsSubscriptionFallback)
     }
 
-    @Test func superwallPromoActionStartsOfferCodeRedemption() {
+    @Test func superwallPromoActionStartsOfferCodeRedemption() async {
         let coordinator = AppSDKCoordinator(
             entitlementStore: EntitlementStore(defaults: testDefaults()),
             purchaseServicesEnabled: false
         )
 
         coordinator.handleCustomPaywallAction(withName: "showPromoRedeem")
+        await Task.yield()
 
         #expect(coordinator.offerCodeRedemptionState == .presenting)
     }
