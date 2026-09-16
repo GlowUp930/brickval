@@ -400,17 +400,25 @@ final class ScanStore {
 
     func retryCamera() async {
         guard case .failed = phase else { return }
+#if DEBUG
+        // The no-camera fixture exercises the recovery state machine without
+        // starting AVFoundation. Keep this path synchronous so the retry
+        // control reflects the same immediate transition as a live camera.
+        if retriesWithoutCamera {
+            setFrozenImageData(nil)
+            frozenBulkRegions = []
+            canCaptureAfterFailure = false
+            retryScanPending = false
+            resetDetectionState()
+            phase = .searching
+            return
+        }
+#endif
         let cameraIsRunning = await camera.isRunning()
         setFrozenImageData(nil)
         frozenBulkRegions = []
         canCaptureAfterFailure = false
         resetDetectionState()
-#if DEBUG
-        if retriesWithoutCamera {
-            phase = .searching
-            return
-        }
-#endif
         if cameraIsRunning {
             phase = .searching
         } else {
