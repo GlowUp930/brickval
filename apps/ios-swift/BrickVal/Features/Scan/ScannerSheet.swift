@@ -49,6 +49,11 @@ final class BulkScanPresentation: Identifiable {
     private(set) var regionStates: [String: BulkRegionProgressState]
     private(set) var revision = 0
     var terminalError: String?
+#if DEBUG
+    /// Debug-only fixture switch used by layout tests to bypass the timed
+    /// reveal while exercising the completed results surface.
+    let startsCompleted: Bool
+#endif
 
     init(
         imageData: Data,
@@ -56,7 +61,8 @@ final class BulkScanPresentation: Identifiable {
         recoveryToken: String?,
         source: BulkScanSource,
         sessionToken: String? = nil,
-        accessMode: BulkScanAccessMode = .real
+        accessMode: BulkScanAccessMode = .real,
+        startsCompleted: Bool = false
     ) {
         self.imageData = imageData
         self.regions = regions
@@ -65,6 +71,9 @@ final class BulkScanPresentation: Identifiable {
         self.sessionToken = sessionToken
         self.accessMode = accessMode
         regionStates = Dictionary(uniqueKeysWithValues: regions.map { ($0.regionId, .pending) })
+#if DEBUG
+        self.startsCompleted = startsCompleted
+#endif
     }
 
     convenience init(
@@ -72,7 +81,8 @@ final class BulkScanPresentation: Identifiable {
         items: [BulkScanResultItem],
         unresolvedRegions: [NormalizedBoundingBox],
         recoveryToken: String?,
-        source: BulkScanSource
+        source: BulkScanSource,
+        startsCompleted: Bool = false
     ) {
         let emptyBox = NormalizedBoundingBox(x: 0, y: 0, width: 0, height: 0)
         var regions = items.map { BulkScanRegion(regionId: $0.id, boundingBox: $0.boundingBox ?? emptyBox) }
@@ -85,7 +95,8 @@ final class BulkScanPresentation: Identifiable {
             imageData: imageData,
             regions: regions,
             recoveryToken: recoveryToken,
-            source: source
+            source: source,
+            startsCompleted: startsCompleted
         )
         for item in items {
             regionStates[item.id] = .resolved(item)

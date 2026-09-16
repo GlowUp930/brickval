@@ -1088,6 +1088,20 @@ struct BulkScanResultsView: View {
         presentationPhase = .compactIntro
         isPreviewOfferVisible = false
 
+#if DEBUG
+        if presentation.startsCompleted {
+            revealSession.begin()
+            revealSession.completeImmediately()
+            displayedRevealTotal = revealSession.revealedTotal
+            displayedPricedCount = revealSession.pricedCount
+            jackpotTotal = displayedRevealTotal
+            presentationPhase = .completedReview
+            revealStage = .completed
+            reviewInteractionReady = true
+            return
+        }
+#endif
+
         do {
             try await Task.sleep(for: .milliseconds(reduceMotion ? 80 : 160))
             guard !Task.isCancelled else { return }

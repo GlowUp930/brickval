@@ -26,14 +26,23 @@ struct ScannerStatusView: View {
                 Button("Try again", systemImage: "arrow.clockwise", action: retry)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
+                    // Keep the recovery action a real, independently hittable
+                    // control on every simulator/runtime. The small button
+                    // style can otherwise produce a sub-44pt target and, when
+                    // the localized error wraps, UIKit may report it outside
+                    // the visible banner bounds.
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
                     .accessibilityIdentifier("scanner.retry")
                     .accessibilityHint(retryHint)
             }
         }
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(.regularMaterial, in: .capsule)
         .padding()
+        .contentShape(Capsule())
         .postHogNoMask()
     }
 

@@ -1,5 +1,26 @@
 # BrickVal Native iOS Context
 
+## Reliability check follow-up — 2026-09-16
+
+The CI UI regressions are covered independently. Dense bulk pricing layout
+tests launch a completed DEBUG fixture with all 60 real fixture entries, assert
+each stable callout identifier and full price, and no longer depend on
+accessibility traversal order. The production progressive reveal remains
+covered by a separate test with a timeout derived from the reveal schedule.
+Failed single-scan recovery exposes `scanner.retry` outside the camera-stage
+accessibility surface, keeps a 44-point target, and leaves the preview live
+without resubmitting the failed photo. The collection history demo carries a
+saved pricing snapshot so navigation tests do not enter a fixture-only error
+state.
+
+The reliability workflow now boots the selected simulator, prints its runtime,
+and uploads result bundles, logs, and failure screenshots. Local small and
+large simulator UI/unit suites pass. Signed Release build 1.0.9 (182) is
+archived at `/tmp/BrickVal182-reliability.xcarchive` with dSYM UUID
+`83D44F67-80AA-3BF0-BB4A-B01B3B6D46ED`; TestFlight upload remains separate.
+CI confirmation and physical camera verification remain open. See
+[`docs/audits/2026-09-16-reliability-check.md`](../../docs/audits/2026-09-16-reliability-check.md).
+
 ## BrickLink maintenance resilience — 2026-09-16
 
 Minifigure pricing now carries explicit availability (`available`, `stale`, or

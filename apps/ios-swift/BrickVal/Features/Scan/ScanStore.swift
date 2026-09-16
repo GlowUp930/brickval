@@ -207,6 +207,25 @@ final class ScanStore {
         )
     }
 
+    /// Starts the dense layout fixture at the completed review state. This is
+    /// intentionally DEBUG-only so layout assertions do not depend on the
+    /// duration of the real progressive reveal animation.
+    func configureDenseBulkCompletedDemo() {
+        guard let imageData = BulkRecoveryDemoFixture.imageData else { return }
+        intent = .bulk
+        authorizationStatus = .authorized
+        setFrozenImageData(imageData)
+        phase = .review
+        presentedBulkResults = BulkScanPresentation(
+            imageData: imageData,
+            items: BulkRecoveryDemoFixture.denseItems,
+            unresolvedRegions: [],
+            recoveryToken: "debug-dense-completed-token",
+            source: .camera,
+            startsCompleted: true
+        )
+    }
+
     func configureLockedBulkPreviewDemo() {
         guard let imageData = BulkRecoveryDemoFixture.imageData else { return }
         let regions = BulkRecoveryDemoFixture.lockedPreviewRegions

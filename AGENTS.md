@@ -1,5 +1,29 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Reliability check follow-up — 2026-09-16
+
+The failed GitHub reliability run was reproduced and its two UI failures were
+separated by cause. The dense bulk layout assertion was coupled to the timed
+progressive reveal, so it could observe only the first revealed price on the
+iPhone 16e runner. It now uses a DEBUG-only completed-results fixture for the
+60-label layout check; a separate test keeps the real reveal and waits using
+its production schedule. The failed-scan retry was underneath the camera
+stage's accessibility surface and clipped geometry; the retry banner is now a
+visible sibling with its own 44-point hit target, while the camera surface is
+non-hit-testing and the live-camera recovery behavior is unchanged. The full
+native UI fixture also now supplies saved demo pricing so collection-navigation
+checks do not trigger a misleading removal alert.
+
+The workflow explicitly boots and reports its selected small iPhone simulator,
+stores the native result bundle and log, and captures a failure screenshot for
+every run. Local small and large simulator unit/UI suites, backend, database,
+type-check, and localization checks pass. A new CI run is required before
+reliability sign-off. Signed Release build 1.0.9 (182) is archived at
+`/tmp/BrickVal182-reliability.xcarchive` with dSYM UUID
+`83D44F67-80AA-3BF0-BB4A-B01B3B6D46ED`; it has not been uploaded to TestFlight.
+Physical iPhone camera verification remains pending.
+See [`docs/audits/2026-09-16-reliability-check.md`](docs/audits/2026-09-16-reliability-check.md).
+
 ## BrickLink maintenance resilience — 2026-09-16
 
 The maintenance-response fix is implemented in the backend and native scan

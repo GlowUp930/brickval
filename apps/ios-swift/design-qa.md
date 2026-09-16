@@ -1,5 +1,24 @@
 # Scan Result Card Visual QA
 
+## Reliability check follow-up — 2026-09-16
+
+The retry banner is now laid out as a sibling of the camera stage, so its
+button remains visible, VoiceOver-accessible, and independently tappable when
+recognition fails. The camera preview surface is explicitly non-hit-testing;
+live-camera recovery and the visible error copy remain intact. Dense bulk
+results use a completed DEBUG fixture for layout screenshots, keeping all 60
+full price chips visible while the real progressive reveal has its own timing
+check. Collection history UI fixtures include saved prices so navigation checks
+do not show the unrelated removal alert.
+
+Focused and full UI checks pass on the BrickVal Small iPhone and iPhone 17 Pro
+simulators. The CI runner now records its simulator/runtime and uploads test
+diagnostics on failure. Signed Release build 1.0.9 (182) is archived at
+`/tmp/BrickVal182-reliability.xcarchive` with dSYM UUID
+`83D44F67-80AA-3BF0-BB4A-B01B3B6D46ED`. Physical iPhone camera and VoiceOver
+confirmation are still required before release sign-off. See
+[`docs/audits/2026-09-16-reliability-check.md`](../../docs/audits/2026-09-16-reliability-check.md).
+
 ## BrickLink maintenance resilience — 2026-09-16
 
 The result card now keeps a recognized minifigure visible when BrickLink is

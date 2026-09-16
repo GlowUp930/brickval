@@ -82,6 +82,9 @@ struct CollectionHistoryDemoView: View {
                 CollectionItem(setNumber: "21367", itemType: .set, name: "Tintin Moon Rocket", theme: "Ideas", marketValueUSD: 150),
                 CollectionItem(setNumber: "70919", itemType: .set, name: "The Joker Manor", theme: "Batman", marketValueUSD: 120)
             ]
+            for index in items.indices {
+                items[index].pricingSnapshot = demoPricing
+            }
             let arguments = ProcessInfo.processInfo.arguments
             if let index = arguments.firstIndex(of: "-collectionPerformanceHoldings"), index + 1 < arguments.count,
                let count = Int(arguments[index + 1]), (2...200).contains(count) {
@@ -95,6 +98,7 @@ struct CollectionHistoryDemoView: View {
                     item.marketSales = row.newSales
                     item.marketHistoryFetchedAt = row.fetchedAt
                     item.marketHistoryMetadataVersion = CollectionItem.marketHistoryMetadataVersionCurrent
+                    item.pricingSnapshot = demoPricing
                     return item
                 }
                 items.reverse()
@@ -103,6 +107,24 @@ struct CollectionHistoryDemoView: View {
             await store.waitForPreparedHistory()
             ready = true
         }
+    }
+
+    private var demoPricing: LookupPricing {
+        LookupPricing(
+            heroNewAverageUSD: 150,
+            rrpUSD: 120,
+            gainPercent: 0.25,
+            dataSource: "sold",
+            newSoldAverageUSD: 150,
+            usedSoldAverageUSD: 120,
+            newStockAverageUSD: nil,
+            usedStockAverageUSD: nil,
+            brickLinkNewAverageUSD: 150,
+            brickLinkUsedAverageUSD: 120,
+            heroUsedAverageUSD: 120,
+            newDataSource: "sold",
+            usedDataSource: "sold"
+        )
     }
 }
 #endif

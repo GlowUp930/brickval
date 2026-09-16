@@ -29,6 +29,7 @@ struct ScannerView: View {
         let isWideBulkProcessingLayoutDemo = ProcessInfo.processInfo.arguments.contains("-showWideBulkProcessingLayoutDemo")
         let isBulkRecoveryDemo = ProcessInfo.processInfo.arguments.contains("-showBulkRecoveryDemo")
         let isDenseBulkRecoveryDemo = ProcessInfo.processInfo.arguments.contains("-showDenseBulkRecoveryDemo")
+        let isDenseBulkCompletedDemo = ProcessInfo.processInfo.arguments.contains("-showDenseBulkCompletedDemo")
         let isLockedBulkPreviewDemo = ProcessInfo.processInfo.arguments.contains("-showLockedBulkPreviewDemo")
         let isFailedScanDemo = ProcessInfo.processInfo.arguments.contains("-showScannerFailureDemo")
         if isWideBulkProcessingLayoutDemo,
@@ -47,6 +48,9 @@ struct ScannerView: View {
         if isDenseBulkRecoveryDemo {
             store.configureDenseBulkRecoveryDemo()
         }
+        if isDenseBulkCompletedDemo {
+            store.configureDenseBulkCompletedDemo()
+        }
         if isLockedBulkPreviewDemo {
             store.configureLockedBulkPreviewDemo()
         }
@@ -57,6 +61,7 @@ struct ScannerView: View {
             !isWideBulkProcessingLayoutDemo &&
             !isBulkRecoveryDemo &&
             !isDenseBulkRecoveryDemo &&
+            !isDenseBulkCompletedDemo &&
             !isLockedBulkPreviewDemo &&
             !isFailedScanDemo
 #else
@@ -117,8 +122,8 @@ struct ScannerView: View {
                     )
                 }()
 
-                ZStack {
-                    ZStack(alignment: .top) {
+                ZStack(alignment: .top) {
+                    ZStack {
                         CameraPreview(session: store.captureSession)
                             .background(.black)
                         if store.frozenImageData != nil {
@@ -147,23 +152,6 @@ struct ScannerView: View {
                                 ViewfinderOverlayView()
                                 DetectionOverlayView(observations: store.observations)
                             }
-                                ScannerStatusView(
-                                phase: store.phase,
-                                intent: store.intent,
-                                    smartScanMessage: store.intent == .single ? store.smartScanMessage : nil,
-                                    retry: {
-                                        store.recordRetryTap(
-                                            retryKind: store.intent == .bulk && store.frozenImageData != nil
-                                                ? "bulk_scan"
-                                                : "camera"
-                                        )
-                                        if store.intent == .bulk, store.frozenImageData != nil {
-                                            startScanOperation { await store.retryBulkScan() }
-                                    } else {
-                                        startScanOperation { await store.retryCamera() }
-                                    }
-                                }
-                            )
                         }
                     }
                     .overlay {
@@ -194,6 +182,31 @@ struct ScannerView: View {
                     .clipped()
                     .accessibilityHidden(!isBulkProcessing && !isFailed)
 
+                    if ![.capturing, .identifying].contains(store.phase) {
+                        ScannerStatusView(
+                            phase: store.phase,
+                            intent: store.intent,
+                            smartScanMessage: store.intent == .single ? store.smartScanMessage : nil,
+                            retry: {
+                                store.recordRetryTap(
+                                    retryKind: store.intent == .bulk && store.frozenImageData != nil
+                                        ? "bulk_scan"
+                                        : "camera"
+                                )
+                                if store.intent == .bulk, store.frozenImageData != nil {
+                                    startScanOperation { await store.retryBulkScan() }
+                                } else {
+                                    startScanOperation { await store.retryCamera() }
+                                }
+                            }
+                        )
+                        // The status banner is a sibling of the camera stage,
+                        // so its recovery button cannot be occluded by the
+                        // camera accessibility surface or a clipped preview.
+                        .frame(width: max(cameraSize.width - 24, 44))
+                        .zIndex(10)
+                    }
+
                     Color.clear
                         .frame(width: cameraSize.width, height: cameraSize.height)
                         .contentShape(Rectangle())
@@ -206,7 +219,7 @@ struct ScannerView: View {
                         )
                         .accessibilityValue(store.phase.statusText)
                         .accessibilityIdentifier("scanner.cameraStage")
-                        .accessibilityHidden(isBulkProcessing || isFailed)
+                        .accessibilityHidden(isBulkProcessing)
                 }
                 .frame(width: cameraSize.width, height: cameraSize.height)
                 .clipShape(.rect(cornerRadius: 24))

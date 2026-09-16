@@ -34,7 +34,65 @@ jobs:
       - run: BRICKVAL_AUDIT_PG_BIN="$(brew --prefix postgresql@17)/bin" python3 scripts/test-reliability-database.py
       - run: xcodegen generate
         working-directory: apps/ios-swift
-      - name: Native tests on a small iPhone
+      - name: Prepare the selected iOS simulator
+        id: simulator
         run: |
-          DEVICE=$(xcrun simctl list devices available --json | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for v in d["devices"].values() for x in v if x["name"] in ["iPhone 16e", "iPhone SE (3rd generation)"]))')
-          xcodebuild -project apps/ios-swift/BrickVal.xcodeproj -scheme BrickVal -destination "platform=iOS Simulator,id=$DEVICE" CODE_SIGNING_ALLOWED=NO test
+          set -euo pipefail
+          SIMULATOR_JSON=$(xcrun simctl list devices available --json)
+          DEVICE_INFO=$(printf '%s' "$SIMULATOR_JSON" | python3 -c '
+          import json, sys
+          payload = json.load(sys.stdin)
+          names = {"iPhone 16e", "iPhone SE (3rd generation)"}
+          for runtime, devices in payload.get("devices", {}).items():
+              for device in devices:
+                  if device.get("name") in names and device.get("isAvailable", True):
+                      print(device["udid"] + "|" + device["name"] + "|" + runtime)
+                      raise SystemExit
+          raise SystemExit("No supported small iPhone simulator is available")
+          ')
+          IFS='|' read -r DEVICE DEVICE_NAME RUNTIME <<< "$DEVICE_INFO"
+          echo "Selected simulator: $DEVICE_NAME ($DEVICE)"
+          echo "Runtime: $RUNTIME"
+          xcrun simctl boot "$DEVICE" 2>/dev/null || true
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl list devices | tee "$RUNNER_TEMP/BrickVal-simulator.txt"
+          echo "device=$DEVICE" >> "$GITHUB_OUTPUT"
+          echo "device_name=$DEVICE_NAME" >> "$GITHUB_OUTPUT"
+          echo "runtime=$RUNTIME" >> "$GITHUB_OUTPUT"
+          echo "BRICKVAL_SIMULATOR_UDID=$DEVICE" >> "$GITHUB_ENV"
+      - name: Native tests on a small iPhone
+        id: native-tests
+        run: |
+          set -o pipefail
+          RESULT_BUNDLE="$RUNNER_TEMP/BrickVal-native.xcresult"
+          LOG_FILE="$RUNNER_TEMP/BrickVal-native.log"
+          rm -rf "$RESULT_BUNDLE" "$LOG_FILE"
+          set +e
+          xcodebuild \
+            -project apps/ios-swift/BrickVal.xcodeproj \
+            -scheme BrickVal \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.device }}" \
+            -resultBundlePath "$RESULT_BUNDLE" \
+            CODE_SIGNING_ALLOWED=NO test 2>&1 | tee "$LOG_FILE"
+          STATUS=${PIPESTATUS[0]}
+          set -e
+          echo "xcodebuild exit status: $STATUS"
+          exit "$STATUS"
+      - name: Capture simulator screenshot on failure
+        if: failure()
+        run: |
+          set +e
+          xcrun simctl io "${{ steps.simulator.outputs.device }}" screenshot "$RUNNER_TEMP/BrickVal-native-failure.png"
+          exit 0
+      - name: Upload native test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-reliability-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/BrickVal-native.xcresult
+            ${{ runner.temp }}/BrickVal-native.log
+            ${{ runner.temp }}/BrickVal-native-failure.png
+            ${{ runner.temp }}/BrickVal-simulator.txt
+          if-no-files-found: warn
+          retention-days: 14

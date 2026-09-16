@@ -254,6 +254,18 @@ struct BulkRevealSession: Sendable {
 
     mutating func commitActiveEntry() { commitSweepStep() }
 
+#if DEBUG
+    /// Completes a fixture without waiting on the production reveal schedule.
+    /// The fixture supplies terminal entries, so this only advances the
+    /// presentation state and never fabricates recognition or pricing.
+    mutating func completeImmediately() {
+        revealedCount = entries.count
+        lastRevealedEntryID = entries.last?.id
+        beamProgress = 1
+        phase = .finalSummary
+    }
+#endif
+
     mutating func reset() {
         revealedCount = 0
         lastRevealedEntryID = nil

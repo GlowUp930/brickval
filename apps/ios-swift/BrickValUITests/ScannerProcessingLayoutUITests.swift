@@ -290,25 +290,51 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
 
     func testDenseBulkPricesKeepEveryFigureVisible() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showDenseBulkRecoveryDemo"]
+        app.launchArguments = ["-showDenseBulkCompletedDemo"]
         app.launch()
 
         let completedSummary = app.descendants(matching: .any).matching(identifier: "bulkResults.summary").firstMatch
-        XCTAssertTrue(completedSummary.waitForExistence(timeout: 35))
+        XCTAssertTrue(completedSummary.waitForExistence(timeout: 10))
 
         let tags = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH %@", "bulkResults.priceCallout.dense-"))
         XCTAssertEqual(tags.count, 60)
-        XCTAssertTrue(tags.element(boundBy: 0).label.contains("Figure 1"))
-        XCTAssertTrue(tags.element(boundBy: 59).label.contains("Figure 60"))
-        for index in 0 ..< tags.count {
-            XCTAssertTrue(tags.element(boundBy: index).label.contains("price $"))
+        var identifiers = Set<String>()
+        for index in 1 ... 60 {
+            let tag = app.descendants(matching: .any)
+                .matching(identifier: "bulkResults.priceCallout.dense-\(index)")
+                .firstMatch
+            XCTAssertTrue(tag.exists, "Missing dense price tag \(index)")
+            identifiers.insert(tag.identifier)
+            XCTAssertTrue(tag.label.contains("Figure \(index)"))
+            XCTAssertTrue(tag.label.contains("price $"))
+            let expectedPrice = Double(((index - 1) % 17) + 2)
+            XCTAssertTrue(tag.label.contains(String(format: "%.2f", expectedPrice)))
         }
+        XCTAssertEqual(identifiers.count, 60)
 
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "Dense bulk full price labels"
         screenshot.lifetime = .keepAlways
         add(screenshot)
+    }
+
+    func testDenseBulkRevealCompletesWithinDerivedBudget() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-showDenseBulkRecoveryDemo"]
+        app.launch()
+
+        // 60 entries at the production maximum step interval, plus the scan,
+        // jackpot, return, and a small simulator scheduling margin.
+        let revealBudget = 1.60 + (60.0 * 0.75) + 1.40 + 0.45 + 10.0
+        let completedSummary = app.descendants(matching: .any).matching(identifier: "bulkResults.summary").firstMatch
+        XCTAssertTrue(completedSummary.waitForExistence(timeout: revealBudget))
+        let lastTag = app.descendants(matching: .any)
+            .matching(identifier: "bulkResults.priceCallout.dense-60")
+            .firstMatch
+        XCTAssertTrue(lastTag.waitForExistence(timeout: 3))
+        XCTAssertTrue(lastTag.label.contains("Figure 60"))
+        XCTAssertTrue(lastTag.label.contains("price $"))
     }
 
     func testProfileLanguageCanBeChangedInsideTheApp() {
