@@ -15,9 +15,11 @@ Focused and full UI checks pass on the BrickVal Small iPhone and iPhone 17 Pro
 simulators. The retry and production reveal regressions pass on both sizes; the
 camera stage is explicitly non-interactive to accessibility hit testing. The CI
 runner now records its simulator/runtime and uploads test diagnostics on
-failure. Signed Release build 1.0.9 (183) is archived at
-`/tmp/BrickVal183-reliability.xcarchive` with dSYM UUID
-`C470E397-83B6-3F76-B528-6D7BCD7EAE1D`. Physical iPhone camera and VoiceOver
+failure. Hosted reliability run [35102659954](https://github.com/GlowUp930/brickval/actions/runs/35102659954)
+passes all backend, database, localization, and 19 native UI checks. Signed
+Release build 1.0.9 (184) is archived at
+`/tmp/BrickVal184-reliability.xcarchive` with dSYM UUID
+`D9FE19F2-4916-3028-8BED-3BB54E52EAFE`. Physical iPhone camera and VoiceOver
 confirmation are still required before release sign-off. See
 [`docs/audits/2026-09-16-reliability-check.md`](../../docs/audits/2026-09-16-reliability-check.md).
 

@@ -45,7 +45,7 @@ the reliability checks enabled and fixes the test/runtime coupling.
 - Updated the reliability workflow to select and boot a supported simulator,
   print device/runtime information, save the native result bundle and log, and
   upload those plus a failure screenshot even when tests fail.
-- Bumped the native build number to 183 for the replacement signed archive.
+- Bumped the native build number to 184 for the replacement signed archive.
 
 No backend, pricing, scan-credit, purchase, or production data contract
 changed.
@@ -65,13 +65,13 @@ Local Release/Debug simulator checks completed:
 - Database reliability script, TypeScript check, and localization audit: pass;
   localization reports 814 app strings plus 4 Info.plist strings across 13
   locales.
+- Exact hosted GitHub reliability run [35102659954](https://github.com/GlowUp930/brickval/actions/runs/35102659954): pass on the iPhone 16e / iOS 26.2 runner, including all 19 native UI checks. The workflow printed the selected simulator/runtime and retained diagnostics artifacts.
 
-Signed Release build 1.0.9 (183) archived successfully at
-`/tmp/BrickVal183-reliability.xcarchive`. Code-signature verification passed;
+Signed Release build 1.0.9 (184) archived successfully at
+`/tmp/BrickVal184-reliability.xcarchive`. Code-signature verification passed;
 the matching BrickVal dSYM UUID is
-`C470E397-83B6-3F76-B528-6D7BCD7EAE1D`.
+`D9FE19F2-4916-3028-8BED-3BB54E52EAFE`. This archive has not been uploaded to
+TestFlight.
 
-The exact GitHub iPhone 16e / iOS 26.2 run must pass with the updated workflow
-before this issue is considered resolved. No physical iPhone was available in
-this session, so camera, VoiceOver, and constrained-device confirmation remain
-open release checks.
+No physical iPhone was available in this session, so camera, VoiceOver, and
+constrained-device confirmation remain open release checks.

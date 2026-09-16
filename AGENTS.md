@@ -20,10 +20,13 @@ every run. Local small and large simulator unit/UI suites, backend, database,
 type-check, and localization checks pass; the final focused retry/reveal checks
 also pass on both simulator sizes. The camera surface now explicitly reports
 that it does not respond to accessibility interaction, preventing it from
-occluding the retry banner on the iOS 26.2 runner. A new CI run is required
-before reliability sign-off. Signed Release build 1.0.9 (183) is archived at
-`/tmp/BrickVal183-reliability.xcarchive` with dSYM UUID
-`C470E397-83B6-3F76-B528-6D7BCD7EAE1D`; it has not been uploaded to TestFlight.
+occluding the retry banner on the iOS 26.2 runner. The exact hosted reliability
+run [35102659954](https://github.com/GlowUp930/brickval/actions/runs/35102659954)
+passed all backend, database, localization, and 19 native UI checks. The two
+progressive-reveal tests use a schedule-derived wait budget; the 60-result
+layout test uses a completed DEBUG fixture. Signed Release build 1.0.9 (184)
+is archived at `/tmp/BrickVal184-reliability.xcarchive` with dSYM UUID
+`D9FE19F2-4916-3028-8BED-3BB54E52EAFE`; it has not been uploaded to TestFlight.
 Physical iPhone camera verification remains pending.
 See [`docs/audits/2026-09-16-reliability-check.md`](docs/audits/2026-09-16-reliability-check.md).
 
