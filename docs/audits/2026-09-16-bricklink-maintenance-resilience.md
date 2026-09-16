@@ -37,7 +37,7 @@ app therefore discarded a usable identity and showed “Something went wrong.”
 ## Verification
 
 - Backend type checking passed.
-- 86 backend tests passed, including maintenance redirects/HTML, status
+- 87 backend tests passed, including maintenance redirects/HTML, status
   classification, identity-only payloads, cache-age behavior, stale fallback,
   no allowance consumption, and raw-cache rehydration.
 - Localization audit passed with 814 app strings and four Info.plist strings
@@ -52,8 +52,11 @@ app therefore discarded a usable identity and showed “Something went wrong.”
 
 The backend changes are backward-compatible: older builds ignore the optional
 pricing fields, while build 180 can continue decoding successful responses.
-The native messaging and retry action require a new TestFlight build. A
-production smoke test and physical-device maintenance recovery check remain
-open before closing the Sentry issue. The original customer remains unresolved
-until a correlated successful recovery or a specific account/provider cause is
-confirmed.
+Signed Release build 1.0.9 (181) is archived at
+`/tmp/BrickVal181-maintenance.xcarchive`; strict code-signature verification
+passed and its BrickVal dSYM UUID is
+`083434E9-E1E9-3039-9FDB-A4237D410B35`. It has not been uploaded to
+TestFlight. A production smoke test and physical-device maintenance recovery
+check remain open before closing the Sentry issue. The original customer
+remains unresolved until a correlated successful recovery or a specific
+account/provider cause is confirmed.

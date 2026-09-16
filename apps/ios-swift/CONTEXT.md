@@ -15,9 +15,11 @@ fallback. Authentication, configuration, not-found, permissions, and existing
 pricing behavior remain unchanged. See
 [`docs/audits/2026-09-16-bricklink-maintenance-resilience.md`](../../docs/audits/2026-09-16-bricklink-maintenance-resilience.md).
 
-Native payload and scanner tests pass on both simulator sizes. The new UI and
-retry behavior require a later TestFlight build; physical-device provider
-recovery remains pending.
+Native payload and scanner tests pass on both simulator sizes. Signed Release
+build 1.0.9 (181) is archived at `/tmp/BrickVal181-maintenance.xcarchive` and
+contains dSYM UUID `083434E9-E1E9-3039-9FDB-A4237D410B35`; TestFlight upload is
+still a separate release step. Physical-device provider recovery remains
+pending.
 
 ## PostHog UX instrumentation and replay visibility — 2026-09-16
 

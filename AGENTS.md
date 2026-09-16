@@ -15,9 +15,12 @@ photo or repeating recognition. Sentry/PostHog record privacy-safe pricing
 path outcomes and older BrickLink/lookup cache rows are rehydrated into the
 snapshot store. See [`docs/audits/2026-09-16-bricklink-maintenance-resilience.md`](docs/audits/2026-09-16-bricklink-maintenance-resilience.md).
 
-Backend, native, localization, and focused simulator verification passes. A
-new native TestFlight build, production smoke test, and physical-device
-maintenance recovery check remain required; build 180 itself is unchanged.
+Backend, native, localization, and focused simulator verification passes. The
+signed Release archive for build 181 is prepared at
+`/tmp/BrickVal181-maintenance.xcarchive` with dSYM UUID
+`083434E9-E1E9-3039-9FDB-A4237D410B35`; it has not been uploaded to TestFlight.
+A production smoke test and physical-device maintenance recovery check remain
+required; build 180 itself is unchanged.
 
 ## Build 1.0.9 (180) — 2026-09-15
 

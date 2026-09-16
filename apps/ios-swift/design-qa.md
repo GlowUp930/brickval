@@ -13,8 +13,10 @@ recognized figure and show an unavailable-price state for unpriced rows.
 The 17 focused scanner checks passed on the Small iPhone simulator and the
 failed-scan recovery check passed on the iPhone 17 Pro simulator. Payload and
 full native unit checks also pass on both sizes; localization passes across all
-13 supported locales. A new TestFlight build and physical-device recovery
-check remain open.
+13 supported locales. Signed Release build 1.0.9 (181) is archived at
+`/tmp/BrickVal181-maintenance.xcarchive` with dSYM UUID
+`083434E9-E1E9-3039-9FDB-A4237D410B35`; TestFlight upload and physical-device
+recovery remain open.
 
 ## Build 1.0.9 (180) — 2026-09-15
 
