@@ -270,8 +270,13 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         app.launchArguments = ["-showBulkRecoveryDemo"]
         app.launch()
 
+        // Two entries at the production maximum step interval, plus the
+        // scan, jackpot, return, and a small simulator scheduling margin.
+        // Keep this assertion tied to the reveal schedule rather than an
+        // arbitrary timeout so hosted CI can finish accessibility rendering.
+        let revealBudget = 1.60 + (2.0 * 0.75) + 1.40 + 0.45 + 10.0
         let completedSummary = app.descendants(matching: .any).matching(identifier: "bulkResults.summary").firstMatch
-        XCTAssertTrue(completedSummary.waitForExistence(timeout: 12))
+        XCTAssertTrue(completedSummary.waitForExistence(timeout: revealBudget))
         XCTAssertTrue(app.images["bulkResults.appIcon"].exists)
         XCTAssertTrue(app.staticTexts["BrickValue"].exists)
         XCTAssertFalse(app.staticTexts["BrickVal"].exists)
