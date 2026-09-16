@@ -1,5 +1,6 @@
 import UIKit
 import PhotosUI
+import PostHog
 import SwiftUI
 
 struct ScannerView: View {
@@ -76,6 +77,7 @@ struct ScannerView: View {
             .controlSize(.large)
             .frame(maxWidth: 340, minHeight: 56)
             .accessibilityIdentifier("scanner.modePicker")
+            .postHogNoMask()
             .padding(.top, 8)
             .padding(.bottom, 4)
 
@@ -91,6 +93,7 @@ struct ScannerView: View {
                 },
                 isResetReminderEnabled: notifications.scanResetReminderEnabled
             )
+            .postHogNoMask()
             .padding(.bottom, 8)
 
             GeometryReader { proxy in
@@ -144,13 +147,18 @@ struct ScannerView: View {
                                 ViewfinderOverlayView()
                                 DetectionOverlayView(observations: store.observations)
                             }
-                            ScannerStatusView(
+                                ScannerStatusView(
                                 phase: store.phase,
                                 intent: store.intent,
-                                smartScanMessage: store.intent == .single ? store.smartScanMessage : nil,
-                                retry: {
-                                    if store.intent == .bulk, store.frozenImageData != nil {
-                                        startScanOperation { await store.retryBulkScan() }
+                                    smartScanMessage: store.intent == .single ? store.smartScanMessage : nil,
+                                    retry: {
+                                        store.recordRetryTap(
+                                            retryKind: store.intent == .bulk && store.frozenImageData != nil
+                                                ? "bulk_scan"
+                                                : "camera"
+                                        )
+                                        if store.intent == .bulk, store.frozenImageData != nil {
+                                            startScanOperation { await store.retryBulkScan() }
                                     } else {
                                         startScanOperation { await store.retryCamera() }
                                     }
@@ -223,8 +231,25 @@ struct ScannerView: View {
                 isCameraReady: store.phase.allowsLiveDetection || store.canCaptureAfterFailure,
                 isImportingPhoto: isImportingBulkPhoto,
                 bulkPhotoItem: $selectedBulkPhoto,
-                toggleTorch: { Task { await store.toggleTorch() } },
+                toggleTorch: {
+                    coordinator?.analytics.capture(
+                        PostHogEvent.scanTorchToggled,
+                        properties: [
+                            "enabled": !store.isTorchEnabled,
+                            "scan_type": store.intent.rawValue,
+                        ]
+                    )
+                    Task { await store.toggleTorch() }
+                },
                 capture: {
+                    coordinator?.analytics.capture(
+                        PostHogEvent.scanShutterTapped,
+                        properties: [
+                            "scan_type": store.intent.rawValue,
+                            "source": "camera",
+                            "capture_mode": "manual",
+                        ]
+                    )
                     dismissScanTips()
                     startScanOperation { await store.captureManually() }
                 }
@@ -280,6 +305,10 @@ struct ScannerView: View {
         }
         .task(id: selectedBulkPhoto) {
             guard let item = selectedBulkPhoto else { return }
+            coordinator?.analytics.capture(
+                PostHogEvent.bulkPhotoSelected,
+                properties: ["source": "photo_library"]
+            )
             store.cancelBulkScan()
             isImportingBulkPhoto = true
             defer {
@@ -357,12 +386,31 @@ struct ScannerView: View {
         Binding(
             get: { store.intent },
             set: { intent in
+                let previousIntent = store.intent
                 guard intent == .bulk,
                       !monetization.canUseBulk(isPro: entitlements.isPro)
                 else {
                     store.intent = intent
+                    guard previousIntent != intent else { return }
+                    coordinator?.analytics.capture(
+                        PostHogEvent.scanModeChanged,
+                        properties: [
+                            "from_mode": previousIntent.rawValue,
+                            "to_mode": intent.rawValue,
+                            "source": "scanner",
+                        ]
+                    )
                     return
                 }
+                coordinator?.analytics.capture(
+                    PostHogEvent.scanModeChanged,
+                    properties: [
+                        "from_mode": previousIntent.rawValue,
+                        "to_mode": intent.rawValue,
+                        "source": "scanner",
+                        "outcome": "blocked",
+                    ]
+                )
                 presentLimit(for: .bulkScan)
             }
         )
@@ -625,6 +673,7 @@ private struct ScanTipsCallout: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Scan mode tips")
         .accessibilityIdentifier("scanner.quickStartTips")
+        .postHogNoMask()
     }
 
     private func tipRow(_ number: Int, _ icon: String, title: LocalizedStringResource, detail: LocalizedStringResource) -> some View {

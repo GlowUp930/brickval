@@ -1,3 +1,4 @@
+import PostHog
 import SwiftUI
 
 struct MarketRegionMenu: View {
@@ -6,6 +7,7 @@ struct MarketRegionMenu: View {
     @Binding var selection: MarketRegion
     let regions: [MarketRegion]
     let tint: Color
+    var onSelection: ((MarketRegion, MarketRegion) -> Void)? = nil
 
     private var menuRegions: [MarketRegion] {
         var result = regions
@@ -22,9 +24,11 @@ struct MarketRegionMenu: View {
                 ForEach(menuRegions) { region in
                     Button {
                         guard selection != region else { return }
+                        let previous = selection
                         withAnimation(reduceMotion ? nil : .timingCurve(0.25, 1.0, 0.5, 1.0, duration: 0.22)) {
                             selection = region
                         }
+                        onSelection?(previous, region)
                     } label: {
                         Label {
                             Text(region.menuTitle(locale: preferences.effectiveLanguage.locale))
@@ -45,6 +49,7 @@ struct MarketRegionMenu: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .postHogNoMask()
         .accessibilityLabel("Market region: \(selection.displayName(locale: preferences.effectiveLanguage.locale))")
         .accessibilityHint("Choose which seller countries are included in market history")
         .accessibilityIdentifier("marketRegionMenu.\(selection.rawValue)")

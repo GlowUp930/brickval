@@ -1,3 +1,4 @@
+import PostHog
 import SwiftUI
 
 struct CollectionHistoryStatusView: View {
@@ -30,5 +31,6 @@ struct CollectionHistoryStatusView: View {
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
+        .postHogNoMask()
     }
 }

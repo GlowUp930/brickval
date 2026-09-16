@@ -1,5 +1,30 @@
 # BrickVal Native iOS Context
 
+## PostHog UX instrumentation and replay visibility — 2026-09-16
+
+The native analytics setup now keeps session replay privacy-first while making
+safe product surfaces useful: onboarding demo cards, scanner controls/status,
+Collection headers/tips/status, and market charts/snapshots use the narrow
+`postHogNoMask()` allowlist. Photos, collection rows/thumbnails, account and
+text-entry content, paywalls, StoreKit sheets, and offer-code forms remain
+masked. Automatic element autocapture remains off so replay is paired with a
+small set of deliberate interaction events.
+
+Analytics schema version 4 adds onboarding-step, tab, scan-control, recovery,
+Collection, chart, condition/region, bulk-result, save, and offer-code events.
+Scan starts receive a fresh attempt ID; explicit retries receive a new ID plus
+the prior ID, and `scan_failed` also records `scan_error_shown`. This makes
+failure → retry → success journeys joinable without sending photos, receipts,
+emails, passwords, credentials, or raw error payloads. Surveys and performance
+timing were intentionally left out of this change. Saved PostHog funnel/trend
+definitions and the verification evidence are in
+[`docs/audits/2026-09-16-posthog-ux-instrumentation.md`](../../docs/audits/2026-09-16-posthog-ux-instrumentation.md).
+
+Verification: the native unit target passed 244 tests in 39 suites and all 18
+focused UI tests passed on the BrickVal Small iPhone simulator. A real
+physical-device replay and production event check are still required after a
+new build is installed; simulator sessions must remain excluded from reports.
+
 ## Offer-code redemption presentation fix — 2026-09-16
 
 The offer-code flow had a confirmed presentation-order defect. The

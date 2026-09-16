@@ -1,3 +1,4 @@
+import PostHog
 import SwiftUI
 
 struct ItemDetailView: View {
@@ -130,6 +131,30 @@ struct ItemDetailView: View {
         .navigationTitle("")
         .task(id: scenePhase) {
             if scenePhase == .active { await store.refreshHistoryAtDayBoundary() }
+        }
+        .onChange(of: horizon) { previous, current in
+            guard previous != current else { return }
+            coordinator?.analytics.capture(
+                PostHogEvent.timeframeChanged,
+                properties: [
+                    "screen": "item_detail",
+                    "from_timeframe": previous.rawValue,
+                    "to_timeframe": current.rawValue,
+                    "source": "chart",
+                    "item_type": item.itemType.rawValue,
+                ]
+            )
+        }
+        .onChange(of: selectedCondition) { previous, current in
+            guard previous != current else { return }
+            coordinator?.analytics.capture(
+                PostHogEvent.conditionChanged,
+                properties: [
+                    "screen": "item_detail",
+                    "from_condition": previous.condition.rawValue,
+                    "to_condition": current.condition.rawValue,
+                ]
+            )
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
@@ -289,6 +314,7 @@ struct ItemDetailView: View {
         }
         .padding(BrickValStyle.Primitive.space4)
         .background(BrickValStyle.ScanResult.surface, in: Capsule())
+        .postHogNoMask()
     }
 
     private func itemTab(_ title: String, option: DetailConditionOption) -> some View {
@@ -338,7 +364,23 @@ struct ItemDetailView: View {
             VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space8) {
                 HStack {
                     Spacer(minLength: 0)
-                    MarketRegionMenu(selection: marketRegionBinding, regions: availableMarketRegions, tint: BrickValStyle.ScanResult.textPrimary)
+                    MarketRegionMenu(
+                        selection: marketRegionBinding,
+                        regions: availableMarketRegions,
+                        tint: BrickValStyle.ScanResult.textPrimary,
+                        onSelection: { previous, current in
+                            coordinator?.analytics.capture(
+                                PostHogEvent.marketRegionChanged,
+                                properties: [
+                                    "screen": "item_detail",
+                                    "from_region": previous.rawValue,
+                                    "to_region": current.rawValue,
+                                    "source": "chart",
+                                    "item_type": item.itemType.rawValue,
+                                ]
+                            )
+                        }
+                    )
                 }
                 ChartHorizonPicker(
                     selection: $horizon,
@@ -352,6 +394,7 @@ struct ItemDetailView: View {
             }
             marketSnapshotPanel
         }
+        .postHogNoMask()
     }
 
     private var soldListingsLegend: some View {
@@ -740,6 +783,16 @@ struct ItemDetailView: View {
     private func adjustQuantity(for option: DetailConditionOption, delta: Int) {
         let nextQuantity = max(0, quantity(for: option) + delta)
         let target = itemForQuantity(option: option)
+
+        coordinator?.analytics.capture(
+            PostHogEvent.collectionQuantityChanged,
+            properties: [
+                "source": "item_detail",
+                "condition": option.condition.rawValue,
+                "delta": delta,
+                "quantity": nextQuantity,
+            ]
+        )
 
         Task {
             do {

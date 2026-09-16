@@ -21,6 +21,7 @@ final class ScanStore {
     var intent: ScanIntent = .single {
         didSet {
             guard oldValue != intent else { return }
+            retryScanPending = false
             resetDetectionState()
             if phase != .preparingCamera { phase = .searching }
         }
@@ -78,6 +79,9 @@ final class ScanStore {
     @ObservationIgnored private var autoScanStartedAt: Date?
     @ObservationIgnored private var firstDetectionAt: Date?
     @ObservationIgnored private var bulkScanGeneration = 0
+    @ObservationIgnored private var scanAttemptID: String?
+    @ObservationIgnored private var scanAttemptNumber = 0
+    @ObservationIgnored private var retryScanPending = false
 #if DEBUG
     @ObservationIgnored private var retriesWithoutCamera = false
 #endif
@@ -128,6 +132,7 @@ final class ScanStore {
     /// cancellation, so stale responses cannot reopen the results screen.
     func cancelBulkScan() {
         bulkScanGeneration &+= 1
+        retryScanPending = false
     }
 
     private func isCurrentBulkScan(_ generation: Int) -> Bool {
@@ -234,6 +239,82 @@ final class ScanStore {
         self.analytics = analytics
     }
 
+    /// Starts a new correlated scan attempt. Only an explicit retry links back
+    /// to the previous attempt; a normal new scan starts a clean journey.
+    private func beginScanAttempt(linkPreviousAttempt: Bool) {
+        let previousAttemptID = linkPreviousAttempt ? scanAttemptID : nil
+        scanAttemptNumber += 1
+        let newAttemptID = UUID().uuidString
+        scanAttemptID = newAttemptID
+
+        var properties: [String: Any] = [
+            "scan_attempt_id": newAttemptID,
+            "attempt_number": scanAttemptNumber,
+        ]
+        if let previousAttemptID {
+            properties["previous_scan_attempt_id"] = previousAttemptID
+        }
+        pendingScanStartProperties = properties
+    }
+
+    @ObservationIgnored private var pendingScanStartProperties: [String: Any] = [:]
+
+    private func captureScanStarted(properties: [String: Any]) {
+        beginScanAttempt(linkPreviousAttempt: retryScanPending)
+        retryScanPending = false
+        var fields = properties
+        pendingScanStartProperties.forEach { fields[$0.key] = $0.value }
+        pendingScanStartProperties = [:]
+        captureAnalytics(PostHogEvent.scanStarted, properties: fields)
+    }
+
+    /// Records the user-visible recovery action without submitting a charge or
+    /// silently resubmitting the same image.
+    func recordRetryTap(retryKind: String) {
+        retryScanPending = true
+        captureAnalytics(
+            PostHogEvent.scanTryAgainTapped,
+            properties: ["retry_kind": retryKind]
+        )
+    }
+
+    private func captureAnalytics(_ event: String, properties: [String: Any] = [:]) {
+        var fields = properties
+        if usesScanAttemptContext(event), let scanAttemptID {
+            fields["scan_attempt_id"] = scanAttemptID
+            fields["attempt_number"] = scanAttemptNumber
+        }
+        captureAnalyticsWithoutAttempt(event, properties: fields)
+    }
+
+    private func usesScanAttemptContext(_ event: String) -> Bool {
+        switch event {
+        case PostHogEvent.scanStarted,
+             PostHogEvent.scanCompleted,
+             PostHogEvent.scanFailed,
+             PostHogEvent.scanBlocked,
+             PostHogEvent.scanErrorShown,
+             PostHogEvent.scanTryAgainTapped,
+             PostHogEvent.bulkPreviewStarted,
+             PostHogEvent.bulkPreviewCompleted,
+             PostHogEvent.bulkPreviewSubscribeTapped,
+             PostHogEvent.bulkPreviewReferralTapped,
+             PostHogEvent.bulkPreviewRescanRequired:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func captureAnalyticsWithoutAttempt(_ event: String, properties: [String: Any]) {
+        analytics?.capture(event, properties: properties)
+        if event == PostHogEvent.scanFailed {
+            var shownProperties = properties
+            shownProperties["source_event"] = PostHogEvent.scanFailed
+            captureAnalyticsWithoutAttempt(PostHogEvent.scanErrorShown, properties: shownProperties)
+        }
+    }
+
     func updateProStatus(_ isPro: Bool) {
         isProSubscriber = isPro
     }
@@ -279,6 +360,7 @@ final class ScanStore {
         await motion.stop()
         isTorchEnabled = false
         canCaptureAfterFailure = false
+        retryScanPending = false
     }
 
     /// Clears the failed photo and stale boxes while preserving the failure
@@ -330,14 +412,13 @@ final class ScanStore {
         guard phase.allowsLiveDetection || canCaptureAfterFailure else { return }
         guard canBeginCurrentScan else {
             proLimitFeature = intent == .bulk ? .bulkScan : .singleScan
-            analytics?.capture(
+            captureAnalytics(
                 PostHogEvent.scanBlocked,
                 properties: ["scan_type": intent.rawValue, "source": "camera"]
             )
             return
         }
-        analytics?.capture(
-            PostHogEvent.scanStarted,
+        captureScanStarted(
             properties: [
                 "scan_type": intent.rawValue,
                 "source": "camera",
@@ -383,14 +464,13 @@ final class ScanStore {
         guard canBeginCurrentScan else {
             phase = .failed(BrickValLocalization.localized("You've used all available bulk scans. Upgrade to continue."))
             proLimitFeature = .bulkScan
-            analytics?.capture(
+            captureAnalytics(
                 PostHogEvent.scanBlocked,
                 properties: ["scan_type": ScanIntent.bulk.rawValue, "source": "photo_library"]
             )
             return
         }
-        analytics?.capture(
-            PostHogEvent.scanStarted,
+        captureScanStarted(
             properties: [
                 "scan_type": ScanIntent.bulk.rawValue,
                 "source": "photo_library",
@@ -399,7 +479,7 @@ final class ScanStore {
         )
         guard let data else {
             phase = .failed(BrickValLocalization.localized("We couldn't read that photo. Choose another image and try again."))
-            analytics?.capture(
+            captureAnalytics(
                 PostHogEvent.scanFailed,
                 properties: ["scan_type": ScanIntent.bulk.rawValue, "source": "photo_library"]
             )
@@ -442,7 +522,7 @@ final class ScanStore {
     func importBulkPhotoLoadFailed() async {
         guard intent == .bulk else { return }
         phase = .failed(BrickValLocalization.localized("We couldn't load that photo. Check your Photos permission and choose another image."))
-        analytics?.capture(
+        captureAnalytics(
             PostHogEvent.scanFailed,
             properties: ["scan_type": ScanIntent.bulk.rawValue, "source": "photo_library"]
         )
@@ -450,6 +530,13 @@ final class ScanStore {
 
     func retryBulkScan() async {
         guard intent == .bulk, case .failed = phase, let frozenImageData else { return }
+        captureScanStarted(
+            properties: [
+                "scan_type": ScanIntent.bulk.rawValue,
+                "source": frozenBulkSource == .photoLibrary ? "photo_library" : "camera",
+                "capture_mode": "retry",
+            ]
+        )
         let generation = beginBulkScan()
         attemptedProAccessRecovery = false
         do {
@@ -480,7 +567,7 @@ final class ScanStore {
     }
 
     func manualLookup(identifier: String, type: ItemType, colorID: Int?) async throws {
-        analytics?.capture(
+        captureAnalytics(
             PostHogEvent.manualLookupStarted,
             properties: ["item_type": type.rawValue]
         )
@@ -489,7 +576,7 @@ final class ScanStore {
         phase = .result
         presentedSheet = .result(result)
         soundEffects.play(.cashRegister)
-        analytics?.capture(
+        captureAnalytics(
             PostHogEvent.manualLookupCompleted,
             properties: ["item_type": type.rawValue]
         )
@@ -506,12 +593,20 @@ final class ScanStore {
             phase = .result
             presentedSheet = .result(result)
             soundEffects.play(.cashRegister)
-            analytics?.capture(
+            captureAnalytics(
                 PostHogEvent.scanCompleted,
                 properties: ["scan_type": intent.rawValue, "outcome": "matched"]
             )
         } catch {
             phase = .failed(error.localizedDescription)
+            captureAnalytics(
+                PostHogEvent.scanFailed,
+                properties: [
+                    "scan_type": intent.rawValue,
+                    "outcome": "lookup_failed",
+                    "status_code": (error as? APIError)?.statusCode ?? 0,
+                ]
+            )
         }
     }
 
@@ -534,12 +629,20 @@ final class ScanStore {
             phase = .result
             presentedSheet = .result(result)
             soundEffects.play(.cashRegister)
-            analytics?.capture(
+            captureAnalytics(
                 PostHogEvent.scanCompleted,
                 properties: ["scan_type": intent.rawValue, "outcome": "matched"]
             )
         } catch {
             phase = .failed(error.localizedDescription)
+            captureAnalytics(
+                PostHogEvent.scanFailed,
+                properties: [
+                    "scan_type": intent.rawValue,
+                    "outcome": "lookup_failed",
+                    "status_code": (error as? APIError)?.statusCode ?? 0,
+                ]
+            )
         }
     }
 
@@ -626,6 +729,14 @@ final class ScanStore {
             soundEffects.play(.cashRegister)
         } catch {
             phase = .failed(error.localizedDescription)
+            captureAnalytics(
+                PostHogEvent.scanFailed,
+                properties: [
+                    "scan_type": intent.rawValue,
+                    "outcome": "lookup_failed",
+                    "status_code": (error as? APIError)?.statusCode ?? 0,
+                ]
+            )
         }
     }
 
@@ -652,6 +763,7 @@ final class ScanStore {
         bulkProcessingTotal = 0
         attemptedProAccessRecovery = false
         canCaptureAfterFailure = false
+        retryScanPending = false
         phase = .searching
         resetDetectionState()
     }
@@ -719,8 +831,7 @@ final class ScanStore {
             phase = .searching
             return
         }
-        analytics?.capture(
-            PostHogEvent.scanStarted,
+        captureScanStarted(
             properties: [
                 "scan_type": ScanIntent.single.rawValue,
                 "source": "camera",
@@ -768,7 +879,7 @@ final class ScanStore {
                     bulkSource: bulkSource
                 ) else {
                     phase = .failed(BrickValLocalization.localized("No minifigures were found. Try a brighter photo with the figures separated and facing forward."))
-                    analytics?.capture(
+                    captureAnalytics(
                         PostHogEvent.bulkPreviewCompleted,
                         properties: [
                             "source": bulkSource == .photoLibrary ? "photo_library" : "camera",
@@ -803,10 +914,28 @@ final class ScanStore {
                 let regions = Array(start.regions.prefix(BulkScanSource.maximumRegionCount))
                 guard !regions.isEmpty else {
                     phase = .failed(BrickValLocalization.localized("No minifigures were found. Try a brighter photo with the figures separated and facing forward."))
+                    captureAnalytics(
+                        PostHogEvent.scanFailed,
+                        properties: [
+                            "scan_type": ScanIntent.bulk.rawValue,
+                            "source": bulkSource == .photoLibrary ? "photo_library" : "camera",
+                            "outcome": "not_found",
+                            "status_code": 0,
+                        ]
+                    )
                     return
                 }
                 guard let frozenImageData else {
                     phase = .failed(BrickValLocalization.localized("The captured photo is no longer available. Please retake the photo."))
+                    captureAnalytics(
+                        PostHogEvent.scanFailed,
+                        properties: [
+                            "scan_type": ScanIntent.bulk.rawValue,
+                            "source": bulkSource == .photoLibrary ? "photo_library" : "camera",
+                            "outcome": "photo_unavailable",
+                            "status_code": 0,
+                        ]
+                    )
                     return
                 }
                 bulkProcessingCompleted = 0
@@ -819,7 +948,7 @@ final class ScanStore {
                     source: bulkSource,
                     sessionToken: start.sessionToken
                 )
-                analytics?.capture(
+                captureAnalytics(
                     PostHogEvent.scanCompleted,
                     properties: [
                         "scan_type": ScanIntent.bulk.rawValue,
@@ -842,6 +971,15 @@ final class ScanStore {
             else {
                 self.setFrozenImageData(nil)
                 phase = .failed(BrickValLocalization.localized("No priced minifigures were found. Try a brighter photo with the figures separated and facing forward."))
+                captureAnalytics(
+                    PostHogEvent.scanFailed,
+                    properties: [
+                        "scan_type": ScanIntent.bulk.rawValue,
+                        "source": bulkSource == .photoLibrary ? "photo_library" : "camera",
+                        "outcome": "not_found",
+                        "status_code": 0,
+                    ]
+                )
                 return
             }
             monetization?.recordSuccessfulBulk(serverUsage: response.usage)
@@ -854,7 +992,7 @@ final class ScanStore {
                 source: bulkSource
             )
             logBulkResult(response, startedAt: startedAt)
-            analytics?.capture(
+            captureAnalytics(
                 PostHogEvent.scanCompleted,
                 properties: [
                     "scan_type": ScanIntent.bulk.rawValue,
@@ -883,7 +1021,7 @@ final class ScanStore {
                     startedAt: startedAt,
                     timings: timings
                 )
-                analytics?.capture(
+                captureAnalytics(
                     PostHogEvent.scanCompleted,
                     properties: ["scan_type": ScanIntent.single.rawValue, "outcome": "matched"]
                 )
@@ -916,7 +1054,7 @@ final class ScanStore {
                     startedAt: startedAt,
                     timings: timings
                 )
-                analytics?.capture(
+                captureAnalytics(
                     PostHogEvent.scanCompleted,
                     properties: ["scan_type": ScanIntent.single.rawValue, "outcome": "needs_review"]
                 )
@@ -940,19 +1078,35 @@ final class ScanStore {
         let identification = try await api.identify(image, mode, intent)
         guard !identification.detections.isEmpty || identification.setNumber != nil else {
             phase = .failed(BrickValLocalization.localized("No match was found. Try a clearer photo."))
+            captureAnalytics(
+                PostHogEvent.scanFailed,
+                properties: [
+                    "scan_type": intent.rawValue,
+                    "outcome": "not_found",
+                    "status_code": 0,
+                ]
+            )
             return
         }
 
         let identifier = identification.setNumber ?? identification.detections.first?.id
         guard let identifier else {
             phase = .failed(BrickValLocalization.localized("The item could not be identified."))
+            captureAnalytics(
+                PostHogEvent.scanFailed,
+                properties: [
+                    "scan_type": intent.rawValue,
+                    "outcome": "not_found",
+                    "status_code": 0,
+                ]
+            )
             return
         }
         let result = try await api.lookup(identifier, mode == .set ? .set : .minifig, nil)
         phase = .result
         presentedSheet = .result(result)
         soundEffects.play(.cashRegister)
-        analytics?.capture(
+        captureAnalytics(
             PostHogEvent.scanCompleted,
             properties: ["scan_type": intent.rawValue, "outcome": "matched"]
         )
@@ -989,7 +1143,7 @@ final class ScanStore {
             source: bulkSource,
             accessMode: .lockedPreview
         )
-        analytics?.capture(
+        captureAnalytics(
             PostHogEvent.bulkPreviewStarted,
             properties: [
                 "source": bulkSource == .photoLibrary ? "photo_library" : "camera",
@@ -1105,7 +1259,7 @@ final class ScanStore {
                 presentation.enterLockedPreview()
                 bulkProcessingCompleted = 0
                 bulkProcessingTotal = presentation.regions.count
-                analytics?.capture(
+                captureAnalytics(
                     PostHogEvent.bulkPreviewStarted,
                     properties: [
                         "source": presentation.source == .photoLibrary ? "photo_library" : "camera",
@@ -1168,6 +1322,14 @@ final class ScanStore {
             resumeCameraAfterFailure()
         }
         phase = .failed(message)
+        captureAnalytics(
+            PostHogEvent.scanFailed,
+            properties: [
+                "scan_type": intent.rawValue,
+                "outcome": "not_found",
+                "status_code": 0,
+            ]
+        )
     }
 
     private func handleIdentificationError(_ error: Error) async {
@@ -1205,7 +1367,7 @@ final class ScanStore {
                         return
                     }
                     phase = .failed(BrickValLocalization.localized("No minifigures were found. Try a brighter photo with the figures separated and facing forward."))
-                    analytics?.capture(
+                    captureAnalytics(
                         PostHogEvent.bulkPreviewCompleted,
                         properties: [
                             "source": frozenBulkSource == .photoLibrary ? "photo_library" : "camera",
@@ -1220,7 +1382,7 @@ final class ScanStore {
             }
             proLimitFeature = apiError.feature
             phase = .failed(apiError.localizedDescription)
-            analytics?.capture(
+            captureAnalytics(
                 PostHogEvent.scanBlocked,
                 properties: [
                     "scan_type": intent.rawValue,
@@ -1239,7 +1401,7 @@ final class ScanStore {
             resumeCameraAfterFailure()
         }
         phase = .failed(error.localizedDescription)
-        analytics?.capture(
+        captureAnalytics(
             PostHogEvent.scanFailed,
             properties: ["scan_type": intent.rawValue, "status_code": statusCode]
         )

@@ -1,6 +1,7 @@
 import AVFoundation
 import AuthenticationServices
 import ClerkKit
+import PostHog
 import SwiftUI
 import UIKit
 
@@ -56,6 +57,7 @@ struct OnboardingView: View {
                 getStarted: showValueStep,
                 signIn: presentSignIn
             )
+            .postHogNoMask()
             .opacity(step == .video ? 1 : 0)
             .scaleEffect(reduceMotion || step == .video ? 1 : 0.985)
             .allowsHitTesting(step == .video)
@@ -67,6 +69,7 @@ struct OnboardingView: View {
                 advance: advanceDetailStep,
                 leaveReview: leaveReview
             )
+            .postHogNoMask()
             .opacity(step.isDetailStep ? 1 : 0)
             .scaleEffect(reduceMotion || step.isDetailStep ? 1 : 0.985)
             .allowsHitTesting(step.isDetailStep)
@@ -79,6 +82,7 @@ struct OnboardingView: View {
                 signInWithGoogle: { authenticate(with: .google) },
                 skip: continueFromAccount
             )
+            .postHogNoMask()
             .opacity(step == .account ? 1 : 0)
             .scaleEffect(reduceMotion || step == .account ? 1 : 0.985)
             .allowsHitTesting(step == .account)
@@ -120,6 +124,10 @@ struct OnboardingView: View {
                 PostHogEvent.onboardingStarted,
                 properties: properties
             )
+            coordinator?.analytics.capture(
+                PostHogEvent.onboardingStepShown,
+                properties: stepAnalyticsProperties(for: step)
+            )
         }
         .sheet(item: $presentedSheet) { sheet in
             switch sheet {
@@ -143,6 +151,10 @@ struct OnboardingView: View {
             referralCode = newCode
         }
         .onChange(of: step) { _, newStep in
+            coordinator?.analytics.capture(
+                PostHogEvent.onboardingStepShown,
+                properties: stepAnalyticsProperties(for: newStep)
+            )
             guard newStep == .review else { return }
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(420))
@@ -191,6 +203,16 @@ struct OnboardingView: View {
         withAnimation(reduceMotion ? nil : .timingCurve(0.22, 1, 0.36, 1, duration: 0.42)) {
             step = .value
         }
+    }
+
+    private func stepAnalyticsProperties(for step: OnboardingStep) -> [String: Any] {
+        [
+            "step": step.analyticsName,
+            "step_index": step.progressIndex ?? -1,
+            "launch_kind": onboardingLaunchKind,
+            "is_replay": preferences.isReplayingOnboarding,
+            "onboarding_session_id": onboardingSessionID,
+        ]
     }
 
     private func showReviewStep() {
@@ -410,6 +432,19 @@ private enum OnboardingStep: Int, CaseIterable, Identifiable {
         case .account: 5
         case .referral: 6
         default: nil
+        }
+    }
+
+    var analyticsName: String {
+        switch self {
+        case .video: "video"
+        case .value: "value"
+        case .scanReveal: "scan_reveal"
+        case .goal: "goal"
+        case .trust: "trust"
+        case .review: "review"
+        case .account: "account"
+        case .referral: "referral"
         }
     }
 }

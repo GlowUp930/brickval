@@ -4,6 +4,7 @@ import PostHog
 enum PostHogEvent {
     static let appReady = "app_ready"
     static let onboardingScreenShown = "onboarding_screen_shown"
+    static let onboardingStepShown = "onboarding_step_shown"
     static let onboardingStarted = "onboarding_started"
     static let onboardingGetStartedTapped = "onboarding_get_started_tapped"
     static let onboardingCompleted = "onboarding_completed"
@@ -33,11 +34,33 @@ enum PostHogEvent {
     static let bulkPreviewSubscribeTapped = "bulk_preview_subscribe_tapped"
     static let bulkPreviewReferralTapped = "bulk_preview_referral_tapped"
     static let bulkPreviewRescanRequired = "bulk_preview_rescan_required"
+
+    // Focused interaction events keep aggregate UX questions answerable while
+    // avoiding the volume and privacy risk of capturing every tap.
+    static let tabSelected = "tab_selected"
+    static let scanModeChanged = "scan_mode_changed"
+    static let scanShutterTapped = "scan_shutter_tapped"
+    static let scanTryAgainTapped = "scan_try_again_tapped"
+    static let scanTorchToggled = "scan_torch_toggled"
+    static let scanErrorShown = "scan_error_shown"
+    static let bulkPhotoSelected = "bulk_photo_selected"
+    static let collectionSearchToggled = "collection_search_toggled"
+    static let collectionFilterChanged = "collection_filter_changed"
+    static let collectionItemOpened = "collection_item_opened"
+    static let collectionSaveTapped = "collection_save_tapped"
+    static let collectionQuantityChanged = "collection_quantity_changed"
+    static let timeframeChanged = "timeframe_changed"
+    static let conditionChanged = "condition_changed"
+    static let marketRegionChanged = "market_region_changed"
+    static let bulkResultSelected = "bulk_result_selected"
+    static let bulkResultSelectionChanged = "bulk_result_selection_changed"
+    static let offerCodeRedeemTapped = "offer_code_redeem_tapped"
 }
 
 @MainActor
 final class PostHogAnalytics {
     static let host = "https://us.i.posthog.com"
+    static let schemaVersion = 4
     private static let installIDKey = "brickvalue_posthog_install_id"
     private static let identifiedUserIDKey = "brickvalue_posthog_identified_user_id"
 
@@ -74,6 +97,10 @@ final class PostHogAnalytics {
         config.sessionReplayConfig.maskAllSandboxedViews = true
         config.sessionReplayConfig.captureNetworkTelemetry = true
         config.sessionReplayConfig.captureLogs = false
+        // Aggregate element autocapture stays off. The app sends a small,
+        // deliberate set of interaction events instead so tap history stays
+        // useful without collecting every gesture or control label.
+        config.captureElementInteractions = false
 #endif
         PostHogSDK.shared.setup(config)
         isConfigured = true
@@ -153,7 +180,7 @@ final class PostHogAnalytics {
         guard isConfigured else { return }
         PostHogSDK.shared.register([
             "analytics_install_id": installID,
-            "analytics_schema_version": 3,
+            "analytics_schema_version": Self.schemaVersion,
         ])
     }
 
@@ -172,7 +199,7 @@ final class PostHogAnalytics {
         let isSimulator = false
 #endif
         var properties: [String: Any] = [
-            "analytics_schema_version": 3,
+            "analytics_schema_version": Self.schemaVersion,
             "app_version": version,
             "app_build": build,
             "os_version": ProcessInfo.processInfo.operatingSystemVersionString,

@@ -1,4 +1,5 @@
 import Charts
+import PostHog
 import SwiftUI
 
 struct StockChartPoint: Identifiable, Equatable, Sendable {
@@ -41,6 +42,7 @@ struct InteractiveStockChart: View {
                        popupBackground: popupBackground, popupForeground: popupForeground, showsFill: showsFill,
                        yDomain: max(0, low - padding)...(high + padding), selectionID: selectionID,
                        singlePointLabel: singlePointLabel)
+            .postHogNoMask()
             .onChange(of: points) { _, _ in
 #if DEBUG
                 ChartInteractionTiming.shared.applied()
@@ -441,5 +443,6 @@ struct ChartHorizonPicker: View {
         }
         .sensoryFeedback(.selection, trigger: selection)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: selection)
+        .postHogNoMask()
     }
 }

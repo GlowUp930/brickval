@@ -1,4 +1,5 @@
 import PhotosUI
+import PostHog
 import SwiftUI
 
 struct ScannerControlsView: View {
@@ -21,6 +22,7 @@ struct ScannerControlsView: View {
                 .disabled(isBusy || !isCameraReady || isImportingPhoto)
                 .accessibilityHint(captureHint)
                 .accessibilityIdentifier("scanner.capture")
+                .postHogNoMask()
 
             HStack {
                 if intent == .bulk {
@@ -48,6 +50,7 @@ struct ScannerControlsView: View {
                     .frame(width: 48, height: 48)
                     .buttonStyle(.bordered)
                     .disabled(isBusy || !isCameraReady || isImportingPhoto)
+                    .postHogNoMask()
             }
         }
         .frame(maxWidth: .infinity, minHeight: 72)

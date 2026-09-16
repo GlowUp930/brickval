@@ -1,3 +1,4 @@
+import PostHog
 import SwiftUI
 
 struct CollectionView: View {
@@ -43,12 +44,17 @@ struct CollectionView: View {
                         .foregroundStyle(BrickValStyle.Semantic.textPrimary)
                     Spacer()
                     headerButton("magnifyingglass", label: "Search collection") {
+                        coordinator?.analytics.capture(
+                            PostHogEvent.collectionSearchToggled,
+                            properties: ["visible": !isSearchVisible, "source": "header"]
+                        )
                         withAnimation(.snappy(duration: 0.2)) { isSearchVisible.toggle() }
                     }
                     headerButton("person.crop.circle", label: "Open account") {
                         presentedSheet = .account
                     }
                 }
+                .postHogNoMask()
                 .padding(.top, BrickValStyle.CollectionLayout.headerTop)
 
                 if isSearchVisible {
@@ -59,6 +65,10 @@ struct CollectionView: View {
                             .textInputAutocapitalization(.never)
                         Button("Close") {
                             searchText = ""
+                            coordinator?.analytics.capture(
+                                PostHogEvent.collectionSearchToggled,
+                                properties: ["visible": false, "source": "search_field"]
+                            )
                             withAnimation(.snappy(duration: 0.2)) { isSearchVisible = false }
                         }
                         .font(.system(size: 13, weight: .semibold))
@@ -135,6 +145,53 @@ struct CollectionView: View {
         }
         .task(id: scenePhase) {
             if scenePhase == .active { await store.refreshHistoryAtDayBoundary() }
+        }
+        .onChange(of: horizon) { previous, current in
+            guard previous != current else { return }
+            coordinator?.analytics.capture(
+                PostHogEvent.timeframeChanged,
+                properties: [
+                    "screen": "collection",
+                    "from_timeframe": previous.rawValue,
+                    "to_timeframe": current.rawValue,
+                    "source": "chart",
+                ]
+            )
+        }
+        .onChange(of: preferences.collectionMarketRegion) { previous, current in
+            guard previous != current else { return }
+            coordinator?.analytics.capture(
+                PostHogEvent.marketRegionChanged,
+                properties: [
+                    "screen": "collection",
+                    "from_region": previous.rawValue,
+                    "to_region": current.rawValue,
+                    "source": "chart",
+                ]
+            )
+        }
+        .onChange(of: filter) { previous, current in
+            guard previous != current else { return }
+            coordinator?.analytics.capture(
+                PostHogEvent.collectionFilterChanged,
+                properties: [
+                    "from_filter": previous.rawValue,
+                    "to_filter": current.rawValue,
+                ]
+            )
+        }
+        .onChange(of: router.collectionPath) { previous, current in
+            guard previous.count < current.count,
+                  case .collectionItem(let item) = current.last
+            else { return }
+            coordinator?.analytics.capture(
+                PostHogEvent.collectionItemOpened,
+                properties: [
+                    "source": "collection",
+                    "item_type": item.itemType.rawValue,
+                    "condition": item.condition.rawValue,
+                ]
+            )
         }
         .refreshable {
             await store.load()
@@ -399,6 +456,7 @@ private struct CollectionTipsCallout: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Collection quick start tips")
         .accessibilityIdentifier("collection.quickStartTips")
+        .postHogNoMask()
     }
 
     private func tipRow(_ number: Int, _ icon: String, title: LocalizedStringResource, detail: LocalizedStringResource) -> some View {

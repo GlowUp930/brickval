@@ -1,3 +1,4 @@
+import PostHog
 import SwiftUI
 
 struct ScannerStatusView: View {
@@ -33,6 +34,7 @@ struct ScannerStatusView: View {
         .padding(.vertical, 10)
         .background(.regularMaterial, in: .capsule)
         .padding()
+        .postHogNoMask()
     }
 
     private var icon: String {

@@ -64,6 +64,16 @@ struct AppShellView: View {
             consumePendingPurchase()
             evaluateFeedback()
         }
+        .onChange(of: router.selectedTab) { previous, selected in
+            guard previous != selected else { return }
+            coordinator?.analytics.capture(
+                PostHogEvent.tabSelected,
+                properties: [
+                    "tab": selected.rawValue,
+                    "previous_tab": previous.rawValue,
+                ]
+            )
+        }
         .onChange(of: entitlements.pendingNewPurchase) { _, _ in
             consumePendingPurchase()
         }

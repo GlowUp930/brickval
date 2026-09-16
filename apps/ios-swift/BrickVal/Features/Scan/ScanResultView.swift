@@ -1,4 +1,5 @@
 import StoreKit
+import PostHog
 import SwiftUI
 
 struct ScanResultView: View {
@@ -97,6 +98,19 @@ struct ScanResultView: View {
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
+            .onChange(of: horizon) { previous, current in
+                guard previous != current else { return }
+                coordinator?.analytics.capture(
+                    PostHogEvent.timeframeChanged,
+                    properties: [
+                        "screen": "scan_result",
+                        "from_timeframe": previous.rawValue,
+                        "to_timeframe": current.rawValue,
+                        "source": "chart",
+                        "item_type": result.itemType.rawValue,
+                    ]
+                )
+            }
         }
     }
 
@@ -168,6 +182,7 @@ struct ScanResultView: View {
             conversionCaption
         }
         .resultSurface()
+        .postHogNoMask()
     }
 
     private var conversionCaption: some View {
@@ -234,6 +249,7 @@ struct ScanResultView: View {
             )
         }
         .resultSurface()
+        .postHogNoMask()
     }
 
     private var collectionActions: some View {
@@ -253,7 +269,18 @@ struct ScanResultView: View {
     }
 
     private func collectionButton(_ title: LocalizedStringResource, condition: CollectionCondition, prominent: Bool) -> some View {
-        Button { save(condition: condition) } label: {
+        Button {
+            coordinator?.analytics.capture(
+                PostHogEvent.collectionSaveTapped,
+                properties: [
+                    "source": "scan_result",
+                    "condition": condition.rawValue,
+                    "quantity": quantity,
+                    "item_type": result.itemType.rawValue,
+                ]
+            )
+            save(condition: condition)
+        } label: {
             let isSaved = savedCondition == condition
             let label = isSaved
                 ? BrickValLocalization.localized("Added")

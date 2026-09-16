@@ -1,3 +1,4 @@
+import PostHog
 import SwiftUI
 import OSLog
 
@@ -688,6 +689,14 @@ struct BulkScanResultsView: View {
     }
 
     private func focusPriceCallout(_ id: String) {
+        coordinator?.analytics.capture(
+            PostHogEvent.bulkResultSelected,
+            properties: [
+                "result_id": id,
+                "source": "price_tag",
+                "identified_count": identifiedCount,
+            ]
+        )
         focusedPriceCalloutID = id
         focusedResultID = id
     }
@@ -757,6 +766,14 @@ struct BulkScanResultsView: View {
         let sourceDetail = MarketPriceSourceCopy.detail(for: item.result.pricing.source(for: condition))
         return HStack(spacing: 7) {
             Button {
+                coordinator?.analytics.capture(
+                    PostHogEvent.bulkResultSelectionChanged,
+                    properties: [
+                        "result_id": item.id,
+                        "selected": !isSelected,
+                        "source": "result_rail",
+                    ]
+                )
                 withAnimation(.easeOut(duration: 0.16)) {
                     state.wrappedValue.isSelected.toggle()
                 }
@@ -1427,6 +1444,14 @@ struct BulkScanResultsView: View {
             target = nil
         }
         guard let target else { return }
+        coordinator?.analytics.capture(
+            PostHogEvent.bulkResultSelected,
+            properties: [
+                "result_id": regionID,
+                "source": "photo_region",
+                "outcome": target.isUnresolved ? "unresolved" : "resolved",
+            ]
+        )
         selectedMatchTarget = target
         let state = target.isUnresolved ? "unresolved" : "resolved"
         Self.correctionLogger.info(

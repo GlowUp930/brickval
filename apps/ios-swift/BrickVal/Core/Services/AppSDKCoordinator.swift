@@ -206,6 +206,10 @@ final class AppSDKCoordinator: SuperwallDelegate {
 
     func handleCustomPaywallAction(withName name: String) {
         guard name == Self.showPromoRedeemAction else { return }
+        analytics.capture(
+            PostHogEvent.offerCodeRedeemTapped,
+            properties: ["action": name, "source": "paywall"]
+        )
         requestOfferCodeRedemption()
     }
 

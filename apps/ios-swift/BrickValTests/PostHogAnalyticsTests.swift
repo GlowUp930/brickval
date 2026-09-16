@@ -4,6 +4,25 @@ import Testing
 
 @MainActor
 struct PostHogAnalyticsTests {
+    @Test("interaction event names and schema stay stable")
+    func interactionEventContractStaysStable() {
+        #expect(PostHogAnalytics.schemaVersion == 4)
+        #expect(PostHogEvent.tabSelected == "tab_selected")
+        #expect(PostHogEvent.scanShutterTapped == "scan_shutter_tapped")
+        #expect(PostHogEvent.scanTryAgainTapped == "scan_try_again_tapped")
+        #expect(PostHogEvent.scanErrorShown == "scan_error_shown")
+        #expect(PostHogEvent.collectionItemOpened == "collection_item_opened")
+        #expect(PostHogEvent.timeframeChanged == "timeframe_changed")
+        #expect(PostHogEvent.bulkResultSelectionChanged == "bulk_result_selection_changed")
+    }
+
+    @Test("scan recovery events have separate start, failure, and retry names")
+    func scanRecoveryEventsRemainDistinct() {
+        #expect(PostHogEvent.scanStarted != PostHogEvent.scanFailed)
+        #expect(PostHogEvent.scanFailed != PostHogEvent.scanTryAgainTapped)
+        #expect(PostHogEvent.scanErrorShown != PostHogEvent.scanFailed)
+    }
+
     @Test("a fresh signed-out launch keeps the anonymous identity")
     func freshLaunchDoesNotResetAnonymousIdentity() {
         #expect(
