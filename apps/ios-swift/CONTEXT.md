@@ -17,14 +17,16 @@ The reliability workflow now boots the selected simulator, prints its runtime,
 and uploads result bundles, logs, and failure screenshots. Local small and
 large simulator UI/unit suites pass, including the final focused retry and
 reveal checks. The camera stage is explicitly marked as non-interactive for
-accessibility hit testing so it cannot occlude the retry banner. Exact hosted
-run [35102659954](https://github.com/GlowUp930/brickval/actions/runs/35102659954)
-passes all backend, database, localization, and 19 native UI checks. The two
-progressive-reveal tests derive their wait from the production schedule, while
-the 60-entry layout test uses a completed DEBUG fixture. Signed Release build
-1.0.9 (184) is archived at `/tmp/BrickVal184-reliability.xcarchive` with dSYM
-UUID `D9FE19F2-4916-3028-8BED-3BB54E52EAFE`; TestFlight upload remains
-separate. Physical camera verification remains open. See
+accessibility hit testing so it cannot occlude the retry banner. Hosted run
+[35120005141](https://github.com/GlowUp930/brickval/actions/runs/35120005141)
+passes all backend, database, localization, and 19 native UI checks on the
+iPhone 16e / iOS 26.2 runner. The retry check waits for the banner to disappear
+instead of applying a duplicate wall-clock assertion; the dense reveal check
+uses the production schedule plus a bounded hosted startup margin, while the
+60-entry layout test uses a completed DEBUG fixture. Signed Release build 1.0.9
+(184) is archived at `/tmp/BrickVal184-reliability.xcarchive` with dSYM UUID
+`D9FE19F2-4916-3028-8BED-3BB54E52EAFE`; TestFlight upload remains separate.
+Physical camera verification remains open. See
 [`docs/audits/2026-09-16-reliability-check.md`](../../docs/audits/2026-09-16-reliability-check.md).
 
 ## BrickLink maintenance resilience — 2026-09-16

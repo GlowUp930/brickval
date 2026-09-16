@@ -6,12 +6,12 @@ The failed GitHub reliability run was reproduced and its two UI failures were
 separated by cause. The dense bulk layout assertion was coupled to the timed
 progressive reveal, so it could observe only the first revealed price on the
 iPhone 16e runner. It now uses a DEBUG-only completed-results fixture for the
-60-label layout check; a separate test keeps the real reveal and waits using
-its production schedule. The failed-scan retry was underneath the camera
-stage's accessibility surface and clipped geometry; the retry banner is now a
-visible sibling with its own 44-point hit target, while the camera surface is
+60-label layout check; separate tests keep the real reveal and wait using the
+production schedule. The failed-scan retry was underneath the camera stage's
+accessibility surface and clipped geometry; the retry banner is now a visible
+sibling with its own 44-point hit target, while the camera surface is
 non-hit-testing and the live-camera recovery behavior is unchanged. The full
-native UI fixture also now supplies saved demo pricing so collection-navigation
+native UI fixture also supplies saved demo pricing so collection-navigation
 checks do not trigger a misleading removal alert.
 
 The workflow explicitly boots and reports its selected small iPhone simulator,
@@ -20,13 +20,18 @@ every run. Local small and large simulator unit/UI suites, backend, database,
 type-check, and localization checks pass; the final focused retry/reveal checks
 also pass on both simulator sizes. The camera surface now explicitly reports
 that it does not respond to accessibility interaction, preventing it from
-occluding the retry banner on the iOS 26.2 runner. The exact hosted reliability
-run [35102659954](https://github.com/GlowUp930/brickval/actions/runs/35102659954)
-passed all backend, database, localization, and 19 native UI checks. The two
-progressive-reveal tests use a schedule-derived wait budget; the 60-result
-layout test uses a completed DEBUG fixture. Signed Release build 1.0.9 (184)
-is archived at `/tmp/BrickVal184-reliability.xcarchive` with dSYM UUID
-`D9FE19F2-4916-3028-8BED-3BB54E52EAFE`; it has not been uploaded to TestFlight.
+occluding the retry banner on the iOS 26.2 runner. Hosted reliability run
+[35120005141](https://github.com/GlowUp930/brickval/actions/runs/35120005141)
+passed all backend, database, localization, and 19 native UI checks on the
+iPhone 16e / iOS 26.2 runner. The retry UI test now relies on XCTest confirming
+the banner disappears after the tap; its duplicate wall-clock assertion was
+removed because hosted accessibility synchronization can exceed that bound
+without indicating an app stall. The dense reveal timing test keeps its
+schedule-derived budget plus an explicit hosted startup margin, while the
+60-result layout test uses a completed DEBUG fixture. Signed Release build
+1.0.9 (184) is archived at `/tmp/BrickVal184-reliability.xcarchive` with dSYM
+UUID `D9FE19F2-4916-3028-8BED-3BB54E52EAFE`; it has not been uploaded to
+TestFlight.
 Physical iPhone camera verification remains pending.
 See [`docs/audits/2026-09-16-reliability-check.md`](docs/audits/2026-09-16-reliability-check.md).
 

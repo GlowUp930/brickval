@@ -15,9 +15,13 @@ Focused and full UI checks pass on the BrickVal Small iPhone and iPhone 17 Pro
 simulators. The retry and production reveal regressions pass on both sizes; the
 camera stage is explicitly non-interactive to accessibility hit testing. The CI
 runner now records its simulator/runtime and uploads test diagnostics on
-failure. Hosted reliability run [35102659954](https://github.com/GlowUp930/brickval/actions/runs/35102659954)
-passes all backend, database, localization, and 19 native UI checks. Signed
-Release build 1.0.9 (184) is archived at
+failure. Hosted reliability run
+[35120005141](https://github.com/GlowUp930/brickval/actions/runs/35120005141)
+passes all backend, database, localization, and 19 native UI checks on the
+iPhone 16e / iOS 26.2 runner. The retry check waits for XCTest to observe the
+banner disappearing after the tap; the dense reveal check uses a schedule-based
+timeout with a bounded hosted startup margin, and the 60-result layout check
+uses a completed DEBUG fixture. Signed Release build 1.0.9 (184) is archived at
 `/tmp/BrickVal184-reliability.xcarchive` with dSYM UUID
 `D9FE19F2-4916-3028-8BED-3BB54E52EAFE`. Physical iPhone camera and VoiceOver
 confirmation are still required before release sign-off. See

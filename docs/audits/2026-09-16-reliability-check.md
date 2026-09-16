@@ -24,6 +24,12 @@ the reliability checks enabled and fixes the test/runtime coupling.
   recovery lookup and showed a misleading “Could not remove item” alert. The
   fixture now contains a saved demo snapshot; production collection behavior
   is unchanged.
+- Hosted accessibility scheduling exposed two test-only timing assumptions after
+  the product fixes landed. The retry check had a duplicate three-second
+  wall-clock assertion even though XCTest had already confirmed that the banner
+  disappeared; the duplicate assertion was removed. The dense reveal timing
+  check keeps the production reveal schedule and adds a bounded startup margin
+  for the hosted runner. Neither adjustment changes production behavior.
 
 ## Changes
 
@@ -65,7 +71,7 @@ Local Release/Debug simulator checks completed:
 - Database reliability script, TypeScript check, and localization audit: pass;
   localization reports 814 app strings plus 4 Info.plist strings across 13
   locales.
-- Exact hosted GitHub reliability run [35102659954](https://github.com/GlowUp930/brickval/actions/runs/35102659954): pass on the iPhone 16e / iOS 26.2 runner, including all 19 native UI checks. The workflow printed the selected simulator/runtime and retained diagnostics artifacts.
+- Exact hosted GitHub reliability run [35120005141](https://github.com/GlowUp930/brickval/actions/runs/35120005141): pass on the iPhone 16e / iOS 26.2 runner, including all 19 native UI checks. The workflow printed the selected simulator/runtime and retained diagnostics artifacts. The retry check waited for the banner to disappear after the tap, and the dense reveal timing check completed within its schedule-derived budget plus hosted startup margin.
 
 Signed Release build 1.0.9 (184) archived successfully at
 `/tmp/BrickVal184-reliability.xcarchive`. Code-signature verification passed;
