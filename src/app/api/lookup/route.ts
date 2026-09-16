@@ -1,12 +1,14 @@
 import { scanRequestAccess } from "@/lib/scan-request-access";
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
+import { reportMinifigPricingOutcome } from "@/lib/backend-error-reporting";
 import { getCached, setCached } from "@/lib/cache";
 import { getEbayMarketData } from "@/lib/ebay";
 import { getBrickLinkColors, getBrickLinkMarketData, getPartMarketData } from "@/lib/bricklink";
 import { getBricksetRrp } from "@/lib/brickset";
 import { getExchangeRates } from "@/lib/frankfurter";
 import { computePricing } from "@/lib/compute-pricing";
-import { buildMinifigLookupPayload, sanitizeMinifigNumber, type MinifigLookupPayload } from "@/lib/minifig-lookup";
+import { sanitizeMinifigNumber } from "@/lib/minifig-lookup";
+import { resolveMinifigMarketSnapshot } from "@/lib/minifig-market-snapshots";
 import { sortByMostRecentDate } from "@/lib/sort-transactions";
 import type { ComputedPricing, EbaySale, SetInfo } from "@/types/market";
 
@@ -39,22 +41,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "invalid_minifigure_number", message: "Enter a valid minifigure number." }, { status: 400 });
     }
 
-    const cacheKey = lookupCacheKey(mode, figNumber);
-    const cached = await getCached<MinifigLookupPayload>(cacheKey);
-    if (cached) {
-      return NextResponse.json(cached);
-    }
-
-    const payload = await buildMinifigLookupPayload(figNumber);
-    if (!payload) {
+    try {
+      const startedAt = performance.now();
+      const snapshot = await resolveMinifigMarketSnapshot(figNumber, (task) => after(task));
+      const outcome = snapshot.payload.pricing_resolution ?? (snapshot.pricingStatus === "fresh"
+        ? "fresh_cache"
+        : snapshot.pricingStatus === "refreshing"
+          ? "stale_cache"
+          : "live");
+      after(() => reportMinifigPricingOutcome({
+        endpoint: "minifig_lookup",
+        outcome,
+        providerState: outcome === "identity_only" ? "temporary" : outcome === "stale_cache" ? "cached" : "available",
+        elapsedMs: Math.round(performance.now() - startedAt),
+      }));
+      return NextResponse.json(snapshot.payload);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Minifigure market data not found") {
+        return NextResponse.json(
+          { error: "not_found", message: "We don't have data for this minifigure. Check the ID and try again." },
+          { status: 404 }
+        );
+      }
+      console.error("[lookup] Minifigure provider failed:", error instanceof Error ? error.name : "unknown");
       return NextResponse.json(
-        { error: "not_found", message: "We don't have data for this minifigure. Check the ID and try again." },
-        { status: 404 }
+        { error: "upstream", message: "Something went wrong. Please try again in a moment." },
+        { status: 502 }
       );
     }
-
-    await setCached(cacheKey, payload, LOOKUP_CACHE_TTL_HOURS);
-    return NextResponse.json(payload);
   }
 
   // ── Part mode ─────────────────────────────────────────────────────────────

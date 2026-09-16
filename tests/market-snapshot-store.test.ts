@@ -50,13 +50,13 @@ test("a one-day-old snapshot is returned immediately and refreshed in the backgr
   assert.equal(writtenName, "Updated Battle Droid");
 });
 
-test("a snapshot older than seven days waits for live pricing and stores it", async () => {
+test("a snapshot older than thirty days waits for live pricing and stores it", async () => {
   let savedAt = "";
   const result = await resolveMarketSnapshot("sw0001", {
     now: () => new Date("2026-07-14T12:00:00.000Z"),
     read: async () => ({
       payload: { name: "Outdated Battle Droid" },
-      updatedAt: "2026-07-01T12:00:00.000Z",
+      updatedAt: "2026-05-01T12:00:00.000Z",
     }),
     fetchLive: async () => ({ name: "Current Battle Droid" }),
     write: async (_itemId, snapshot) => {
@@ -70,4 +70,27 @@ test("a snapshot older than seven days waits for live pricing and stores it", as
   assert.equal(result.pricingStatus, "fetched");
   assert.equal(result.payload.name, "Current Battle Droid");
   assert.equal(savedAt, "2026-07-14T12:00:00.000Z");
+});
+
+test("a saved snapshot within the emergency window remains available for a temporary outage", async () => {
+  const backgroundTasks: Array<() => Promise<void>> = [];
+  const result = await resolveMarketSnapshot("sw0001", {
+    now: () => new Date("2026-07-30T12:00:00.000Z"),
+    read: async () => ({
+      payload: { name: "Saved Battle Droid", pricing: { used_sold_avg_usd: 4.25 } },
+      updatedAt: "2026-07-01T12:00:00.000Z",
+    }),
+    fetchLive: async () => {
+      throw new Error("BrickLink maintenance");
+    },
+    write: async () => {},
+    refreshInBackground: (task) => {
+      backgroundTasks.push(task);
+    },
+  });
+
+  assert.equal(result.pricingStatus, "refreshing");
+  assert.equal(result.payload.name, "Saved Battle Droid");
+  assert.equal(result.pricingUpdatedAt, "2026-07-01T12:00:00.000Z");
+  assert.equal(backgroundTasks.length, 1);
 });

@@ -342,7 +342,12 @@ struct ScannerView: View {
             switch sheet {
             case .manualLookup: ManualLookupView(store: store)
             case .partColor(let detection): PartColorSelectionView(detection: detection, store: store)
-            case .result(let result): ScanResultView(result: result, reset: store.reset)
+            case .result(let result):
+                ScanResultView(
+                    result: result,
+                    reset: store.reset,
+                    retryPricing: { try await store.retryPricing(for: result) }
+                )
             case .review(let review): ScanReviewView(review: review, store: store)
             }
         }

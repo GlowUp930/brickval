@@ -4,6 +4,9 @@ struct MinifigLookupPayload: Decodable, Sendable {
     let figInfo: FigInfo
     let pricing: LookupPricing
     let marketHistory: [MarketHistoryPoint]?
+    let pricingAvailability: String?
+    let pricingUpdatedAt: String?
+    let pricingResolution: String?
 
     struct FigInfo: Decodable, Sendable {
         let name: String
@@ -38,9 +41,20 @@ struct MinifigLookupPayload: Decodable, Sendable {
         case figInfo
         case pricing
         case marketHistory = "market_history"
+        case pricingAvailability = "pricing_availability"
+        case pricingUpdatedAt = "pricing_updated_at"
+        case pricingResolution = "pricing_resolution"
     }
 
     var normalized: LookupResult {
+        normalizedResult()
+    }
+
+    func normalizedResult(
+        pricingAvailability overrideAvailability: String? = nil,
+        pricingUpdatedAt overrideUpdatedAt: String? = nil,
+        pricingResolution overrideResolution: String? = nil
+    ) -> LookupResult {
         LookupResult(
             identifier: figInfo.figNumber,
             itemType: .minifig,
@@ -53,7 +67,10 @@ struct MinifigLookupPayload: Decodable, Sendable {
             pricing: pricing,
             marketHistory: marketHistory ?? [],
             colorID: nil,
-            colorName: nil
+            colorName: nil,
+            pricingAvailability: MarketPricingAvailability(rawValue: overrideAvailability ?? pricingAvailability ?? "") ?? .available,
+            pricingUpdatedAt: overrideUpdatedAt ?? pricingUpdatedAt,
+            pricingResolution: MarketPricingResolution(rawValue: overrideResolution ?? pricingResolution ?? "") ?? .live
         )
     }
 }

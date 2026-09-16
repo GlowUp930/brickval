@@ -1,6 +1,9 @@
 import type { NonSetDetection } from "./identify-nonset";
 import type { PricingStatus } from "./market-snapshot-store";
 
+export type MinifigPricingAvailability = "available" | "stale" | "unavailable";
+export type MinifigPricingResolution = "live" | "fresh_cache" | "stale_cache" | "identity_only";
+
 export interface MinifigIdentification {
   detections: NonSetDetection[];
 }
@@ -8,7 +11,9 @@ export interface MinifigIdentification {
 export interface PricedMinifig<T> {
   payload: T;
   pricingStatus: PricingStatus;
-  pricingUpdatedAt: string;
+  pricingUpdatedAt?: string;
+  pricingAvailability?: MinifigPricingAvailability;
+  pricingResolution?: MinifigPricingResolution;
 }
 
 export interface MinifigScanDependencies<T> {
@@ -22,7 +27,9 @@ export interface MatchedMinifigScan<T> {
   identification: NonSetDetection;
   result: T;
   pricingStatus: PricingStatus;
-  pricingUpdatedAt: string;
+  pricingAvailability: MinifigPricingAvailability;
+  pricingUpdatedAt?: string;
+  pricingResolution?: MinifigPricingResolution;
   identifyMs: number;
   pricingMs: number;
   totalMs: number;
@@ -45,6 +52,11 @@ export interface NotFoundMinifigScan {
 }
 
 export type MinifigScanResult<T> = MatchedMinifigScan<T> | ReviewMinifigScan | NotFoundMinifigScan;
+
+/** A recognition-only response must not spend a single-scan allowance. */
+export function shouldConsumeSingleScan<T>(result: MinifigScanResult<T>): boolean {
+  return result.status !== "matched" || result.pricingAvailability !== "unavailable";
+}
 
 export async function runMinifigScan<T>(
   image: Blob,
@@ -82,17 +94,38 @@ export async function runMinifigScan<T>(
   const pricingStartedAt = dependencies.now();
   const priced = await dependencies.price(detection.id);
   const pricingMs = elapsed(dependencies.now(), pricingStartedAt);
+  const pricingAvailability = priced.pricingAvailability ?? availabilityForStatus(priced.pricingStatus);
+  const pricingResolution = priced.pricingResolution ?? resolutionForStatus(priced.pricingStatus, pricingAvailability);
 
   return {
     status: "matched",
     identification: detection,
     result: priced.payload,
     pricingStatus: priced.pricingStatus,
+    pricingAvailability,
     pricingUpdatedAt: priced.pricingUpdatedAt,
+    pricingResolution,
     identifyMs,
     pricingMs,
     totalMs: elapsed(dependencies.now(), startedAt),
   };
+}
+
+function availabilityForStatus(status: PricingStatus): MinifigPricingAvailability {
+  switch (status) {
+  case "unavailable": return "unavailable";
+  case "refreshing": return "stale";
+  default: return "available";
+  }
+}
+
+function resolutionForStatus(
+  status: PricingStatus,
+  availability: MinifigPricingAvailability,
+): MinifigPricingResolution {
+  if (availability === "unavailable") return "identity_only";
+  if (availability === "stale" || status === "refreshing") return "stale_cache";
+  return status === "fresh" ? "fresh_cache" : "live";
 }
 
 function elapsed(now: number, start: number): number {

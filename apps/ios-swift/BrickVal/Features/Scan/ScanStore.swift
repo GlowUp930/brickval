@@ -582,6 +582,22 @@ final class ScanStore {
         )
     }
 
+    /// Reprice an already identified item without repeating image recognition
+    /// or spending a single-scan allowance.
+    func retryPricing(for result: LookupResult) async throws -> LookupResult {
+        let refreshed = try await api.lookup(result.identifier, result.itemType, result.colorID)
+        captureAnalytics(
+            PostHogEvent.scanCompleted,
+            properties: [
+                "scan_type": ScanIntent.single.rawValue,
+                "outcome": "pricing_retry",
+                "pricing_availability": refreshed.pricingAvailability.rawValue,
+                "pricing_resolution": refreshed.pricingResolution.rawValue,
+            ]
+        )
+        return refreshed
+    }
+
     func selectDetection(_ detection: IdentificationDetection) async {
         if detection.itemType == .part {
             phase = .review
@@ -1008,7 +1024,9 @@ final class ScanStore {
         if mode == .minifig, intent == .single {
             switch try await api.scanMinifigure(image) {
             case .matched(let identification, let lookup, let timings, let usage):
-                monetization?.recordSuccessfulSingle(serverUsage: usage)
+                if lookup.pricingAvailability != .unavailable {
+                    monetization?.recordSuccessfulSingle(serverUsage: usage)
+                }
                 phase = .result
                 presentedSheet = .result(lookup)
                 soundEffects.play(.cashRegister)
@@ -1023,7 +1041,12 @@ final class ScanStore {
                 )
                 captureAnalytics(
                     PostHogEvent.scanCompleted,
-                    properties: ["scan_type": ScanIntent.single.rawValue, "outcome": "matched"]
+                    properties: [
+                        "scan_type": ScanIntent.single.rawValue,
+                        "outcome": lookup.pricingAvailability == .unavailable ? "identity_only" : "matched",
+                        "pricing_availability": lookup.pricingAvailability.rawValue,
+                        "pricing_resolution": lookup.pricingResolution.rawValue,
+                    ]
                 )
             case .review(let detections, let timings, let usage):
                 let candidates = ScanReviewCandidate.make(from: detections)

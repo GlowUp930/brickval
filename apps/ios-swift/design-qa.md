@@ -1,5 +1,21 @@
 # Scan Result Card Visual QA
 
+## BrickLink maintenance resilience — 2026-09-16
+
+The result card now keeps a recognized minifigure visible when BrickLink is
+temporarily unavailable. A saved price up to 30 days old is labelled with its
+last update date; without a usable saved price, the card says “Market prices
+are temporarily unavailable” and keeps `Check prices again` available. The
+retry uses the identifier only. The card never shows an invented value,
+reuploads the photo, or silently spends a scan. Bulk results retain every
+recognized figure and show an unavailable-price state for unpriced rows.
+
+The 17 focused scanner checks passed on the Small iPhone simulator and the
+failed-scan recovery check passed on the iPhone 17 Pro simulator. Payload and
+full native unit checks also pass on both sizes; localization passes across all
+13 supported locales. A new TestFlight build and physical-device recovery
+check remain open.
+
 ## Build 1.0.9 (180) — 2026-09-15
 
 Release build 1.0.9 (180) includes the native PostHog replay enablement and

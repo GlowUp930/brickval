@@ -1,6 +1,6 @@
 import { scanRequestAccess } from "@/lib/scan-request-access";
-import { NextRequest, NextResponse } from "next/server";
-import { getCached, setCached } from "@/lib/cache";
+import { after, NextRequest, NextResponse } from "next/server";
+import { reportMinifigPricingOutcome } from "@/lib/backend-error-reporting";
 import { getEbayMarketData } from "@/lib/ebay";
 import { getBrickLinkMarketData } from "@/lib/bricklink";
 import { getBricksetRrp } from "@/lib/brickset";
@@ -10,10 +10,8 @@ import { computePricing } from "@/lib/compute-pricing";
 import {
   sanitizeBulkMinifigNumbers,
 } from "@/lib/minifig-lookup";
-import { lookupBulkMinifigures } from "@/lib/bulk-minifig-lookup";
+import { hasMinifigLookupResult, lookupBulkMinifigures } from "@/lib/bulk-minifig-lookup";
 import type { EbaySale, SetInfo, ComputedPricing } from "@/types/market";
-
-const LOOKUP_CACHE_TTL_HOURS = 24;
 
 type BulkLookupRow =
   | { setNumber: string; setInfo: SetInfo | null; pricing: ComputedPricing; error?: never }
@@ -126,6 +124,17 @@ export async function POST(req: NextRequest) {
 
   if (mode === "minifig") {
     const results = await lookupBulkMinifigures(figNumbers, 5);
+    const outcomes = new Set(
+      results.filter(hasMinifigLookupResult).flatMap((row) => row.result.pricing_resolution ? [row.result.pricing_resolution] : [])
+    );
+    outcomes.forEach((outcome) => {
+      after(() => reportMinifigPricingOutcome({
+        endpoint: "bulk_minifig_lookup",
+        outcome,
+        providerState: outcome === "identity_only" ? "temporary" : outcome === "stale_cache" ? "cached" : "available",
+        elapsedMs: null,
+      }));
+    });
 
     if (userId && isBulkScan && results.some((row) => "result" in row)) {
       const gate = await consumeFeatureUsage(userId, "bulk_scan");

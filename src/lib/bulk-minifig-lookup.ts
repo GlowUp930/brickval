@@ -1,26 +1,28 @@
-import { getCached, setCached } from "./cache";
+import { resolveMinifigMarketSnapshot } from "./minifig-market-snapshots";
 import {
-  buildMinifigLookupPayload,
   sanitizeBulkMinifigNumbers,
   type MinifigLookupPayload,
 } from "./minifig-lookup";
-
-const LOOKUP_CACHE_TTL_HOURS = 24;
 
 export type BulkMinifigLookupRow =
   | { figNumber: string; result: MinifigLookupPayload; error?: never }
   | { figNumber: string; error: "not_found"; result?: never };
 
 async function lookupOneMinifig(figNumber: string): Promise<BulkMinifigLookupRow> {
-  const cacheKey = `lookup:minifig:${figNumber}`;
-  const cached = await getCached<MinifigLookupPayload>(cacheKey);
-  if (cached) return { figNumber, result: cached };
-
-  const payload = await buildMinifigLookupPayload(figNumber);
-  if (!payload) return { figNumber, error: "not_found" };
-
-  await setCached(cacheKey, payload, LOOKUP_CACHE_TTL_HOURS);
-  return { figNumber, result: payload };
+  try {
+    const snapshot = await resolveMinifigMarketSnapshot(figNumber, (task) => {
+      // Bulk lookup is already bounded by its worker pool. Run a stale refresh
+      // in the background without delaying the response or writing an
+      // identity-only result into the cache.
+      void task();
+    });
+    return { figNumber, result: snapshot.payload };
+  } catch (error) {
+    if (error instanceof Error && error.message === "Minifigure market data not found") {
+      return { figNumber, error: "not_found" };
+    }
+    throw error;
+  }
 }
 
 export async function lookupBulkMinifigures(
@@ -47,4 +49,10 @@ export function hasUsableMinifigPrice(
     pricing.new_sold_avg_usd,
     pricing.new_stock_avg_usd,
   ].some((value) => typeof value === "number" && Number.isFinite(value) && value > 0);
+}
+
+export function hasMinifigLookupResult(
+  row: BulkMinifigLookupRow
+): row is { figNumber: string; result: MinifigLookupPayload; error?: never } {
+  return "result" in row && Boolean(row.result);
 }

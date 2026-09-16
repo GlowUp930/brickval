@@ -10,6 +10,46 @@ type BulkScanErrorContext = {
   appBuild?: string | null;
 };
 
+export type MinifigPricingOutcome = "live" | "fresh_cache" | "stale_cache" | "identity_only";
+
+type MinifigPricingOutcomeContext = {
+  endpoint: string;
+  outcome: MinifigPricingOutcome;
+  providerState: "available" | "cached" | "temporary";
+  elapsedMs: number | null;
+};
+
+/** Record the pricing path without attaching item IDs, provider bodies, or user data. */
+export async function reportMinifigPricingOutcome(
+  context: MinifigPricingOutcomeContext,
+): Promise<void> {
+  const deployment = process.env.VERCEL_GIT_COMMIT_SHA ?? "local";
+  const release = process.env.VERCEL_GIT_COMMIT_SHA
+    ? `brickval-backend@${process.env.VERCEL_GIT_COMMIT_SHA}`
+    : "brickval-backend@local";
+
+  Sentry.withScope((scope) => {
+    scope.setLevel(context.outcome === "identity_only" ? "warning" : "info");
+    scope.setFingerprint(["bricklink-pricing-outcome", context.outcome]);
+    scope.setTag("runtime", "backend");
+    scope.setTag("endpoint", context.endpoint);
+    scope.setTag("pricing_outcome", context.outcome);
+    scope.setTag("provider", "bricklink");
+    scope.setTag("provider_state", context.providerState);
+    scope.setTag("deployment", deployment);
+    scope.setTag("release", release);
+    scope.setContext("minifig_pricing", {
+      outcome: context.outcome,
+      provider_state: context.providerState,
+      elapsed_ms: context.elapsedMs,
+      deployment,
+      release,
+    });
+    Sentry.captureMessage("minifig_pricing_outcome");
+  });
+  await Sentry.flush(2_000);
+}
+
 export async function reportBulkScanError(error: unknown, context: BulkScanErrorContext): Promise<void> {
   const normalizedError = error instanceof Error
     ? error

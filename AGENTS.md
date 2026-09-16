@@ -1,5 +1,24 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## BrickLink maintenance resilience — 2026-09-16
+
+The maintenance-response fix is implemented in the backend and native scan
+flow. BrickLink redirects/HTML, timeouts, rate limits, and 5xx responses are
+classified as temporary; authentication, configuration, and genuine not-found
+responses remain distinct. Recognized minifigures now survive a temporary
+pricing outage: a successful saved price up to 30 days old is labelled stale,
+otherwise the app returns an identity-only 200 response with empty pricing and
+does not spend a single-scan allowance. Bulk results retain recognized but
+unpriced figures. The result screen keeps collection actions, labels stale or
+unavailable prices clearly, and retries by identifier without uploading the
+photo or repeating recognition. Sentry/PostHog record privacy-safe pricing
+path outcomes and older BrickLink/lookup cache rows are rehydrated into the
+snapshot store. See [`docs/audits/2026-09-16-bricklink-maintenance-resilience.md`](docs/audits/2026-09-16-bricklink-maintenance-resilience.md).
+
+Backend, native, localization, and focused simulator verification passes. A
+new native TestFlight build, production smoke test, and physical-device
+maintenance recovery check remain required; build 180 itself is unchanged.
+
 ## Build 1.0.9 (180) — 2026-09-15
 
 The PostHog native session-replay fix is included in signed Release build

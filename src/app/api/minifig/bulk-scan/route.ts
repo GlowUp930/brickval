@@ -1,7 +1,7 @@
 import { scanRequestAccess } from "@/lib/scan-request-access";
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 
-import { reportBulkScanError } from "@/lib/backend-error-reporting";
+import { reportBulkScanError, reportMinifigPricingOutcome } from "@/lib/backend-error-reporting";
 import { runBulkMinifigScan } from "@/lib/bulk-minifig-scan-service";
 import { BrickognizeUnavailableError } from "@/lib/brickognize";
 import { issueBulkRecoveryToken } from "@/lib/bulk-recovery-token";
@@ -73,6 +73,18 @@ export async function POST(req: NextRequest) {
       partial: scan.partial,
     });
     const hasPricedResult = scan.items.length > 0 || scan.reviewItems.length > 0;
+    const outcomes = new Set([
+      ...scan.items.map((item) => item.result.pricing_resolution),
+      ...scan.reviewItems.flatMap((item) => item.candidates.map((candidate) => candidate.result.pricing_resolution)),
+    ].filter((outcome): outcome is "live" | "fresh_cache" | "stale_cache" | "identity_only" => Boolean(outcome)));
+    outcomes.forEach((outcome) => {
+      after(() => reportMinifigPricingOutcome({
+        endpoint: "bulk_minifig_scan",
+        outcome,
+        providerState: outcome === "identity_only" ? "temporary" : outcome === "stale_cache" ? "cached" : "available",
+        elapsedMs: scan.timings.total_ms,
+      }));
+    });
     if (!userId || !hasPricedResult) return NextResponse.json({ ...scan, recoveryToken: issueBulkRecoveryToken(userId) });
 
     const gate = await consumeFeatureUsage(userId, "bulk_scan");

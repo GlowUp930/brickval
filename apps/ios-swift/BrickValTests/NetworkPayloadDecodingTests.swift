@@ -17,6 +17,38 @@ struct NetworkPayloadDecodingTests {
         #expect(result.pricing.preferredUsedValue == 9.25)
     }
 
+    @Test func decodesMaintenancePricingMetadataWithoutInventingAValue() throws {
+        let data = Data(#"""
+        {
+          "figInfo":{"name":"sw0001","image_url":null,"fig_number":"sw0001","year_released":null},
+          "pricing":{"used_sold_avg_usd":null,"new_sold_avg_usd":null,"data_source":null},
+          "pricing_availability":"unavailable",
+          "pricing_resolution":"identity_only"
+        }
+        """#.utf8)
+
+        let result = try JSONDecoder().decode(MinifigLookupPayload.self, from: data).normalized
+        #expect(result.identifier == "sw0001")
+        #expect(result.pricingAvailability == .unavailable)
+        #expect(result.pricingResolution == .identityOnly)
+        #expect(result.pricing.preferredUsedValue == nil)
+        #expect(result.pricing.preferredNewValue == nil)
+    }
+
+    @Test func decodesSnakeCaseScanPricingMetadata() throws {
+        let data = Data(#"""
+        {
+          "status":"matched",
+          "pricing_availability":"unavailable",
+          "pricing_resolution":"identity_only"
+        }
+        """#.utf8)
+
+        let payload = try JSONDecoder().decode(MinifigScanPayload.self, from: data)
+        #expect(payload.pricingAvailability == "unavailable")
+        #expect(payload.pricingResolution == "identity_only")
+    }
+
     @Test func decodesPartLookupPayload() throws {
         let data = Data(#"""
         {

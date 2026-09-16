@@ -63,6 +63,74 @@ export interface MinifigMarketData {
   sold_new: BrickLinkPriceGuide | null;
   stock_new: BrickLinkPriceGuide | null;
   item: BrickLinkItem | null;
+  /** Internal status used to avoid caching partial outage responses. */
+  providerFailure?: BrickLinkFailureKind;
+}
+
+export type BrickLinkFailureKind = "temporary" | "authentication" | "configuration";
+
+/** A provider failure that callers may safely handle without exposing details. */
+export class BrickLinkProviderError extends Error {
+  readonly kind: BrickLinkFailureKind;
+  readonly statusCode: number | null;
+
+  constructor(kind: BrickLinkFailureKind, statusCode: number | null = null) {
+    super(
+      kind === "authentication"
+        ? "BrickLink authentication failed"
+        : kind === "configuration"
+          ? "BrickLink is not configured"
+          : "BrickLink is temporarily unavailable",
+    );
+    this.name = "BrickLinkProviderError";
+    this.kind = kind;
+    this.statusCode = statusCode;
+  }
+}
+
+export function isBrickLinkTemporaryError(error: unknown): error is BrickLinkProviderError {
+  return error instanceof BrickLinkProviderError && error.kind === "temporary";
+}
+
+export function isBrickLinkAuthenticationError(error: unknown): error is BrickLinkProviderError {
+  return error instanceof BrickLinkProviderError && error.kind === "authentication";
+}
+
+export function isBrickLinkConfigurationError(error: unknown): error is BrickLinkProviderError {
+  return error instanceof BrickLinkProviderError && error.kind === "configuration";
+}
+
+/**
+ * Classify only provider responses. A null result still represents a valid
+ * not-found response; callers should reserve this classification for retries
+ * and emergency cache fallback.
+ */
+export function classifyBrickLinkFailure(input: {
+  status: number;
+  finalURL?: string;
+  contentType?: string;
+}): BrickLinkFailureKind | null {
+  // A JSON 404 is BrickLink's genuine not-found response. Keep this check
+  // ahead of content-type inspection because some provider error pages are
+  // HTML even when the item simply does not exist.
+  if (input.status === 404) return null;
+  if (input.status === 401 || input.status === 403) return "authentication";
+  if (input.status === 429 || input.status >= 500) return "temporary";
+
+  let hostname = "";
+  try {
+    hostname = input.finalURL ? new URL(input.finalURL).hostname.toLowerCase() : "";
+  } catch {
+    // An invalid final URL is handled as a normal content-type failure below.
+  }
+  if (hostname === "maintenance.bricklink.com" || hostname.endsWith(".maintenance.bricklink.com")) {
+    return "temporary";
+  }
+
+  if (input.contentType && !input.contentType.toLowerCase().includes("application/json")) {
+    return "temporary";
+  }
+  return null;
 }
 
 export interface PartMarketData {
@@ -86,9 +154,7 @@ function getCredentials() {
   const tokenSecret = process.env.BRICKLINK_TOKEN_SECRET;
 
   if (!consumerKey || !consumerSecret || !tokenValue || !tokenSecret) {
-    throw new Error(
-      "[bricklink] Missing env vars: BRICKLINK_CONSUMER_KEY, BRICKLINK_CONSUMER_SECRET, BRICKLINK_TOKEN_VALUE, BRICKLINK_TOKEN_SECRET"
-    );
+    throw new BrickLinkProviderError("configuration");
   }
 
   return { consumerKey, consumerSecret, tokenValue, tokenSecret };
@@ -171,10 +237,11 @@ function buildAuthHeader(method: string, url: string): string {
 // ── API Fetch ────────────────────────────────────────────────────────────────
 
 async function brickLinkFetch<T>(path: string, timeoutMs = 8_000): Promise<T | null> {
+  // Build the signature outside the network try/catch so missing credentials
+  // remain a configuration error instead of being mislabelled as downtime.
+  const url = `${API_BASE}${path}`;
+  const authHeader = buildAuthHeader("GET", url);
   try {
-    const url = `${API_BASE}${path}`;
-    const authHeader = buildAuthHeader("GET", url);
-
     const res = await fetch(url, {
       method: "GET",
       headers: {
@@ -185,17 +252,26 @@ async function brickLinkFetch<T>(path: string, timeoutMs = 8_000): Promise<T | n
       signal: AbortSignal.timeout(timeoutMs), next: { revalidate: 0 },
     } as RequestInit);
 
+    const contentType = res.headers.get("content-type") ?? "";
+    const failureKind = classifyBrickLinkFailure({
+      status: res.status,
+      finalURL: res.url,
+      contentType,
+    });
+    if (failureKind) {
+      console.warn(`[bricklink] ${failureKind} response status=${res.status} path=${path}`);
+      throw new BrickLinkProviderError(failureKind, res.status);
+    }
+
     if (!res.ok) {
-      const text = await res.text();
-      console.warn(`[bricklink] ${res.status} for ${path}: ${text.slice(0, 300)}`);
+      console.warn(`[bricklink] not-found response status=${res.status} path=${path}`);
       return null;
     }
 
-    const contentType = res.headers.get("content-type") ?? "";
     if (!contentType.includes("application/json")) {
-      const text = await res.text();
-      console.warn(`[bricklink] Non-JSON response for ${path} (content-type: ${contentType}): ${text.slice(0, 300)}`);
-      return null;
+      // This is normally BrickLink's maintenance page. Keep the body private
+      // and expose only a typed temporary failure to the caller.
+      throw new BrickLinkProviderError("temporary", res.status);
     }
 
     const json = await res.json();
@@ -206,8 +282,9 @@ async function brickLinkFetch<T>(path: string, timeoutMs = 8_000): Promise<T | n
     }
     return json as T;
   } catch (err) {
-    console.error(`[bricklink] Fetch error for ${path}:`, err);
-    return null;
+    if (err instanceof BrickLinkProviderError) throw err;
+    console.error(`[bricklink] Fetch error for ${path}:`, err instanceof Error ? err.name : "unknown");
+    throw new BrickLinkProviderError("temporary");
   }
 }
 
@@ -320,7 +397,7 @@ export async function getMinifigMarketData(figNo: string): Promise<MinifigMarket
   const cached = await getCached<MinifigMarketData>(cacheKey);
   if (cached) return cached;
 
-  const [soldUsed, stockUsed, soldNew, stockNew, item] = await Promise.all([
+  const requests = await Promise.allSettled([
     fetchMinifigPriceGuide(figNo, "sold", "U"),
     fetchMinifigPriceGuide(figNo, "stock", "U"),
     fetchMinifigPriceGuide(figNo, "sold", "N"),
@@ -328,9 +405,49 @@ export async function getMinifigMarketData(figNo: string): Promise<MinifigMarket
     fetchMinifigItem(figNo),
   ]);
 
-  const result: MinifigMarketData = { sold_used: soldUsed, stock_used: stockUsed, sold_new: soldNew, stock_new: stockNew, item };
+  const values = requests.map((request) => request.status === "fulfilled" ? request.value : null);
+  const [soldUsed, stockUsed, soldNew, stockNew, item] = values as [
+    BrickLinkPriceGuide | null,
+    BrickLinkPriceGuide | null,
+    BrickLinkPriceGuide | null,
+    BrickLinkPriceGuide | null,
+    BrickLinkItem | null,
+  ];
+  const failures = requests
+    .filter((request): request is PromiseRejectedResult => request.status === "rejected")
+    .map((request) => request.reason);
+  const hasAuthenticationFailure = failures.some(isBrickLinkAuthenticationError);
+  const hasConfigurationFailure = failures.some(isBrickLinkConfigurationError);
+  const hasTemporaryFailure = failures.some(isBrickLinkTemporaryError);
+  const hasAnyResponse = values.some(Boolean);
 
-  if (soldUsed || stockUsed || soldNew || stockNew || item) {
+  if (!hasAnyResponse && hasConfigurationFailure) {
+    throw failures.find(isBrickLinkConfigurationError);
+  }
+  if (!hasAnyResponse && hasAuthenticationFailure) {
+    throw failures.find(isBrickLinkAuthenticationError);
+  }
+  if (!hasAnyResponse && hasTemporaryFailure) {
+    throw failures.find(isBrickLinkTemporaryError);
+  }
+
+  const providerFailure = hasAuthenticationFailure
+    ? "authentication"
+    : hasConfigurationFailure
+      ? "configuration"
+    : hasTemporaryFailure
+      ? "temporary"
+      : undefined;
+  const result: MinifigMarketData = {
+    sold_used: soldUsed,
+    stock_used: stockUsed,
+    sold_new: soldNew,
+    stock_new: stockNew,
+    item,
+    providerFailure,
+  };
+
+  if (!providerFailure && (soldUsed || stockUsed || soldNew || stockNew || item)) {
     await setCached(cacheKey, result, CACHE_TTL_HOURS);
   }
   return result;

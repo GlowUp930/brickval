@@ -68293,6 +68293,125 @@
         "ar": {"stringUnit": {"state": "translated", "value": "لا توجد مبيعات من بائعي %@ خلال هذه الفترة."}},
         "hi": {"stringUnit": {"state": "translated", "value": "इस अवधि में %@ विक्रेताओं की कोई बिक्री नहीं है।"}}
       }
+    },
+    "Market prices are temporarily unavailable": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Market prices are temporarily unavailable"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Los precios del mercado no están disponibles temporalmente"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Les prix du marché sont temporairement indisponibles"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Marktpreise sind vorübergehend nicht verfügbar"}},
+        "it": {"stringUnit": {"state": "translated", "value": "I prezzi di mercato non sono temporaneamente disponibili"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Os preços de mercado estão temporariamente indisponíveis"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Marktprijzen zijn tijdelijk niet beschikbaar"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "市場価格は一時的に利用できません"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "시장 가격을 일시적으로 이용할 수 없습니다"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "市场价格暂时不可用"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "市場價格暫時無法使用"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "أسعار السوق غير متاحة مؤقتًا"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "बाज़ार की कीमतें अभी उपलब्ध नहीं हैं"}}
+      }
+    },
+    "Your minifigure was identified. Check prices again when the market service is back online.": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Your minifigure was identified. Check prices again when the market service is back online."}},
+        "es": {"stringUnit": {"state": "translated", "value": "Tu minifigura fue identificada. Vuelve a consultar los precios cuando el servicio del mercado vuelva a estar disponible."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Votre minifigurine a été identifiée. Consultez à nouveau les prix lorsque le service du marché sera de nouveau disponible."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Deine Minifigur wurde erkannt. Prüfe die Preise erneut, sobald der Marktdienst wieder online ist."}},
+        "it": {"stringUnit": {"state": "translated", "value": "La tua minifigure è stata identificata. Controlla di nuovo i prezzi quando il servizio di mercato sarà nuovamente online."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Sua minifigura foi identificada. Verifique os preços novamente quando o serviço de mercado voltar a funcionar."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Je minifiguur is geïdentificeerd. Controleer de prijzen opnieuw wanneer de marktdienst weer online is."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "ミニフィギュアを特定しました。マーケットサービスが復旧したら、もう一度価格を確認してください。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "미니피겨를 확인했습니다. 마켓 서비스가 다시 온라인 상태가 되면 가격을 다시 확인하세요."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "已识别你的小人仔。市场服务恢复后，请再次查看价格。"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "已識別你的人偶。市場服務恢復後，請再次查看價格。"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "تم التعرف على المجسم المصغر. تحقق من الأسعار مرة أخرى عند عودة خدمة السوق للعمل."}},
+        "hi": {"stringUnit": {"state": "translated", "value": "आपकी मिनीफिगर की पहचान हो गई है। बाज़ार सेवा फिर से ऑनलाइन होने पर कीमतें दोबारा जाँचें।"}}
+      }
+    },
+    "Saved price from an earlier update": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Saved price from an earlier update"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Precio guardado de una actualización anterior"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Prix enregistré lors d'une mise à jour précédente"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Gespeicherter Preis aus einer früheren Aktualisierung"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Prezzo salvato da un aggiornamento precedente"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Preço salvo de uma atualização anterior"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Opgeslagen prijs van een eerdere update"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "以前の更新で保存された価格"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "이전 업데이트에서 저장된 가격"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "上次更新时保存的价格"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "上次更新時儲存的價格"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "السعر المحفوظ من تحديث سابق"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "पिछले अपडेट से सहेजी गई कीमत"}}
+      }
+    },
+    "Saved price": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Saved price"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Precio guardado"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Prix enregistré"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Gespeicherter Preis"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Prezzo salvato"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Preço salvo"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Opgeslagen prijs"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "保存された価格"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "저장된 가격"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "已保存的价格"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "已儲存的價格"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "السعر المحفوظ"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "सहेजी गई कीमत"}}
+      }
+    },
+    "updated": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "updated"}},
+        "es": {"stringUnit": {"state": "translated", "value": "actualizado"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "mis à jour"}},
+        "de": {"stringUnit": {"state": "translated", "value": "aktualisiert"}},
+        "it": {"stringUnit": {"state": "translated", "value": "aggiornato"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "atualizado"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "bijgewerkt"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "更新"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "업데이트됨"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "更新于"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "更新於"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "محدّث"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "अपडेट किया गया"}}
+      }
+    },
+    "Check prices again": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Check prices again"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Volver a consultar precios"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Vérifier à nouveau les prix"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Preise erneut prüfen"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Controlla di nuovo i prezzi"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Verificar preços novamente"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Prijzen opnieuw controleren"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "価格を再確認"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "가격 다시 확인"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "再次查看价格"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "再次查看價格"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "تحقق من الأسعار مرة أخرى"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "कीमतें फिर जाँचें"}}
+      }
+    },
+    "Checks market prices without scanning the photo again.": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Checks market prices without scanning the photo again."}},
+        "es": {"stringUnit": {"state": "translated", "value": "Consulta los precios del mercado sin volver a escanear la foto."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Vérifie les prix du marché sans rescanner la photo."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Prüft die Marktpreise, ohne das Foto erneut zu scannen."}},
+        "it": {"stringUnit": {"state": "translated", "value": "Controlla i prezzi di mercato senza scansionare di nuovo la foto."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Verifica os preços de mercado sem escanear a foto novamente."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Controleert marktprijzen zonder de foto opnieuw te scannen."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "写真を再スキャンせずに市場価格を確認します。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "사진을 다시 스캔하지 않고 시장 가격을 확인합니다."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "无需重新扫描照片即可查看市场价格。"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "無需重新掃描照片即可查看市場價格。"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "يتحقق من أسعار السوق دون إعادة مسح الصورة."}},
+        "hi": {"stringUnit": {"state": "translated", "value": "फ़ोटो को फिर से स्कैन किए बिना बाज़ार की कीमतें जाँचता है।"}}
+      }
     }
   },
   "version": "1.0"

@@ -1,10 +1,11 @@
 import { scanRequestAccess } from "@/lib/scan-request-access";
 import { after, NextRequest, NextResponse } from "next/server";
 
+import { reportMinifigPricingOutcome } from "@/lib/backend-error-reporting";
 import { identifyNonSet } from "@/lib/brickognize";
 import { getMonetizationPolicy } from "@/lib/monetization-policy";
 import { resolveMinifigMarketSnapshot } from "@/lib/minifig-market-snapshots";
-import { runMinifigScan } from "@/lib/minifig-scan-service";
+import { runMinifigScan, shouldConsumeSingleScan } from "@/lib/minifig-scan-service";
 import { checkFeatureAccess, consumeFeatureUsage } from "@/lib/scan-gate";
 
 const MAX_CAPTURE_BYTES = 500 * 1024;
@@ -50,9 +51,42 @@ export async function POST(req: NextRequest) {
       now: () => performance.now(),
     });
 
-    if (scan.status === "not-found") return NextResponse.json(scan);
+    // Keep the new public metadata available in snake_case while retaining the
+    // existing camelCase scan envelope for older native clients.
+    const response = scan.status === "matched"
+      ? {
+          ...scan,
+          pricing_availability: scan.pricingAvailability,
+          pricing_updated_at: scan.pricingUpdatedAt,
+          pricing_resolution: scan.pricingResolution,
+        }
+      : scan;
 
-    if (!userId) return NextResponse.json(scan);
+    if (scan.status === "matched") {
+      const pricingResolution = scan.pricingResolution ?? "live";
+      const providerState = pricingResolution === "identity_only"
+        ? "temporary"
+        : pricingResolution === "stale_cache"
+          ? "cached"
+          : "available";
+      after(() => reportMinifigPricingOutcome({
+        endpoint: "minifig_scan",
+        outcome: pricingResolution,
+        providerState,
+        elapsedMs: scan.totalMs,
+      }));
+    }
+
+    if (scan.status === "not-found") return NextResponse.json(response);
+
+    if (!userId) return NextResponse.json(response);
+
+    // Recognition succeeded, but BrickLink was temporarily unavailable and no
+    // saved price was usable. Keep the identity result useful without charging
+    // a single-scan allowance for a result that contains no market data.
+    if (!shouldConsumeSingleScan(scan)) {
+      return NextResponse.json(response);
+    }
 
     const gate = await consumeFeatureUsage(userId, "single_scan");
     if (!gate.allowed) {
@@ -64,7 +98,7 @@ export async function POST(req: NextRequest) {
       }, { status: 402 });
     }
 
-    return NextResponse.json({ ...scan, usage: gate.usage });
+    return NextResponse.json({ ...response, usage: gate.usage });
   } catch (error) {
     console.error("[minifig-scan] Failed:", error);
     return NextResponse.json(

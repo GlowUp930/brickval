@@ -87,7 +87,11 @@ extension BrickValAPIClient {
                     }
                     return .matched(
                         identification: identification,
-                        result: result.normalized,
+                        result: result.normalizedResult(
+                            pricingAvailability: payload.pricingAvailability,
+                            pricingUpdatedAt: payload.pricingUpdatedAt,
+                            pricingResolution: payload.pricingResolution
+                        ),
                         timings: payload.timings,
                         usage: payload.usage
                     )

@@ -13,7 +13,7 @@ import {
   type GuidedBulkCrop,
   type NormalizedRegionBox,
 } from "./bulk-identify";
-import { hasUsableMinifigPrice, lookupBulkMinifigures } from "./bulk-minifig-lookup";
+import { hasMinifigLookupResult, lookupBulkMinifigures } from "./bulk-minifig-lookup";
 import type { NonSetDetection } from "./identify-nonset";
 import type { MinifigLookupPayload } from "./minifig-lookup";
 
@@ -177,8 +177,8 @@ export async function runBulkMinifigScan(
     ...(detection.alternatives ?? []).map((candidate) => candidate.id),
   ]);
   const lookupRows = await lookupBulkMinifigures(candidateIDs, 5, regionLimit);
-  const pricedByIdentifier = new Map(
-    lookupRows.filter(hasUsableMinifigPrice).map((row) => [row.figNumber.toLowerCase(), row.result])
+  const resultByIdentifier = new Map(
+    lookupRows.filter(hasMinifigLookupResult).map((row) => [row.figNumber.toLowerCase(), row.result])
   );
   const clearItems: BulkMinifigScanResult["items"] = [];
   const reviewItems: BulkMinifigScanResult["reviewItems"] = [];
@@ -190,7 +190,7 @@ export async function runBulkMinifigScan(
       .filter((candidate, index, all) => all.findIndex((item) => item.id.toLowerCase() === candidate.id.toLowerCase()) === index)
       .map((candidate) => ({
         ...candidate,
-        result: pricedByIdentifier.get(candidate.id.toLowerCase()),
+        result: resultByIdentifier.get(candidate.id.toLowerCase()),
       }))
       .filter((candidate): candidate is { id: string; score: number; result: MinifigLookupPayload } => Boolean(candidate.result))
       .slice(0, 3);

@@ -1,5 +1,24 @@
 # BrickVal Native iOS Context
 
+## BrickLink maintenance resilience — 2026-09-16
+
+Minifigure pricing now carries explicit availability (`available`, `stale`, or
+`unavailable`) and resolution metadata. When BrickLink is temporarily down,
+the native result keeps the recognized figure and collection actions, shows a
+saved price only when it is no more than 30 days old, or shows a clear
+temporary-unavailable state with a `Check prices again` identifier lookup.
+Identity-only results do not upload the image again, repeat recognition, or
+spend a single-scan allowance. Bulk results keep recognized figures with no
+price, while totals count only priced rows. Older raw BrickLink and lookup
+cache entries are rehydrated into the snapshot store for the emergency
+fallback. Authentication, configuration, not-found, permissions, and existing
+pricing behavior remain unchanged. See
+[`docs/audits/2026-09-16-bricklink-maintenance-resilience.md`](../../docs/audits/2026-09-16-bricklink-maintenance-resilience.md).
+
+Native payload and scanner tests pass on both simulator sizes. The new UI and
+retry behavior require a later TestFlight build; physical-device provider
+recovery remains pending.
+
 ## PostHog UX instrumentation and replay visibility — 2026-09-16
 
 The native analytics setup now keeps session replay privacy-first while making

@@ -1,12 +1,22 @@
-import { getMinifigMarketData, type MinifigMarketData } from "./bricklink";
+import {
+  BrickLinkProviderError,
+  getMinifigMarketData,
+  type MinifigMarketData,
+} from "./bricklink";
 import { sortByMostRecentDate } from "./sort-transactions";
 import type { MinifigInfo, MinifigPricing } from "../types/market";
 
 export const MINIFIG_BATCH_LIMIT = Number.MAX_SAFE_INTEGER;
 
+export type MinifigPricingAvailability = "available" | "stale" | "unavailable";
+export type MinifigPricingResolution = "live" | "fresh_cache" | "stale_cache" | "identity_only";
+
 export type MinifigLookupPayload = {
   figInfo: MinifigInfo;
   pricing: MinifigPricing;
+  pricing_availability?: MinifigPricingAvailability;
+  pricing_updated_at?: string;
+  pricing_resolution?: MinifigPricingResolution;
 };
 
 export type MinifigMarketDataFetcher = (figNumber: string) => Promise<MinifigMarketData>;
@@ -31,6 +41,38 @@ export function sanitizeBulkMinifigNumbers(values: unknown[], limit = MINIFIG_BA
   return ids;
 }
 
+export function identityOnlyMinifigLookupPayload(figNumber: string): MinifigLookupPayload {
+  const emptyPricing: MinifigPricing = {
+    used_sold_avg_usd: null,
+    used_sold_min_usd: null,
+    used_sold_max_usd: null,
+    used_sold_qty: null,
+    used_stock_avg_usd: null,
+    used_stock_qty: null,
+    new_sold_avg_usd: null,
+    new_sold_min_usd: null,
+    new_sold_max_usd: null,
+    new_sold_qty: null,
+    new_stock_avg_usd: null,
+    new_stock_qty: null,
+    sold_details: [],
+    stock_details: [],
+    sold_new_details: [],
+    stock_new_details: [],
+  };
+  return {
+    figInfo: {
+      name: figNumber,
+      image_url: null,
+      fig_number: figNumber,
+      year_released: null,
+    },
+    pricing: emptyPricing,
+    pricing_availability: "unavailable",
+    pricing_resolution: "identity_only",
+  };
+}
+
 function decodeHtmlEntities(value: string): string {
   return value
     .replace(/&#(\d+);/g, (_: string, dec: string) => String.fromCharCode(parseInt(dec, 10)))
@@ -42,15 +84,25 @@ function decodeHtmlEntities(value: string): string {
     .replace(/&apos;/g, "'");
 }
 
-export async function buildMinifigLookupPayload(
+/** Convert a saved BrickLink response into the public minifigure payload. */
+export function minifigLookupPayloadFromMarketData(
   figNumber: string,
-  fetchMarketData: MinifigMarketDataFetcher = getMinifigMarketData
-): Promise<MinifigLookupPayload | null> {
-  const minifigData = await fetchMarketData(figNumber).catch(() => null);
-
-  if (!minifigData?.item && !minifigData?.sold_used && !minifigData?.stock_used && !minifigData?.sold_new && !minifigData?.stock_new) {
-    return null;
+  minifigData: MinifigMarketData,
+): MinifigLookupPayload | null {
+  const hasGuide = Boolean(
+    minifigData.sold_used || minifigData.stock_used || minifigData.sold_new || minifigData.stock_new
+  );
+  if (minifigData.providerFailure === "authentication") {
+    throw new BrickLinkProviderError("authentication");
   }
+  if (minifigData.providerFailure === "configuration") {
+    throw new BrickLinkProviderError("configuration");
+  }
+  if (minifigData.providerFailure === "temporary" && !hasGuide) {
+    throw new BrickLinkProviderError("temporary");
+  }
+
+  if (!minifigData.item && !hasGuide) return null;
 
   const item = minifigData.item;
   const figInfo: MinifigInfo = {
@@ -107,5 +159,17 @@ export async function buildMinifigLookupPayload(
     stock_new_details: stockNewDetails,
   };
 
-  return { figInfo, pricing };
+  return { figInfo, pricing, pricing_availability: "available", pricing_resolution: "live" };
+}
+
+export async function buildMinifigLookupPayload(
+  figNumber: string,
+  fetchMarketData: MinifigMarketDataFetcher = getMinifigMarketData
+): Promise<MinifigLookupPayload | null> {
+  // Keep provider failures typed so the snapshot resolver can serve saved data
+  // or return an identity-only result. Genuine not-found responses remain null
+  // and continue through the normal 404 path.
+  const minifigData: MinifigMarketData = await fetchMarketData(figNumber);
+
+  return minifigLookupPayloadFromMarketData(figNumber, minifigData);
 }

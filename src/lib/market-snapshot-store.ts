@@ -1,4 +1,4 @@
-export type PricingStatus = "fresh" | "refreshing" | "fetched";
+export type PricingStatus = "fresh" | "refreshing" | "fetched" | "unavailable";
 
 export interface StoredMarketSnapshot<T> {
   payload: T;
@@ -15,11 +15,13 @@ export interface MarketSnapshotDependencies<T> {
 
 export interface ResolvedMarketSnapshot<T> extends StoredMarketSnapshot<T> {
   pricingStatus: PricingStatus;
-  pricingUpdatedAt: string;
+  pricingUpdatedAt?: string;
 }
 
 const FRESH_FOR_MS = 24 * 60 * 60 * 1000;
-const SERVE_STALE_FOR_MS = 7 * 24 * 60 * 60 * 1000;
+// Keep a known-good snapshot useful through short provider outages, while
+// preventing old market data from being presented as current indefinitely.
+export const SERVE_STALE_FOR_MS = 30 * 24 * 60 * 60 * 1000;
 
 export async function resolveMarketSnapshot<T>(
   itemId: string,

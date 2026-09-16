@@ -13,8 +13,10 @@ struct ScanResultView: View {
     @Environment(CurrencyStore.self) private var currency
     @Environment(\.brickValAccent) private var accent
 
-    let result: LookupResult
     let reset: () -> Void
+    let retryPricing: (() async throws -> LookupResult)?
+
+    @State private var result: LookupResult
 
     @State private var quantity = 1
     @State private var horizon: PortfolioHorizon = .month
@@ -24,6 +26,17 @@ struct ScanResultView: View {
     @State private var saveMessage: String?
     @State private var proMessage: String?
     @State private var errorMessage: String?
+    @State private var isRetryingPricing = false
+
+    init(
+        result: LookupResult,
+        reset: @escaping () -> Void,
+        retryPricing: (() async throws -> LookupResult)? = nil
+    ) {
+        self.reset = reset
+        self.retryPricing = retryPricing
+        _result = State(initialValue: result)
+    }
 
     private var commonSource: String? {
         let newSource = result.pricing.source(for: .newSealed)
@@ -169,10 +182,13 @@ struct ScanResultView: View {
                     .font(.caption.bold())
                     .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
             }
-            Text(sourceDetail)
-                .font(.caption)
-                .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            if result.pricingAvailability != .unavailable {
+                Text(sourceDetail)
+                    .font(.caption)
+                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            pricingAvailabilityNotice
             HStack(spacing: 0) {
                 priceColumn(title: "USED", value: result.pricing.preferredUsedValue, condition: .used)
                 Divider().overlay(BrickValStyle.ScanResult.border)
@@ -183,6 +199,62 @@ struct ScanResultView: View {
         }
         .resultSurface()
         .postHogNoMask()
+    }
+
+    @ViewBuilder
+    private var pricingAvailabilityNotice: some View {
+        switch result.pricingAvailability {
+        case .available:
+            EmptyView()
+        case .stale:
+            VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space8) {
+                Label(stalePricingCopy, systemImage: "clock.arrow.circlepath")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                retryPricingButton
+            }
+        case .unavailable:
+            VStack(alignment: .leading, spacing: BrickValStyle.Primitive.space8) {
+                Label("Market prices are temporarily unavailable", systemImage: "wifi.exclamationmark")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                Text("Your minifigure was identified. Check prices again when the market service is back online.")
+                    .font(.caption)
+                    .foregroundStyle(BrickValStyle.ScanResult.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                retryPricingButton
+            }
+        }
+    }
+
+    private var stalePricingCopy: String {
+        guard let rawDate = result.pricingUpdatedAt,
+              let date = ISO8601DateFormatter().date(from: rawDate) else {
+            return BrickValLocalization.localized("Saved price from an earlier update")
+        }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        formatter.locale = BrickValLocalization.effectiveLanguage.locale
+        return "\(BrickValLocalization.localized("Saved price")) · \(BrickValLocalization.localized("updated")) \(formatter.string(from: date))"
+    }
+
+    @ViewBuilder
+    private var retryPricingButton: some View {
+        if retryPricing != nil {
+            Button {
+                retryMarketPrices()
+            } label: {
+                Label(
+                    isRetryingPricing ? BrickValLocalization.localized("Checking…") : BrickValLocalization.localized("Check prices again"),
+                    systemImage: isRetryingPricing ? "hourglass" : "arrow.clockwise"
+                )
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(accent)
+            .disabled(isRetryingPricing)
+            .accessibilityHint(BrickValLocalization.localized("Checks market prices without scanning the photo again."))
+        }
     }
 
     private var conversionCaption: some View {
@@ -383,6 +455,19 @@ struct ScanResultView: View {
     private func close() {
         reset()
         dismiss()
+    }
+
+    private func retryMarketPrices() {
+        guard !isRetryingPricing, let retryPricing else { return }
+        isRetryingPricing = true
+        Task { @MainActor in
+            defer { isRetryingPricing = false }
+            do {
+                result = try await retryPricing()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 }
 
