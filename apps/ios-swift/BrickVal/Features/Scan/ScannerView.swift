@@ -219,6 +219,11 @@ struct ScannerView: View {
                         )
                         .accessibilityValue(store.phase.statusText)
                         .accessibilityIdentifier("scanner.cameraStage")
+                        // The preview is descriptive only. Marking it as
+                        // non-interactive keeps VoiceOver and XCTest from
+                        // treating its full-frame accessibility surface as an
+                        // occluding hit target for the recovery banner.
+                        .accessibilityRespondsToUserInteraction(false)
                         .accessibilityHidden(isBulkProcessing)
                 }
                 .frame(width: cameraSize.width, height: cameraSize.height)

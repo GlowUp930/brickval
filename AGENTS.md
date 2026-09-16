@@ -17,10 +17,13 @@ checks do not trigger a misleading removal alert.
 The workflow explicitly boots and reports its selected small iPhone simulator,
 stores the native result bundle and log, and captures a failure screenshot for
 every run. Local small and large simulator unit/UI suites, backend, database,
-type-check, and localization checks pass. A new CI run is required before
-reliability sign-off. Signed Release build 1.0.9 (182) is archived at
-`/tmp/BrickVal182-reliability.xcarchive` with dSYM UUID
-`83D44F67-80AA-3BF0-BB4A-B01B3B6D46ED`; it has not been uploaded to TestFlight.
+type-check, and localization checks pass; the final focused retry/reveal checks
+also pass on both simulator sizes. The camera surface now explicitly reports
+that it does not respond to accessibility interaction, preventing it from
+occluding the retry banner on the iOS 26.2 runner. A new CI run is required
+before reliability sign-off. Signed Release build 1.0.9 (183) is archived at
+`/tmp/BrickVal183-reliability.xcarchive` with dSYM UUID
+`C470E397-83B6-3F76-B528-6D7BCD7EAE1D`; it has not been uploaded to TestFlight.
 Physical iPhone camera verification remains pending.
 See [`docs/audits/2026-09-16-reliability-check.md`](docs/audits/2026-09-16-reliability-check.md).
 

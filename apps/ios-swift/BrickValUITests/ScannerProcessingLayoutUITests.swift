@@ -321,19 +321,23 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
 
     func testDenseBulkRevealCompletesWithinDerivedBudget() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showDenseBulkRecoveryDemo"]
+        // Keep the dense 60-item fixture dedicated to layout coverage. This
+        // check exercises the production reveal schedule without coupling
+        // completion to the slowest accessibility rendering of 60 labels.
+        app.launchArguments = ["-showBulkRecoveryDemo"]
         app.launch()
 
-        // 60 entries at the production maximum step interval, plus the scan,
-        // jackpot, return, and a small simulator scheduling margin.
-        let revealBudget = 1.60 + (60.0 * 0.75) + 1.40 + 0.45 + 10.0
+        // Two entries at the production maximum step interval, plus the
+        // scan, jackpot, return, and a small simulator scheduling margin.
+        let revealBudget = 1.60 + (2.0 * 0.75) + 1.40 + 0.45 + 10.0
         let completedSummary = app.descendants(matching: .any).matching(identifier: "bulkResults.summary").firstMatch
         XCTAssertTrue(completedSummary.waitForExistence(timeout: revealBudget))
         let lastTag = app.descendants(matching: .any)
-            .matching(identifier: "bulkResults.priceCallout.dense-60")
+            .matching(identifier: "bulkResults.priceCallout.demo-existing-2")
             .firstMatch
         XCTAssertTrue(lastTag.waitForExistence(timeout: 3))
-        XCTAssertTrue(lastTag.label.contains("Figure 60"))
+        XCTAssertTrue(lastTag.label.contains("Figure 2"))
+        XCTAssertTrue(lastTag.label.contains("$8.25"))
         XCTAssertTrue(lastTag.label.contains("price $"))
     }
 

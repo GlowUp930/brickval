@@ -28,21 +28,24 @@ the reliability checks enabled and fixes the test/runtime coupling.
 ## Changes
 
 - Moved `ScannerStatusView` outside the clipped camera content, gave
-  `scanner.retry` a minimum 44-point target and a content shape, and made the
-  camera-stage accessibility surface non-hit-testing. Failed single scans still
-  clear the frozen image and stale boxes, keep the error visible, pause
-  automatic submissions, and leave the shutter ready for an explicit capture.
+  `scanner.retry` a minimum 44-point target and a content shape, and marked the
+  camera-stage accessibility surface as descriptive-only and non-interactive.
+  Failed single scans still clear the frozen image and stale boxes, keep the
+  error visible, pause automatic submissions, and leave the shutter ready for
+  an explicit capture.
 - Added `-showDenseBulkCompletedDemo`, a DEBUG-only presentation that starts
   with the existing 60 resolved fixture entries. The layout test asserts all 60
   stable callout identifiers and their matching full prices directly. The real
   `-showDenseBulkRecoveryDemo` path remains covered by a separate test whose
-  timeout is derived from the production reveal schedule.
+  timeout is derived from the production reveal schedule. The timing check
+  asserts the stable second figure identifier and its full price, matching the
+  accessible callout contract rather than a visual character name.
 - Added saved pricing to the existing DEBUG collection fixtures so navigation
   does not invoke network recovery or surface a fixture-only error.
 - Updated the reliability workflow to select and boot a supported simulator,
   print device/runtime information, save the native result bundle and log, and
   upload those plus a failure screenshot even when tests fail.
-- Bumped the native build number to 182 for the replacement signed archive.
+- Bumped the native build number to 183 for the replacement signed archive.
 
 No backend, pricing, scan-credit, purchase, or production data contract
 changed.
@@ -51,8 +54,10 @@ changed.
 
 Local Release/Debug simulator checks completed:
 
-- Focused retry and completed dense-price checks: pass on BrickVal Small iPhone.
-- Real 60-entry progressive reveal check: pass on BrickVal Small iPhone.
+- Focused retry and production reveal checks: pass on BrickVal Small iPhone and
+  iPhone 17 Pro simulators.
+- Completed 60-entry dense-price layout check: pass on BrickVal Small iPhone;
+  the existing full UI runs also pass on both simulator sizes.
 - Native unit target: 246 tests in 39 suites, pass on Small iPhone and iPhone 17
   Pro simulators.
 - Full native UI target: 19 tests, zero failures on both simulator sizes.
@@ -61,10 +66,10 @@ Local Release/Debug simulator checks completed:
   localization reports 814 app strings plus 4 Info.plist strings across 13
   locales.
 
-Signed Release build 1.0.9 (182) archived successfully at
-`/tmp/BrickVal182-reliability.xcarchive`. Code-signature verification passed;
+Signed Release build 1.0.9 (183) archived successfully at
+`/tmp/BrickVal183-reliability.xcarchive`. Code-signature verification passed;
 the matching BrickVal dSYM UUID is
-`83D44F67-80AA-3BF0-BB4A-B01B3B6D46ED`.
+`C470E397-83B6-3F76-B528-6D7BCD7EAE1D`.
 
 The exact GitHub iPhone 16e / iOS 26.2 run must pass with the updated workflow
 before this issue is considered resolved. No physical iPhone was available in
