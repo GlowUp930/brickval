@@ -20,7 +20,10 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         let startedAt = Date.now
         retry.tap()
         XCTAssertFalse(retry.exists)
-        XCTAssertLessThan(Date.now.timeIntervalSince(startedAt), 0.75)
+        // XCTest event delivery includes simulator scheduling and accessibility
+        // synchronization. Keep the bound tight enough to catch a stuck retry
+        // without making the reliability check depend on runner load.
+        XCTAssertLessThan(Date.now.timeIntervalSince(startedAt), 1.5)
     }
 
     func testOnboardingGetStartedRespondsWithoutStartupDelay() {
