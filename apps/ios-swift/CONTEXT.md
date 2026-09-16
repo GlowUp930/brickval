@@ -1,5 +1,17 @@
 # BrickVal Native iOS Context
 
+## One-year Pro offer code — 2026-09-16
+
+App Store Connect has an active **BrickValue Yearly Gift 2026** offer for
+`com.brickval.app.pro.yearly` (subscription ID `6775651631`). It grants a free
+year to new, existing, and expired subscribers in all enabled storefronts and
+does not auto-renew after the gift period. The custom-code batch has a
+500-redemption limit and no expiry. The code is intentionally not stored in
+the repository; its redemption URL is built from the App Store offer-code
+template. Existing StoreKit redemption and RevenueCat entitlement sync in the
+current build require no binary change. See
+[`docs/audits/2026-09-16-yearly-offer-code.md`](../../docs/audits/2026-09-16-yearly-offer-code.md).
+
 ## Build 1.0.9 (180) — 2026-09-15
 
 The native PostHog session-replay configuration is included in signed Release
