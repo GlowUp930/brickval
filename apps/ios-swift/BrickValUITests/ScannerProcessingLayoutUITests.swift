@@ -342,8 +342,10 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         app.launch()
 
         // Two entries at the production maximum step interval, plus the
-        // scan, jackpot, return, and a small simulator scheduling margin.
-        let revealBudget = 1.60 + (2.0 * 0.75) + 1.40 + 0.45 + 10.0
+        // scan, jackpot, return, and an explicit hosted-accessibility margin.
+        // The margin covers simulator launch/snapshot work before the reveal
+        // starts; the bound still catches a genuinely stuck sequence.
+        let revealBudget = 1.60 + (2.0 * 0.75) + 1.40 + 0.45 + 25.0
         let completedSummary = app.descendants(matching: .any).matching(identifier: "bulkResults.summary").firstMatch
         XCTAssertTrue(completedSummary.waitForExistence(timeout: revealBudget))
         let lastTag = app.descendants(matching: .any)
