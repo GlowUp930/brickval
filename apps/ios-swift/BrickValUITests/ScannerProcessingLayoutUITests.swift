@@ -17,14 +17,12 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         XCTAssertTrue(capture.waitForExistence(timeout: 3))
         XCTAssertTrue(capture.isHittable)
 
-        let startedAt = Date.now
         retry.tap()
         // XCTest event delivery includes simulator scheduling and accessibility
         // synchronization. A three-second bound still catches the old camera
         // actor stall while avoiding a false failure when the hosted runner
         // takes a little longer to publish the post-tap hierarchy.
         XCTAssertTrue(retry.waitForNonExistence(timeout: 3))
-        XCTAssertLessThan(Date.now.timeIntervalSince(startedAt), 3.0)
     }
 
     func testOnboardingGetStartedRespondsWithoutStartupDelay() {
