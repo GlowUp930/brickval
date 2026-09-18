@@ -1,5 +1,15 @@
 # BrickVal Native iOS Context
 
+## TestFlight build 188 — 2026-09-18
+
+Build 1.0.10 (188) contains the scanner mode localization/layout fix. The
+Small iPhone simulator build passed, plus the two `ScanIntentTests` and the
+focused language-switch UI regression. The exported IPA at
+`/tmp/BrickVal188-export/BrickVal.ipa` passed deep signature verification
+under Apple Distribution; dSYM UUID `615B7F6F-47FA-367B-8616-BF8DEF478C82`.
+Xcode uploaded it successfully to App Store Connect/TestFlight and Apple is
+processing the build. Physical-device verification remains pending.
+
 ## Bulk fill drafts and audible feedback — 2026-09-18
 
 The scanner now uses the selected Lightning Lead treatment: a smooth

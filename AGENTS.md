@@ -1,5 +1,16 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## TestFlight build 188 — 2026-09-18
+
+Build 1.0.10 (188) includes the scanner mode localization/layout fix. The
+Small iPhone simulator build passed, along with the two `ScanIntentTests` and
+the focused `testScannerModeLabelsRefreshAfterLanguageSwitch` UI regression.
+The exported IPA at `/tmp/BrickVal188-export/BrickVal.ipa` passed deep
+signature verification under Apple Distribution for `com.brickval.app`; its
+dSYM UUID is `615B7F6F-47FA-367B-8616-BF8DEF478C82`. Xcode uploaded the build
+successfully to App Store Connect/TestFlight, where Apple processing is now
+in progress. Physical-device verification remains pending.
+
 ## Bulk fill drafts and audible feedback — 2026-09-18
 
 The Single → Bulk handoff now uses the selected Lightning Lead treatment: a

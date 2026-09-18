@@ -1,5 +1,13 @@
 # Scan Result Card Visual QA
 
+## TestFlight build 188 — 2026-09-18
+
+Build 1.0.10 (188) passed the Small iPhone simulator check and the focused
+scanner localization regressions. The exported IPA was deep-signature
+verified and uploaded successfully to App Store Connect/TestFlight; Apple
+processing is in progress. Physical-device visual and audio verification
+remains open.
+
 ## Bulk fill drafts and audible feedback — 2026-09-18
 
 The Single → Bulk handoff now uses the selected Lightning Lead treatment: a
