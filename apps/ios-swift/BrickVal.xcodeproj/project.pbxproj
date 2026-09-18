@@ -47,10 +47,12 @@
 		2792EE7411F0E205AD72A9AA /* CollectionMarketHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 750444807619F90EFFDBD796 /* CollectionMarketHistory.swift */; };
 		28D2AB981918BE69951B92A0 /* cash-register-kaching.aac in Resources */ = {isa = PBXBuildFile; fileRef = A3C39F6BC7B798264AF2202F /* cash-register-kaching.aac */; };
 		28ED6BC97F60E1B03AB88487 /* PreferencesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08CF8409E271EB2CE9E51A41 /* PreferencesStore.swift */; };
+		290A06941DFED3DC4507123E /* bulk-result-cash-register.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = FDD8F74D027697D4265F66AB /* bulk-result-cash-register.mp3 */; };
 		2A15B106E07D44CDD347AC65 /* CoreMLMinifigureDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F8087076F32E788DB73B80A /* CoreMLMinifigureDetector.swift */; };
 		2AD9924B85122F2FEB2B1A60 /* MarketRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0949D3B7A39994F2848E89 /* MarketRow.swift */; };
 		2BD4EA07392D174705E82851 /* CollectorProfileEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83DF4CF5EBB489C29E3E2206 /* CollectorProfileEditorView.swift */; };
 		2CB0D24202AF1C9D2C873614 /* CollectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF513E65F25EFDFFCFCF0B6B /* CollectionView.swift */; };
+		2CC29F71558D2255C4C08F4C /* bulk-mode-power-up.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 98116C49A59A3B9840E0F894 /* bulk-mode-power-up.mp3 */; };
 		2E99E9CE173E2B582F5D870F /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 7DDC53872792F7CE6746211B /* PostHog */; };
 		2EEC570BF64A6905EC0AF0E5 /* ImageProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F6E8C925C6457ED1766DE95 /* ImageProcessor.swift */; };
 		2FE0CC6952C659B5D9C970C4 /* CameraPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC71F374CC6CBDF9CFFCBA8B /* CameraPreview.swift */; };
@@ -165,6 +167,7 @@
 		B1CC885270D115A068E3B269 /* OnboardingDemo.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 6A3D70B90830A255986E5AEA /* OnboardingDemo.mp4 */; };
 		B27807ED55B5EBDB3A7BA4C2 /* NetworkPayloadDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A95320472022CBED5A5F5AD /* NetworkPayloadDecodingTests.swift */; };
 		B31C8FB33248FABE116BD07B /* OfferCodeRedemptionStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 235637548F2BFE985EBCD90F /* OfferCodeRedemptionStatusView.swift */; };
+		B3EFCE1FAF2278DA4A721B75 /* BulkModeBoostEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 931A1BD8C72D39619213DD4A /* BulkModeBoostEffect.swift */; };
 		B51434B625915BDF68B156C2 /* ScanReviewCandidate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D69ECFFDB07A185852CFA8 /* ScanReviewCandidate.swift */; };
 		B5D1DEF12605EFB7C7765F7D /* ScanPreviewPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 637A01995655EC92927C95BC /* ScanPreviewPipelineTests.swift */; };
 		B5E5514786627ECC603173AA /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEA9BCCFFE15F7960FCD15F5 /* CameraPreviewView.swift */; };
@@ -386,8 +389,10 @@
 		91EC9210EDDAAAB6762CE5F7 /* CollectionCondition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionCondition.swift; sourceTree = "<group>"; };
 		921AE9C9AE50E9CEFD8135C7 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		9273D6960556EA50BAD93374 /* LocalDetectionScheduleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalDetectionScheduleTests.swift; sourceTree = "<group>"; };
+		931A1BD8C72D39619213DD4A /* BulkModeBoostEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkModeBoostEffect.swift; sourceTree = "<group>"; };
 		963FBD5CCEE45E0163D8E605 /* CameraService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraService.swift; sourceTree = "<group>"; };
 		9768DDF1E1F096EC49D4CE7F /* BulkScanResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkScanResultsView.swift; sourceTree = "<group>"; };
+		98116C49A59A3B9840E0F894 /* bulk-mode-power-up.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "bulk-mode-power-up.mp3"; sourceTree = "<group>"; };
 		99C7ACF75A359CFFC7F7783C /* BulkRevealSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkRevealSession.swift; sourceTree = "<group>"; };
 		99DD4A69B686D7B8FF0FA128 /* PurchaseAttemptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseAttemptTests.swift; sourceTree = "<group>"; };
 		9A6A953A43B8A32D4B291AEB /* MonetizationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonetizationStore.swift; sourceTree = "<group>"; };
@@ -470,6 +475,7 @@
 		F995837F375B4DC12C7F78F7 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		FB0EBE4F1B2830A4DC3C769B /* CurrencySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencySettingsView.swift; sourceTree = "<group>"; };
 		FCFB10D8CCEC6DC4223F6D69 /* NormalizedBoundingBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NormalizedBoundingBox.swift; sourceTree = "<group>"; };
+		FDD8F74D027697D4265F66AB /* bulk-result-cash-register.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "bulk-result-cash-register.mp3"; sourceTree = "<group>"; };
 		FE50EF5D6FCFA05F776581BD /* BulkImageLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkImageLayout.swift; sourceTree = "<group>"; };
 		FFA01128903534D6C3A7D6C0 /* CameraError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraError.swift; sourceTree = "<group>"; };
 		FFBC2210305E1EDC17B72B9D /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -851,6 +857,7 @@
 				DF17751A3223381C740D00A1 /* AutoScanPhase.swift */,
 				7923F89B165DBE64790485D1 /* AutoScanSession.swift */,
 				6BFA316FF629A4E6A317927E /* BulkFocusOverlay.swift */,
+				931A1BD8C72D39619213DD4A /* BulkModeBoostEffect.swift */,
 				0D07D26137A84E97FDE0C2E5 /* BulkPriceTagLayout.swift */,
 				F94B31D7916CE405BF07E876 /* BulkPriceTagsOverlay.swift */,
 				BF73BA3EA5F7DB4F5C1820B8 /* BulkProcessingOverlayView.swift */,
@@ -927,6 +934,8 @@
 			isa = PBXGroup;
 			children = (
 				0BD5CBC7EB973B1B43F9B4B1 /* Assets.xcassets */,
+				98116C49A59A3B9840E0F894 /* bulk-mode-power-up.mp3 */,
+				FDD8F74D027697D4265F66AB /* bulk-result-cash-register.mp3 */,
 				A3C39F6BC7B798264AF2202F /* cash-register-kaching.aac */,
 				921AE9C9AE50E9CEFD8135C7 /* InfoPlist.xcstrings */,
 				CA9F24F8BE45889A3C91E371 /* LaunchScreen.storyboard */,
@@ -1082,6 +1091,8 @@
 				08C31477AC1CC38678FCF17E /* LaunchScreen.storyboard in Resources */,
 				3A1308E54903A24ED7D22704 /* Localizable.xcstrings in Resources */,
 				B1CC885270D115A068E3B269 /* OnboardingDemo.mp4 in Resources */,
+				2CC29F71558D2255C4C08F4C /* bulk-mode-power-up.mp3 in Resources */,
+				290A06941DFED3DC4507123E /* bulk-result-cash-register.mp3 in Resources */,
 				28D2AB981918BE69951B92A0 /* cash-register-kaching.aac in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1203,6 +1214,7 @@
 				AAA777803A3BA83E0F8D462A /* BulkMinifigLookupRow.swift in Sources */,
 				1EB721E15C336E9FE07190E4 /* BulkMinifigScanPayload.swift in Sources */,
 				81E23CEB89523800F6164D95 /* BulkMinifigureDetector.mlpackage in Sources */,
+				B3EFCE1FAF2278DA4A721B75 /* BulkModeBoostEffect.swift in Sources */,
 				C4E208DCC6EF1170980F1A31 /* BulkPriceTagLayout.swift in Sources */,
 				94FAA1B4016FBD1A503F7A25 /* BulkPriceTagsOverlay.swift in Sources */,
 				C5D449AD90B548B9985E56EE /* BulkProcessingOverlayView.swift in Sources */,
@@ -1369,13 +1381,13 @@
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution: HO LAM CHAN (4CQHLZBSU7)";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 184;
+				CURRENT_PROJECT_VERSION = 186;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.9;
+				MARKETING_VERSION = 1.0.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.brickval.app;
 				PRODUCT_NAME = BrickVal;
 				PROVISIONING_PROFILE_SPECIFIER = "BrickVal App Store Build 125";
@@ -1498,13 +1510,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 184;
+				CURRENT_PROJECT_VERSION = 186;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.9;
+				MARKETING_VERSION = 1.0.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.brickval.app;
 				PRODUCT_NAME = BrickVal;
 				SDKROOT = iphoneos;

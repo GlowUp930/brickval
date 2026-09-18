@@ -703,6 +703,14 @@ final class ScanStore {
         soundEffects.play(.cashRegister)
     }
 
+    func playBulkResultSound() {
+        soundEffects.play(.bulkResultCashRegister)
+    }
+
+    func playBulkModeSwitchSound() {
+        soundEffects.play(.bulkModePowerUp)
+    }
+
     /// Recovers selected physical figures with a small concurrency window so
     /// recognition stays responsive without flooding the provider.
     func recoverBulkMinifigures(

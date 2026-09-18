@@ -1,5 +1,28 @@
 # BrickVal Native iOS Context
 
+## Bulk mode boost — 2026-09-18
+
+The scanner now plays the provided `bulk-mode-power-up.mp3` when the user
+successfully changes the mode picker from Single to Bulk. The final transient
+overlay is the Orbit pulse direction, anchored to the Bulk segment of the
+56-point control. Three compact accent rings expand while the stack icon lifts
+slightly. The overlay is transform/opacity-only, keeps the scanner geometry
+stable, hides its decoration from VoiceOver, and uses a short crossfade under
+Reduce Motion. The sound uses the existing ambient/mix-with-others player, so it
+respects the system silent state.
+
+The small-simulator Debug build, native unit suite, and focused scanner checks
+pass. Physical-device audio and release sign-off remain pending.
+
+Each resolved bulk minifigure now plays the supplied
+`bulk-result-cash-register.mp3` when its reveal commits. The existing final
+summary cue remains separate, and the sound service retains active players so
+rapid results do not cancel one another. Signed Release build 1.0.10 (186) is
+archived at `/tmp/BrickVal186-bulk-audio.xcarchive`, contains both audio
+resources, and was uploaded to Apple for App Store Connect/TestFlight. Its
+dSYM UUID is `B3BF4D4B-BF24-3F4C-9FA9-26D24D16FB05`; physical-device audio
+verification remains pending.
+
 ## Reliability check follow-up — 2026-09-16
 
 The CI UI regressions are covered independently. Dense bulk pricing layout

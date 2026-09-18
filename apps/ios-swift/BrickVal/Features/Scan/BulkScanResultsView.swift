@@ -1231,6 +1231,10 @@ struct BulkScanResultsView: View {
                     }
                 }
 
+                if entry.isResolved {
+                    store.playBulkResultSound()
+                }
+
                 withAnimation(reduceMotion ? nil : .easeOut(duration: 0.24)) {
                     revealSession.commitSweepStep()
                 }

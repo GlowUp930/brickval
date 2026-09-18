@@ -1,5 +1,20 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Bulk result audio — 2026-09-18
+
+Each resolved minifigure in the progressive bulk reveal now plays the supplied
+`bulk-result-cash-register.mp3` once when its result commits. The existing
+single-scan/final-summary cue remains separate, and the sound service retains
+overlapping players so rapid bulk results do not cut one another off. The
+Single → Bulk Orbit pulse and its `bulk-mode-power-up.mp3` cue remain enabled.
+
+The signed Release archive `/tmp/BrickVal186-bulk-audio.xcarchive` is version
+1.0.10 (186), contains both audio resources, and has dSYM UUID
+`B3BF4D4B-BF24-3F4C-9FA9-26D24D16FB05`. Xcode Organizer reports the build as
+**Uploaded to Apple** for App Store Connect/TestFlight. The first build 1.0.9
+(185) upload was rejected because that version train was closed, so the new
+version train was used. Physical-device audio verification remains pending.
+
 ## Reliability check follow-up — 2026-09-16
 
 The failed GitHub reliability run was reproduced and its two UI failures were

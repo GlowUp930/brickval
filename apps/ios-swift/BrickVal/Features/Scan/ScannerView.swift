@@ -20,6 +20,7 @@ struct ScannerView: View {
     @State private var frozenPreview: UIImage?
     @State private var scanOperation: Task<Void, Never>?
     @State private var purchaseMessage: String?
+    @State private var bulkModeBoostTrigger = 0
     private let runsCameraLoop: Bool
 
     init(api: BrickValAPIClient = .live()) {
@@ -85,6 +86,13 @@ struct ScannerView: View {
             .postHogNoMask()
             .padding(.top, 8)
             .padding(.bottom, 4)
+            .overlay {
+                if store.intent == .bulk, bulkModeBoostTrigger > 0 {
+                    BulkModeBoostEffect(trigger: bulkModeBoostTrigger)
+                    .frame(maxWidth: .infinity, minHeight: 78, maxHeight: 78)
+                    .offset(y: 2)
+                }
+            }
 
             ScannerAllowanceView(
                 intent: store.intent,
@@ -306,6 +314,11 @@ struct ScannerView: View {
         }
         .onChange(of: entitlements.isPro) { _, isPro in
             store.updateProStatus(isPro)
+        }
+        .onChange(of: store.intent) { previousIntent, intent in
+            guard previousIntent == .single, intent == .bulk else { return }
+            bulkModeBoostTrigger &+= 1
+            store.playBulkModeSwitchSound()
         }
         .task {
             // A failure banner is the recovery surface. Do not place the
