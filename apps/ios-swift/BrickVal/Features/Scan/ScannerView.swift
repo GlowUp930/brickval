@@ -96,7 +96,7 @@ struct ScannerView: View {
             }
             .overlay {
                 if store.intent == .bulk, bulkModeBoostTrigger > 0 {
-                    BulkModeBoostEffect(trigger: bulkModeBoostTrigger, variant: .smoothCharge)
+                    BulkModeBoostEffect(trigger: bulkModeBoostTrigger, variant: .lightningLead)
                 }
             }
 

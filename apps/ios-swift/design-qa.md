@@ -2,9 +2,10 @@
 
 ## Bulk fill drafts and audible feedback — 2026-09-18
 
-The Single → Bulk handoff now uses a smooth left-to-right green charge from the
-Single segment into Bulk. Smooth Charge is the current production draft;
-Lightning Lead and Power Bands are available together in the DEBUG gallery
+The Single → Bulk handoff now uses the selected Lightning Lead treatment: a
+smooth left-to-right green charge from the Single segment into Bulk with a
+bright leading edge and the supplied lightning mark. Smooth Charge and Power
+Bands remain available together in the DEBUG gallery
 launched with `-showBulkFillAnimationDrafts`. The supplied Icons8 lightning SVG
 is compiled as the `BulkLightningBolt` vector asset and is overlaid to the left
 of the Bulk label. The effect is direction-aware for RTL localizations, does
@@ -21,8 +22,10 @@ when the iPhone silent switch is enabled; resource, session, and play failures
 are logged for device verification.
 
 The Debug app build, native unit suite, and focused scanner checks pass on the
-BrickVal Small iPhone simulator. Physical-device audio and final release
-sign-off remain open.
+BrickVal Small iPhone simulator. Signed Release build 1.0.10 (187) is archived
+at `/tmp/BrickVal187-lightning-lead.xcarchive` and uploaded to Apple for
+App Store Connect/TestFlight processing. Physical-device audio verification
+remains open.
 
 Bulk result reveals also play the supplied `bulk-result-cash-register.mp3` once
 for each resolved minifigure as its reveal commits. The existing final-summary

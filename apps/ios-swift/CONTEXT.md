@@ -2,10 +2,10 @@
 
 ## Bulk fill drafts and audible feedback — 2026-09-18
 
-The scanner now uses a smooth left-to-right green charge from Single into the
-Bulk segment when the user switches modes. Smooth Charge is the current
-production draft; Lightning Lead and Power Bands are available in the DEBUG
-gallery launched with `-showBulkFillAnimationDrafts`. The supplied Icons8
+The scanner now uses the selected Lightning Lead treatment: a smooth
+left-to-right green charge from Single into the Bulk segment with a bright
+leading edge and the supplied lightning mark. Smooth Charge and Power Bands
+remain available in the DEBUG gallery launched with `-showBulkFillAnimationDrafts`. The supplied Icons8
 lightning SVG is compiled as the `BulkLightningBolt` vector asset and sits to
 the left of the Bulk label. The overlay is direction-aware for RTL
 localizations, keeps the 56-point segmented control geometry unchanged, uses
@@ -22,7 +22,10 @@ missing resources, rejected playback, and session failures are logged for
 device verification.
 
 The small-simulator Debug build, native unit suite, and focused scanner checks
-pass. Physical-device audio and release sign-off remain pending.
+pass. Signed Release build 1.0.10 (187) is archived at
+`/tmp/BrickVal187-lightning-lead.xcarchive` and uploaded to Apple for
+App Store Connect/TestFlight processing. Physical-device audio verification
+remains pending.
 
 Each resolved bulk minifigure now plays the supplied
 `bulk-result-cash-register.mp3` when its reveal commits. The existing final

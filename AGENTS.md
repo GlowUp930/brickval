@@ -2,9 +2,10 @@
 
 ## Bulk fill drafts and audible feedback — 2026-09-18
 
-The Single → Bulk handoff now uses a smooth left-to-right green charge over the
-actual Bulk segment. The current production draft is Smooth Charge; Lightning
-Lead and Power Bands are available together in the DEBUG gallery launched with
+The Single → Bulk handoff now uses the selected Lightning Lead treatment: a
+smooth left-to-right green charge over the actual Bulk segment with a bright
+leading edge and the supplied lightning mark. Smooth Charge and Power Bands
+remain available together in the DEBUG gallery launched with
 `-showBulkFillAnimationDrafts`. The supplied Icons8 lightning SVG is compiled
 as the `BulkLightningBolt` vector asset and sits to the left of the Bulk label.
 The effect is direction-aware for RTL localizations, uses composited
@@ -19,12 +20,11 @@ session now uses playback plus mixing so scan feedback remains audible when
 the iPhone silent switch is enabled; missing resources, rejected playback,
 and session failures are logged for device verification.
 
-The signed Release archive `/tmp/BrickVal186-bulk-audio.xcarchive` is version
-1.0.10 (186), contains both audio resources, and has dSYM UUID
-`B3BF4D4B-BF24-3F4C-9FA9-26D24D16FB05`. Xcode Organizer reports the build as
-**Uploaded to Apple** for App Store Connect/TestFlight. The first build 1.0.9
-(185) upload was rejected because that version train was closed, so the new
-version train was used. Physical-device audio verification remains pending.
+The signed Release archive `/tmp/BrickVal187-lightning-lead.xcarchive` is
+version 1.0.10 (187), contains the animation and audio resources, and has dSYM
+UUID `51B7B281-505A-3B01-9E02-5AA9615A662F`. Xcode Organizer reports the build
+as **Uploaded to Apple** for App Store Connect/TestFlight. Apple processing is
+asynchronous; physical-device audio and motion verification remains pending.
 
 ## Reliability check follow-up — 2026-09-16
 
