@@ -35,6 +35,16 @@ archived at `/tmp/BrickVal186-bulk-audio.xcarchive` and was uploaded to Apple
 for App Store Connect/TestFlight; physical-device audio verification remains
 pending.
 
+## Scanner mode localization and layout — 2026-09-18
+
+The Single/Bulk mode bar follows the live selected language immediately after
+an in-app language change. Bulk labels use scanner language rather than a
+literal cargo translation, and the lightning mark is positioned from the
+localized text width so long German labels and Arabic RTL ordering stay clear
+of the icon and segment edges. German, Simplified Chinese, and Arabic were
+visually checked on the Small iPhone simulator; the focused language-switch
+and scanner-layout checks pass.
+
 ## Reliability check follow-up — 2026-09-16
 
 The retry banner is now laid out as a sibling of the camera stage, so its

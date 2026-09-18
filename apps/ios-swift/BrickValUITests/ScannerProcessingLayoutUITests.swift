@@ -380,6 +380,54 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         english.tap()
     }
 
+    func testScannerModeLabelsRefreshAfterLanguageSwitch() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-showScannerDemo", "-brickval_language_override", "de"]
+        app.launch()
+
+        let modePicker = app.segmentedControls["scanner.modePicker"]
+        XCTAssertTrue(modePicker.waitForExistence(timeout: 5))
+        XCTAssertTrue(modePicker.buttons["Minifigur"].waitForExistence(timeout: 3))
+
+        // The language setting is changed through the same in-app path as a
+        // customer, then the scanner tab is revisited to exercise the native
+        // segmented control's label refresh.
+        app.tabBars.buttons.element(boundBy: 2).tap()
+        let languageRow = app.descendants(matching: .any)
+            .matching(identifier: "settings.language")
+            .firstMatch
+        XCTAssertTrue(languageRow.waitForExistence(timeout: 3))
+        languageRow.tap()
+
+        let simplifiedChinese = app.buttons["简体中文"]
+        for _ in 0..<4 where !simplifiedChinese.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(simplifiedChinese.waitForExistence(timeout: 3))
+        simplifiedChinese.tap()
+        XCTAssertTrue(app.navigationBars["语言"].waitForExistence(timeout: 3))
+
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.tabBars.buttons.element(boundBy: 1).tap()
+
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Scanner after Simplified Chinese switch"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+
+        XCTAssertEqual(
+            modePicker.buttons.allElementsBoundByIndex.map(\.label),
+            ["小人仔", "批量"],
+            "Mode picker labels after language switch"
+        )
+
+        XCTAssertTrue(modePicker.waitForExistence(timeout: 3))
+        XCTAssertTrue(modePicker.buttons["小人仔"].waitForExistence(timeout: 3))
+        XCTAssertTrue(modePicker.buttons["批量"].waitForExistence(timeout: 3))
+        XCTAssertFalse(modePicker.buttons["Minifigur"].exists)
+        XCTAssertFalse(modePicker.buttons["Schüttgut"].exists)
+    }
+
     func testProfileCurrencyCanBeChangedInsideTheApp() {
         let app = XCUIApplication()
         app.launchArguments = ["-showSettingsRootDemo"]

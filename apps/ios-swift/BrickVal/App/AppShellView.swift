@@ -7,6 +7,7 @@ struct AppShellView: View {
     @Environment(NotificationCoordinator.self) private var notifications
     @Environment(ProductFeedbackStore.self) private var feedback
     @Environment(\.appSDKCoordinator) private var coordinator
+    @Environment(\.locale) private var locale
 
     var body: some View {
         @Bindable var router = router
@@ -18,6 +19,7 @@ struct AppShellView: View {
                     }
                     Tab("Scan", systemImage: "viewfinder", value: .scan) {
                         ScanTabView(path: $router.scanPath)
+                            .id(locale.identifier)
                     }
                     Tab("Profile", systemImage: "person.crop.circle", value: .settings) {
                         SettingsTabView(path: $router.settingsPath)
@@ -29,6 +31,7 @@ struct AppShellView: View {
                         .tabItem { Label("Collection", systemImage: "shippingbox") }
                         .tag(AppTab.collection)
                     ScanTabView(path: $router.scanPath)
+                        .id(locale.identifier)
                         .tabItem { Label("Scan", systemImage: "viewfinder") }
                         .tag(AppTab.scan)
                     SettingsTabView(path: $router.settingsPath)

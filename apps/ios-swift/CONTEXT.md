@@ -36,6 +36,18 @@ resources, and was uploaded to Apple for App Store Connect/TestFlight. Its
 dSYM UUID is `B3BF4D4B-BF24-3F4C-9FA9-26D24D16FB05`; physical-device audio
 verification remains pending.
 
+## Scanner mode localization and layout — 2026-09-18
+
+The Single/Bulk segmented picker now resolves its labels from the live SwiftUI
+locale instead of the launch-time UserDefaults value. This keeps the mode bar
+in sync when users change language in Settings. Scanner-specific Bulk
+translations replace misleading cargo wording, and the lightning overlay now
+measures the localized label and clamps its position inside the segment. The
+German-to-Simplified-Chinese switch regression, all supported Bulk title
+translations, German spacing, Arabic RTL layout, and the existing scanner
+geometry regression pass on the small simulator. The source fix is not yet in
+a new TestFlight build.
+
 ## Reliability check follow-up — 2026-09-16
 
 The CI UI regressions are covered independently. Dense bulk pricing layout

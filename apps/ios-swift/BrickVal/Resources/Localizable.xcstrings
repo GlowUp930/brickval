@@ -11890,13 +11890,13 @@
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "مجمعة"
+            "value": "مسح جماعي"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schüttgut"
+            "value": "Mehrfachscan"
           }
         },
         "en": {
@@ -11908,49 +11908,49 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Granel"
+            "value": "Lote"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vrac"
+            "value": "Lot"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "बल्क"
+            "value": "बल्क स्कैन"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "In blocco"
+            "value": "Lotto"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "バルク"
+            "value": "一括"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "대량"
+            "value": "일괄"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bulk"
+            "value": "Batch"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Em massa"
+            "value": "Em lote"
           }
         },
         "zh-Hans": {
@@ -31562,7 +31562,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Minifigurines"
+            "value": "Minifigurine"
           }
         },
         "hi": {
@@ -31580,7 +31580,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ミニフィギュア"
+            "value": "ミニフィグ"
           }
         },
         "ko": {

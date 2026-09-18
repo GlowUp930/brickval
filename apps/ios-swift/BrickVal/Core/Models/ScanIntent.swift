@@ -6,11 +6,19 @@ enum ScanIntent: String, CaseIterable, Identifiable, Sendable {
 
     var id: Self { self }
 
-    var title: String {
+    var titleResource: LocalizedStringResource {
         switch self {
-        case .single: BrickValLocalization.localized("Minifigure")
-        case .bulk: BrickValLocalization.localized("Bulk")
+        case .single: "Minifigure"
+        case .bulk: "Bulk"
         }
+    }
+
+    var title: String {
+        BrickValLocalization.localized(titleResource)
+    }
+
+    func title(locale: Locale) -> String {
+        BrickValLocalization.localized(titleResource, locale: locale)
     }
 
     var iconName: String {

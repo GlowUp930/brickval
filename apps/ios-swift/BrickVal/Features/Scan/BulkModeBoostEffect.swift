@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct BulkModeBoostEffect: View {
     enum Variant: String, CaseIterable, Identifiable, Sendable {
@@ -180,28 +181,34 @@ struct BulkModeBoostEffect: View {
 }
 
 struct ScanModePickerLabel: View {
+    @Environment(\.locale) private var locale
     let intent: ScanIntent
 
     @ViewBuilder
     var body: some View {
         switch intent {
         case .single:
-            Label(intent.title, systemImage: intent.iconName)
+            Label(intent.title(locale: locale), systemImage: intent.iconName)
         case .bulk:
-            Text(intent.title)
+            Text(intent.title(locale: locale))
         }
     }
 }
 
 struct BulkModePickerIconOverlay: View {
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(\.locale) private var locale
 
     var body: some View {
         GeometryReader { proxy in
             BulkLightningBoltIcon()
                 .frame(width: 15, height: 15)
                 .position(
-                    x: proxy.size.width * (layoutDirection == .leftToRight ? 0.75 : 0.25) - 28,
+                    x: BulkModePickerLayout.iconCenterX(
+                        controlWidth: proxy.size.width,
+                        layoutDirection: layoutDirection,
+                        label: ScanIntent.bulk.title(locale: locale)
+                    ),
                     y: proxy.size.height * 0.5
                 )
         }
@@ -209,6 +216,25 @@ struct BulkModePickerIconOverlay: View {
         .frame(maxWidth: 340, minHeight: 56, maxHeight: 56)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+}
+
+enum BulkModePickerLayout {
+    static func iconCenterX(
+        controlWidth: CGFloat,
+        layoutDirection: LayoutDirection,
+        label: String,
+        iconWidth: CGFloat = 15,
+        gap: CGFloat = 8
+    ) -> CGFloat {
+        let segmentCenter = controlWidth * (layoutDirection == .leftToRight ? 0.75 : 0.25)
+        let segmentHalfWidth = controlWidth * 0.25
+        let labelWidth = (label as NSString).size(
+            withAttributes: [.font: UIFont.preferredFont(forTextStyle: .body)]
+        ).width
+        let desiredOffset = labelWidth * 0.5 + iconWidth * 0.5 + gap
+        let maximumOffset = max(segmentHalfWidth - iconWidth * 0.5 - 8, 0)
+        return segmentCenter - min(desiredOffset, maximumOffset)
     }
 }
 

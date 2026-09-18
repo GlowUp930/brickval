@@ -26,6 +26,18 @@ UUID `51B7B281-505A-3B01-9E02-5AA9615A662F`. Xcode Organizer reports the build
 as **Uploaded to Apple** for App Store Connect/TestFlight. Apple processing is
 asynchronous; physical-device audio and motion verification remains pending.
 
+## Scanner mode localization and layout — 2026-09-18
+
+The Single/Bulk picker now resolves its labels from the live SwiftUI locale, so
+an in-app language change updates the mode bar together with the rest of the
+scanner. Scanner-specific translations replace misleading cargo wording and
+awkward bulk labels. The lightning mark is measured against the localized Bulk
+label and clamped inside its segment, preventing overlap in long labels and
+RTL layouts. The exact German-to-Simplified-Chinese switch, all supported Bulk
+translations, German spacing, Arabic RTL layout, and the existing scanner
+geometry regression pass on the small simulator. This fix is source-complete
+but needs a new TestFlight build before device rollout.
+
 ## Reliability check follow-up — 2026-09-16
 
 The failed GitHub reliability run was reproduced and its two UI failures were
