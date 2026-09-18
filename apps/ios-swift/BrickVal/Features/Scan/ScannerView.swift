@@ -21,6 +21,7 @@ struct ScannerView: View {
     @State private var scanOperation: Task<Void, Never>?
     @State private var purchaseMessage: String?
     @State private var bulkModeBoostTrigger = 0
+    @State private var isShowingBulkFillAnimationDrafts = false
     private let runsCameraLoop: Bool
 
     init(api: BrickValAPIClient = .live()) {
@@ -33,6 +34,7 @@ struct ScannerView: View {
         let isDenseBulkCompletedDemo = ProcessInfo.processInfo.arguments.contains("-showDenseBulkCompletedDemo")
         let isLockedBulkPreviewDemo = ProcessInfo.processInfo.arguments.contains("-showLockedBulkPreviewDemo")
         let isFailedScanDemo = ProcessInfo.processInfo.arguments.contains("-showScannerFailureDemo")
+        let isBulkFillAnimationDrafts = ProcessInfo.processInfo.arguments.contains("-showBulkFillAnimationDrafts")
         if isWideBulkProcessingLayoutDemo,
            let imageData = BulkRecoveryDemoFixture.wideProcessingImageData {
             store.configureBulkProcessingLayoutDemo(imageData: imageData)
@@ -58,14 +60,17 @@ struct ScannerView: View {
         if ProcessInfo.processInfo.arguments.contains("-showBulkGatingDemo") {
             store.intent = .bulk
         }
+        _isShowingBulkFillAnimationDrafts = State(initialValue: isBulkFillAnimationDrafts)
         runsCameraLoop = !isProcessingLayoutDemo &&
             !isWideBulkProcessingLayoutDemo &&
             !isBulkRecoveryDemo &&
             !isDenseBulkRecoveryDemo &&
             !isDenseBulkCompletedDemo &&
             !isLockedBulkPreviewDemo &&
-            !isFailedScanDemo
+            !isFailedScanDemo &&
+            !isBulkFillAnimationDrafts
 #else
+        _isShowingBulkFillAnimationDrafts = State(initialValue: false)
         runsCameraLoop = true
 #endif
         _store = State(initialValue: store)
@@ -88,9 +93,7 @@ struct ScannerView: View {
             .padding(.bottom, 4)
             .overlay {
                 if store.intent == .bulk, bulkModeBoostTrigger > 0 {
-                    BulkModeBoostEffect(trigger: bulkModeBoostTrigger)
-                    .frame(maxWidth: .infinity, minHeight: 78, maxHeight: 78)
-                    .offset(y: 2)
+                    BulkModeBoostEffect(trigger: bulkModeBoostTrigger, variant: .sweep)
                 }
             }
 
@@ -419,6 +422,11 @@ struct ScannerView: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: store.successMessage)
+#if DEBUG
+        .fullScreenCover(isPresented: $isShowingBulkFillAnimationDrafts) {
+            BulkModeFillDraftsView()
+        }
+#endif
         .alert("BrickValue Pro", isPresented: purchaseMessageBinding) {
             Button("OK", role: .cancel) { purchaseMessage = nil }
         } message: {

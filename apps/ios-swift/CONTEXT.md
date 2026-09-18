@@ -1,15 +1,23 @@
 # BrickVal Native iOS Context
 
-## Bulk mode boost — 2026-09-18
+## Bulk fill drafts and audible feedback — 2026-09-18
 
-The scanner now plays the provided `bulk-mode-power-up.mp3` when the user
-successfully changes the mode picker from Single to Bulk. The final transient
-overlay is the Orbit pulse direction, anchored to the Bulk segment of the
-56-point control. Three compact accent rings expand while the stack icon lifts
-slightly. The overlay is transform/opacity-only, keeps the scanner geometry
-stable, hides its decoration from VoiceOver, and uses a short crossfade under
-Reduce Motion. The sound uses the existing ambient/mix-with-others player, so it
-respects the system silent state.
+The scanner now fills the actual Bulk segment from left to right when the user
+changes from Single to Bulk. Solid Sweep is the current production draft;
+Scanline Sweep and Charge Meter are available in the DEBUG gallery launched
+with `-showBulkFillAnimationDrafts`. The overlay is direction-aware for RTL
+localizations, keeps the 56-point segmented control geometry unchanged, uses
+composited fill/opacity/transform work, hides decoration from VoiceOver, and
+reduces to a short crossfade under Reduce Motion.
+
+The provided `bulk-mode-power-up.mp3` still plays on the successful mode
+change. Each resolved bulk minifigure plays the supplied
+`bulk-result-cash-register.mp3` when its reveal commits, while the existing
+final summary cue remains separate. Active players are retained so rapid
+results do not cancel one another. The sound session now uses playback plus
+mixing so feedback remains audible when the iPhone silent switch is enabled;
+missing resources, rejected playback, and session failures are logged for
+device verification.
 
 The small-simulator Debug build, native unit suite, and focused scanner checks
 pass. Physical-device audio and release sign-off remain pending.

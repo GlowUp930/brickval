@@ -1,19 +1,25 @@
 # Scan Result Card Visual QA
 
-## Bulk mode boost — 2026-09-18
+## Bulk fill drafts and audible feedback — 2026-09-18
 
-The Single → Bulk mode handoff now has a transient power-up layer and uses the
-provided `bulk-mode-power-up.mp3` effect only after a successful mode change.
-The final visual direction is Orbit pulse: three compact accent rings expand
-from the Bulk segment while the stack icon lifts slightly. The overlay uses
-transforms and opacity only, does not change scanner layout, hides itself from
-VoiceOver because the segmented control remains the source of truth, and
-reduces to a short crossfade under Reduce Motion. The MP3 is played through the
-existing ambient/mix-with-others sound service so the system silent state still
-controls it.
+The Single → Bulk handoff now uses a left-to-right green fill over the actual
+Bulk segment. Solid Sweep is the current production draft; Scanline Sweep and
+Charge Meter are available together in the DEBUG gallery launched with
+`-showBulkFillAnimationDrafts`. The overlay is direction-aware for RTL
+localizations, does not change scanner layout, hides itself from VoiceOver,
+uses composited fill/opacity/transform work, and reduces to a short crossfade
+under Reduce Motion.
+
+The provided `bulk-mode-power-up.mp3` plays only after a successful mode
+change. Each resolved bulk result plays `bulk-result-cash-register.mp3` once
+when it commits, while the final-summary `cash-register-kaching.aac` cue stays
+separate. Active players are retained so rapid results do not cut one another
+off. The audio session now uses playback plus mixing so cues remain audible
+when the iPhone silent switch is enabled; resource, session, and play failures
+are logged for device verification.
 
 The Debug app build, native unit suite, and focused scanner checks pass on the
-BrickVal Small iPhone simulator. Physical-device audio and the final release
+BrickVal Small iPhone simulator. Physical-device audio and final release
 sign-off remain open.
 
 Bulk result reveals also play the supplied `bulk-result-cash-register.mp3` once

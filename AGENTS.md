@@ -1,12 +1,21 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
-## Bulk result audio — 2026-09-18
+## Bulk fill drafts and audible feedback — 2026-09-18
 
-Each resolved minifigure in the progressive bulk reveal now plays the supplied
+The Single → Bulk handoff now uses a left-to-right green fill over the actual
+Bulk segment. The current production draft is Solid Sweep; Scanline Sweep and
+Charge Meter are available together in the DEBUG gallery launched with
+`-showBulkFillAnimationDrafts`. The effect is direction-aware for RTL
+localizations, uses composited fill/opacity/transform work only, keeps the
+segmented control layout unchanged, and hides its decoration from VoiceOver.
+
+Each resolved minifigure in the progressive bulk reveal plays the supplied
 `bulk-result-cash-register.mp3` once when its result commits. The existing
 single-scan/final-summary cue remains separate, and the sound service retains
-overlapping players so rapid bulk results do not cut one another off. The
-Single → Bulk Orbit pulse and its `bulk-mode-power-up.mp3` cue remain enabled.
+overlapping players so rapid bulk results do not cut one another off. The audio
+session now uses playback plus mixing so scan feedback remains audible when
+the iPhone silent switch is enabled; missing resources, rejected playback,
+and session failures are logged for device verification.
 
 The signed Release archive `/tmp/BrickVal186-bulk-audio.xcarchive` is version
 1.0.10 (186), contains both audio resources, and has dSYM UUID
