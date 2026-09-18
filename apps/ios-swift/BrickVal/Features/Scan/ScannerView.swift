@@ -80,8 +80,8 @@ struct ScannerView: View {
         @Bindable var store = store
         VStack(spacing: 0) {
             Picker("Scan mode", selection: scanIntentBinding) {
-                ForEach(ScanIntent.allCases) {
-                    Label($0.title, systemImage: $0.iconName).tag($0)
+                ForEach(ScanIntent.allCases) { intent in
+                    ScanModePickerLabel(intent: intent).tag(intent)
                 }
             }
             .pickerStyle(.segmented)
@@ -92,8 +92,11 @@ struct ScannerView: View {
             .padding(.top, 8)
             .padding(.bottom, 4)
             .overlay {
+                BulkModePickerIconOverlay()
+            }
+            .overlay {
                 if store.intent == .bulk, bulkModeBoostTrigger > 0 {
-                    BulkModeBoostEffect(trigger: bulkModeBoostTrigger, variant: .sweep)
+                    BulkModeBoostEffect(trigger: bulkModeBoostTrigger, variant: .smoothCharge)
                 }
             }
 

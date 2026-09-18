@@ -2,13 +2,15 @@
 
 ## Bulk fill drafts and audible feedback — 2026-09-18
 
-The Single → Bulk handoff now uses a left-to-right green fill over the actual
-Bulk segment. Solid Sweep is the current production draft; Scanline Sweep and
-Charge Meter are available together in the DEBUG gallery launched with
-`-showBulkFillAnimationDrafts`. The overlay is direction-aware for RTL
-localizations, does not change scanner layout, hides itself from VoiceOver,
-uses composited fill/opacity/transform work, and reduces to a short crossfade
-under Reduce Motion.
+The Single → Bulk handoff now uses a smooth left-to-right green charge from the
+Single segment into Bulk. Smooth Charge is the current production draft;
+Lightning Lead and Power Bands are available together in the DEBUG gallery
+launched with `-showBulkFillAnimationDrafts`. The supplied Icons8 lightning SVG
+is compiled as the `BulkLightningBolt` vector asset and is overlaid to the left
+of the Bulk label. The effect is direction-aware for RTL localizations, does
+not change scanner layout, hides itself from VoiceOver, uses composited
+fill/opacity/transform work, and reduces to a short crossfade under Reduce
+Motion.
 
 The provided `bulk-mode-power-up.mp3` plays only after a successful mode
 change. Each resolved bulk result plays `bulk-result-cash-register.mp3` once

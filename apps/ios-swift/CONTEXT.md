@@ -2,10 +2,12 @@
 
 ## Bulk fill drafts and audible feedback — 2026-09-18
 
-The scanner now fills the actual Bulk segment from left to right when the user
-changes from Single to Bulk. Solid Sweep is the current production draft;
-Scanline Sweep and Charge Meter are available in the DEBUG gallery launched
-with `-showBulkFillAnimationDrafts`. The overlay is direction-aware for RTL
+The scanner now uses a smooth left-to-right green charge from Single into the
+Bulk segment when the user switches modes. Smooth Charge is the current
+production draft; Lightning Lead and Power Bands are available in the DEBUG
+gallery launched with `-showBulkFillAnimationDrafts`. The supplied Icons8
+lightning SVG is compiled as the `BulkLightningBolt` vector asset and sits to
+the left of the Bulk label. The overlay is direction-aware for RTL
 localizations, keeps the 56-point segmented control geometry unchanged, uses
 composited fill/opacity/transform work, hides decoration from VoiceOver, and
 reduces to a short crossfade under Reduce Motion.

@@ -2,25 +2,25 @@ import SwiftUI
 
 struct BulkModeBoostEffect: View {
     enum Variant: String, CaseIterable, Identifiable, Sendable {
-        case sweep
-        case scanline
-        case meter
+        case smoothCharge
+        case lightningLead
+        case powerBands
 
         var id: Self { self }
 
         var title: String {
             switch self {
-            case .sweep: "Solid sweep"
-            case .scanline: "Scanline sweep"
-            case .meter: "Charge meter"
+            case .smoothCharge: "Smooth charge"
+            case .lightningLead: "Lightning lead"
+            case .powerBands: "Power bands"
             }
         }
 
         var detail: String {
             switch self {
-            case .sweep: "One clean green wash across Bulk."
-            case .scanline: "A green charge with a moving edge."
-            case .meter: "Five compact stages fill in sequence."
+            case .smoothCharge: "One continuous transfer from Single into Bulk."
+            case .lightningLead: "The bolt leads the charge into the new mode."
+            case .powerBands: "Three smooth bands give the switch extra thrust."
             }
         }
     }
@@ -34,7 +34,7 @@ struct BulkModeBoostEffect: View {
     @State private var progress = 0.0
     @State private var opacity = 0.0
 
-    init(trigger: Int, variant: Variant = .sweep) {
+    init(trigger: Int, variant: Variant = .smoothCharge) {
         self.trigger = trigger
         self.variant = variant
     }
@@ -51,6 +51,9 @@ struct BulkModeBoostEffect: View {
                     y: proxy.size.height * 0.5
                 )
         }
+        // Keep the effect's drawing coordinates physical so an RTL locale
+        // still gets a real left-to-right charge inside the Bulk segment.
+        .environment(\.layoutDirection, .leftToRight)
         .frame(maxWidth: .infinity, minHeight: 56, maxHeight: 56)
         .opacity(opacity)
         .allowsHitTesting(false)
@@ -62,54 +65,87 @@ struct BulkModeBoostEffect: View {
 
     private var bulkSegmentFill: some View {
         GeometryReader { proxy in
-            let fillWidth = max(0, proxy.size.width * progress)
+            let inset: CGFloat = 2
+            let availableWidth = max(proxy.size.width - inset * 2, 0)
+            let fillWidth = availableWidth * progress
+            let fillHeight = max(proxy.size.height - inset * 2, 0)
             let green = BrickValStyle.Semantic.valuePositive
+            let edgeX = min(max(inset + fillWidth, inset), proxy.size.width - inset)
 
-            ZStack(alignment: .leading) {
+            ZStack {
                 switch variant {
-                case .sweep:
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(green.opacity(0.66))
-                        .frame(width: fillWidth)
-                    sweepEdge(at: fillWidth, height: proxy.size.height, color: green)
+                case .smoothCharge:
+                    chargeShape(
+                        width: fillWidth,
+                        height: fillHeight,
+                        x: inset + fillWidth * 0.5,
+                        y: proxy.size.height * 0.5,
+                        color: green.opacity(0.68)
+                    )
+                    chargeEdge(at: edgeX, in: proxy.size, color: green)
 
-                case .scanline:
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(green.opacity(0.48))
-                        .frame(width: fillWidth)
-                    sweepEdge(at: fillWidth, height: proxy.size.height, color: .white)
-                        .shadow(color: green.opacity(0.9), radius: 7)
+                case .lightningLead:
+                    chargeShape(
+                        width: fillWidth,
+                        height: fillHeight,
+                        x: inset + fillWidth * 0.5,
+                        y: proxy.size.height * 0.5,
+                        color: green.opacity(0.52)
+                    )
+                    chargeEdge(at: edgeX, in: proxy.size, color: .white)
+                        .shadow(color: green.opacity(0.92), radius: 7)
+                    Image("BulkLightningBolt")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .foregroundStyle(.white)
+                        .frame(width: 18, height: 18)
+                        .scaleEffect(0.84 + progress * 0.16)
+                        .opacity(min(progress * 10, 1))
+                        .position(x: edgeX, y: proxy.size.height * 0.5)
 
-                case .meter:
-                    HStack(spacing: 3) {
-                        ForEach(0..<5, id: \.self) { index in
-                            let stageStart = Double(index) / 5
-                            let stageProgress = min(max((progress - stageStart) * 5, 0), 1)
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(green.opacity(0.16 + stageProgress * 0.58))
-                                .overlay(alignment: .leading) {
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .fill(green.opacity(0.72))
-                                        .frame(maxWidth: .infinity)
-                                        .scaleEffect(x: stageProgress, y: 1, anchor: .leading)
-                                }
-                        }
+                case .powerBands:
+                    ForEach(0..<3, id: \.self) { index in
+                        let bandProgress = min(
+                            max(progress * 1.2 - Double(index) * 0.1, 0),
+                            1
+                        )
+                        let bandHeight = max((fillHeight - 6) / 3, 4)
+                        let bandY = inset + bandHeight * 0.5 + CGFloat(index) * (bandHeight + 3)
+                        chargeShape(
+                            width: availableWidth * bandProgress,
+                            height: bandHeight,
+                            x: inset + availableWidth * bandProgress * 0.5,
+                            y: bandY,
+                            color: green.opacity(0.26 + bandProgress * 0.46)
+                        )
                     }
-                    .padding(.horizontal, 6)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    chargeEdge(at: edgeX, in: proxy.size, color: green.opacity(0.95))
                 }
             }
-            .padding(.horizontal, 2)
-            .padding(.vertical, 2)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         }
     }
 
-    private func sweepEdge(at x: CGFloat, height: CGFloat, color: Color) -> some View {
-        Rectangle()
-            .fill(color.opacity(0.9))
-            .frame(width: 1.5, height: max(height - 8, 0))
-            .offset(x: max(x - 1.5, 0))
+    private func chargeShape(
+        width: CGFloat,
+        height: CGFloat,
+        x: CGFloat,
+        y: CGFloat,
+        color: Color
+    ) -> some View {
+        RoundedRectangle(cornerRadius: 24, style: .continuous)
+            .fill(color)
+            .frame(width: max(width, 0), height: max(height, 0))
+            .position(x: x, y: y)
+    }
+
+    private func chargeEdge(at x: CGFloat, in size: CGSize, color: Color) -> some View {
+        Capsule()
+            .fill(color.opacity(0.92))
+            .frame(width: 1.5, height: max(size.height - 10, 0))
+            .position(x: x, y: size.height * 0.5)
     }
 
     private func play() async {
@@ -123,7 +159,7 @@ struct BulkModeBoostEffect: View {
             withAnimation(.easeOut(duration: 0.12)) {
                 opacity = 1
             }
-            try? await Task.sleep(for: .milliseconds(220))
+            try? await Task.sleep(for: .milliseconds(240))
             guard !Task.isCancelled else { return }
             withAnimation(.easeOut(duration: 0.12)) {
                 opacity = 0
@@ -131,15 +167,60 @@ struct BulkModeBoostEffect: View {
             return
         }
 
-        withAnimation(.easeOut(duration: 0.42)) {
+        withAnimation(.easeOut(duration: 0.44)) {
             progress = 1
             opacity = 1
         }
-        try? await Task.sleep(for: .milliseconds(470))
+        try? await Task.sleep(for: .milliseconds(490))
         guard !Task.isCancelled else { return }
         withAnimation(.easeOut(duration: 0.14)) {
             opacity = 0
         }
+    }
+}
+
+struct ScanModePickerLabel: View {
+    let intent: ScanIntent
+
+    @ViewBuilder
+    var body: some View {
+        switch intent {
+        case .single:
+            Label(intent.title, systemImage: intent.iconName)
+        case .bulk:
+            Text(intent.title)
+        }
+    }
+}
+
+struct BulkModePickerIconOverlay: View {
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    var body: some View {
+        GeometryReader { proxy in
+            BulkLightningBoltIcon()
+                .frame(width: 15, height: 15)
+                .position(
+                    x: proxy.size.width * (layoutDirection == .leftToRight ? 0.75 : 0.25) - 28,
+                    y: proxy.size.height * 0.5
+                )
+        }
+        .environment(\.layoutDirection, .leftToRight)
+        .frame(maxWidth: 340, minHeight: 56, maxHeight: 56)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct BulkLightningBoltIcon: View {
+    var body: some View {
+        Image("BulkLightningBolt")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 15, height: 15)
+            .foregroundStyle(.primary)
+            .accessibilityHidden(true)
     }
 }
 
@@ -155,7 +236,7 @@ struct BulkModeFillDraftsView: View {
                         .font(.title2.weight(.bold))
                         .foregroundStyle(BrickValStyle.Semantic.textPrimary)
 
-                    Text("Each version fills the Bulk segment from left to right. Tap Replay to watch it again.")
+                    Text("All three move smoothly from Single into Bulk. Tap Replay to watch each charge again.")
                         .font(.subheadline)
                         .foregroundStyle(BrickValStyle.Semantic.textSecondary)
 
@@ -174,6 +255,7 @@ struct BulkModeFillDraftsView: View {
                 }
             }
         }
+        .environment(\.layoutDirection, .leftToRight)
     }
 }
 
@@ -195,13 +277,16 @@ private struct BulkModeFillDraftCard: View {
             }
 
             Picker("Scan mode", selection: $selection) {
-                ForEach(ScanIntent.allCases) {
-                    Label($0.title, systemImage: $0.iconName).tag($0)
+                ForEach(ScanIntent.allCases) { intent in
+                    ScanModePickerLabel(intent: intent).tag(intent)
                 }
             }
             .pickerStyle(.segmented)
             .controlSize(.large)
             .frame(maxWidth: 340, minHeight: 56)
+            .overlay {
+                BulkModePickerIconOverlay()
+            }
             .overlay {
                 if selection == .bulk {
                     BulkModeBoostEffect(trigger: trigger, variant: variant)
