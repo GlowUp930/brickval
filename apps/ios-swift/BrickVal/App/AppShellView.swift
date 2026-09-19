@@ -6,6 +6,7 @@ struct AppShellView: View {
     @Environment(MonetizationStore.self) private var monetization
     @Environment(NotificationCoordinator.self) private var notifications
     @Environment(ProductFeedbackStore.self) private var feedback
+    @Environment(PreferencesStore.self) private var preferences
     @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.locale) private var locale
 
@@ -16,28 +17,40 @@ struct AppShellView: View {
                 TabView(selection: $router.selectedTab) {
                     Tab("Collection", systemImage: "shippingbox", value: .collection) {
                         CollectionTabView(path: $router.collectionPath)
+                            .environment(\.layoutDirection, contentLayoutDirection)
                     }
                     Tab("Scan", systemImage: "viewfinder", value: .scan) {
                         ScanTabView(path: $router.scanPath)
                             .id(locale.identifier)
+                            .environment(\.layoutDirection, contentLayoutDirection)
                     }
                     Tab("Profile", systemImage: "person.crop.circle", value: .settings) {
                         SettingsTabView(path: $router.settingsPath)
+                            .environment(\.layoutDirection, contentLayoutDirection)
                     }
                 }
+                // Keep product navigation order stable. Each tab reapplies the
+                // locale direction so Arabic content still lays out RTL.
+                .environment(\.layoutDirection, .leftToRight)
             } else {
                 TabView(selection: $router.selectedTab) {
                     CollectionTabView(path: $router.collectionPath)
+                        .environment(\.layoutDirection, contentLayoutDirection)
                         .tabItem { Label("Collection", systemImage: "shippingbox") }
                         .tag(AppTab.collection)
                     ScanTabView(path: $router.scanPath)
                         .id(locale.identifier)
+                        .environment(\.layoutDirection, contentLayoutDirection)
                         .tabItem { Label("Scan", systemImage: "viewfinder") }
                         .tag(AppTab.scan)
                     SettingsTabView(path: $router.settingsPath)
+                        .environment(\.layoutDirection, contentLayoutDirection)
                         .tabItem { Label("Profile", systemImage: "person.crop.circle") }
                         .tag(AppTab.settings)
                 }
+                // Keep product navigation order stable. Each tab reapplies the
+                // locale direction so Arabic content still lays out RTL.
+                .environment(\.layoutDirection, .leftToRight)
             }
         }
         .sheet(isPresented: subscriptionFallbackBinding) {
@@ -123,6 +136,10 @@ struct AppShellView: View {
                 }
             }
         )
+    }
+
+    private var contentLayoutDirection: LayoutDirection {
+        preferences.effectiveLanguage.isRightToLeft ? .rightToLeft : .leftToRight
     }
 
     private func consumePendingPurchase() {

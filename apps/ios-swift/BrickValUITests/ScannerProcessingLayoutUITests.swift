@@ -380,6 +380,57 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         english.tap()
     }
 
+    func testArabicKeepsBottomTabsInProductOrder() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-showSettingsRootDemo", "-brickval_language_override", "ar"]
+        app.launch()
+
+        let tabBar = app.tabBars.firstMatch
+        XCTAssertTrue(tabBar.waitForExistence(timeout: 5))
+
+        let collection = tabBar.buttons["المجموعة"]
+        let scan = tabBar.buttons["مسح"]
+        let profile = tabBar.buttons["الملف الشخصي"]
+        XCTAssertTrue(collection.waitForExistence(timeout: 3))
+        XCTAssertTrue(scan.waitForExistence(timeout: 3))
+        XCTAssertTrue(profile.waitForExistence(timeout: 3))
+
+        XCTAssertLessThan(collection.frame.minX, scan.frame.minX)
+        XCTAssertLessThan(scan.frame.minX, profile.frame.minX)
+    }
+
+    func testSwitchingToArabicKeepsBottomTabsInProductOrder() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-showSettingsRootDemo", "-brickval_language_override", "en"]
+        app.launch()
+
+        let languageRow = app.descendants(matching: .any)
+            .matching(identifier: "settings.language")
+            .firstMatch
+        XCTAssertTrue(languageRow.waitForExistence(timeout: 3))
+        languageRow.tap()
+
+        let arabic = app.buttons["العربية"].firstMatch
+        for _ in 0..<8 where !arabic.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(arabic.waitForExistence(timeout: 3))
+        XCTAssertTrue(arabic.isHittable)
+        arabic.tap()
+
+        let tabBar = app.tabBars.firstMatch
+        XCTAssertTrue(tabBar.waitForExistence(timeout: 5))
+        let collection = tabBar.buttons["المجموعة"]
+        let scan = tabBar.buttons["مسح"]
+        let profile = tabBar.buttons["الملف الشخصي"]
+        XCTAssertTrue(collection.waitForExistence(timeout: 3))
+        XCTAssertTrue(scan.waitForExistence(timeout: 3))
+        XCTAssertTrue(profile.waitForExistence(timeout: 3))
+
+        XCTAssertLessThan(collection.frame.minX, scan.frame.minX)
+        XCTAssertLessThan(scan.frame.minX, profile.frame.minX)
+    }
+
     func testScannerModeLabelsRefreshAfterLanguageSwitch() {
         let app = XCUIApplication()
         app.launchArguments = ["-showScannerDemo", "-brickval_language_override", "de"]

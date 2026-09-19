@@ -11,6 +11,17 @@ dSYM UUID is `615B7F6F-47FA-367B-8616-BF8DEF478C82`. Xcode uploaded the build
 successfully to App Store Connect/TestFlight, where Apple processing is now
 in progress. Physical-device verification remains pending.
 
+## Arabic tab navigation order — 2026-09-19
+
+Arabic correctly uses right-to-left layout inside each screen, but the global
+direction was also reversing the bottom `TabView` order. `AppShellView` now
+keeps the product navigation visually ordered Collection → Scan → Profile in
+every language while reapplying the locale direction to each tab's content.
+The new Arabic UI regression first reproduced the reversed order, then passed
+after the fix on the BrickVal Small iPhone simulator; the existing language
+switch and scan intent checks also pass. This source fix needs a new TestFlight
+build before device rollout.
+
 ## Bulk fill drafts and audible feedback — 2026-09-18
 
 The Single → Bulk handoff now uses the selected Lightning Lead treatment: a
