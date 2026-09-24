@@ -77,7 +77,6 @@ struct AppShellView: View {
             FeedbackSurveySheet(survey: survey)
         }
         .onAppear {
-            consumePendingPurchase()
             evaluateFeedback()
         }
         .onChange(of: router.selectedTab) { previous, selected in
@@ -91,7 +90,7 @@ struct AppShellView: View {
             )
         }
         .onChange(of: entitlements.pendingNewPurchase) { _, _ in
-            consumePendingPurchase()
+            evaluateFeedback()
         }
         .onChange(of: notifications.subscriptionState) { _, _ in
             evaluateFeedback()
@@ -151,6 +150,7 @@ struct AppShellView: View {
     }
 
     private func evaluateFeedback() {
+        consumePendingPurchase()
         feedback.evaluate(
             isPro: entitlements.isPro,
             subscriptionState: notifications.subscriptionState,

@@ -22,6 +22,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
     private(set) var showsSubscriptionFallback = false
     private(set) var paywallPresentationError: String?
     private(set) var offerCodeRedemptionState: OfferCodeRedemptionState = .idle
+    var purchaseRestrictionGuide: PurchaseRestrictionGuideContext?
 
     var superwallSeed: Int? {
         guard superwallConfigured else { return nil }
@@ -57,6 +58,11 @@ final class AppSDKCoordinator: SuperwallDelegate {
         self.offerCodeClient = offerCodeClient
         self.dismissPresentedPaywall = dismissPresentedPaywall
         analytics = PostHogAnalytics(apiKey: Self.configurationValue("PostHogAPIKey"))
+        entitlementStore.onProActivation = { [analytics] source, isTrial in
+            var properties: [String: Any] = ["activation_source": source]
+            properties["is_trial"] = isTrial
+            analytics.capture(PostHogEvent.proAccessActivated, properties: properties)
+        }
         let clerkKey = Self.configurationValue("ClerkPublishableKey")
         if let clerkKey {
             Clerk.configure(publishableKey: clerkKey)
@@ -104,11 +110,21 @@ final class AppSDKCoordinator: SuperwallDelegate {
                 }
             )
             purchaseController = controller
+            controller.onPurchaseRestriction = { [weak self] _, placement in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    await self.dismissPresentedPaywall()
+                    self.purchaseRestrictionGuide = PurchaseRestrictionGuideContext(placement: placement)
+                }
+            }
             if self.offerCodeClient == nil {
                 self.offerCodeClient = controller
             }
             Purchases.configure(withAPIKey: revenueCatKey)
             purchasesConfigured = true
+            if let distinctID = analytics.distinctID {
+                Purchases.shared.attribution.setAttributes(["$posthogUserId": distinctID])
+            }
             if let superwallKey {
                 Superwall.configure(apiKey: superwallKey, purchaseController: controller)
                 // Superwall otherwise reads the device-wide locale list. Keep
@@ -130,6 +146,11 @@ final class AppSDKCoordinator: SuperwallDelegate {
 
     func presentUpgrade() {
         _ = presentUpgrade(placement: .subscriptionUpgrade)
+    }
+
+    func retryAfterPurchaseRestriction(placement: String?) {
+        guard AppStore.canMakePayments else { return }
+        _ = presentUpgrade(placement: placement.flatMap(ProPlacement.init(rawValue:)) ?? .subscriptionUpgrade)
     }
 
     @discardableResult
@@ -272,7 +293,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
         do {
             let isPro = try await offerCodeClient.syncPurchases()
             if isPro {
-                entitlementStore.update(isPro: true)
+                entitlementStore.update(isPro: true, source: "offer_code")
                 offerCodeRedemptionState = .idle
             } else {
                 offerCodeRedemptionState = .failed("We couldn't confirm Pro access yet. Try checking again or restore purchases.")
@@ -283,13 +304,17 @@ final class AppSDKCoordinator: SuperwallDelegate {
     }
 
     func didDismissPaywall(withInfo paywallInfo: PaywallInfo) {
+        let paywallViewID = purchaseController?.paywallViewID
         purchaseController?.setPurchasePlacement(nil)
+        purchaseController?.clearPaywallViewID()
+        var properties: [String: Any] = [
+            "placement": String(describing: paywallInfo.presentedByPlacementWithName),
+            "close_reason": String(describing: paywallInfo.closeReason),
+        ]
+        properties["paywall_view_id"] = paywallViewID
         analytics.capture(
             PostHogEvent.paywallDismissed,
-            properties: [
-                "placement": String(describing: paywallInfo.presentedByPlacementWithName),
-                "close_reason": String(describing: paywallInfo.closeReason),
-            ]
+            properties: properties
         )
         guard let pendingManualDismissal,
               pendingManualDismissalPlacement?.rawValue == paywallInfo.presentedByPlacementWithName else {
@@ -323,7 +348,8 @@ final class AppSDKCoordinator: SuperwallDelegate {
         guard purchasesConfigured else { return }
         let info = try await Purchases.shared.restorePurchases()
         let isPro = info.entitlements["pro"]?.isActive == true
-        entitlementStore.update(isPro: isPro)
+        entitlementStore.update(isPro: isPro, source: "restore",
+                                isTrial: info.entitlements["pro"].map { $0.periodType == .trial })
         if let purchaseController {
             purchaseController.startSyncing()
         }
@@ -353,6 +379,9 @@ final class AppSDKCoordinator: SuperwallDelegate {
             }
             if superwallConfigured { Superwall.shared.reset() }
         }
+        if let distinctID = analytics.distinctID {
+            Purchases.shared.attribution.setAttributes(["$posthogUserId": distinctID])
+        }
     }
 
     func synchronizeServerEntitlement() async {
@@ -360,7 +389,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
         guard let result = try? await apiClient.syncSubscription(), result.verified, result.isPro else {
             return
         }
-        entitlementStore.update(isPro: true)
+        entitlementStore.update(isPro: true, source: "server_sync")
     }
 
     private func resolveAndRegister(
@@ -438,11 +467,14 @@ final class AppSDKCoordinator: SuperwallDelegate {
         let presentationHandler = PaywallPresentationHandler()
         presentationHandler.onPresent { [weak self] _ in
             Task { @MainActor [weak self] in
+                let paywallViewID = UUID().uuidString
+                self?.purchaseController?.setPaywallViewID(paywallViewID)
                 self?.analytics.capture(
                     PostHogEvent.paywallPresented,
                     properties: [
                         "placement": placement.rawValue,
                         "source_placement": (params?["source_placement"] as? String) ?? placement.rawValue,
+                        "paywall_view_id": paywallViewID,
                     ]
                 )
                 self?.showsSubscriptionFallback = false
@@ -486,6 +518,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
             ]
         )
         purchaseController?.setPurchasePlacement(nil)
+        purchaseController?.clearPaywallViewID()
         pendingManualDismissal = nil
         pendingManualDismissalPlacement = nil
         showsSubscriptionFallback = false

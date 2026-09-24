@@ -2,6 +2,50 @@ import XCTest
 
 @MainActor
 final class ScannerProcessingLayoutUITests: XCTestCase {
+    func testPhotoGuideShowsSeamlessExamplesAndCanDismiss() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-showScannerPhotoGuideDemo", "-brickval_language_override", "en"]
+        app.launch()
+
+        let headline = app.staticTexts["Scan fails? Try these!"]
+        XCTAssertTrue(headline.waitForExistence(timeout: 4))
+        let good = app.images.matching(NSPredicate(format: "label BEGINSWITH %@", "Good:")).firstMatch
+        let avoid = app.images.matching(NSPredicate(format: "label BEGINSWITH %@", "Avoid:")).firstMatch
+        XCTAssertTrue(good.exists)
+        XCTAssertTrue(avoid.exists)
+        XCTAssertTrue(app.buttons["scanner.photoGuide.retake"].isHittable)
+        XCTAssertTrue(app.buttons["scanner.photoGuide.library"].exists)
+        XCTAssertFalse(app.buttons["scanner.retry"].isHittable)
+
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Photo guide with edge-to-edge examples"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+
+        app.buttons["scanner.photoGuide.close"].tap()
+        XCTAssertTrue(headline.waitForNonExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["scanner.retry"].isHittable)
+        XCTAssertTrue(app.buttons["scanner.photoTips"].isHittable)
+    }
+
+    func testPhotoGuideLargeArabicTextKeepsRecoveryAvailable() {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-showScannerPhotoGuideDemo",
+            "-brickval_language_override", "ar",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL",
+        ]
+        app.launch()
+
+        XCTAssertTrue(app.buttons["scanner.photoGuide.close"].waitForExistence(timeout: 4))
+        let retake = app.buttons["scanner.photoGuide.retake"]
+        for _ in 0..<4 where !retake.isHittable { app.swipeUp() }
+        XCTAssertTrue(retake.isHittable)
+        let library = app.buttons["scanner.photoGuide.library"]
+        for _ in 0..<4 where !library.isHittable { app.swipeUp() }
+        XCTAssertTrue(library.isHittable)
+    }
+
     func testFailedScanRetryRespondsImmediately() {
         let app = XCUIApplication()
         app.launchArguments = ["-showScannerFailureDemo", "-brickval_language_override", "en"]
@@ -154,7 +198,7 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
 
     func testCapturedImageDoesNotExpandScannerIntoAdjacentControls() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showScannerProcessingLayoutDemo"]
+        app.launchArguments = ["-showScannerProcessingLayoutDemo", "-brickval_language_override", "en"]
         app.launch()
 
         let modePicker = app.segmentedControls["scanner.modePicker"]
@@ -175,7 +219,7 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
 
     func testSingleScanExplainsAveragePriceAfterProcessingPause() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showScannerProcessingLayoutDemo"]
+        app.launchArguments = ["-showScannerProcessingLayoutDemo", "-brickval_language_override", "en"]
         app.launch()
 
         let status = app.descendants(matching: .any)
@@ -190,7 +234,7 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
 
     func testWideBulkProcessingFitsPhotoAndStatusInsideScannerStage() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showWideBulkProcessingLayoutDemo"]
+        app.launchArguments = ["-showWideBulkProcessingLayoutDemo", "-brickval_language_override", "en"]
         app.launch()
 
         let cameraStage = app.otherElements["scanner.cameraStage"]
@@ -210,7 +254,7 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
 
     func testBulkCorrectionUsesDetectedFigureContext() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showBulkRecoveryDemo"]
+        app.launchArguments = ["-showBulkRecoveryDemo", "-brickval_language_override", "en"]
         app.launch()
 
         // The production reveal can spend the maximum interval on each of
@@ -241,7 +285,7 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
 
     func testBulkRevealUsesOneTotalAndThenOneCompletedSummary() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showBulkRecoveryDemo"]
+        app.launchArguments = ["-showBulkRecoveryDemo", "-brickval_language_override", "en"]
         app.launch()
 
         let revealTotal = app.descendants(matching: .any).matching(identifier: "bulkReveal.total")
@@ -271,7 +315,7 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
 
     func testBulkResolvedPriceRemainsAnchoredAfterRevealCompletes() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showBulkRecoveryDemo"]
+        app.launchArguments = ["-showBulkRecoveryDemo", "-brickval_language_override", "en"]
         app.launch()
 
         // Two entries at the production maximum step interval, plus the
@@ -302,7 +346,7 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
 
     func testDenseBulkPricesKeepEveryFigureVisible() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showDenseBulkCompletedDemo"]
+        app.launchArguments = ["-showDenseBulkCompletedDemo", "-brickval_language_override", "en"]
         app.launch()
 
         let completedSummary = app.descendants(matching: .any).matching(identifier: "bulkResults.summary").firstMatch
@@ -336,7 +380,7 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         // Keep the dense 60-item fixture dedicated to layout coverage. This
         // check exercises the production reveal schedule without coupling
         // completion to the slowest accessibility rendering of 60 labels.
-        app.launchArguments = ["-showBulkRecoveryDemo"]
+        app.launchArguments = ["-showBulkRecoveryDemo", "-brickval_language_override", "en"]
         app.launch()
 
         // Two entries at the production maximum step interval, plus the
@@ -357,7 +401,7 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
 
     func testProfileLanguageCanBeChangedInsideTheApp() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showSettingsRootDemo"]
+        app.launchArguments = ["-showSettingsRootDemo", "-brickval_language_override", "en"]
         app.launch()
 
         let languageRow = app.descendants(matching: .any)
@@ -481,7 +525,7 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
 
     func testProfileCurrencyCanBeChangedInsideTheApp() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showSettingsRootDemo"]
+        app.launchArguments = ["-showSettingsRootDemo", "-brickval_language_override", "en"]
         app.launch()
 
         let currencyRow = app.descendants(matching: .any)
@@ -502,21 +546,25 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         XCTAssertTrue(systemDefault.isSelected)
     }
 
-    func testProductionRootShowsNormalizedPurchaseFailure() {
+    func testProductionRootShowsPurchaseRestrictionGuide() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showPurchaseFailureRootDemo"]
+        app.launchArguments = [
+            "-AppleLanguages", "(en)",
+            "-AppleLocale", "en_US",
+            "-brickval_language_override", "en",
+            "-showPurchaseFailureRootDemo",
+        ]
         app.launch()
 
-        let alert = app.alerts.firstMatch
-        XCTAssertTrue(alert.waitForExistence(timeout: 5))
-        XCTAssertGreaterThanOrEqual(alert.staticTexts.count, 2)
-        let alertText = alert.staticTexts.allElementsBoundByIndex.map(\.label).joined(separator: " ")
-        XCTAssertFalse(alertText.contains("The device or user is not allowed to make the purchase."))
+        XCTAssertTrue(app.staticTexts["Let's check purchase settings"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Allow in-app purchases"].exists)
+        XCTAssertTrue(app.buttons["Check again"].exists)
+        XCTAssertFalse(app.staticTexts["The device or user is not allowed to make the purchase."].exists)
     }
 
     func testLockedBulkPreviewRevealsPlaceholdersAndRoutesToReferrals() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showLockedBulkPreviewDemo"]
+        app.launchArguments = ["-showLockedBulkPreviewDemo", "-brickval_language_override", "en"]
         app.launch()
 
         XCTAssertTrue(app.otherElements["bulkPreview.locked"].waitForExistence(timeout: 3))

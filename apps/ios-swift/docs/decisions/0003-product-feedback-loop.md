@@ -16,6 +16,12 @@ All surveys are optional and dismissible. The priority is cancellation, then pos
 
 `ProductFeedbackStore` persists installation identity, cooldowns, handled purchase contexts, and cancellation events in `UserDefaults`. It receives successful scan history from `MonetizationStore` and subscription state from RevenueCat. Submissions use `/api/mobile/feedback/surveys`, are validated server-side, and are stored in the private Supabase `product_feedback` table with a unique dedupe key.
 
+The cancellation survey requires RevenueCat's `unsubscribeDetectedAt` while Pro
+is still active. `willRenew == false` alone is insufficient because it also
+describes billing issues and other nonrenewing access. A fresh purchase's
+post-purchase feedback takes priority; completing or skipping it starts the
+normal 30-day survey cooldown.
+
 Only product-interaction answers and coarse context are stored: survey type, selected answers, optional free text, cohort, plan/trial state, app build, usage count, and anonymous or signed-in identifier. Scan images, collection data, and contact details are excluded. Submission failures never block access or Pro entitlement.
 
 ## Review guardrails

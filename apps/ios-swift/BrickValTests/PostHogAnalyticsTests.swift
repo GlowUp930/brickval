@@ -6,7 +6,7 @@ import Testing
 struct PostHogAnalyticsTests {
     @Test("interaction event names and schema stay stable")
     func interactionEventContractStaysStable() {
-        #expect(PostHogAnalytics.schemaVersion == 4)
+        #expect(PostHogAnalytics.schemaVersion == 5)
         #expect(PostHogEvent.tabSelected == "tab_selected")
         #expect(PostHogEvent.scanShutterTapped == "scan_shutter_tapped")
         #expect(PostHogEvent.scanTryAgainTapped == "scan_try_again_tapped")

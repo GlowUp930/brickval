@@ -9,6 +9,49 @@ import Testing
 struct PurchaseAttemptTests {
     private let productID = "com.brickval.app.pro.yearly"
 
+    @Test func successfulPurchaseIsRecordedBeforeSubscriptionObserversRun() async {
+        let defaults = UserDefaults(suiteName: "PurchaseAttemptTests.\(UUID())")!
+        let entitlements = BrickVal.EntitlementStore(defaults: defaults)
+        let center = PurchaseObservationCenter()
+        let notifications = NotificationCoordinator(center: center, defaults: defaults)
+        var pendingWhenSubscriptionUpdated = false
+        center.onRemove = {
+            pendingWhenSubscriptionUpdated = entitlements.pendingNewPurchase?.productID == productID
+        }
+        let controller = RevenueCatPurchaseController(
+            entitlementStore: entitlements,
+            notificationCoordinator: notifications,
+            publishSubscription: { _ in }
+        )
+
+        let result = await controller.performPurchase(productID: productID) {
+            RevenueCatPurchaseOutcome(userCancelled: false, customerInfo: customerInfo(willRenew: false))
+        }
+
+        guard case .purchased = result else { Issue.record("Expected purchase"); return }
+        #expect(pendingWhenSubscriptionUpdated)
+        #expect(notifications.subscriptionState?.willRenew == false)
+        #expect(notifications.subscriptionState?.unsubscribeDetectedAt == nil)
+    }
+
+    @Test func restrictionGuideOnlyOpensWhenStoreKitBlocksPayments() async {
+        let blocked = Harness()
+        var blockedGuides = 0
+        blocked.controller.onPurchaseRestriction = { _, _ in blockedGuides += 1 }
+        _ = await blocked.controller.performPurchase(productID: productID) {
+            throw Product.PurchaseError.purchaseNotAllowed
+        }
+        #expect(blockedGuides == 1)
+
+        let allowed = Harness(canMakePayments: true)
+        var allowedGuides = 0
+        allowed.controller.onPurchaseRestriction = { _, _ in allowedGuides += 1 }
+        _ = await allowed.controller.performPurchase(productID: productID) {
+            throw Product.PurchaseError.purchaseNotAllowed
+        }
+        #expect(allowedGuides == 0)
+    }
+
     @Test func rejectionThenExplicitRetrySharesCustomerButNotAttempt() async throws {
         let harness = Harness()
         var calls = 0
@@ -47,6 +90,34 @@ struct PurchaseAttemptTests {
         #expect(succeeded["attempt_id"] as? String != failed["attempt_id"] as? String)
         #expect(succeeded["customer_hash"] as? String == failed["customer_hash"] as? String)
         #expect(harness.reporter.attempts.count == 1)
+    }
+
+    @Test func paywallViewIDStaysWithAttemptAfterPaywallCloses() async throws {
+        let harness = Harness()
+        harness.controller.setPaywallViewID("view-1")
+        let result = await harness.controller.performPurchase(productID: productID) {
+            harness.controller.setPurchasePlacement(nil)
+            throw Product.PurchaseError.purchaseNotAllowed
+        }
+        guard case .failed = result else { Issue.record("Expected failure"); return }
+        #expect(harness.events.first?["paywall_view_id"] as? String == "view-1")
+        #expect(harness.events.last?["paywall_view_id"] as? String == "view-1")
+        #expect(harness.controller.paywallViewID == "view-1")
+        harness.controller.clearPaywallViewID()
+        #expect(harness.controller.paywallViewID == nil)
+    }
+
+    @Test func confirmedProActivationIsOnlyRecordedOnInactiveToActiveTransition() async {
+        let harness = Harness()
+        var activations: [(String, Bool?)] = []
+        harness.entitlements.onProActivation = { activations.append(($0, $1)) }
+        _ = await harness.controller.performPurchase(productID: productID) {
+            RevenueCatPurchaseOutcome(userCancelled: false, customerInfo: customerInfo())
+        }
+        _ = await harness.controller.performRestoration { customerInfo() }
+        #expect(activations.count == 1)
+        #expect(activations.first?.0 == "purchase")
+        #expect(activations.first?.1 == false)
     }
 
     @Test func cancellationAndPendingDoNotReportFailureOrGrantPro() async {
@@ -152,9 +223,9 @@ struct PurchaseAttemptTests {
         #expect(properties["storefront_country"] as? String == "AUS")
     }
 
-    private func customerInfo() -> RevenueCat.CustomerInfo {
+    private func customerInfo(willRenew: Bool = true) -> RevenueCat.CustomerInfo {
         RevenueCat.CustomerInfo(entitlements: EntitlementInfos(entitlements: [
-            "pro": EntitlementInfo(identifier: "pro", isActive: true, willRenew: true,
+            "pro": EntitlementInfo(identifier: "pro", isActive: true, willRenew: willRenew,
                 periodType: .normal, store: .appStore, productIdentifier: productID,
                 isSandbox: true, ownershipType: .purchased)
         ]), requestDate: Date(), firstSeen: Date(), originalAppUserId: "test-customer")
@@ -172,21 +243,31 @@ struct PurchaseAttemptTests {
         let reporter = Reporter()
         var events: [[String: Any]] = []
         var controller: RevenueCatPurchaseController!
-        init() {
+        init(canMakePayments: Bool = false) {
             let defaults = UserDefaults(suiteName: "PurchaseAttemptTests.\(UUID())")!
             entitlements = BrickVal.EntitlementStore(defaults: defaults)
             controller = RevenueCatPurchaseController(entitlementStore: entitlements,
                 notificationCoordinator: NotificationCoordinator(defaults: defaults),
                 errorReporter: reporter,
-                attemptFactory: { productID, placement, operation in
+                attemptFactory: { productID, placement, paywallViewID, operation in
                     PurchaseAttempt(customerID: "test-customer", productID: productID,
-                        placement: placement, operation: operation, canMakePayments: false,
+                        placement: placement, paywallViewID: paywallViewID, operation: operation, canMakePayments: false,
                         storefrontID: "143460", storefrontCountry: "AUS", build: "171",
                         osVersion: "26.5", uptime: 10)
-                }, uptime: { 10.25 },
+                }, uptime: { 10.25 }, canMakePayments: { canMakePayments },
                 recordAttempt: { [weak self] _, fields in self?.events.append(fields) },
                 publishSubscription: { _ in })
             controller.setPurchasePlacement("brickval_upgrade")
         }
     }
+}
+
+@MainActor
+private final class PurchaseObservationCenter: BrickValNotificationCenterClient {
+    var onRemove: (() -> Void)?
+
+    func authorizationStatus() async -> BrickValNotificationAuthorizationStatus { .denied }
+    func requestAuthorization() async throws -> Bool { false }
+    func add(_ request: BrickValLocalNotificationRequest) async throws {}
+    func removePendingNotifications(withIdentifiers identifiers: [String]) { onRemove?() }
 }

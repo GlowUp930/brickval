@@ -57,6 +57,7 @@ struct SubscriptionReminderState: Equatable, Sendable {
     let isActive: Bool
     let isTrial: Bool
     let willRenew: Bool
+    let unsubscribeDetectedAt: Date?
     let expirationDate: Date?
     let productID: String?
 
@@ -64,12 +65,14 @@ struct SubscriptionReminderState: Equatable, Sendable {
         isActive: Bool,
         isTrial: Bool,
         willRenew: Bool,
+        unsubscribeDetectedAt: Date? = nil,
         expirationDate: Date?,
         productID: String? = nil
     ) {
         self.isActive = isActive
         self.isTrial = isTrial
         self.willRenew = willRenew
+        self.unsubscribeDetectedAt = unsubscribeDetectedAt
         self.expirationDate = expirationDate
         self.productID = productID
     }

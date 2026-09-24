@@ -54,6 +54,8 @@ struct SDKEnvironmentRootView: View {
             AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showScannerFailureDemo") {
             AppShellView()
+        } else if ProcessInfo.processInfo.arguments.contains("-showScannerPhotoGuideDemo") {
+            AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showWideBulkProcessingLayoutDemo") {
             AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showBulkRecoveryDemo") {

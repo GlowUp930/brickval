@@ -1,5 +1,3 @@
-import RevenueCat
-import StoreKit
 import SwiftUI
 
 struct AppRootView: View {
@@ -17,7 +15,7 @@ struct AppRootView: View {
     @State private var isShowingLaunch = true
     @State private var launchIsHandingOff = false
     @State private var migrationError: String?
-    @State private var purchaseFailureDemo: PurchaseFailure?
+    @State private var retryPurchasePlacement: String?
     @State private var didCaptureAppReady = false
 
     var body: some View {
@@ -63,12 +61,7 @@ struct AppRootView: View {
             guard isReady, isPurchaseFailureRootFixture else { return }
             try? await Task.sleep(for: .milliseconds(900))
             guard !Task.isCancelled else { return }
-            purchaseFailureDemo = PurchaseFailure.from(
-                revenueCatCode: RevenueCat.ErrorCode.purchaseNotAllowedError.rawValue,
-                underlyingDomain: SKErrorDomain,
-                underlyingCode: SKError.Code.paymentNotAllowed.rawValue,
-                productID: "com.brickval.app.pro.yearly"
-            )
+            coordinator?.purchaseRestrictionGuide = PurchaseRestrictionGuideContext(placement: nil)
         }
         .task(id: "\(scenePhase)-\(coordinator?.clerk?.user?.id ?? "signed-out")-\(preferences.referralOnboardingCompletionPending)") {
             guard scenePhase == .active,
@@ -96,10 +89,14 @@ struct AppRootView: View {
         } message: {
             Text(migrationError ?? BrickValLocalization.localized("Your existing data has not been changed."))
         }
-        .alert("Purchase failed", isPresented: purchaseFailureDemoBinding) {
-            Button("OK", role: .cancel) { purchaseFailureDemo = nil }
-        } message: {
-            Text(purchaseFailureDemo?.errorDescription ?? BrickValLocalization.localized("We couldn't complete this purchase. Please try again."))
+        .sheet(item: purchaseRestrictionGuideBinding, onDismiss: {
+            guard let retryPurchasePlacement else { return }
+            self.retryPurchasePlacement = nil
+            coordinator?.retryAfterPurchaseRestriction(placement: retryPurchasePlacement)
+        }) { guide in
+            PurchaseRestrictionGuideView {
+                retryPurchasePlacement = guide.placement ?? ""
+            }
         }
     }
 
@@ -110,10 +107,10 @@ struct AppRootView: View {
         )
     }
 
-    private var purchaseFailureDemoBinding: Binding<Bool> {
+    private var purchaseRestrictionGuideBinding: Binding<PurchaseRestrictionGuideContext?> {
         Binding(
-            get: { purchaseFailureDemo != nil },
-            set: { if !$0 { purchaseFailureDemo = nil } }
+            get: { coordinator?.purchaseRestrictionGuide },
+            set: { coordinator?.purchaseRestrictionGuide = $0 }
         )
     }
 

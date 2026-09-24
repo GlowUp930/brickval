@@ -50,6 +50,7 @@ final class ProductFeedbackStore {
         handledPostPurchaseIDs.insert(context.id)
         persistHandledPostPurchaseIDs()
         postPurchaseContext = nil
+        markSurveyCompleted()
         errorMessage = nil
     }
 
@@ -75,6 +76,7 @@ final class ProductFeedbackStore {
             self.handledPostPurchaseIDs.insert(context.id)
             self.persistHandledPostPurchaseIDs()
             self.postPurchaseContext = nil
+            self.markSurveyCompleted()
         }
     }
 
@@ -88,11 +90,13 @@ final class ProductFeedbackStore {
         latestSuccessfulScanCount = successfulScanCount
         lastAccessCohort = accessCohort
         guard presentedSurvey == nil else { return }
+        guard postPurchaseContext == nil else { return }
 
         if isPro,
            let subscriptionState,
            subscriptionState.isActive,
-           !subscriptionState.willRenew {
+           !subscriptionState.willRenew,
+           subscriptionState.unsubscribeDetectedAt != nil {
             let eventKey = ProductFeedbackEligibility.cancellationEventKey(
                 productID: subscriptionState.productID ?? "unknown",
                 expirationDate: subscriptionState.expirationDate
@@ -103,8 +107,6 @@ final class ProductFeedbackStore {
                 return
             }
         }
-
-        guard postPurchaseContext == nil else { return }
 
         if ProductFeedbackEligibility.shouldPresentPMF(
             now: now(),

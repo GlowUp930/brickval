@@ -57,6 +57,10 @@ struct LocalizationTests {
         #expect(BrickValLanguage.english.isRightToLeft == false)
     }
 
+    @Test func arabicIsTheOnlySupportedRightToLeftLanguage() {
+        #expect(BrickValLanguage.allCases.filter { $0.isRightToLeft } == [.arabic])
+    }
+
     @Test func apiErrorUsesStableCodeInsteadOfServerText() {
         let error = APIError(
             endpoint: "lookup",

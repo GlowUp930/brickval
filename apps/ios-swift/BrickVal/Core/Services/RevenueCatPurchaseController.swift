@@ -29,20 +29,24 @@ final class RevenueCatPurchaseController: PurchaseController, OfferCodeRedemptio
     private let notificationCoordinator: NotificationCoordinator
     private let purchaseClient: any RevenueCatPurchaseClient
     private let errorReporter: any PurchaseErrorReporting
-    private let attemptFactory: @MainActor (String?, String?, String) -> PurchaseAttempt
+    private let attemptFactory: @MainActor (String?, String?, String?, String) -> PurchaseAttempt
     private let uptime: () -> TimeInterval
+    private let canMakePayments: () -> Bool
     private let recordAttempt: (String, [String: Any]) -> Void
     private let publishSubscription: (RevenueCat.CustomerInfo) -> Void
+    var onPurchaseRestriction: (@MainActor (PurchaseFailure, String?) -> Void)?
     private var syncTasks: [Task<Void, Never>] = []
     private(set) var purchasePlacement: String?
+    private(set) var paywallViewID: String?
 
     init(
         entitlementStore: EntitlementStore,
         notificationCoordinator: NotificationCoordinator,
         purchaseClient: (any RevenueCatPurchaseClient)? = nil,
         errorReporter: (any PurchaseErrorReporting)? = nil,
-        attemptFactory: @escaping @MainActor (String?, String?, String) -> PurchaseAttempt = PurchaseAttempt.live,
+        attemptFactory: @escaping @MainActor (String?, String?, String?, String) -> PurchaseAttempt = PurchaseAttempt.live,
         uptime: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
+        canMakePayments: @escaping () -> Bool = { AppStore.canMakePayments },
         recordAttempt: @escaping (String, [String: Any]) -> Void = { _, _ in },
         publishSubscription: ((RevenueCat.CustomerInfo) -> Void)? = nil
     ) {
@@ -52,6 +56,7 @@ final class RevenueCatPurchaseController: PurchaseController, OfferCodeRedemptio
         self.errorReporter = errorReporter ?? SentryPurchaseErrorReporter()
         self.attemptFactory = attemptFactory
         self.uptime = uptime
+        self.canMakePayments = canMakePayments
         self.recordAttempt = recordAttempt
         self.publishSubscription = publishSubscription ?? { customerInfo in
             let identifiers = customerInfo.entitlements.activeInCurrentEnvironment.keys
@@ -64,6 +69,9 @@ final class RevenueCatPurchaseController: PurchaseController, OfferCodeRedemptio
     func setPurchasePlacement(_ placement: String?) {
         purchasePlacement = placement
     }
+
+    func setPaywallViewID(_ id: String) { paywallViewID = id }
+    func clearPaywallViewID() { paywallViewID = nil }
 
     func startSyncing() {
         guard syncTasks.isEmpty else { return }
@@ -101,7 +109,7 @@ final class RevenueCatPurchaseController: PurchaseController, OfferCodeRedemptio
     func performPurchase(productID: String,
                          operation: () async throws -> RevenueCatPurchaseOutcome) async -> PurchaseResult {
         let placement = purchasePlacement
-        let attempt = attemptFactory(productID, placement, "purchase")
+        let attempt = attemptFactory(productID, placement, paywallViewID, "purchase")
         recordAttempt("purchase_attempt_started", attempt.properties(outcome: "started", uptime: uptime()))
         do {
             let result = try await operation()
@@ -109,11 +117,11 @@ final class RevenueCatPurchaseController: PurchaseController, OfferCodeRedemptio
                 recordAttempt("purchase_attempt_finished", attempt.properties(outcome: "cancelled", uptime: uptime()))
                 return .cancelled
             }
-            await apply(result.customerInfo)
             entitlementStore.recordNewPurchase(
                 productID: productID,
                 isTrial: result.customerInfo.entitlements["pro"]?.periodType == .trial
             )
+            await apply(result.customerInfo, source: "purchase")
             recordAttempt("purchase_attempt_finished", attempt.properties(outcome: "purchased", uptime: uptime()))
             return .purchased
         } catch {
@@ -128,6 +136,9 @@ final class RevenueCatPurchaseController: PurchaseController, OfferCodeRedemptio
                 return .pending
             case .notAllowed, .productUnavailable, .network, .store, .configuration, .unknown:
                 errorReporter.capture(failure: failure, placement: placement, attempt: fields)
+                if failure.category == .notAllowed && !canMakePayments() {
+                    onPurchaseRestriction?(failure, placement)
+                }
                 return .failed(failure)
             }
         }
@@ -139,11 +150,11 @@ final class RevenueCatPurchaseController: PurchaseController, OfferCodeRedemptio
 
     func performRestoration(operation: () async throws -> RevenueCat.CustomerInfo) async -> RestorationResult {
         let placement = purchasePlacement
-        let attempt = attemptFactory(nil, placement, "restore")
+        let attempt = attemptFactory(nil, placement, paywallViewID, "restore")
         recordAttempt("purchase_attempt_started", attempt.properties(outcome: "started", uptime: uptime()))
         do {
             let info = try await operation()
-            await apply(info)
+            await apply(info, source: "restore")
             var fields = attempt.properties(outcome: "restored", uptime: uptime())
             fields["pro_active"] = info.entitlements["pro"]?.isActive == true
             recordAttempt("purchase_attempt_finished", fields)
@@ -162,11 +173,11 @@ final class RevenueCatPurchaseController: PurchaseController, OfferCodeRedemptio
 
     func syncPurchases() async throws -> Bool {
         let info = try await Purchases.shared.syncPurchases()
-        await apply(info)
+        await apply(info, source: "offer_code")
         return info.entitlements["pro"]?.isActive == true
     }
 
-    private func apply(_ customerInfo: RevenueCat.CustomerInfo) async {
+    private func apply(_ customerInfo: RevenueCat.CustomerInfo, source: String = "entitlement_sync") async {
         publishSubscription(customerInfo)
         let proEntitlement = customerInfo.entitlements["pro"]
         await notificationCoordinator.updateSubscription(
@@ -174,10 +185,12 @@ final class RevenueCatPurchaseController: PurchaseController, OfferCodeRedemptio
                 isActive: proEntitlement?.isActive == true,
                 isTrial: proEntitlement?.periodType == .trial,
                 willRenew: proEntitlement?.willRenew == true,
+                unsubscribeDetectedAt: proEntitlement?.unsubscribeDetectedAt,
                 expirationDate: proEntitlement?.expirationDate,
                 productID: proEntitlement?.productIdentifier
             )
         )
-        entitlementStore.update(isPro: proEntitlement?.isActive == true)
+        entitlementStore.update(isPro: proEntitlement?.isActive == true, source: source,
+                                isTrial: proEntitlement.map { $0.periodType == .trial })
     }
 }

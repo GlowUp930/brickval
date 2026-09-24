@@ -184,6 +184,7 @@
 		BEF66B9FEF44FAA656FAC3DE /* BulkShareCardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B42859537BC630597753FFD1 /* BulkShareCardTests.swift */; };
 		BF013D0A4964914481031BC6 /* ScanProcessingOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D61E6D6F834D68E54B0A94 /* ScanProcessingOverlayView.swift */; };
 		C1596A1FF17789D4371F5558 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFBC2210305E1EDC17B72B9D /* OnboardingView.swift */; };
+		C1F148983A397092316A2B17 /* ScanPhotoGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 645A0FB1C93EAFAED2BDEB58 /* ScanPhotoGuideView.swift */; };
 		C3CDD43E8EDE4C3F3E680AFC /* ManualSetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70BEA2066B1A6BF1D07EFC0F /* ManualSetEntryView.swift */; };
 		C3F238AAD9383F76416ECE0D /* DetectionObservation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 838575333B805A61A14C702C /* DetectionObservation.swift */; };
 		C44D3A2878BBD8D7658E9342 /* BulkDetectionTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 682C25B2470F84B42642FFD1 /* BulkDetectionTracker.swift */; };
@@ -229,6 +230,7 @@
 		EEB57FE6251C0842C3B05023 /* ScanTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E9D73BC693CED0990F80E70 /* ScanTabView.swift */; };
 		F0DCF56E2DE9BC7F0BBAE5FF /* PurchasingError.swift in Sources */ = {isa = PBXBuildFile; fileRef = D74C8B2CFA1F934387EAE143 /* PurchasingError.swift */; };
 		F2293D0FD95B8BB529797596 /* BulkImageLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE50EF5D6FCFA05F776581BD /* BulkImageLayout.swift */; };
+		F42DC45033D019EF2504BE8D /* PurchaseRestrictionGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3092053C66BFB85DC8A2EC5E /* PurchaseRestrictionGuideView.swift */; };
 		F43FC34EAB4C1D9D4E9255CC /* ScanIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = E29E9A9DE0362A16AF205AD1 /* ScanIntent.swift */; };
 		F5EF0F8D2F730EB38F42A637 /* ProBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ACCFEA6B4DBD7F1DB888B1B /* ProBadge.swift */; };
 		FA04109A6118B6360D61A228 /* PostHogAnalytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 702466270F62E93DA9515B16 /* PostHogAnalytics.swift */; };
@@ -288,6 +290,7 @@
 		2AD4112FE8E65BE43ECA76C6 /* PortfolioSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioSummaryView.swift; sourceTree = "<group>"; };
 		2AF2A448084915691C5874AC /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		2B97BB2DF610A85B024F16A6 /* RevenueCatPurchaseController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevenueCatPurchaseController.swift; sourceTree = "<group>"; };
+		3092053C66BFB85DC8A2EC5E /* PurchaseRestrictionGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseRestrictionGuideView.swift; sourceTree = "<group>"; };
 		31F9057D5EB20B52943F223F /* OfferCodeRedemption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferCodeRedemption.swift; sourceTree = "<group>"; };
 		32E00FF36212FF566E311D3C /* BrickValAPIEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrickValAPIEnvironment.swift; sourceTree = "<group>"; };
 		33393ED0233F29E4CCA2BD7F /* PartLookupPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartLookupPayload.swift; sourceTree = "<group>"; };
@@ -342,6 +345,7 @@
 		5F8395A4685E831B69CB7D85 /* AccentPreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentPreference.swift; sourceTree = "<group>"; };
 		5FA99ACAD38CD5000BB6D3AB /* CameraSessionBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraSessionBox.swift; sourceTree = "<group>"; };
 		637A01995655EC92927C95BC /* ScanPreviewPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanPreviewPipelineTests.swift; sourceTree = "<group>"; };
+		645A0FB1C93EAFAED2BDEB58 /* ScanPhotoGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanPhotoGuideView.swift; sourceTree = "<group>"; };
 		647C9370C073104F93DE5060 /* ProductImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImage.swift; sourceTree = "<group>"; };
 		67E89950A8EB117E686AC7E6 /* MinifigLookupPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MinifigLookupPayload.swift; sourceTree = "<group>"; };
 		682C25B2470F84B42642FFD1 /* BulkDetectionTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkDetectionTracker.swift; sourceTree = "<group>"; };
@@ -787,6 +791,7 @@
 				38DA6B33E490682F88613CB2 /* ProductFeedbackSurveyView.swift */,
 				D852B26C280FAE4484AB8D02 /* ProfileDesignDraftsView.swift */,
 				0B6370B2721603AD443EF2AD /* ProWelcomeView.swift */,
+				3092053C66BFB85DC8A2EC5E /* PurchaseRestrictionGuideView.swift */,
 				3DBAA003425237511692DC4E /* ReferralView.swift */,
 				52E253FA0F92DE11FF8055A3 /* SettingsView.swift */,
 				FFBFE5D27E5CABF2ACFE1E55 /* SubscriptionView.swift */,
@@ -883,6 +888,7 @@
 				BED682995C15E75257E316FF /* ScannerStatusView.swift */,
 				D9E2003B12A14D11AF013D22 /* ScannerView.swift */,
 				D3BBA3C5019B7177879671B4 /* ScanPhase.swift */,
+				645A0FB1C93EAFAED2BDEB58 /* ScanPhotoGuideView.swift */,
 				42D61E6D6F834D68E54B0A94 /* ScanProcessingOverlayView.swift */,
 				AD4021F21C580E46CEC12F4C /* ScanResultView.swift */,
 				687AC7545B773C4A395075BD /* ScanReview.swift */,
@@ -1329,6 +1335,7 @@
 				348CE9C851CF49B491AE8037 /* ProductImage.swift in Sources */,
 				0BA0A493FCB6D27B79075140 /* ProfileDesignDraftsView.swift in Sources */,
 				6D06018920CEE003F8E2295B /* PurchaseAttempt.swift in Sources */,
+				F42DC45033D019EF2504BE8D /* PurchaseRestrictionGuideView.swift in Sources */,
 				F0DCF56E2DE9BC7F0BBAE5FF /* PurchasingError.swift in Sources */,
 				664500A9A4DA7C2337108879 /* ReferralView.swift in Sources */,
 				402F0E0F4542BDE2F1C4F4F0 /* RevenueCatPurchaseController.swift in Sources */,
@@ -1336,6 +1343,7 @@
 				F43FC34EAB4C1D9D4E9255CC /* ScanIntent.swift in Sources */,
 				61F55C70DE98CC29ADAC8252 /* ScanMode.swift in Sources */,
 				11823ECFC522C0EEFBD648BF /* ScanPhase.swift in Sources */,
+				C1F148983A397092316A2B17 /* ScanPhotoGuideView.swift in Sources */,
 				A104D744FEB84C81E8F6981F /* ScanPreviewPipeline.swift in Sources */,
 				BF013D0A4964914481031BC6 /* ScanProcessingOverlayView.swift in Sources */,
 				9C8C4D7BA6C10356B316672B /* ScanResultView.swift in Sources */,
@@ -1383,18 +1391,18 @@
 				APS_ENVIRONMENT = production;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Distribution: HO LAM CHAN (4CQHLZBSU7)";
+				CODE_SIGN_IDENTITY = 73ED6DE8405E3B97619850CEC7576E70B00A275A;
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 188;
+				CURRENT_PROJECT_VERSION = 190;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.10;
+				MARKETING_VERSION = 1.11;
 				PRODUCT_BUNDLE_IDENTIFIER = com.brickval.app;
 				PRODUCT_NAME = BrickVal;
-				PROVISIONING_PROFILE_SPECIFIER = "BrickVal App Store Build 125";
+				PROVISIONING_PROFILE_SPECIFIER = "BrickVal App Store 1.11 Build 189";
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -1514,13 +1522,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 188;
+				CURRENT_PROJECT_VERSION = 190;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.10;
+				MARKETING_VERSION = 1.11;
 				PRODUCT_BUNDLE_IDENTIFIER = com.brickval.app;
 				PRODUCT_NAME = BrickVal;
 				SDKROOT = iphoneos;

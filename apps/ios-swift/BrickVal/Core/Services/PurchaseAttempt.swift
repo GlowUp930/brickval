@@ -10,7 +10,7 @@ struct PurchaseAttempt {
     private let startedAt: TimeInterval
     private let context: [String: Any]
 
-    init(customerID: String?, productID: String?, placement: String?, operation: String,
+    init(customerID: String?, productID: String?, placement: String?, paywallViewID: String? = nil, operation: String,
          canMakePayments: Bool, storefrontID: String?, storefrontCountry: String?,
          build: String, osVersion: String, uptime: TimeInterval) {
         startedAt = uptime
@@ -22,6 +22,7 @@ struct PurchaseAttempt {
             "os_version": osVersion,
         ]
         fields["product_id"] = productID
+        fields["paywall_view_id"] = paywallViewID
         fields["storefront_id"] = storefrontID
         fields["storefront_country"] = storefrontCountry
         if let customerID, !customerID.isEmpty {
@@ -32,12 +33,12 @@ struct PurchaseAttempt {
     }
 
     @MainActor
-    static func live(productID: String?, placement: String?, operation: String) -> PurchaseAttempt {
+    static func live(productID: String?, placement: String?, paywallViewID: String?, operation: String) -> PurchaseAttempt {
         // StoreKit's cached storefront avoids adding a network wait before Apple's purchase sheet.
         let storefront = SKPaymentQueue.default().storefront
         return PurchaseAttempt(
             customerID: Purchases.isConfigured ? Purchases.shared.appUserID : nil,
-            productID: productID, placement: placement, operation: operation,
+            productID: productID, placement: placement, paywallViewID: paywallViewID, operation: operation,
             canMakePayments: AppStore.canMakePayments,
             storefrontID: storefront?.identifier, storefrontCountry: storefront?.countryCode,
             build: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown",

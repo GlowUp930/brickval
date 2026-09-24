@@ -15,6 +15,9 @@ struct ScannerView: View {
     @Environment(\.openURL) private var openURL
     @State private var store: ScanStore
     @State private var isShowingScanTips = false
+    @State private var isShowingPhotoGuide = false
+    @State private var selectedGuidePhoto: PhotosPickerItem?
+    @State private var isImportingGuidePhoto = false
     @State private var selectedBulkPhoto: PhotosPickerItem?
     @State private var isImportingBulkPhoto = false
     @State private var frozenPreview: UIImage?
@@ -34,6 +37,7 @@ struct ScannerView: View {
         let isDenseBulkCompletedDemo = ProcessInfo.processInfo.arguments.contains("-showDenseBulkCompletedDemo")
         let isLockedBulkPreviewDemo = ProcessInfo.processInfo.arguments.contains("-showLockedBulkPreviewDemo")
         let isFailedScanDemo = ProcessInfo.processInfo.arguments.contains("-showScannerFailureDemo")
+        let isPhotoGuideDemo = ProcessInfo.processInfo.arguments.contains("-showScannerPhotoGuideDemo")
         let isBulkFillAnimationDrafts = ProcessInfo.processInfo.arguments.contains("-showBulkFillAnimationDrafts")
         if isWideBulkProcessingLayoutDemo,
            let imageData = BulkRecoveryDemoFixture.wideProcessingImageData {
@@ -44,6 +48,9 @@ struct ScannerView: View {
         } else if isFailedScanDemo,
                   let imageData = UIImage(named: "AvatarClassic")?.jpegData(compressionQuality: 0.9) {
             store.configureFailedScanDemo(imageData: imageData)
+        } else if isPhotoGuideDemo,
+                  let imageData = UIImage(named: "AvatarClassic")?.jpegData(compressionQuality: 0.9) {
+            store.configurePhotoGuideDemo(imageData: imageData)
         }
         if isBulkRecoveryDemo {
             store.configureBulkRecoveryDemo()
@@ -68,6 +75,7 @@ struct ScannerView: View {
             !isDenseBulkCompletedDemo &&
             !isLockedBulkPreviewDemo &&
             !isFailedScanDemo &&
+            !isPhotoGuideDemo &&
             !isBulkFillAnimationDrafts
 #else
         _isShowingBulkFillAnimationDrafts = State(initialValue: false)
@@ -201,6 +209,7 @@ struct ScannerView: View {
                             phase: store.phase,
                             intent: store.intent,
                             smartScanMessage: store.intent == .single ? store.smartScanMessage : nil,
+                            isImportingPhoto: isImportingBulkPhoto || isImportingGuidePhoto,
                             retry: {
                                 store.recordRetryTap(
                                     retryKind: store.intent == .bulk && store.frozenImageData != nil
@@ -212,7 +221,10 @@ struct ScannerView: View {
                                 } else {
                                     startScanOperation { await store.retryCamera() }
                                 }
-                            }
+                            },
+                            photoTips: store.photoGuidanceAvailable ? {
+                                isShowingPhotoGuide = true
+                            } : nil
                         )
                         // The status banner is a sibling of the camera stage,
                         // so its recovery button cannot be occluded by the
@@ -261,7 +273,7 @@ struct ScannerView: View {
                 isTorchEnabled: store.isTorchEnabled,
                 isBusy: [.capturing, .identifying].contains(store.phase),
                 isCameraReady: store.phase.allowsLiveDetection || store.canCaptureAfterFailure,
-                isImportingPhoto: isImportingBulkPhoto,
+                isImportingPhoto: isImportingBulkPhoto || isImportingGuidePhoto,
                 bulkPhotoItem: $selectedBulkPhoto,
                 toggleTorch: {
                     coordinator?.analytics.capture(
@@ -289,6 +301,8 @@ struct ScannerView: View {
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("scanner.controls")
         }
+        .accessibilityHidden(isShowingPhotoGuide)
+        .allowsHitTesting(!isShowingPhotoGuide)
         .toolbar(.hidden, for: .navigationBar)
         .task(id: scenePhase) {
             guard runsCameraLoop else { return }
@@ -344,9 +358,53 @@ struct ScannerView: View {
                 isShowingScanTips = true
             }
         }
+        .task {
+            if isFailedScanPhase && store.photoGuidanceAvailable {
+                isShowingPhotoGuide = true
+            }
+        }
         .onChange(of: store.phase) { _, phase in
             guard [.capturing, .identifying, .review, .result].contains(phase) || isFailedPhase(phase) else { return }
             dismissScanTips()
+            if isFailedPhase(phase) && store.photoGuidanceAvailable {
+                isShowingPhotoGuide = true
+            } else {
+                isShowingPhotoGuide = false
+            }
+        }
+        .task(id: selectedGuidePhoto) {
+            guard let item = selectedGuidePhoto else { return }
+            isShowingPhotoGuide = false
+            isImportingGuidePhoto = true
+            defer {
+                isImportingGuidePhoto = false
+                selectedGuidePhoto = nil
+            }
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self) else {
+                    if store.intent == .bulk {
+                        await store.importBulkPhotoLoadFailed()
+                    } else {
+                        store.importSinglePhotoLoadFailed()
+                    }
+                    return
+                }
+                try Task.checkCancellation()
+                if store.intent == .bulk {
+                    store.cancelBulkScan()
+                    await store.importBulkPhoto(data)
+                } else {
+                    await store.identifyGalleryImage(data)
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                if store.intent == .bulk {
+                    await store.importBulkPhotoLoadFailed()
+                } else {
+                    store.importSinglePhotoLoadFailed()
+                }
+            }
         }
         .task(id: selectedBulkPhoto) {
             guard let item = selectedBulkPhoto else { return }
@@ -422,6 +480,38 @@ struct ScannerView: View {
                     .background(accent, in: .capsule)
                     .padding(.top, 8)
                     .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .overlay {
+            if isShowingPhotoGuide {
+                GeometryReader { proxy in
+                    ZStack {
+                        Color.black.opacity(0.68)
+                            .ignoresSafeArea()
+                            .onTapGesture { isShowingPhotoGuide = false }
+                        ScrollView {
+                            ScanPhotoGuideView(
+                                selectedPhoto: $selectedGuidePhoto,
+                                retake: {
+                                    isShowingPhotoGuide = false
+                                    if store.intent == .bulk {
+                                        store.reset()
+                                    } else {
+                                        startScanOperation { await store.retryCamera() }
+                                    }
+                                },
+                                dismiss: { isShowingPhotoGuide = false }
+                            )
+                            .environment(\.colorScheme, .light)
+                            .padding(.horizontal, 16)
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: proxy.size.height, alignment: .center)
+                        }
+                        .scrollIndicators(.hidden)
+                    }
+                }
+                .transition(.opacity)
+                .zIndex(20)
             }
         }
         .animation(.easeOut(duration: 0.2), value: store.successMessage)

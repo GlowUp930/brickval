@@ -5,7 +5,6 @@ enum PostHogEvent {
     static let appReady = "app_ready"
     static let onboardingScreenShown = "onboarding_screen_shown"
     static let onboardingStepShown = "onboarding_step_shown"
-    static let onboardingStarted = "onboarding_started"
     static let onboardingGetStartedTapped = "onboarding_get_started_tapped"
     static let onboardingCompleted = "onboarding_completed"
     static let trialActivationPromptShown = "trial_activation_prompt_shown"
@@ -21,6 +20,7 @@ enum PostHogEvent {
     static let paywallPresented = "paywall_presented"
     static let paywallDismissed = "paywall_dismissed"
     static let paywallPresentationFailed = "paywall_presentation_failed"
+    static let proAccessActivated = "pro_access_activated"
     static let itemAddedToCollection = "item_added_to_collection"
     static let itemsAddedToCollection = "items_added_to_collection"
     static let referralOpened = "referral_opened"
@@ -60,11 +60,16 @@ enum PostHogEvent {
 @MainActor
 final class PostHogAnalytics {
     static let host = "https://us.i.posthog.com"
-    static let schemaVersion = 4
+    static let schemaVersion = 5
     private static let installIDKey = "brickvalue_posthog_install_id"
     private static let identifiedUserIDKey = "brickvalue_posthog_identified_user_id"
 
     private(set) var isConfigured = false
+    var distinctID: String? {
+        guard isConfigured else { return nil }
+        let id = PostHogSDK.shared.getDistinctId()
+        return id.isEmpty ? nil : id
+    }
     private(set) var installID: String
     private let defaults: UserDefaults
     private var identifiedUserID: String?

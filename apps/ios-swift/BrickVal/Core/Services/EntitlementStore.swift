@@ -18,6 +18,7 @@ final class EntitlementStore {
     var errorMessage: String?
 
     @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored var onProActivation: ((String, Bool?) -> Void)?
 
 #if DEBUG
     @ObservationIgnored private let forcesProForDemo =
@@ -39,7 +40,7 @@ final class EntitlementStore {
 #endif
     }
 
-    func update(isPro: Bool) {
+    func update(isPro: Bool, source: String = "entitlement_sync", isTrial: Bool? = nil) {
 #if DEBUG
         if forcesProForDemo {
             self.isPro = true
@@ -49,6 +50,7 @@ final class EntitlementStore {
             return
         }
 #endif
+        let becamePro = !self.isPro && isPro
         self.isPro = isPro
         if !isPro {
             shouldPresentProWelcome = false
@@ -57,6 +59,7 @@ final class EntitlementStore {
         defaults.set(isPro, forKey: Keys.lastKnownPro)
         isLoading = false
         errorMessage = nil
+        if becamePro { onProActivation?(source, isTrial) }
     }
 
     func recordNewPurchase(productID: String, isTrial: Bool) {

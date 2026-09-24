@@ -23,6 +23,8 @@ struct ScanStoreLifecycleTests {
         #expect(store.frozenImageData == nil)
         #expect(store.phase == .failed(BrickValLocalization.localized("No minifigure match was found. Try a closer, brighter photo.")))
         #expect(store.canCaptureAfterFailure)
+        // This fixture isolates the legacy retry path without the new guide.
+        #expect(store.photoGuidanceAvailable == false)
     }
 
     @Test @MainActor
@@ -42,6 +44,25 @@ struct ScanStoreLifecycleTests {
         #expect(store.phase == .failed(BrickValLocalization.localized("No minifigure match was found. Try a closer, brighter photo.")))
         #expect(store.frozenImageData == nil)
         #expect(store.canCaptureAfterFailure)
+        #expect(store.photoGuidanceAvailable)
+
+        store.reset()
+        #expect(store.photoGuidanceAvailable == false)
+    }
+
+    @Test @MainActor
+    func providerFailureDoesNotOfferPhotoGuide() async throws {
+        var api = BrickValAPIClient.successfulLookupStub
+        api.scanMinifigure = { _ in throw ScanStoreLifecycleTestError.unusedEndpoint }
+        let store = ScanStore(api: api)
+
+        await store.identifyGalleryImage(try recoveryImageData())
+
+        guard case .failed = store.phase else {
+            Issue.record("Expected a retryable provider failure")
+            return
+        }
+        #expect(store.photoGuidanceAvailable == false)
     }
 
     @Test @MainActor
@@ -514,7 +535,7 @@ struct ScanStoreLifecycleTests {
 
         await store.importBulkPhoto(imageData)
 
-        #expect(store.phase == .failed("A valid minifigure crop is required."))
+        #expect(store.phase == .failed(BrickValLocalization.localized("A valid minifigure crop is required.")))
         #expect(store.frozenImageData == imageData)
         #expect(reporter.contexts.count == 1)
         #expect(reporter.contexts.first?.statusCode == 400)

@@ -26,7 +26,15 @@ final class ScanStore {
             if phase != .preparingCamera { phase = .searching }
         }
     }
-    private(set) var phase: ScanPhase = .idle
+    private(set) var phase: ScanPhase = .idle {
+        didSet {
+            if case .failed = phase { return }
+            photoGuidanceAvailable = false
+        }
+    }
+    /// Only recognition failures that a clearer photo could fix show the
+    /// visual guide. Camera, network, permission and allowance failures do not.
+    private(set) var photoGuidanceAvailable = false
     private(set) var authorizationStatus: CameraAuthorizationStatus = .notDetermined
     private(set) var observations: [DetectionObservation] = []
     var presentedSheet: ScannerSheet? {
@@ -159,6 +167,11 @@ final class ScanStore {
         phase = .failed(BrickValLocalization.localized("No minifigure match was found. Try a closer, brighter photo."))
         retriesWithoutCamera = true
         resumeCameraAfterFailure()
+    }
+
+    func configurePhotoGuideDemo(imageData: Data) {
+        configureFailedScanDemo(imageData: imageData)
+        photoGuidanceAvailable = true
     }
 
     func configureBulkProcessingLayoutDemo(imageData: Data) {
@@ -431,6 +444,7 @@ final class ScanStore {
             try await camera.setTorch(enabled: !isTorchEnabled)
             isTorchEnabled.toggle()
         } catch {
+            photoGuidanceAvailable = false
             phase = .failed(error.localizedDescription)
         }
     }
@@ -489,6 +503,7 @@ final class ScanStore {
     func importBulkPhoto(_ data: Data?) async {
         guard intent == .bulk, phase != .capturing, phase != .identifying else { return }
         guard canBeginCurrentScan else {
+            photoGuidanceAvailable = false
             phase = .failed(BrickValLocalization.localized("You've used all available bulk scans. Upgrade to continue."))
             proLimitFeature = .bulkScan
             captureAnalytics(
@@ -505,6 +520,7 @@ final class ScanStore {
             ]
         )
         guard let data else {
+            photoGuidanceAvailable = false
             phase = .failed(BrickValLocalization.localized("We couldn't read that photo. Choose another image and try again."))
             captureAnalytics(
                 PostHogEvent.scanFailed,
@@ -548,6 +564,7 @@ final class ScanStore {
 
     func importBulkPhotoLoadFailed() async {
         guard intent == .bulk else { return }
+        photoGuidanceAvailable = false
         phase = .failed(BrickValLocalization.localized("We couldn't load that photo. Check your Photos permission and choose another image."))
         captureAnalytics(
             PostHogEvent.scanFailed,
@@ -581,16 +598,38 @@ final class ScanStore {
     }
 
     func identifyGalleryImage(_ data: Data) async {
-        guard phase != .identifying else { return }
+        guard intent == .single, phase != .capturing, phase != .identifying else { return }
         guard canBeginSingleScan else {
             proLimitFeature = .singleScan
             return
         }
+        captureScanStarted(
+            properties: [
+                "scan_type": ScanIntent.single.rawValue,
+                "source": "photo_library",
+                "capture_mode": "import",
+            ]
+        )
         do {
+            canCaptureAfterFailure = false
+            phase = .capturing
+            setFrozenImageData(data)
             try await identify(imageData: data)
+        } catch is CancellationError {
+            return
         } catch {
             await handleIdentificationError(error)
         }
+    }
+
+    func importSinglePhotoLoadFailed() {
+        guard intent == .single else { return }
+        photoGuidanceAvailable = false
+        phase = .failed(BrickValLocalization.localized("We couldn't load that photo. Check your Photos permission and choose another image."))
+        captureAnalytics(
+            PostHogEvent.scanFailed,
+            properties: ["scan_type": ScanIntent.single.rawValue, "source": "photo_library"]
+        )
     }
 
     func manualLookup(identifier: String, type: ItemType, colorID: Int?) async throws {
@@ -929,6 +968,7 @@ final class ScanStore {
                     bulkRegions: bulkRegions,
                     bulkSource: bulkSource
                 ) else {
+                    photoGuidanceAvailable = true
                     phase = .failed(BrickValLocalization.localized("No minifigures were found. Try a brighter photo with the figures separated and facing forward."))
                     captureAnalytics(
                         PostHogEvent.bulkPreviewCompleted,
@@ -964,6 +1004,7 @@ final class ScanStore {
                 }
                 let regions = Array(start.regions.prefix(BulkScanSource.maximumRegionCount))
                 guard !regions.isEmpty else {
+                    photoGuidanceAvailable = true
                     phase = .failed(BrickValLocalization.localized("No minifigures were found. Try a brighter photo with the figures separated and facing forward."))
                     captureAnalytics(
                         PostHogEvent.scanFailed,
@@ -1135,6 +1176,7 @@ final class ScanStore {
 
         let identification = try await api.identify(image, mode, intent)
         guard !identification.detections.isEmpty || identification.setNumber != nil else {
+            photoGuidanceAvailable = true
             phase = .failed(BrickValLocalization.localized("No match was found. Try a clearer photo."))
             captureAnalytics(
                 PostHogEvent.scanFailed,
@@ -1379,6 +1421,7 @@ final class ScanStore {
         if intent == .single {
             resumeCameraAfterFailure()
         }
+        photoGuidanceAvailable = true
         phase = .failed(message)
         captureAnalytics(
             PostHogEvent.scanFailed,
@@ -1424,6 +1467,7 @@ final class ScanStore {
                     ) {
                         return
                     }
+                    photoGuidanceAvailable = true
                     phase = .failed(BrickValLocalization.localized("No minifigures were found. Try a brighter photo with the figures separated and facing forward."))
                     captureAnalytics(
                         PostHogEvent.bulkPreviewCompleted,

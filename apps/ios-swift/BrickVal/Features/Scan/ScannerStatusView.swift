@@ -5,7 +5,9 @@ struct ScannerStatusView: View {
     let phase: ScanPhase
     let intent: ScanIntent
     let smartScanMessage: String?
+    let isImportingPhoto: Bool
     let retry: (() -> Void)?
+    let photoTips: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 6) {
@@ -35,6 +37,14 @@ struct ScannerStatusView: View {
                     .contentShape(Rectangle())
                     .accessibilityIdentifier("scanner.retry")
                     .accessibilityHint(retryHint)
+                    .disabled(isImportingPhoto)
+                if let photoTips {
+                    Button("Photo tips", systemImage: "photo.on.rectangle", action: photoTips)
+                        .font(.caption.weight(.semibold))
+                        .frame(minWidth: 44, minHeight: 44)
+                        .accessibilityIdentifier("scanner.photoTips")
+                        .disabled(isImportingPhoto)
+                }
             }
         }
         .frame(maxWidth: .infinity)

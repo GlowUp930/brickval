@@ -1,5 +1,56 @@
 # BrickVal Native iOS Context
 
+## Failed-scan photo guide — 2026-09-24
+
+The scanner shows a dismissible photo comparison only for recognition failures
+that a clearer image may solve. The supplied good and piled examples meet at
+one seamless edge. Retake returns to the camera; Choose from Library imports
+into the current Single or Bulk flow. The failure banner retains Try again and
+can reopen Photo tips. Other failure classes do not show the guide. New copy
+is translated in all 13 locales. Source and focused simulator checks pass;
+physical camera and Photos picker QA and a later TestFlight build remain open.
+
+## Post-purchase cancellation survey repair — 2026-09-24
+
+The cancellation feedback sheet could appear immediately after a successful
+subscription because `willRenew == false` was treated as proof of cancellation.
+RevenueCat also reports false for billing issues and other nonrenewing access.
+The survey now requires `unsubscribeDetectedAt`, and a fresh purchase is
+recorded before subscription observers run. The pending post-purchase context
+defers other surveys; skipping or submitting it starts the 30-day survey
+cooldown. The exact false-survey regression first failed, then passed alongside
+the purchase ordering and genuine-cancellation checks (19 focused tests on the
+Small iPhone simulator). This source is not in TestFlight build 189; the live
+purchase and cancellation sequence still needs physical-device verification.
+
+## Purchase restriction guide — 2026-09-24
+
+When StoreKit reports a purchase-not-allowed failure and `AppStore.canMakePayments`
+is false, the app closes the Superwall paywall and shows a native three-step
+Screen Time guide. It also covers managed devices without assuming Screen Time
+is the cause. “Check again” only reopens the upgrade flow after StoreKit says
+purchases are allowed; it does not retry or grant a purchase automatically.
+The existing DEBUG purchase-failure root fixture now previews this guide.
+The guide copy is localized across all 13 supported locales and passes the
+localization audit. This source is not in TestFlight build 189. Real-device
+behavior remains to be verified before release.
+
+## PostHog journey repair — 2026-09-23
+
+Schema 5 source adds `paywall_view_id` to actual presentation, dismissal, and
+purchase attempts; emits `pro_access_activated` only when confirmed Pro access
+changes from inactive to active; sets RevenueCat `$posthogUserId`; and stops
+the redundant `onboarding_started` event. Focused simulator tests pass, but
+this source is not in build 189. See the root AGENTS.md and journey audit for
+live dashboard changes and physical-device verification still required.
+
+## TestFlight build 189 — 2026-09-23
+
+App Store Connect processed version 1.11 (189) after its 11:30 AM Melbourne
+upload. TestFlight shows Ready to Submit and both existing internal groups.
+Build 189 is saved on the 1.11 App Store version page. It has not been added
+for App Review or released.
+
 ## TestFlight build 188 — 2026-09-18
 
 Build 1.0.10 (188) contains the scanner mode localization/layout fix. The

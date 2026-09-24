@@ -1,5 +1,53 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Failed-scan photo guide — 2026-09-24
+
+Native source now offers an image-led pop-up only after a minifigure
+recognition/no-figures failure. It compares the supplied separated and piled
+photos edge-to-edge, gives brief lighting/library tips, and offers retake or
+Photo Library import in Single and Bulk modes. Camera, network, permission,
+and subscription failures keep their existing recovery instead. The guide is
+localized across all 13 app languages and is not in TestFlight build 189.
+See `apps/ios-swift/design-qa.md` for simulator checks and remaining device QA.
+
+## Post-purchase cancellation survey repair — 2026-09-24
+
+Native source now requires RevenueCat's `unsubscribeDetectedAt` before showing
+the cancellation survey. A new purchase is recorded before subscription state
+observers run, and its feedback context defers other surveys. Focused simulator
+regressions pass; this is not in TestFlight build 189 and still needs a real
+purchase/cancellation check. See `apps/ios-swift/CONTEXT.md`.
+
+## Purchase restriction guide — 2026-09-24
+
+Native source now shows a three-step Screen Time guide only for a
+purchase-not-allowed result when `AppStore.canMakePayments` is false. It notes
+that family, school, or work management may also block purchases, and checks
+StoreKit again before reopening the upgrade flow. This is not in TestFlight
+build 189; physical-device verification remains pending. The guide copy is
+localized across all 13 supported locales. See
+`apps/ios-swift/CONTEXT.md`.
+
+## PostHog journey repair — 2026-09-23
+
+The [journey audit and repair status](docs/audits/2026-09-23-posthog-journey-audit.md)
+tracks the live funnel changes and native schema 5. The first-run funnel now
+excludes simulators and TestFlight, uses a one-day window, and breaks down by
+build; the broken historical install tile is off the growth dashboard. A
+purchase-outcome-filtered paywall funnel is saved. Native source adds per-view
+paywall correlation, confirmed inactive-to-active Pro transitions, and the
+RevenueCat PostHog ID attribute. This source is **not** in TestFlight build
+189. Do not use new event data until a later build and physical purchase,
+restore, offer-code, and identity checks pass.
+
+## TestFlight build 189 — 2026-09-23
+
+App Store Connect accepted version 1.11 (189) at 11:30 AM Melbourne time.
+Processing completed, and TestFlight lists it as Ready to Submit with the
+existing Team (Expo) and v1 internal groups. Build 189 is saved as the selected
+build on the 1.11 App Store version page. The version has not been added for
+App Review or released.
+
 ## TestFlight build 188 — 2026-09-18
 
 Build 1.0.10 (188) includes the scanner mode localization/layout fix. The

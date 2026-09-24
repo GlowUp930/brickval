@@ -121,10 +121,6 @@ struct OnboardingView: View {
                 properties: properties
             )
             coordinator?.analytics.capture(
-                PostHogEvent.onboardingStarted,
-                properties: properties
-            )
-            coordinator?.analytics.capture(
                 PostHogEvent.onboardingStepShown,
                 properties: stepAnalyticsProperties(for: step)
             )

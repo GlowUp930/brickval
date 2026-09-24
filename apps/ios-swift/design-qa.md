@@ -1,5 +1,18 @@
 # Scan Result Card Visual QA
 
+## Failed-scan photo guide — 2026-09-24
+
+Recognition/no-figures failures now open the selected light pop-up over the
+scanner. Good and Avoid photos are edge-to-edge with no divider; the card has
+short spacing/lighting/library hints, a 44-point dismiss button, Retake photo,
+and a working Choose from Library action for either scan mode. The underlying
+Try again banner remains available after dismissal and Photo tips reopens the
+guide. The Small iPhone simulator screenshot was inspected in light-card/dark-
+scanner appearance; focused retry and guide UI tests plus single-scan failure
+tests pass, including reachability with large Arabic Dynamic Type. The
+13-language catalog audit passes. Physical camera and real library-import QA
+remain separate release checks.
+
 ## TestFlight build 188 — 2026-09-18
 
 Build 1.0.10 (188) passed the Small iPhone simulator check and the focused

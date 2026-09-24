@@ -13,7 +13,7 @@
 	<key>provisioningProfiles</key>
 	<dict>
 		<key>com.brickval.app</key>
-		<string>BrickVal App Store Build 125</string>
+		<string>BrickVal App Store 1.11 Build 189</string>
 	</dict>
 	<key>stripSwiftSymbols</key>
 	<true/>

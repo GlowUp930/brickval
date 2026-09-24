@@ -36078,7 +36078,7 @@
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "खुली सेटिंग"
+            "value": "सेटिंग्स खोलें"
           }
         },
         "it": {
@@ -68412,7 +68412,327 @@
         "ar": {"stringUnit": {"state": "translated", "value": "يتحقق من أسعار السوق دون إعادة مسح الصورة."}},
         "hi": {"stringUnit": {"state": "translated", "value": "फ़ोटो को फिर से स्कैन किए बिना बाज़ार की कीमतें जाँचता है।"}}
       }
-    }
+    },
+    "Let's check purchase settings": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Let's check purchase settings"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Revisemos la configuración de compras"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Vérifions les réglages des achats"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Kaufeinstellungen prüfen"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Controlliamo le impostazioni degli acquisti"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Vamos verificar os ajustes de compra"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Laten we de aankoopinstellingen controleren"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "購入設定を確認しましょう"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "구입 설정 확인하기"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "检查购买设置"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "檢查購買設定"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "لنتحقق من إعدادات الشراء"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "खरीद सेटिंग जाँचें"}}
+      }
+    },
+    "This iPhone isn't allowing in-app purchases right now. Screen Time may be the reason.": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "This iPhone isn't allowing in-app purchases right now. Screen Time may be the reason."}},
+        "es": {"stringUnit": {"state": "translated", "value": "Este iPhone no permite compras dentro de apps en este momento. Puede que el motivo sea Tiempo de uso."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Cet iPhone n’autorise pas les achats intégrés pour le moment. Temps d’écran peut en être la cause."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Auf diesem iPhone sind In-App-Käufe derzeit nicht erlaubt. Bildschirmzeit könnte der Grund sein."}},
+        "it": {"stringUnit": {"state": "translated", "value": "Su questo iPhone gli acquisti in-app non sono consentiti al momento. Il motivo potrebbe essere Tempo di utilizzo."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Este iPhone não permite compras dentro do app no momento. O Tempo de Uso pode ser o motivo."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Op deze iPhone zijn aankopen in apps momenteel niet toegestaan. Schermtijd kan de reden zijn."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "このiPhoneでは現在、アプリ内課金が許可されていません。スクリーンタイムが原因かもしれません。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "이 iPhone에서는 현재 앱 내 구입이 허용되지 않습니다. 스크린 타임이 원인일 수 있습니다."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "此 iPhone 目前不允许 App 内购买。屏幕使用时间可能是原因。"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "此 iPhone 目前不允許 App 內購買。螢幕使用時間可能是原因。"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "لا يسمح هذا الـ iPhone بعمليات الشراء داخل التطبيقات حاليًا. قد تكون مدة استخدام الجهاز هي السبب."}},
+        "hi": {"stringUnit": {"state": "translated", "value": "इस iPhone पर अभी इन-ऐप खरीदारी की अनुमति नहीं है। स्क्रीन टाइम इसका कारण हो सकता है।"}}
+      }
+    },
+    "On this iPhone, open Settings → Screen Time.": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "On this iPhone, open Settings → Screen Time."}},
+        "es": {"stringUnit": {"state": "translated", "value": "En este iPhone, abre Ajustes → Tiempo de uso."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Sur cet iPhone, ouvrez Réglages → Temps d’écran."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Öffne auf diesem iPhone Einstellungen → Bildschirmzeit."}},
+        "it": {"stringUnit": {"state": "translated", "value": "Su questo iPhone, apri Impostazioni → Tempo di utilizzo."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Neste iPhone, abra Ajustes → Tempo de Uso."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Open op deze iPhone Instellingen → Schermtijd."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "このiPhoneで、「設定」→「スクリーンタイム」を開きます。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "이 iPhone에서 설정 → 스크린 타임을 엽니다."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "在此 iPhone 上打开“设置”→“屏幕使用时间”。"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "在此 iPhone 上開啟「設定」→「螢幕使用時間」。"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "على هذا الـ iPhone، افتح الإعدادات → مدة استخدام الجهاز."}},
+        "hi": {"stringUnit": {"state": "translated", "value": "इस iPhone पर सेटिंग्स → स्क्रीन टाइम खोलें।"}}
+      }
+    },
+    "Find purchase restrictions": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Find purchase restrictions"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Busca las restricciones de compra"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Trouvez les restrictions d’achat"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Kaufeinschränkungen finden"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Trova le restrizioni per gli acquisti"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Encontre as restrições de compra"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Zoek de aankoopbeperkingen"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "購入制限を探します"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "구입 제한 찾기"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "找到购买限制"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "找到購買限制"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "ابحث عن قيود الشراء"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "खरीद प्रतिबंध ढूँढें"}}
+      }
+    },
+    "Tap Content & Privacy Restrictions → iTunes & App Store Purchases.": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Tap Content & Privacy Restrictions → iTunes & App Store Purchases."}},
+        "es": {"stringUnit": {"state": "translated", "value": "Toca Restricciones de contenido y privacidad → Compras de iTunes y App Store."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Touchez Restrictions de contenu et de confidentialité → Achats iTunes et App Store."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Tippe auf Beschränkungen → Käufe im iTunes & App Store."}},
+        "it": {"stringUnit": {"state": "translated", "value": "Tocca Restrizioni contenuti e privacy → Acquisti su iTunes e App Store."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Toque em Restrições de Conteúdo e Privacidade → Compras no iTunes e App Store."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Tik op Beperkingen voor materiaal en privacy → iTunes- en App Store-aankopen."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "「コンテンツとプライバシーの制限」→「iTunesおよびApp Storeでの購入」をタップします。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "콘텐츠 및 개인정보 보호 제한 → iTunes 및 App Store 구입을 탭합니다."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "轻点“内容与隐私访问限制”→“iTunes Store 与 App Store 购买项目”。"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "點一下「內容與隱私權限制」→「iTunes 與 App Store 購買項目」。"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "اضغط على قيود المحتوى والخصوصية → مشتريات iTunes وApp Store."}},
+        "hi": {"stringUnit": {"state": "translated", "value": "कॉन्टेंट और प्राइवेसी प्रतिबंध → iTunes और App Store खरीदारी पर टैप करें।"}}
+      }
+    },
+    "Allow in-app purchases": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Allow in-app purchases"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Permitir compras dentro de apps"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Autoriser les achats intégrés"}},
+        "de": {"stringUnit": {"state": "translated", "value": "In-App-Käufe erlauben"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Consenti acquisti in-app"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Permitir compras dentro do app"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Aankopen in apps toestaan"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "App内課金を許可"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "앱 내 구입 허용"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "允许 App 内购买"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "允許 App 內購買"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "السماح بعمليات الشراء داخل التطبيقات"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "इन-ऐप खरीदारी की अनुमति दें"}}
+      }
+    },
+    "Tap In-app Purchases and choose Allow.": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Tap In-app Purchases and choose Allow."}},
+        "es": {"stringUnit": {"state": "translated", "value": "Toca Compras dentro de apps y selecciona Permitir."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Touchez Achats intégrés, puis sélectionnez Autoriser."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Tippe auf In-App-Käufe und wähle Erlauben."}},
+        "it": {"stringUnit": {"state": "translated", "value": "Tocca Acquisti in-app e scegli Consenti."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Toque em Compras dentro do app e selecione Permitir."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Tik op Aankopen in apps en kies Sta toe."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "「App内課金」をタップして「許可」を選択します。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "앱 내 구입을 탭하고 허용을 선택합니다."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "轻点“App 内购买”，然后选择“允许”。"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "點一下「App 內購買」，然後選擇「允許」。"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "اضغط على عمليات الشراء داخل التطبيقات واختر السماح."}},
+        "hi": {"stringUnit": {"state": "translated", "value": "इन-ऐप खरीदारी पर टैप करें और अनुमति दें चुनें।"}}
+      }
+    },
+    "If this iPhone is managed by family, school, or work, ask the person who manages it to allow purchases.": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "If this iPhone is managed by family, school, or work, ask the person who manages it to allow purchases."}},
+        "es": {"stringUnit": {"state": "translated", "value": "Si este iPhone está administrado por tu familia, escuela o trabajo, pide a la persona administradora que permita las compras."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Si cet iPhone est géré par votre famille, votre école ou votre entreprise, demandez à la personne qui le gère d’autoriser les achats."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Wenn dieses iPhone von der Familie, Schule oder Arbeit verwaltet wird, bitte die zuständige Person, Käufe zu erlauben."}},
+        "it": {"stringUnit": {"state": "translated", "value": "Se questo iPhone è gestito dalla famiglia, dalla scuola o dal lavoro, chiedi alla persona responsabile di consentire gli acquisti."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Se este iPhone for gerenciado pela família, escola ou trabalho, peça à pessoa responsável que permita compras."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Als deze iPhone wordt beheerd door je gezin, school of werk, vraag dan de beheerder om aankopen toe te staan."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "このiPhoneが家族、学校、または職場によって管理されている場合は、管理者に購入を許可してもらってください。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "이 iPhone이 가족, 학교 또는 직장에서 관리되는 경우 관리 담당자에게 구입을 허용해 달라고 요청하세요."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "如果此 iPhone 由家人、学校或工作单位管理，请让管理者允许购买。"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "如果此 iPhone 由家人、學校或工作單位管理，請請管理者允許購買。"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "إذا كان هذا الـ iPhone مُدارًا من قِبل العائلة أو المدرسة أو جهة العمل، فاطلب من المسؤول عنه السماح بعمليات الشراء."}},
+        "hi": {"stringUnit": {"state": "translated", "value": "अगर यह iPhone परिवार, स्कूल या काम की जगह द्वारा प्रबंधित है, तो इसे प्रबंधित करने वाले व्यक्ति से खरीदारी की अनुमति देने को कहें।"}}
+      }
+    },
+    "Purchases are still blocked on this iPhone. Check the settings above, then try again.": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Purchases are still blocked on this iPhone. Check the settings above, then try again."}},
+        "es": {"stringUnit": {"state": "translated", "value": "Las compras siguen bloqueadas en este iPhone. Comprueba los ajustes anteriores y vuelve a intentarlo."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Les achats sont toujours bloqués sur cet iPhone. Vérifiez les réglages ci-dessus, puis réessayez."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Käufe sind auf diesem iPhone weiterhin blockiert. Prüfe die Einstellungen oben und versuche es erneut."}},
+        "it": {"stringUnit": {"state": "translated", "value": "Gli acquisti sono ancora bloccati su questo iPhone. Controlla le impostazioni sopra, poi riprova."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "As compras continuam bloqueadas neste iPhone. Verifique os ajustes acima e tente novamente."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Aankopen zijn nog steeds geblokkeerd op deze iPhone. Controleer de bovenstaande instellingen en probeer het opnieuw."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "このiPhoneではまだ購入がブロックされています。上の設定を確認してから、もう一度お試しください。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "이 iPhone에서는 아직 구입이 차단되어 있습니다. 위 설정을 확인한 후 다시 시도하세요."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "此 iPhone 仍然禁止购买。请检查上面的设置，然后重试。"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "此 iPhone 仍然禁止購買。請檢查上面的設定，然後重試。"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "لا تزال عمليات الشراء محظورة على هذا الـ iPhone. تحقّق من الإعدادات أعلاه ثم حاول مرة أخرى."}},
+        "hi": {"stringUnit": {"state": "translated", "value": "इस iPhone पर खरीदारी अभी भी ब्लॉक है। ऊपर दी गई सेटिंग जाँचें, फिर दोबारा कोशिश करें।"}}
+      }
+    },
+    "Check again": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Check again"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Comprobar de nuevo"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Vérifier à nouveau"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Erneut prüfen"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Controlla di nuovo"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Verificar novamente"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Opnieuw controleren"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "もう一度確認"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "다시 확인"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "再次检查"}},
+        "zh-Hant": {"stringUnit": {"state": "translated", "value": "再次檢查"}},
+        "ar": {"stringUnit": {"state": "translated", "value": "التحقق مرة أخرى"}},
+        "hi": {"stringUnit": {"state": "translated", "value": "फिर जाँचें"}}
+      }
+    },
+    "Scan fails? Try these!": {"localizations": {
+      "en": {"stringUnit": {"state": "translated", "value": "Scan fails? Try these!"}},
+      "es": {"stringUnit": {"state": "translated", "value": "¿Falló el escaneo? ¡Prueba esto!"}},
+      "fr": {"stringUnit": {"state": "translated", "value": "Le scan a échoué ? Essayez ceci !"}},
+      "de": {"stringUnit": {"state": "translated", "value": "Scan fehlgeschlagen? Das hilft!"}},
+      "it": {"stringUnit": {"state": "translated", "value": "Scansione non riuscita? Prova così!"}},
+      "pt-BR": {"stringUnit": {"state": "translated", "value": "A leitura falhou? Tente isto!"}},
+      "nl": {"stringUnit": {"state": "translated", "value": "Scannen mislukt? Probeer dit!"}},
+      "ja": {"stringUnit": {"state": "translated", "value": "スキャンできませんか？こちらをお試しください"}},
+      "ko": {"stringUnit": {"state": "translated", "value": "스캔이 안 되나요? 이렇게 해 보세요!"}},
+      "zh-Hans": {"stringUnit": {"state": "translated", "value": "扫描失败？试试这些方法！"}},
+      "zh-Hant": {"stringUnit": {"state": "translated", "value": "掃描失敗？試試這些方法！"}},
+      "ar": {"stringUnit": {"state": "translated", "value": "فشل المسح؟ جرّب هذه النصائح!"}},
+      "hi": {"stringUnit": {"state": "translated", "value": "स्कैन नहीं हुआ? ये तरीके आज़माएँ!"}}
+    }},
+    "Good": {"localizations": {
+      "en": {"stringUnit": {"state": "translated", "value": "Good"}},
+      "es": {"stringUnit": {"state": "translated", "value": "Bien"}},
+      "fr": {"stringUnit": {"state": "translated", "value": "Bien"}},
+      "de": {"stringUnit": {"state": "translated", "value": "Gut"}},
+      "it": {"stringUnit": {"state": "translated", "value": "Bene"}},
+      "pt-BR": {"stringUnit": {"state": "translated", "value": "Bom"}},
+      "nl": {"stringUnit": {"state": "translated", "value": "Goed"}},
+      "ja": {"stringUnit": {"state": "translated", "value": "良い例"}},
+      "ko": {"stringUnit": {"state": "translated", "value": "좋은 예"}},
+      "zh-Hans": {"stringUnit": {"state": "translated", "value": "好示例"}},
+      "zh-Hant": {"stringUnit": {"state": "translated", "value": "好範例"}},
+      "ar": {"stringUnit": {"state": "translated", "value": "جيد"}},
+      "hi": {"stringUnit": {"state": "translated", "value": "अच्छा"}}
+    }},
+    "Avoid": {"localizations": {
+      "en": {"stringUnit": {"state": "translated", "value": "Avoid"}},
+      "es": {"stringUnit": {"state": "translated", "value": "Evita"}},
+      "fr": {"stringUnit": {"state": "translated", "value": "À éviter"}},
+      "de": {"stringUnit": {"state": "translated", "value": "Vermeiden"}},
+      "it": {"stringUnit": {"state": "translated", "value": "Da evitare"}},
+      "pt-BR": {"stringUnit": {"state": "translated", "value": "Evite"}},
+      "nl": {"stringUnit": {"state": "translated", "value": "Vermijd"}},
+      "ja": {"stringUnit": {"state": "translated", "value": "避けたい例"}},
+      "ko": {"stringUnit": {"state": "translated", "value": "피할 예"}},
+      "zh-Hans": {"stringUnit": {"state": "translated", "value": "避免"}},
+      "zh-Hant": {"stringUnit": {"state": "translated", "value": "避免"}},
+      "ar": {"stringUnit": {"state": "translated", "value": "تجنّب"}},
+      "hi": {"stringUnit": {"state": "translated", "value": "इससे बचें"}}
+    }},
+    "Separate": {"localizations": {
+      "en": {"stringUnit": {"state": "translated", "value": "Separate"}},
+      "es": {"stringUnit": {"state": "translated", "value": "Sepáralas"}},
+      "fr": {"stringUnit": {"state": "translated", "value": "Espacez-les"}},
+      "de": {"stringUnit": {"state": "translated", "value": "Mit Abstand"}},
+      "it": {"stringUnit": {"state": "translated", "value": "Distanziale"}},
+      "pt-BR": {"stringUnit": {"state": "translated", "value": "Separe as figuras"}},
+      "nl": {"stringUnit": {"state": "translated", "value": "Leg ze los"}},
+      "ja": {"stringUnit": {"state": "translated", "value": "間隔を空ける"}},
+      "ko": {"stringUnit": {"state": "translated", "value": "서로 떼어 놓기"}},
+      "zh-Hans": {"stringUnit": {"state": "translated", "value": "分开放置"}},
+      "zh-Hant": {"stringUnit": {"state": "translated", "value": "分開擺放"}},
+      "ar": {"stringUnit": {"state": "translated", "value": "افصل بينها"}},
+      "hi": {"stringUnit": {"state": "translated", "value": "अलग-अलग रखें"}}
+    }},
+    "Don't pile": {"localizations": {
+      "en": {"stringUnit": {"state": "translated", "value": "Don't pile"}},
+      "es": {"stringUnit": {"state": "translated", "value": "No las amontones"}},
+      "fr": {"stringUnit": {"state": "translated", "value": "Ne les empilez pas"}},
+      "de": {"stringUnit": {"state": "translated", "value": "Nicht stapeln"}},
+      "it": {"stringUnit": {"state": "translated", "value": "Non ammucchiarle"}},
+      "pt-BR": {"stringUnit": {"state": "translated", "value": "Não amontoe"}},
+      "nl": {"stringUnit": {"state": "translated", "value": "Niet opstapelen"}},
+      "ja": {"stringUnit": {"state": "translated", "value": "重ねない"}},
+      "ko": {"stringUnit": {"state": "translated", "value": "쌓아 두지 않기"}},
+      "zh-Hans": {"stringUnit": {"state": "translated", "value": "不要堆叠"}},
+      "zh-Hant": {"stringUnit": {"state": "translated", "value": "不要堆疊"}},
+      "ar": {"stringUnit": {"state": "translated", "value": "لا تكدّسها"}},
+      "hi": {"stringUnit": {"state": "translated", "value": "ढेर न लगाएँ"}}
+    }},
+    "Bright light": {"localizations": {
+      "en": {"stringUnit": {"state": "translated", "value": "Bright light"}},
+      "es": {"stringUnit": {"state": "translated", "value": "Buena luz"}},
+      "fr": {"stringUnit": {"state": "translated", "value": "Bonne lumière"}},
+      "de": {"stringUnit": {"state": "translated", "value": "Helles Licht"}},
+      "it": {"stringUnit": {"state": "translated", "value": "Buona luce"}},
+      "pt-BR": {"stringUnit": {"state": "translated", "value": "Boa iluminação"}},
+      "nl": {"stringUnit": {"state": "translated", "value": "Goed licht"}},
+      "ja": {"stringUnit": {"state": "translated", "value": "明るい場所"}},
+      "ko": {"stringUnit": {"state": "translated", "value": "밝은 조명"}},
+      "zh-Hans": {"stringUnit": {"state": "translated", "value": "光线充足"}},
+      "zh-Hant": {"stringUnit": {"state": "translated", "value": "光線充足"}},
+      "ar": {"stringUnit": {"state": "translated", "value": "إضاءة جيدة"}},
+      "hi": {"stringUnit": {"state": "translated", "value": "अच्छी रोशनी"}}
+    }},
+    "Try a library photo": {"localizations": {
+      "en": {"stringUnit": {"state": "translated", "value": "Try a library photo"}},
+      "es": {"stringUnit": {"state": "translated", "value": "Prueba una foto guardada"}},
+      "fr": {"stringUnit": {"state": "translated", "value": "Essayez une photo enregistrée"}},
+      "de": {"stringUnit": {"state": "translated", "value": "Foto aus Mediathek testen"}},
+      "it": {"stringUnit": {"state": "translated", "value": "Prova una foto salvata"}},
+      "pt-BR": {"stringUnit": {"state": "translated", "value": "Tente uma foto da biblioteca"}},
+      "nl": {"stringUnit": {"state": "translated", "value": "Probeer een opgeslagen foto"}},
+      "ja": {"stringUnit": {"state": "translated", "value": "保存した写真を試す"}},
+      "ko": {"stringUnit": {"state": "translated", "value": "보관함 사진 사용해 보기"}},
+      "zh-Hans": {"stringUnit": {"state": "translated", "value": "试试相册里的照片"}},
+      "zh-Hant": {"stringUnit": {"state": "translated", "value": "試試圖庫中的照片"}},
+      "ar": {"stringUnit": {"state": "translated", "value": "جرّب صورة من المكتبة"}},
+      "hi": {"stringUnit": {"state": "translated", "value": "लाइब्रेरी की फ़ोटो आज़माएँ"}}
+    }},
+    "Retake photo": {"localizations": {
+      "en": {"stringUnit": {"state": "translated", "value": "Retake photo"}},
+      "es": {"stringUnit": {"state": "translated", "value": "Volver a tomar la foto"}},
+      "fr": {"stringUnit": {"state": "translated", "value": "Reprendre la photo"}},
+      "de": {"stringUnit": {"state": "translated", "value": "Foto neu aufnehmen"}},
+      "it": {"stringUnit": {"state": "translated", "value": "Scatta di nuovo"}},
+      "pt-BR": {"stringUnit": {"state": "translated", "value": "Tirar outra foto"}},
+      "nl": {"stringUnit": {"state": "translated", "value": "Foto opnieuw maken"}},
+      "ja": {"stringUnit": {"state": "translated", "value": "写真を撮り直す"}},
+      "ko": {"stringUnit": {"state": "translated", "value": "사진 다시 찍기"}},
+      "zh-Hans": {"stringUnit": {"state": "translated", "value": "重新拍照"}},
+      "zh-Hant": {"stringUnit": {"state": "translated", "value": "重新拍照"}},
+      "ar": {"stringUnit": {"state": "translated", "value": "أعد التقاط الصورة"}},
+      "hi": {"stringUnit": {"state": "translated", "value": "फिर से फ़ोटो लें"}}
+    }},
+    "Choose from Library": {"localizations": {
+      "en": {"stringUnit": {"state": "translated", "value": "Choose from Library"}},
+      "es": {"stringUnit": {"state": "translated", "value": "Elegir de la fototeca"}},
+      "fr": {"stringUnit": {"state": "translated", "value": "Choisir dans la photothèque"}},
+      "de": {"stringUnit": {"state": "translated", "value": "Aus Mediathek wählen"}},
+      "it": {"stringUnit": {"state": "translated", "value": "Scegli dalla libreria"}},
+      "pt-BR": {"stringUnit": {"state": "translated", "value": "Escolher da biblioteca"}},
+      "nl": {"stringUnit": {"state": "translated", "value": "Kies uit fotobibliotheek"}},
+      "ja": {"stringUnit": {"state": "translated", "value": "ライブラリから選ぶ"}},
+      "ko": {"stringUnit": {"state": "translated", "value": "보관함에서 선택"}},
+      "zh-Hans": {"stringUnit": {"state": "translated", "value": "从相册选择"}},
+      "zh-Hant": {"stringUnit": {"state": "translated", "value": "從圖庫選擇"}},
+      "ar": {"stringUnit": {"state": "translated", "value": "اختر من المكتبة"}},
+      "hi": {"stringUnit": {"state": "translated", "value": "लाइब्रेरी से चुनें"}}
+    }},
+    "Photo tips": {"localizations": {
+      "en": {"stringUnit": {"state": "translated", "value": "Photo tips"}},
+      "es": {"stringUnit": {"state": "translated", "value": "Consejos para fotos"}},
+      "fr": {"stringUnit": {"state": "translated", "value": "Conseils photo"}},
+      "de": {"stringUnit": {"state": "translated", "value": "Fototipps"}},
+      "it": {"stringUnit": {"state": "translated", "value": "Consigli per la foto"}},
+      "pt-BR": {"stringUnit": {"state": "translated", "value": "Dicas de foto"}},
+      "nl": {"stringUnit": {"state": "translated", "value": "Fototips"}},
+      "ja": {"stringUnit": {"state": "translated", "value": "撮影のヒント"}},
+      "ko": {"stringUnit": {"state": "translated", "value": "사진 촬영 팁"}},
+      "zh-Hans": {"stringUnit": {"state": "translated", "value": "拍照提示"}},
+      "zh-Hant": {"stringUnit": {"state": "translated", "value": "拍照提示"}},
+      "ar": {"stringUnit": {"state": "translated", "value": "نصائح للتصوير"}},
+      "hi": {"stringUnit": {"state": "translated", "value": "फ़ोटो टिप्स"}}
+    }}
   },
   "version": "1.0"
 }
