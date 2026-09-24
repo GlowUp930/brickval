@@ -1,5 +1,19 @@
 # BrickVal Native iOS Context
 
+## TestFlight build 190 — 2026-09-24
+
+Version 1.12 (190) was archived, signed, and uploaded successfully to App
+Store Connect/TestFlight; Apple processing is asynchronous. The archive is
+`/tmp/BrickVal190-v112.xcarchive`, with matching arm64 dSYM UUID
+`3C6D3A66-D1B2-3202-8D2E-7222D28BA329`. Signature verification passed.
+The fresh Small iPhone run passed 281/283 checks; the two remaining photo-guide
+UI checks passed in a focused rerun after adding the missing DEBUG fixture
+route. Localization passed across 13 languages. Physical-device camera,
+Photos, purchase, and analytics verification remains pending. The version 1.11
+upload train is closed because 1.11 was approved; build 190 therefore uses
+version 1.12. No App Review submission or App Store release was made. Sentry
+dSYM upload remains pending because credentials are unavailable here.
+
 ## Failed-scan photo guide — 2026-09-24
 
 The scanner shows a dismissible photo comparison only for recognition failures
@@ -8,7 +22,7 @@ one seamless edge. Retake returns to the camera; Choose from Library imports
 into the current Single or Bulk flow. The failure banner retains Try again and
 can reopen Photo tips. Other failure classes do not show the guide. New copy
 is translated in all 13 locales. Source and focused simulator checks pass;
-physical camera and Photos picker QA and a later TestFlight build remain open.
+physical camera and Photos picker QA remain open in uploaded build 190.
 
 ## Post-purchase cancellation survey repair — 2026-09-24
 
@@ -20,7 +34,7 @@ recorded before subscription observers run. The pending post-purchase context
 defers other surveys; skipping or submitting it starts the 30-day survey
 cooldown. The exact false-survey regression first failed, then passed alongside
 the purchase ordering and genuine-cancellation checks (19 focused tests on the
-Small iPhone simulator). This source is not in TestFlight build 189; the live
+Small iPhone simulator). This source is in uploaded build 190; the live
 purchase and cancellation sequence still needs physical-device verification.
 
 ## Purchase restriction guide — 2026-09-24
@@ -32,7 +46,7 @@ is the cause. “Check again” only reopens the upgrade flow after StoreKit say
 purchases are allowed; it does not retry or grant a purchase automatically.
 The existing DEBUG purchase-failure root fixture now previews this guide.
 The guide copy is localized across all 13 supported locales and passes the
-localization audit. This source is not in TestFlight build 189. Real-device
+localization audit. This source is in uploaded build 190. Real-device
 behavior remains to be verified before release.
 
 ## PostHog journey repair — 2026-09-23
@@ -41,7 +55,7 @@ Schema 5 source adds `paywall_view_id` to actual presentation, dismissal, and
 purchase attempts; emits `pro_access_activated` only when confirmed Pro access
 changes from inactive to active; sets RevenueCat `$posthogUserId`; and stops
 the redundant `onboarding_started` event. Focused simulator tests pass, but
-this source is not in build 189. See the root AGENTS.md and journey audit for
+this source is in uploaded build 190. See the root AGENTS.md and journey audit for
 live dashboard changes and physical-device verification still required.
 
 ## TestFlight build 189 — 2026-09-23

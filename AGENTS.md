@@ -1,5 +1,16 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## TestFlight build 190 — 2026-09-24
+
+Signed native version 1.12 (190) was uploaded successfully to App Store
+Connect/TestFlight and is processing. It includes the failed-scan photo guide,
+post-purchase cancellation survey repair, purchase restriction guide, and
+PostHog journey instrumentation. The fresh small-iPhone simulator suite passed
+281 of 283 checks; the remaining two guide checks passed after their DEBUG
+fixture route was fixed. Localization passed across all 13 languages. Physical
+camera, Photos import, purchase/cancellation, and analytics identity checks
+remain open. Build 190 has not been submitted for App Review or released.
+
 ## Failed-scan photo guide — 2026-09-24
 
 Native source now offers an image-led pop-up only after a minifigure
@@ -7,7 +18,7 @@ recognition/no-figures failure. It compares the supplied separated and piled
 photos edge-to-edge, gives brief lighting/library tips, and offers retake or
 Photo Library import in Single and Bulk modes. Camera, network, permission,
 and subscription failures keep their existing recovery instead. The guide is
-localized across all 13 app languages and is not in TestFlight build 189.
+localized across all 13 app languages and included in uploaded build 190.
 See `apps/ios-swift/design-qa.md` for simulator checks and remaining device QA.
 
 ## Post-purchase cancellation survey repair — 2026-09-24
@@ -15,7 +26,7 @@ See `apps/ios-swift/design-qa.md` for simulator checks and remaining device QA.
 Native source now requires RevenueCat's `unsubscribeDetectedAt` before showing
 the cancellation survey. A new purchase is recorded before subscription state
 observers run, and its feedback context defers other surveys. Focused simulator
-regressions pass; this is not in TestFlight build 189 and still needs a real
+regressions pass; this is in uploaded build 190 and still needs a real
 purchase/cancellation check. See `apps/ios-swift/CONTEXT.md`.
 
 ## Purchase restriction guide — 2026-09-24
@@ -23,8 +34,8 @@ purchase/cancellation check. See `apps/ios-swift/CONTEXT.md`.
 Native source now shows a three-step Screen Time guide only for a
 purchase-not-allowed result when `AppStore.canMakePayments` is false. It notes
 that family, school, or work management may also block purchases, and checks
-StoreKit again before reopening the upgrade flow. This is not in TestFlight
-build 189; physical-device verification remains pending. The guide copy is
+StoreKit again before reopening the upgrade flow. This is in uploaded
+build 190; physical-device verification remains pending. The guide copy is
 localized across all 13 supported locales. See
 `apps/ios-swift/CONTEXT.md`.
 
@@ -36,8 +47,8 @@ excludes simulators and TestFlight, uses a one-day window, and breaks down by
 build; the broken historical install tile is off the growth dashboard. A
 purchase-outcome-filtered paywall funnel is saved. Native source adds per-view
 paywall correlation, confirmed inactive-to-active Pro transitions, and the
-RevenueCat PostHog ID attribute. This source is **not** in TestFlight build
-189. Do not use new event data until a later build and physical purchase,
+RevenueCat PostHog ID attribute. This source is in uploaded build 190. Do not
+use new event data until build 190 is processed and physical purchase,
 restore, offer-code, and identity checks pass.
 
 ## TestFlight build 189 — 2026-09-23
