@@ -68732,7 +68732,991 @@
       "zh-Hant": {"stringUnit": {"state": "translated", "value": "拍照提示"}},
       "ar": {"stringUnit": {"state": "translated", "value": "نصائح للتصوير"}},
       "hi": {"stringUnit": {"state": "translated", "value": "फ़ोटो टिप्स"}}
-    }}
+    }},
+    "Your next find": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your next find"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu próximo hallazgo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre prochaine découverte"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein nächster Fund"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua prossima scoperta"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sua próxima descoberta"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je volgende vondst"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次の発見へ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음 발견을 향해"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一次发现"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一次發現"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اكتشافك التالي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपकी अगली खोज"
+          }
+        }
+      }
+    },
+    "Your BrickValue trial": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your BrickValue trial"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu prueba de BrickValue"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre essai BrickValue"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine BrickValue-Testphase"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua prova BrickValue"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu teste do BrickValue"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je BrickValue-proefperiode"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BrickValueの無料体験"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BrickValue 체험"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 BrickValue 试用"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 BrickValue 試用"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فترة تجربة BrickValue"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपका BrickValue ट्रायल"
+          }
+        }
+      }
+    },
+    "Your trial is scheduled to renew on %@. Review your plan.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your trial is scheduled to renew on %@. Review your plan."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu prueba está prevista para renovarse el %@. Revisa tu plan."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le renouvellement de votre essai est prévu le %@. Vérifiez votre abonnement."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Testphase verlängert sich voraussichtlich am %@. Prüfe dein Abo."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il rinnovo della prova è previsto per il %@. Controlla il tuo piano."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu teste está programado para renovar em %@. Confira seu plano."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je proefperiode wordt volgens planning verlengd op %@. Bekijk je abonnement."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無料体験は%@に更新予定です。プランをご確認ください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "체험은 %@에 갱신될 예정입니다. 요금제를 확인하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的试用计划于 %@ 续订。请查看你的方案。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的試用預計於 %@ 續訂。請查看你的方案。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "من المقرر تجديد تجربتك في %@. راجع خطتك."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपका ट्रायल %@ को रिन्यू होने वाला है। अपना प्लान देखें।"
+          }
+        }
+      }
+    },
+    "Keep your finds together. Scan a minifigure and save it to your collection.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep your finds together. Scan a minifigure and save it to your collection."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reúne tus hallazgos. Escanea una minifigura y guárdala en tu colección."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rassemblez vos découvertes. Scannez une figurine et ajoutez-la à votre collection."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Behalte deine Funde zusammen. Scanne eine Minifigur und speichere sie in deiner Sammlung."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riunisci le tue scoperte. Scansiona una minifigure e salvala nella tua collezione."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reúna suas descobertas. Escaneie uma minifigura e salve-a na sua coleção."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bewaar je vondsten bij elkaar. Scan een minifiguur en sla die op in je verzameling."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "発見をまとめましょう。ミニフィグをスキャンしてコレクションに保存できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "발견한 미니피겨를 모아 보세요. 스캔하고 컬렉션에 저장하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "集中保存你的发现。扫描一个人仔，并保存到你的收藏。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "集中保存你的發現。掃描一個人偶，並儲存到你的收藏。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اجمع اكتشافاتك في مكان واحد. امسح شخصية مصغرة واحفظها في مجموعتك."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अपनी खोजें एक साथ रखें। एक मिनीफिगर स्कैन करें और अपने संग्रह में सेव करें।"
+          }
+        }
+      }
+    },
+    "Your collection is ready when you are. Review your saved finds or scan another minifigure.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your collection is ready when you are. Review your saved finds or scan another minifigure."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu colección te espera. Revisa tus hallazgos guardados o escanea otra minifigura."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre collection vous attend. Consultez vos découvertes enregistrées ou scannez une autre figurine."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Sammlung wartet auf dich. Sieh dir deine gespeicherten Funde an oder scanne eine weitere Minifigur."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua collezione ti aspetta. Guarda le scoperte salvate o scansiona un’altra minifigure."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sua coleção está à sua espera. Veja suas descobertas salvas ou escaneie outra minifigura."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je verzameling wacht op je. Bekijk je opgeslagen vondsten of scan nog een minifiguur."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "いつでもコレクションを確認できます。保存した発見を見たり、別のミニフィグをスキャンしたりしましょう。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "컬렉션이 기다리고 있어요. 저장한 미니피겨를 확인하거나 다른 미니피겨를 스캔하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "随时查看你的收藏。回顾已保存的发现，或扫描另一个人仔。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隨時查看你的收藏。回顧已儲存的發現，或掃描另一個人偶。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مجموعتك جاهزة متى أردت. راجع اكتشافاتك المحفوظة أو امسح شخصية مصغرة أخرى."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपका संग्रह तैयार है। सेव की गई खोजें देखें या एक और मिनीफिगर स्कैन करें।"
+          }
+        }
+      }
+    },
+    "Another minifigure to identify? BrickVal is ready when you are.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another minifigure to identify? BrickVal is ready when you are."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Otra minifigura por identificar? BrickVal está listo cuando tú quieras."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une autre figurine à identifier ? BrickVal est prêt quand vous l’êtes."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch eine Minifigur zu erkennen? BrickVal ist bereit, wenn du es bist."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un’altra minifigure da identificare? BrickVal è pronto quando vuoi."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outra minifigura para identificar? O BrickVal está pronto quando você quiser."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nog een minifiguur herkennen? BrickVal is klaar wanneer jij dat bent."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別のミニフィグを調べませんか？BrickValはいつでも使えます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 미니피겨를 알아볼까요? BrickVal은 언제든 준비되어 있어요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还有人仔需要识别？BrickVal 随时为你准备就绪。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "還有人偶需要辨識？BrickVal 隨時為你準備就緒。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هل لديك شخصية مصغرة أخرى للتعرف عليها؟ BrickVal جاهز متى أردت."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "एक और मिनीफिगर पहचानना है? BrickVal आपके लिए तैयार है।"
+          }
+        }
+      }
+    },
+    "Want occasional reminders to scan and build your collection?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Want occasional reminders to scan and build your collection?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Quieres recordatorios ocasionales para escanear y ampliar tu colección?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Souhaitez-vous des rappels occasionnels pour scanner et enrichir votre collection ?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Möchtest du gelegentliche Erinnerungen zum Scannen und Erweitern deiner Sammlung?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vuoi promemoria occasionali per scansionare e ampliare la tua collezione?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quer lembretes ocasionais para escanear e ampliar sua coleção?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wil je af en toe een herinnering om te scannen en je verzameling uit te breiden?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スキャンやコレクション作りのリマインダーを受け取りますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가끔 스캔하고 컬렉션을 모으도록 알림을 받을까요?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "想偶尔收到扫描和建立收藏的提醒吗？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "想偶爾收到掃描和建立收藏的提醒嗎？"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هل تريد تذكيرات من حين لآخر للمسح وبناء مجموعتك؟"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्कैन करने और संग्रह बनाने के लिए कभी-कभी रिमाइंडर चाहिए?"
+          }
+        }
+      }
+    },
+    "Enable reminders": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enable reminders"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activar recordatorios"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activer les rappels"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erinnerungen aktivieren"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attiva promemoria"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ativar lembretes"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herinneringen inschakelen"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リマインダーを有効にする"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "알림 켜기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开启提醒"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟提醒"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تفعيل التذكيرات"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रिमाइंडर चालू करें"
+          }
+        }
+      }
+    },
+    "At most one reminder a week, and two in 30 days. Turn them off anytime in Notifications.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At most one reminder a week, and two in 30 days. Turn them off anytime in Notifications."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Como máximo uno por semana y dos en 30 días. Puedes desactivarlos cuando quieras en Notificaciones."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un rappel par semaine maximum, et deux sur 30 jours. Désactivez-les à tout moment dans Notifications."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Höchstens eine Erinnerung pro Woche und zwei in 30 Tagen. Unter Mitteilungen jederzeit abschaltbar."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al massimo uno a settimana e due in 30 giorni. Disattivali quando vuoi in Notifiche."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No máximo um por semana e dois em 30 dias. Desative quando quiser em Notificações."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maximaal één per week en twee in 30 dagen. Zet ze op elk moment uit bij Meldingen."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "週に最大1回、30日間に最大2回です。「通知」でいつでもオフにできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일주일에 최대 한 번, 30일에 두 번입니다. 알림 설정에서 언제든 끌 수 있어요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每周最多一次，30 天内最多两次。可随时在“通知”中关闭。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每週最多一次，30 天內最多兩次。可隨時在「通知」中關閉。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تذكير واحد أسبوعيًا كحد أقصى واثنان خلال 30 يومًا. أوقفها متى شئت من الإشعارات."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हफ़्ते में अधिकतम एक और 30 दिनों में दो रिमाइंडर। इन्हें सूचनाओं में कभी भी बंद करें।"
+          }
+        }
+      }
+    },
+    "At most one reminder a week, and two in 30 days.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At most one reminder a week, and two in 30 days."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Como máximo uno por semana y dos en 30 días."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un rappel par semaine maximum, et deux sur 30 jours."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Höchstens eine Erinnerung pro Woche und zwei in 30 Tagen."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al massimo uno a settimana e due in 30 giorni."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No máximo um por semana e dois em 30 dias."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maximaal één per week en twee in 30 dagen."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "週に最大1回、30日間に最大2回です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일주일에 최대 한 번, 30일에 두 번입니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每周最多一次，30 天内最多两次。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每週最多一次，30 天內最多兩次。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تذكير واحد أسبوعيًا كحد أقصى واثنان خلال 30 يومًا."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हफ़्ते में अधिकतम एक और 30 दिनों में दो रिमाइंडर।"
+          }
+        }
+      }
+    },
+    "Scan and collection reminders": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan and collection reminders"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recordatorios de escaneo y colección"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rappels de scan et de collection"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan- und Sammlungserinnerungen"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Promemoria scansione e collezione"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lembretes de escaneamento e coleção"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan- en verzamelherinneringen"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スキャンとコレクションのリマインダー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스캔 및 컬렉션 알림"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "扫描和收藏提醒"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "掃描和收藏提醒"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تذكيرات المسح والمجموعة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्कैन और संग्रह के रिमाइंडर"
+          }
+        }
+      }
+    },
+    "BrickValue only sends reminders you choose. Manage each reminder below.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BrickValue only sends reminders you choose. Manage each reminder below."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BrickValue solo envía los recordatorios que elijas. Gestiona cada uno a continuación."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BrickValue envoie uniquement les rappels que vous choisissez. Gérez-les ci-dessous."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BrickValue sendet nur Erinnerungen, die du auswählst. Verwalte sie unten."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BrickValue invia solo i promemoria che scegli. Gestiscili qui sotto."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O BrickValue só envia os lembretes que você escolher. Gerencie-os abaixo."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BrickValue stuurt alleen herinneringen die je kiest. Beheer ze hieronder."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BrickValueは選択したリマインダーだけを送信します。以下で管理できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BrickValue는 선택한 알림만 보냅니다. 아래에서 각 알림을 관리하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BrickValue 仅发送你选择的提醒。请在下方管理各项提醒。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BrickValue 僅傳送你選擇的提醒。請在下方管理各項提醒。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يرسل BrickValue التذكيرات التي تختارها فقط. أدِر كل تذكير أدناه."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BrickValue केवल आपके चुने हुए रिमाइंडर भेजता है। नीचे हर रिमाइंडर प्रबंधित करें।"
+          }
+        }
+      }
+    }
   },
   "version": "1.0"
 }

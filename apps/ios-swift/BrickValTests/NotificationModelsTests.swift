@@ -15,7 +15,8 @@ struct NotificationModelsTests {
             resetDate: reset,
             now: now,
             timeZone: timeZone,
-            calendar: calendar
+            calendar: calendar,
+            locale: Locale(identifier: "en")
         )
 
         #expect(request?.title == "Your free scans are ready")
@@ -33,7 +34,8 @@ struct NotificationModelsTests {
             resetDate: reset,
             now: now,
             timeZone: timeZone,
-            calendar: calendar
+            calendar: calendar,
+            locale: Locale(identifier: "en")
         )
 
         #expect(request?.fireDate == reset)
@@ -72,7 +74,7 @@ struct NotificationModelsTests {
     @Test("notification links open the correct destination")
     func notificationLinksAreActionable() {
         #expect(BrickValNotificationCategory.scanReset.deepLink.absoluteString == "brickval://scan")
-        #expect(BrickValNotificationCategory.trialEnding.deepLink.absoluteString == "brickval://settings")
-        #expect(BrickValNotificationCategory.accountAction.deepLink.absoluteString == "brickval://settings")
+        #expect(BrickValNotificationCategory.trialEnding.deepLink.absoluteString == "brickval://subscription")
+        #expect(BrickValNotificationCategory.accountAction.deepLink.absoluteString == "brickval://subscription")
     }
 }

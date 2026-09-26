@@ -180,6 +180,9 @@ struct CollectionView: View {
                 ]
             )
         }
+        .onChange(of: router.notificationNavigationRevision) { _, _ in
+            presentedSheet = nil
+        }
         .onChange(of: router.collectionPath) { previous, current in
             guard previous.count < current.count,
                   case .collectionItem(let item) = current.last

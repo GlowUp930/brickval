@@ -1,5 +1,15 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Optional retention reminders — 2026-09-26
+
+Native source adds an explicitly opted-in seven/21-day scan and collection
+sequence with persistent equal holdout assignment, local frequency limits,
+activity cancellation, and notification measurement. Both dates are reserved
+locally to support users who keep the app closed. Backend policy defaults
+`BRICKVALUE_RETENTION_NOTIFICATIONS_ENABLED` to false. A new native release
+and physical delivery checks are required before activation. See
+`docs/audits/2026-09-26-notification-retention.md`.
+
 ## TestFlight build 190 — 2026-09-24
 
 Signed native version 1.12 (190) was uploaded successfully to App Store

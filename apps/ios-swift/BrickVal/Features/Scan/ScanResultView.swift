@@ -5,6 +5,8 @@ import SwiftUI
 struct ScanResultView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.requestReview) private var requestReview
+    @Environment(NotificationCoordinator.self) private var notifications
+    @State private var recordedResult = false
     @Environment(CollectionStore.self) private var collection
     @Environment(EntitlementStore.self) private var entitlements
     @Environment(MonetizationStore.self) private var monetization
@@ -125,6 +127,13 @@ struct ScanResultView: View {
                 )
             }
         }
+        .task {
+            guard !recordedResult else { return }
+            recordedResult = true
+            notifications.recordMeaningfulActivity("usable_scan", hasCollection: !collection.items.isEmpty, usableScan: true,
+                accessAllowed: monetization.accessCohort != .hardTrial || entitlements.isPro)
+        }
+        .retentionReminderInvitation()
     }
 
     private var productImage: some View {
@@ -408,6 +417,7 @@ struct ScanResultView: View {
                     isPro: entitlements.isPro || !monetization.policy.gates.collectionCapacity,
                     freeLimit: monetization.collectionLimit
                 )
+                notifications.recordMeaningfulActivity("collection_save", hasCollection: true)
                 withAnimation(.spring(response: 0.22, dampingFraction: 0.84)) {
                     savedCondition = condition
                     saveMessage = BrickValLocalization.localized("Added to collection")

@@ -22,7 +22,9 @@ struct SDKEnvironmentRootView: View {
     @ViewBuilder
     private var content: some View {
 #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("-showProfileDesign1Demo") {
+        if ProcessInfo.processInfo.arguments.contains("-showRetentionReminderDemo") {
+            RetentionNotificationDemoView()
+        } else if ProcessInfo.processInfo.arguments.contains("-showProfileDesign1Demo") {
             ProfileDesignDraftsView(initialDraft: .compact)
         } else if ProcessInfo.processInfo.arguments.contains("-showProfileDesign2Demo") {
             ProfileDesignDraftsView(initialDraft: .collectorCard)

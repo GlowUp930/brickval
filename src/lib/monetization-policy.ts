@@ -24,6 +24,7 @@ export interface MonetizationPolicy {
     scanReset: boolean;
     trialEnding: boolean;
     accountAction: boolean;
+    retention: boolean;
   };
   minimumAppBuild: number | null;
   appUpdateURL: string;
@@ -80,6 +81,7 @@ export function getMonetizationPolicy(): MonetizationPolicy {
       scanReset: booleanValue("BRICKVALUE_SCAN_RESET_NOTIFICATIONS_ENABLED", true),
       trialEnding: booleanValue("BRICKVALUE_TRIAL_REMINDER_NOTIFICATIONS_ENABLED", true),
       accountAction: booleanValue("BRICKVALUE_ACCOUNT_ALERTS_ENABLED", true),
+      retention: booleanValue("BRICKVALUE_RETENTION_NOTIFICATIONS_ENABLED", false),
     },
     // Keep this unset until the replacement build is live in the App Store.
     minimumAppBuild: optionalPositiveInteger("BRICKVALUE_MINIMUM_IOS_BUILD"),

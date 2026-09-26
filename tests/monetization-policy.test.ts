@@ -4,6 +4,7 @@ import test from "node:test";
 import { getMonetizationPolicy } from "../src/lib/monetization-policy";
 
 const keys = [
+  "BRICKVALUE_RETENTION_NOTIFICATIONS_ENABLED",
   "BRICKVALUE_SINGLE_SCAN_GATE_ENABLED",
   "BRICKVALUE_BULK_GATE_ENABLED",
   "BRICKVALUE_COLLECTION_GATE_ENABLED",
@@ -95,5 +96,14 @@ test("minimum iOS build can be enabled remotely", () => {
     const policy = getMonetizationPolicy();
     assert.equal(policy.minimumAppBuild, 142);
     assert.equal(policy.appUpdateURL, "https://example.com/update");
+  });
+});
+
+
+test("retention sequence is disabled by default and separately controlled", () => {
+  withCleanEnvironment(() => {
+    assert.equal(getMonetizationPolicy().notifications.retention, false);
+    process.env.BRICKVALUE_RETENTION_NOTIFICATIONS_ENABLED = "true";
+    assert.equal(getMonetizationPolicy().notifications.retention, true);
   });
 });

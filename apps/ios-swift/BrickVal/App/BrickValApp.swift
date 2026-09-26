@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct BrickValApp: App {
     @UIApplicationDelegateAdaptor(BrickValAppDelegate.self) private var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
     @State private var router = AppRouter()
     @State private var collectionStore = CollectionStore()
     @State private var preferences = PreferencesStore()
@@ -15,7 +16,19 @@ struct BrickValApp: App {
 
     init() {
         let entitlementStore = EntitlementStore()
-        let notificationCoordinator = NotificationCoordinator()
+        let notificationCoordinator: NotificationCoordinator
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-showRetentionReminderDemo") {
+            let demoDefaults = UserDefaults(suiteName: "BrickValRetentionDemo")!
+            demoDefaults.removePersistentDomain(forName: "BrickValRetentionDemo")
+            notificationCoordinator = NotificationCoordinator(defaults: demoDefaults,
+                assignRetention: { ProcessInfo.processInfo.arguments.contains("-retentionHoldout") ? .holdout : .sequence })
+        } else {
+            notificationCoordinator = NotificationCoordinator()
+        }
+#else
+        notificationCoordinator = NotificationCoordinator()
+#endif
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-showProfileTabDemo") ||
             ProcessInfo.processInfo.arguments.contains("-showProGatingDemo") ||
@@ -27,6 +40,9 @@ struct BrickValApp: App {
             entitlementStore: entitlementStore,
             notificationCoordinator: notificationCoordinator
         )
+        notificationCoordinator.eventHandler = { [weak sdkCoordinator] event, properties in
+            sdkCoordinator?.analytics.capture(event, properties: properties)
+        }
         _entitlements = State(initialValue: entitlementStore)
         _notifications = State(initialValue: notificationCoordinator)
         _sdkCoordinator = State(initialValue: sdkCoordinator)
@@ -67,7 +83,7 @@ struct BrickValApp: App {
                         try await sdkCoordinator.apiClient.registerNotificationDevice(registration)
                     }
                     notifications.setResponseHandler { url in
-                        router.handle(url: url)
+                        router.handleNotification(url: url)
                     }
                 }
                 .onChange(of: monetization.policy) { _, policy in
@@ -78,7 +94,20 @@ struct BrickValApp: App {
                     notifications.updateLanguage(language)
                     sdkCoordinator.updateLocalization(language)
                 }
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active { Task { await notifications.refreshAuthorizationStatus() } }
+                }
+                .onChange(of: collectionStore.items.isEmpty) { _, empty in
+                    notifications.updateCollectionPresence(!empty)
+                }
+                .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name.NSSystemTimeZoneDidChange)) { _ in
+                    Task { await notifications.refreshAuthorizationStatus() }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+                    Task { await notifications.refreshAuthorizationStatus() }
+                }
                 .task {
+                    notifications.updateCollectionPresence(!collectionStore.items.isEmpty)
                     await notifications.refreshAuthorizationStatus()
                     await currency.refresh(using: sdkCoordinator.apiClient)
                 }

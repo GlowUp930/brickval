@@ -54,7 +54,21 @@ struct NotificationSettingsView: View {
                 .font(.caption.bold())
                 .foregroundStyle(BrickValStyle.Semantic.textSecondary)
 
-            if !entitlements.isPro, notifications.policy.scanReset {
+            if notifications.retentionState.assignment == .sequence {
+                NotificationToggleRow(
+                    title: "Scan and collection reminders",
+                    subtitle: "At most one reminder a week, and two in 30 days.",
+                    isOn: Binding(
+                        get: { notifications.retentionState.consent },
+                        set: { enabled in
+                            if enabled { Task { _ = await notifications.requestRetentionReminders() } }
+                            else { notifications.cancel(category: .retention) }
+                        }
+                    )
+                )
+                .disabled(!notifications.retentionAvailable && !notifications.retentionState.consent)
+            }
+            if !entitlements.isPro, monetization.accessCohort != .hardTrial, notifications.policy.scanReset {
                 NotificationToggleRow(
                     title: "Free scans are ready",
                     subtitle: "One reminder when your daily scans reset.",
@@ -125,7 +139,7 @@ struct NotificationSettingsView: View {
     private var statusMessage: String {
         switch notifications.authorizationStatus {
         case .authorized, .provisional, .ephemeral:
-            BrickValLocalization.localized("BrickValue will only send reminders you choose. We do not send inactivity or generic marketing notifications.")
+            BrickValLocalization.localized("BrickValue only sends reminders you choose. Manage each reminder below.")
         case .denied:
             BrickValLocalization.localized("Turn notifications on in Settings to use a reminder you requested.")
         case .notDetermined:

@@ -2,6 +2,7 @@ import PostHog
 import SwiftUI
 
 struct ItemDetailView: View {
+    @Environment(NotificationCoordinator.self) private var notifications
     @Environment(CollectionStore.self) private var store
     @Environment(EntitlementStore.self) private var entitlements
     @Environment(MonetizationStore.self) private var monetization
@@ -120,6 +121,9 @@ struct ItemDetailView: View {
             .padding(.bottom, BrickValStyle.Primitive.space32)
         }
         .background(detailBackground.ignoresSafeArea())
+        .onAppear {
+            notifications.recordMeaningfulActivity("collection_item_opened", hasCollection: !store.items.isEmpty)
+        }
         .task {
             guard let coordinator else { return }
             store.prepareHistoryIfNeeded()

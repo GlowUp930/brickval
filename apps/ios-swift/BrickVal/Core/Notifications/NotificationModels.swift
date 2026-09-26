@@ -4,6 +4,7 @@ enum BrickValNotificationCategory: String, CaseIterable, Codable, Hashable, Send
     case scanReset
     case trialEnding
     case accountAction
+    case retention
 
     var requestIdentifier: String {
         "brickvalue.notification.\(rawValue)"
@@ -14,7 +15,9 @@ enum BrickValNotificationCategory: String, CaseIterable, Codable, Hashable, Send
         case .scanReset:
             URL(string: "brickval://scan")!
         case .trialEnding, .accountAction:
-            URL(string: "brickval://settings")!
+            URL(string: "brickval://subscription")!
+        case .retention:
+            URL(string: "brickval://scan")!
         }
     }
 }
@@ -117,8 +120,8 @@ enum BrickValNotificationSchedulePlanner {
         return BrickValLocalNotificationRequest(
             identifier: BrickValNotificationCategory.trialEnding.requestIdentifier,
             category: .trialEnding,
-            title: BrickValLocalization.localized("Your BrickValue trial ends in 2 days", locale: locale),
-            body: BrickValLocalization.localized("Review your plan before it renews.", locale: locale),
+            title: BrickValLocalization.localized("Your BrickValue trial", locale: locale),
+            body: String(format: BrickValLocalization.localized("Your trial is scheduled to renew on %@. Review your plan.", locale: locale), expirationDate.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: locale, timeZone: timeZone))),
             fireDate: deliveryDate(
                 preferredDate: preferredDate,
                 now: now,

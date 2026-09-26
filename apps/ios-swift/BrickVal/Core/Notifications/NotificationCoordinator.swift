@@ -36,7 +36,7 @@ final class SystemBrickValNotificationCenter: BrickValNotificationCenterClient {
         content.title = request.title
         content.body = request.body
         content.sound = .default
-        content.userInfo = ["deepLink": request.deepLink.absoluteString]
+        content.userInfo = ["deepLink": request.deepLink.absoluteString, "notification_category": request.category.rawValue, "notification_id": request.identifier]
 
         var calendar = Calendar.autoupdatingCurrent
         calendar.timeZone = .autoupdatingCurrent
@@ -70,6 +70,13 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
     private(set) var lastError: String?
     private(set) var policy: MonetizationPolicy.Notifications
 
+    private(set) var retentionState: RetentionNotificationState
+    private(set) var showsRetentionInvitation = false
+    @ObservationIgnored var eventHandler: ((String, [String: Any]) -> Void)?
+    @ObservationIgnored private var pendingResponseURL: URL?
+    @ObservationIgnored private var schedulingTask: Task<Void, Never>?
+    @ObservationIgnored private var lastNotificationTap: Date?
+    @ObservationIgnored private let assignRetention: () -> RetentionNotificationState.Assignment
     @ObservationIgnored private let center: BrickValNotificationCenterClient
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let now: @Sendable () -> Date
@@ -87,8 +94,12 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
         center: BrickValNotificationCenterClient = SystemBrickValNotificationCenter(),
         defaults: UserDefaults = .standard,
         now: @escaping @Sendable () -> Date = Date.init,
-        timeZone: TimeZone = .autoupdatingCurrent
+        timeZone: TimeZone = .autoupdatingCurrent,
+        assignRetention: @escaping () -> RetentionNotificationState.Assignment = { Bool.random() ? .sequence : .holdout }
     ) {
+        self.assignRetention = assignRetention
+        retentionState = defaults.data(forKey: "brickvalue_retention_state_v1")
+            .flatMap { try? JSONDecoder().decode(RetentionNotificationState.self, from: $0) } ?? RetentionNotificationState()
         self.center = center
         self.defaults = defaults
         self.now = now
@@ -116,11 +127,20 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
     }
 
     func refreshAuthorizationStatus() async {
+        let previous = authorizationStatus
         authorizationStatus = await center.authorizationStatus()
+        if previous != authorizationStatus {
+            track("notification_authorization_changed", ["previous_status": String(describing: previous), "status": String(describing: authorizationStatus)])
+        }
+        if let state = subscriptionState {
+            await updateTrialReminder(expirationDate: state.isActive && state.isTrial ? state.expirationDate : nil, willRenew: state.willRenew)
+        }
+        await reconcileRetention()
     }
 
     func setResponseHandler(_ handler: @escaping @MainActor @Sendable (URL) -> Void) {
         responseHandler = handler
+        if let pendingResponseURL { handler(pendingResponseURL); self.pendingResponseURL = nil }
     }
 
     func setDeviceRegistrationHandler(
@@ -131,6 +151,25 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
     }
 
     func setSubscriberID(_ subscriberID: String?) {
+        if retentionState.identity != subscriberID {
+            retentionState.reconcileElapsed(now: now())
+            // On upgrade there may be no retention identity yet. Preserve existing
+            // requested reminders until a known account/activity context changes.
+            if retentionState.identity != nil || retentionState.lastActivity != nil {
+                cancel(category: .trialEnding)
+                cancel(category: .scanReset)
+                subscriptionState = nil
+            }
+            retentionState.pending = []
+            retentionState.episodeSteps = []
+            retentionState.lastActivity = nil
+            retentionState.hasSuccessfulScan = false
+            retentionState.hasCollection = false
+            retentionState.identity = subscriberID
+            showsRetentionInvitation = false
+            persistRetention()
+            Task { await reconcileRetention() }
+        }
         self.subscriberID = subscriberID
         syncDeviceRegistration()
     }
@@ -143,11 +182,19 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
     func updateLanguage(_ language: BrickValLanguage) {
         guard languageCode != language.rawValue else { return }
         languageCode = language.rawValue
+        Task {
+            if let state = subscriptionState {
+                await updateTrialReminder(expirationDate: state.isActive && state.isTrial ? state.expirationDate : nil, willRenew: state.willRenew)
+            }
+            await reconcileRetention()
+        }
         syncDeviceRegistration()
     }
 
     func updatePolicy(_ policy: MonetizationPolicy.Notifications) {
         self.policy = policy
+        if !policy.enabled || !policy.retention { showsRetentionInvitation = false }
+        Task { await reconcileRetention() }
         if !policy.enabled || !policy.scanReset {
             cancel(category: .scanReset)
         }
@@ -165,7 +212,7 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
     }
 
     func requestScanResetReminder(resetDate: Date) async -> Bool {
-        guard policy.enabled, policy.scanReset else { return false }
+        guard policy.enabled, policy.scanReset, accessCohort != "hard_trial", subscriptionState?.isActive != true else { return false }
         let granted = await requestPermission()
         guard granted,
               let request = BrickValNotificationSchedulePlanner.scanReset(
@@ -181,6 +228,9 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
             try await center.add(request)
             scanResetReminderEnabled = true
             defaults.set(true, forKey: Keys.scanResetReminder)
+            defaults.set(request.fireDate, forKey: "brickvalue_scan_reset_date")
+            track("notification_scheduled", ["category": "scanReset"])
+            await reconcileRetention()
             lastError = nil
             return true
         } catch {
@@ -190,7 +240,9 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
     }
 
     func requestTrialReminder(expirationDate: Date, willRenew: Bool) async -> Bool {
-        guard policy.enabled, policy.trialEnding else { return false }
+        guard policy.enabled, policy.trialEnding,
+              BrickValNotificationSchedulePlanner.trialEnding(expirationDate: expirationDate, willRenew: willRenew, now: now(), timeZone: timeZone) != nil
+        else { return false }
         let granted = await requestPermission()
         guard granted else { return false }
         trialReminderEnabled = true
@@ -201,6 +253,7 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
 
     func updateSubscription(_ state: SubscriptionReminderState) async {
         subscriptionState = state
+        if state.isActive { cancel(category: .scanReset) }
         await updateTrialReminder(
             expirationDate: state.isActive && state.isTrial ? state.expirationDate : nil,
             willRenew: state.willRenew
@@ -221,6 +274,8 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
     func updateTrialReminder(expirationDate: Date?, willRenew: Bool) async {
         let identifier = BrickValNotificationCategory.trialEnding.requestIdentifier
         center.removePendingNotifications(withIdentifiers: [identifier])
+        defaults.removeObject(forKey: "brickvalue_trial_reminder_date")
+        defer { Task { await reconcileRetention() } }
 
         guard trialReminderEnabled,
               policy.enabled,
@@ -238,6 +293,8 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
 
         do {
             try await center.add(request)
+            defaults.set(request.fireDate, forKey: "brickvalue_trial_reminder_date")
+            track("notification_scheduled", ["category": "trialEnding"])
             lastError = nil
         } catch {
             lastError = BrickValLocalization.localized("We couldn’t schedule the trial reminder.")
@@ -245,12 +302,24 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
     }
 
     func cancel(category: BrickValNotificationCategory) {
+        defer { if category != .retention { Task { await reconcileRetention() } } }
         center.removePendingNotifications(withIdentifiers: [category.requestIdentifier])
+        track("notification_cancelled", ["category": category.rawValue])
         switch category {
+        case .retention:
+            center.removePendingNotifications(withIdentifiers: ["brickvalue.notification.retention.1", "brickvalue.notification.retention.2"])
+            retentionState.reconcileElapsed(now: now())
+            retentionState.consent = false
+            retentionState.pending = []
+            showsRetentionInvitation = false
+            persistRetention()
+            Task { await reconcileRetention() }
         case .scanReset:
+            defaults.removeObject(forKey: "brickvalue_scan_reset_date")
             scanResetReminderEnabled = false
             defaults.set(false, forKey: Keys.scanResetReminder)
         case .trialEnding:
+            defaults.removeObject(forKey: "brickvalue_trial_reminder_date")
             trialReminderEnabled = false
             defaults.set(false, forKey: Keys.trialReminder)
         case .accountAction:
@@ -264,7 +333,7 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
         guard let value = response.notification.request.content.userInfo["deepLink"] as? String,
               let url = URL(string: value)
         else { return }
-        responseHandler?(url)
+        receiveResponse(url: url, identifier: response.notification.request.identifier)
     }
 
     private func requestPermission() async -> Bool {
@@ -305,9 +374,10 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
         didReceive response: UNNotificationResponse
     ) async {
         let deepLink = response.notification.request.content.userInfo["deepLink"] as? String
+        let identifier = response.notification.request.identifier
         await MainActor.run { [weak self] in
             guard let deepLink, let url = URL(string: deepLink) else { return }
-            self?.responseHandler?(url)
+            self?.receiveResponse(url: url, identifier: identifier)
         }
     }
 
@@ -315,7 +385,138 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
-        [.banner, .sound]
+        let identifier = notification.request.identifier
+        await MainActor.run { [weak self] in
+            self?.track("notification_foreground_presented", ["notification_id": identifier])
+        }
+        return [.banner, .sound]
+    }
+
+    var retentionAvailable: Bool {
+        policy.enabled && policy.retention && retentionState.assignment == .sequence && retentionState.hasSuccessfulScan
+    }
+
+    func recordMeaningfulActivity(_ kind: String, hasCollection: Bool, usableScan: Bool = false, accessAllowed: Bool = true) {
+        guard accessAllowed else { return }
+        retentionState.reconcileElapsed(now: now())
+        for pending in retentionState.pending {
+            track("notification_cancelled", ["notification_id": pending.identifier, "category": "retention", "reason": "activity"])
+        }
+        retentionState.lastActivity = now()
+        retentionState.hasCollection = hasCollection
+        retentionState.episodeSteps = []
+        retentionState.pending = []
+        if usableScan {
+            retentionState.hasSuccessfulScan = true
+            if policy.enabled && policy.retention && retentionState.assignment == nil {
+                retentionState.assignment = assignRetention()
+                retentionState.eligibleAt = now()
+                track("notification_experiment_eligible")
+            }
+            showsRetentionInvitation = retentionAvailable && !retentionState.invitationSeen
+        }
+        persistRetention()
+        track("notification_meaningful_activity", ["activity": kind,
+            "after_notification_tap": lastNotificationTap.map { now().timeIntervalSince($0) < 86_400 } ?? false])
+        Task { await reconcileRetention() }
+    }
+
+    func markRetentionInvitationSeen() {
+        guard showsRetentionInvitation else { return }
+        retentionState.invitationSeen = true
+        persistRetention()
+        track("notification_consent_shown")
+    }
+
+    func declineRetentionInvitation() {
+        showsRetentionInvitation = false
+        retentionState.invitationSeen = true
+        persistRetention()
+        track("notification_consent_declined")
+    }
+
+    func requestRetentionReminders() async -> Bool {
+        guard retentionAvailable else { return false }
+        showsRetentionInvitation = false
+        retentionState.invitationSeen = true
+        persistRetention()
+        guard await requestPermission() else {
+            track("notification_consent_denied")
+            return false
+        }
+        retentionState.consent = true
+        persistRetention()
+        track("notification_consent_enabled")
+        await reconcileRetention()
+        return lastError == nil
+    }
+
+    func updateCollectionPresence(_ hasCollection: Bool) {
+        guard retentionState.hasCollection != hasCollection else { return }
+        retentionState.hasCollection = hasCollection
+        persistRetention()
+        Task { await reconcileRetention() }
+    }
+
+    /// Serialize notification-center writes: rapid activity cannot leave a stale request behind.
+    func reconcileRetention() async {
+        let previous = schedulingTask
+        let task = Task { @MainActor in
+            await previous?.value
+            await self.scheduleRetention()
+        }
+        schedulingTask = task
+        await task.value
+    }
+
+    private func scheduleRetention() async {
+        retentionState.reconcileElapsed(now: now())
+        let old = retentionState.pending
+        var desired: [RetentionNotificationState.Reservation] = []
+        if retentionAvailable && authorizationStatus.canSchedule {
+            let utilities = ["brickvalue_scan_reset_date", "brickvalue_trial_reminder_date"]
+                .compactMap { defaults.object(forKey: $0) as? Date }
+            desired = RetentionNotificationPlanner.reservations(state: retentionState, now: now(), timeZone: timeZone, utilityDates: utilities)
+        }
+        center.removePendingNotifications(withIdentifiers: ["brickvalue.notification.retention.1", "brickvalue.notification.retention.2"])
+        retentionState.pending = []
+        for removed in old where !desired.contains(removed) {
+            track("notification_cancelled", ["notification_id": removed.identifier, "category": "retention"])
+        }
+        if !desired.isEmpty { lastError = nil }
+        for reservation in desired {
+            if reservation.step == 2 && !retentionState.episodeSteps.contains(1) && !retentionState.pending.contains(where: { $0.step == 1 }) { continue }
+            do {
+                try await center.add(RetentionNotificationPlanner.request(reservation, locale: Locale(identifier: languageCode)))
+                retentionState.pending.append(reservation)
+                if !old.contains(reservation) {
+                    track("notification_scheduled", ["notification_id": reservation.identifier, "category": "retention", "step": reservation.step, "scheduled_at": reservation.date.timeIntervalSince1970])
+                }
+            } catch {
+                lastError = BrickValLocalization.localized("Notifications are unavailable right now.")
+                track("notification_schedule_failed", ["category": "retention", "step": reservation.step])
+            }
+        }
+        persistRetention()
+    }
+
+    private func persistRetention() {
+        if let data = try? JSONEncoder().encode(retentionState) { defaults.set(data, forKey: "brickvalue_retention_state_v1") }
+    }
+
+    private func track(_ event: String, _ properties: [String: Any] = [:]) {
+        var properties = properties
+        properties["retention_assignment"] = retentionState.assignment?.rawValue ?? "unassigned"
+        properties["retention_eligible_at"] = retentionState.eligibleAt?.timeIntervalSince1970
+        properties["retention_experiment_version"] = 1
+        eventHandler?(event, properties)
+    }
+
+    func receiveResponse(url: URL, identifier: String) {
+        guard url.scheme == "brickval", ["scan", "collection", "settings", "subscription"].contains(url.host ?? "") else { return }
+        lastNotificationTap = now()
+        track("notification_tapped", ["notification_id": identifier])
+        if let responseHandler { responseHandler(url) } else { pendingResponseURL = url }
     }
 
     private enum Keys {

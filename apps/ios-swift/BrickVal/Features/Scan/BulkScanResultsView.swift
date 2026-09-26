@@ -50,6 +50,8 @@ private enum BulkResultsPresentationPhase {
 @MainActor
 struct BulkScanResultsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(NotificationCoordinator.self) private var notifications
+    @State private var recordedUsableResult = false
     @Environment(CollectionStore.self) private var collection
     @Environment(EntitlementStore.self) private var entitlements
     @Environment(MonetizationStore.self) private var monetization
@@ -166,6 +168,13 @@ struct BulkScanResultsView: View {
             guard presentation.accessMode == .real else { return }
             await store.processBulkPresentation(presentation)
         }
+        .task(id: "retention-\(presentation.resolvedItems.count)-\(reviewInteractionReady)") {
+            guard reviewInteractionReady, presentation.accessMode == .real, !presentation.resolvedItems.isEmpty, !recordedUsableResult else { return }
+            recordedUsableResult = true
+            notifications.recordMeaningfulActivity("usable_scan", hasCollection: !collection.items.isEmpty, usableScan: true,
+                accessAllowed: monetization.accessCohort != .hardTrial || entitlements.isPro)
+        }
+        .retentionReminderInvitation()
         .onChange(of: presentation.revision) { _, _ in
             syncPresentation()
         }
@@ -1375,6 +1384,7 @@ struct BulkScanResultsView: View {
                     isPro: entitlements.isPro || !monetization.policy.gates.collectionCapacity,
                     freeLimit: monetization.collectionLimit
                 )
+                if !collectionItems.isEmpty { notifications.recordMeaningfulActivity("collection_save", hasCollection: true) }
                 store.completeBulkSave(count: collectionItems.count)
                 coordinator?.analytics.capture(
                     PostHogEvent.itemsAddedToCollection,

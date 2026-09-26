@@ -658,3 +658,7 @@ Update this file when native architecture, build/release settings, current workf
 CollectionStore now owns background-prepared numeric history for 1M/3M/6M and grouped inventory rows. Collection summary and graph share prepared results; item history comes from the same snapshot. Date-window refresh follows UTC while active. Chart inspection state is isolated from sampling/currency conversion and selection changes no longer restart reveal animation. ProductImagePipeline handles public-photo download sharing, background downsampling and bounded memory/disk caching. Detail history refresh accepts an optional item key and joins/prioritizes existing refresh work. No backend or persisted-schema changes.
 
 Sentry BRICKVAL-M confirms the build-171 production freeze in `NSISO8601DateFormatter.init` through `PortfolioSummaryView` (14.2–15.0 seconds). Initial optimized measurements and Release-config UI tests support the fix; physical-device confirmation and final release status are tracked in `docs/audits/2026-09-09-collection-performance.md`.
+
+## Optional retention reminders — 2026-09-26
+
+Source adds opted-in local seven/21-day reminders, a persistent holdout, cold-launch destinations, and analytics. Backend rollout remains off by default. Both dates are scheduled together by user-approved design. See `../../docs/audits/2026-09-26-notification-retention.md` for behavior, measurement, tests, and physical-device release gates.

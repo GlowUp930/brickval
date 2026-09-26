@@ -30,6 +30,7 @@ const freeStatus: MonetizationStatus = {
       scanReset: true,
       trialEnding: true,
       accountAction: true,
+      retention: false,
     },
     minimumAppBuild: null,
     appUpdateURL: "https://apps.apple.com/au/app/brickvalue/id6771715475",

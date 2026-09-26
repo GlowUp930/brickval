@@ -5,6 +5,7 @@ import SwiftUI
 @Observable
 @MainActor
 final class AppRouter {
+    private(set) var notificationNavigationRevision = 0
     var selectedTab: AppTab = .scan
     var collectionPath: [AppRoute] = []
     var scanPath: [AppRoute] = []
@@ -34,12 +35,22 @@ final class AppRouter {
         }
     }
 
+    func handleNotification(url: URL) {
+        guard url.scheme == "brickval", ["scan", "collection", "settings", "subscription"].contains(url.host ?? "") else { return }
+        handle(url: url)
+        notificationNavigationRevision += 1
+    }
+
     func handle(url: URL) {
         if url.scheme == "brickval" {
             switch url.host {
-            case "scan": selectedTab = .scan
-            case "collection": selectedTab = .collection
-            case "settings":
+            case "scan":
+                selectedTab = .scan
+                scanPath = []
+            case "collection":
+                selectedTab = .collection
+                collectionPath = []
+            case "settings", "subscription":
                 selectedTab = .settings
                 settingsPath = [.subscription]
             case "referral":

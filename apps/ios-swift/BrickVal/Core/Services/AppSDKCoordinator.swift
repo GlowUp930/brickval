@@ -330,8 +330,8 @@ final class AppSDKCoordinator: SuperwallDelegate {
 
     func setMonetizationCohort(_ cohort: MonetizationAccessCohort?) {
         analytics.setAccessCohort(cohort?.rawValue)
+        notificationCoordinator.setAccessCohort(cohort?.rawValue)
         guard let cohort else { return }
-        notificationCoordinator.setAccessCohort(cohort.rawValue)
         let attributes = [
             "access_cohort": cohort.rawValue,
             "access_experiment": "new_user_scan_gate_v1",

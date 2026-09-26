@@ -4,6 +4,7 @@ import PostHog
 import SwiftUI
 
 struct ScannerView: View {
+    @Environment(AppRouter.self) private var router
     @Environment(PreferencesStore.self) private var preferences
     @Environment(EntitlementStore.self) private var entitlements
     @Environment(MonetizationStore.self) private var monetization
@@ -441,6 +442,11 @@ struct ScannerView: View {
             presentLimit(for: feature)
             store.clearProLimitRequest()
         }
+        .onChange(of: router.notificationNavigationRevision, initial: true) { _, revision in
+            guard revision > 0 else { return }
+            // A notification destination must not stay behind an old result modal.
+            if store.presentedSheet != nil || store.presentedBulkResults != nil { store.reset() }
+        }
         .sheet(item: $store.presentedSheet) { sheet in
             switch sheet {
             case .manualLookup: ManualLookupView(store: store)
@@ -862,6 +868,8 @@ private struct ScanTipsCallout: View {
 
 #Preview {
     NavigationStack { ScannerView() }
+        .environment(AppRouter())
+        .environment(NotificationCoordinator())
         .environment(PreferencesStore())
         .environment(CollectionStore())
         .environment(EntitlementStore())

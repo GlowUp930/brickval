@@ -47,6 +47,25 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
         let scanReset: Bool
         let trialEnding: Bool
         let accountAction: Bool
+        var retention: Bool = false
+
+        init(enabled: Bool, scanReset: Bool, trialEnding: Bool, accountAction: Bool, retention: Bool = false) {
+            self.enabled = enabled
+            self.scanReset = scanReset
+            self.trialEnding = trialEnding
+            self.accountAction = accountAction
+            self.retention = retention
+        }
+
+        private enum CodingKeys: String, CodingKey { case enabled, scanReset, trialEnding, accountAction, retention }
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            enabled = try container.decode(Bool.self, forKey: .enabled)
+            scanReset = try container.decode(Bool.self, forKey: .scanReset)
+            trialEnding = try container.decode(Bool.self, forKey: .trialEnding)
+            accountAction = try container.decode(Bool.self, forKey: .accountAction)
+            retention = try container.decodeIfPresent(Bool.self, forKey: .retention) ?? false
+        }
     }
 
     let version: Int
