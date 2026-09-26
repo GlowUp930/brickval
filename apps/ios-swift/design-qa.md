@@ -1,5 +1,15 @@
 # Scan Result Card Visual QA
 
+## TestFlight build 192 — 2026-09-26
+
+Version 1.13 (192) contains the optional seven/21-day retention reminders.
+The signed archive passed strict code-signature verification and uploaded to
+App Store Connect for TestFlight processing. Archive:
+`/tmp/BrickVal192-v113-retention.xcarchive`; arm64 dSYM UUID
+`45FA4946-DC43-39D2-9555-E95D3AA1F412`. The rollout policy remains off.
+Physical-iPhone notification and billing checks remain pending. Sentry symbol
+upload also remains pending because local Sentry credentials are unavailable.
+
 ## Failed-scan photo guide — 2026-09-24
 
 Recognition/no-figures failures now open the selected light pop-up over the

@@ -54,10 +54,12 @@ Before enabling: confirm requested reset delivery, dated trial delivery/cancella
 
 ## Verification
 
-- Final focused native run: 22 tests passed, zero failures, covering the retention planner, coordinator, invitation refusal, holdout, and routing. Result: `/tmp/BrickValRetention-routing-retry.xcresult`. A simulator launch failure on the preceding attempt cleared after restarting the dedicated test simulator.
-- Earlier focused notification/model/image-cache/UI run: 32 tests passed, zero failures (`/tmp/BrickValRetention-final.xcresult`).
-- Wider native run: 276 passed and one failed (`/tmp/BrickValRetention-clean.xcresult`). The unrelated image-cache disk-trimming timing assertion passed on the focused rerun. The wider suite is not reported as wholly passing.
+- Final focused native run: 22 tests passed, zero failures, covering the retention planner, coordinator, invitation refusal, holdout, and routing. A simulator launch failure on the preceding attempt cleared after restarting the dedicated test simulator.
+- Earlier focused notification/model/image-cache/UI run: 32 tests passed, zero failures.
+- Wider native run: 276 passed and one failed. The unrelated image-cache disk-trimming timing assertion passed on the focused rerun. The wider suite is not reported as wholly passing.
 - Backend policy, notification localization, and scan-gate tests: 11 passed. Type checking passed.
 - Localization audit passed for 846 app strings and four Info.plist strings across all 13 languages. Diff whitespace checks passed.
 
-Physical iPhone local delivery, external trial cancellation/renewal/expiry, hardware permission journeys, and billing APNs remain pending. No new TestFlight build was uploaded or production flag enabled by this task.
+Native version 1.13 (192), containing this change, is signed and uploaded to App Store Connect for TestFlight processing. Archive: `/tmp/BrickVal192-v113-retention.xcarchive`; arm64 dSYM UUID `45FA4946-DC43-39D2-9555-E95D3AA1F412`; strict signature verification passed. The prior 1.12 train was closed, so the release marketing version moved to 1.13. `BRICKVALUE_RETENTION_NOTIFICATIONS_ENABLED` remains false. Physical iPhone local delivery, external trial cancellation/renewal/expiry, hardware permission journeys, billing APNs, and Sentry symbol upload remain pending. No App Review submission or App Store release was made.
+
+Temporary simulator result bundles were removed to recover disk space before archiving. Test summaries above are retained here.

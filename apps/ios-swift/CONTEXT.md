@@ -1,5 +1,15 @@
 # BrickVal Native iOS Context
 
+## TestFlight build 192 — 2026-09-26
+
+Version 1.13 (192), including the optional retention reminder sequence, is
+signed and uploaded to App Store Connect for TestFlight processing. Archive:
+`/tmp/BrickVal192-v113-retention.xcarchive`. Signature verification passed;
+the arm64 dSYM UUID is `45FA4946-DC43-39D2-9555-E95D3AA1F412`. The remote
+retention policy remains disabled. Physical-iPhone delivery checks remain
+pending. Sentry symbol upload is pending because Sentry credentials are not
+available in this environment.
+
 ## TestFlight build 190 — 2026-09-24
 
 Version 1.12 (190) was archived, signed, and uploaded successfully to App

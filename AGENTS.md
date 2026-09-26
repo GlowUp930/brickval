@@ -10,6 +10,14 @@ locally to support users who keep the app closed. Backend policy defaults
 and physical delivery checks are required before activation. See
 `docs/audits/2026-09-26-notification-retention.md`.
 
+## TestFlight build 192 — 2026-09-26
+
+Signed version 1.13 (192), including optional retention reminders, uploaded to
+App Store Connect for TestFlight processing. Strict signature verification
+passed; arm64 dSYM UUID is `45FA4946-DC43-39D2-9555-E95D3AA1F412`. Retention
+policy remains disabled. Physical-iPhone notification checks and Sentry symbol
+upload remain pending. See `apps/ios-swift/CONTEXT.md`.
+
 ## TestFlight build 190 — 2026-09-24
 
 Signed native version 1.12 (190) was uploaded successfully to App Store
