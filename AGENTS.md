@@ -1,5 +1,18 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Onboarding analytics correction — 2026-09-27
+
+The historical install funnel is renamed **Historical install funnel — invalid
+conversion metric** and its warning description is saved and reload-verified.
+The observed planning baseline is 98/118 Get Started installations (83.1%) and
+94/118 completions (79.7%) among app-ready first-run installations; it does not
+measure downloads or startup loss. Replacement installation-based SQL reports
+use retained first-readiness history, chronological 24-hour outcomes, mature
+UTC cohorts and explicit production/device/TestFlight/replay filters. Synthetic
+query checks pass. Live reconciliation and dashboard publication remain pending
+because concurrent Chrome activity interrupted SQL access. See the
+[correction audit](docs/audits/2026-09-27-onboarding-analytics.md).
+
 ## Optional retention reminders — 2026-09-26
 
 Native source adds an explicitly opted-in seven/21-day scan and collection
