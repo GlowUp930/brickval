@@ -1,5 +1,21 @@
 # Scan Result Card Visual QA
 
+## First-week reminder invitation — 2026-10-09
+
+The first onboarding demo includes optional inline reminder consent below the
+existing Get Started/sign-in controls. The prompt explains the three-reminder
+limit and possible Pro requirement; no automatic permission dialog appears.
+Explicit text colours keep the card legible on the white onboarding surface.
+Invitation display is measured when the card is visible, not merely laid out
+below the fold. Get Started remains tappable before opt-in or decline.
+
+The focused small-iPhone run passes 55 unit tests and three UI checks. The final
+[onboarding screenshot](design-qa-assets/2026-10-09-onboarding-reminders.png) was
+visually inspected. Reminder delivery, physical camera and hardware permission
+checks remain pending; rollout stays off. See the
+[implementation audit](../../docs/audits/2026-10-09-first-week-activation.md).
+
+
 ## TestFlight build 192 — 2026-09-26
 
 Version 1.13 (192) contains the optional seven/21-day retention reminders.

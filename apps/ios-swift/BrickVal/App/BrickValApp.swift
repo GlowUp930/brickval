@@ -83,11 +83,15 @@ struct BrickValApp: App {
                         try await sdkCoordinator.apiClient.registerNotificationDevice(registration)
                     }
                     notifications.setResponseHandler { url in
-                        router.handleNotification(url: url)
+                        router.handleNotification(url: url, onboardingCompleted: preferences.hasCompletedOnboarding)
                     }
                 }
                 .onChange(of: monetization.policy) { _, policy in
                     notifications.updatePolicy(policy.notifications)
+                }
+                .onChange(of: preferences.hasCompletedOnboarding, initial: true) { _, completed in
+                    notifications.updateOnboardingStatus(completed)
+                    if completed { router.completeNotificationOnboarding() }
                 }
                 .onChange(of: preferences.languageOverride) { _, _ in
                     let language = preferences.effectiveLanguage

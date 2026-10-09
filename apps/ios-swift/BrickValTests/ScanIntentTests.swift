@@ -4,6 +4,14 @@ import UIKit
 @testable import BrickVal
 
 struct ScanIntentTests {
+    @Test("notification entry disables automatic capture until manual scanning")
+    @MainActor func reminderEntryUsesManualCapture() {
+        let store = ScanStore()
+        store.pauseAutomaticScanningForReminder()
+        #expect(store.automaticScanningPausedForReminder)
+        #expect(!store.canUseSmartScan)
+    }
+
     @Test
     func modeTitlesUseScannerLanguageInsteadOfCargoTranslations() {
         let expectedBulkTitles: [String: String] = [

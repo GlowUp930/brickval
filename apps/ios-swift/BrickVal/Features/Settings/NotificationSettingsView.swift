@@ -56,17 +56,17 @@ struct NotificationSettingsView: View {
 
             if notifications.retentionState.assignment == .sequence {
                 NotificationToggleRow(
-                    title: "Scan and collection reminders",
-                    subtitle: "At most one reminder a week, and two in 30 days.",
+                    title: "First-week scan reminders",
+                    subtitle: "Up to three reminders in your first week. Some scanning features require Pro. Turn reminders off anytime in Settings.",
                     isOn: Binding(
-                        get: { notifications.retentionState.consent },
+                        get: { notifications.retentionRemindersEnabled },
                         set: { enabled in
                             if enabled { Task { _ = await notifications.requestRetentionReminders() } }
                             else { notifications.cancel(category: .retention) }
                         }
                     )
                 )
-                .disabled(!notifications.retentionAvailable && !notifications.retentionState.consent)
+                .disabled(!notifications.retentionAvailable && !notifications.retentionRemindersEnabled)
             }
             if !entitlements.isPro, monetization.accessCohort != .hardTrial, notifications.policy.scanReset {
                 NotificationToggleRow(

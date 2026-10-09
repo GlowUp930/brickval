@@ -63,6 +63,7 @@ final class ScanStore {
     /// remains live. Manual capture is enabled, but automatic detection stays
     /// paused until the user starts a new scan.
     private(set) var canCaptureAfterFailure = false
+    private(set) var automaticScanningPausedForReminder = false
 
     @ObservationIgnored private let camera: CameraService
     @ObservationIgnored private let motion: MotionStabilityService
@@ -151,6 +152,7 @@ final class ScanStore {
         mode == .minifig &&
             intent == .single &&
             smartScanAvailable &&
+            !automaticScanningPausedForReminder &&
             canBeginSingleScan
     }
 
@@ -267,6 +269,9 @@ final class ScanStore {
         isProSubscriber = isPro
     }
 
+    @ObservationIgnored var onReminderScanAttempt: (() -> Void)?
+    @ObservationIgnored var onReminderRecognitionFailure: (() -> Void)?
+
     func configureAnalytics(_ analytics: PostHogAnalytics?) {
         self.analytics = analytics
     }
@@ -291,7 +296,13 @@ final class ScanStore {
 
     @ObservationIgnored private var pendingScanStartProperties: [String: Any] = [:]
 
+    func pauseAutomaticScanningForReminder() {
+        automaticScanningPausedForReminder = true
+        resetDetectionState()
+    }
+
     private func captureScanStarted(properties: [String: Any]) {
+        onReminderScanAttempt?()
         beginScanAttempt(linkPreviousAttempt: retryScanPending)
         retryScanPending = false
         var fields = properties
@@ -341,6 +352,7 @@ final class ScanStore {
     private func captureAnalyticsWithoutAttempt(_ event: String, properties: [String: Any]) {
         analytics?.capture(event, properties: properties)
         if event == PostHogEvent.scanFailed {
+            if photoGuidanceAvailable { onReminderRecognitionFailure?() }
             var shownProperties = properties
             shownProperties["source_event"] = PostHogEvent.scanFailed
             captureAnalyticsWithoutAttempt(PostHogEvent.scanErrorShown, properties: shownProperties)
@@ -450,6 +462,7 @@ final class ScanStore {
     }
 
     func captureManually() async {
+        automaticScanningPausedForReminder = false
         guard phase.allowsLiveDetection || canCaptureAfterFailure else { return }
         guard canBeginCurrentScan else {
             proLimitFeature = intent == .bulk ? .bulkScan : .singleScan
@@ -892,7 +905,7 @@ final class ScanStore {
                 phase = .searching
                 return
             }
-            guard intent == .single else { return }
+            guard intent == .single, !automaticScanningPausedForReminder else { return }
             observations = batch.observations
             logDetection(batch, at: now)
             autoSession.observe(batch.observations, deviceStable: deviceStable)
@@ -915,6 +928,7 @@ final class ScanStore {
         frame: CameraFrame,
         focusBox: NormalizedBoundingBox
     ) async {
+        guard !automaticScanningPausedForReminder else { return }
         guard canBeginSingleScan else {
             proLimitFeature = .singleScan
             resetDetectionState()

@@ -1,5 +1,15 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## First-week activation reminders — 2026-10-09
+
+Native source replaces the optional 7/21-day reminders with one consent-anchored
+1/3/7-day campaign and inline first-demo opt-in. Copy follows first-scan,
+recognition-failure and repeat-scan state; taps resume onboarding before Single
+or Bulk Scan. Version-2 migration preserves invitation/assignment/frequency history
+and requires fresh higher-frequency consent. Rollout remains disabled pending a
+new native release, physical-iPhone checks and live funnel reconciliation. See
+[implementation audit](docs/audits/2026-10-09-first-week-activation.md).
+
 ## Onboarding analytics correction — 2026-09-27
 
 The historical install funnel is renamed **Historical install funnel — invalid

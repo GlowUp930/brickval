@@ -331,6 +331,8 @@ struct ScannerView: View {
         .task {
             store.configureMonetization(monetization, isPro: entitlements.isPro)
             store.configureAnalytics(coordinator?.analytics)
+            store.onReminderScanAttempt = { notifications.recordScanAttempt() }
+            store.onReminderRecognitionFailure = { notifications.recordRecognitionFailure() }
             monetization.configure(signedIn: coordinator?.clerk?.user != nil)
         }
         .onChange(of: entitlements.isPro) { _, isPro in
@@ -443,9 +445,12 @@ struct ScannerView: View {
             store.clearProLimitRequest()
         }
         .onChange(of: router.notificationNavigationRevision, initial: true) { _, revision in
-            guard revision > 0 else { return }
+            guard revision > 0, let intent = router.consumeNotificationScanIntent() else { return }
             // A notification destination must not stay behind an old result modal.
             if store.presentedSheet != nil || store.presentedBulkResults != nil { store.reset() }
+            store.intent = intent
+            // Do not auto-submit immediately when returning from a reminder.
+            store.pauseAutomaticScanningForReminder()
         }
         .sheet(item: $store.presentedSheet) { sheet in
             switch sheet {

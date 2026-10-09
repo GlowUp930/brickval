@@ -174,7 +174,7 @@ struct BulkScanResultsView: View {
             notifications.recordMeaningfulActivity("usable_scan", hasCollection: !collection.items.isEmpty, usableScan: true,
                 accessAllowed: monetization.accessCohort != .hardTrial || entitlements.isPro)
         }
-        .retentionReminderInvitation()
+        .safeAreaInset(edge: .bottom) { RetentionReminderInvitationView().padding(.horizontal, 16) }
         .onChange(of: presentation.revision) { _, _ in
             syncPresentation()
         }

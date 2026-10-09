@@ -38,6 +38,10 @@ struct ScanStoreLifecycleTests {
             ))
         }
         let store = ScanStore(api: api)
+        var reminderAttempts = 0
+        var reminderRecognitionFailures = 0
+        store.onReminderScanAttempt = { reminderAttempts += 1 }
+        store.onReminderRecognitionFailure = { reminderRecognitionFailures += 1 }
 
         await store.identifyGalleryImage(try recoveryImageData())
 
@@ -45,6 +49,8 @@ struct ScanStoreLifecycleTests {
         #expect(store.frozenImageData == nil)
         #expect(store.canCaptureAfterFailure)
         #expect(store.photoGuidanceAvailable)
+        #expect(reminderAttempts == 1)
+        #expect(reminderRecognitionFailures == 1)
 
         store.reset()
         #expect(store.photoGuidanceAvailable == false)
@@ -55,6 +61,10 @@ struct ScanStoreLifecycleTests {
         var api = BrickValAPIClient.successfulLookupStub
         api.scanMinifigure = { _ in throw ScanStoreLifecycleTestError.unusedEndpoint }
         let store = ScanStore(api: api)
+        var reminderAttempts = 0
+        var reminderRecognitionFailures = 0
+        store.onReminderScanAttempt = { reminderAttempts += 1 }
+        store.onReminderRecognitionFailure = { reminderRecognitionFailures += 1 }
 
         await store.identifyGalleryImage(try recoveryImageData())
 
@@ -63,6 +73,8 @@ struct ScanStoreLifecycleTests {
             return
         }
         #expect(store.photoGuidanceAvailable == false)
+        #expect(reminderAttempts == 1)
+        #expect(reminderRecognitionFailures == 0)
     }
 
     @Test @MainActor

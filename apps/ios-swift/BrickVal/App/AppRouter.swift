@@ -6,6 +6,8 @@ import SwiftUI
 @MainActor
 final class AppRouter {
     private(set) var notificationNavigationRevision = 0
+    private(set) var notificationScanIntent: ScanIntent?
+    @ObservationIgnored private var pendingOnboardingScanURL: URL?
     var selectedTab: AppTab = .scan
     var collectionPath: [AppRoute] = []
     var scanPath: [AppRoute] = []
@@ -17,6 +19,7 @@ final class AppRouter {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        pendingOnboardingScanURL = defaults.url(forKey: "brickvalue_pending_notification_scan")
         pendingReferralCode = defaults.string(forKey: "brickvalue_pending_referral_code")
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-showCollectionGatingDemo") || ProcessInfo.processInfo.arguments.contains("-showCollectionHistoryDemo") {
@@ -35,16 +38,35 @@ final class AppRouter {
         }
     }
 
-    func handleNotification(url: URL) {
+    func handleNotification(url: URL, onboardingCompleted: Bool = true) {
         guard url.scheme == "brickval", ["scan", "collection", "settings", "subscription"].contains(url.host ?? "") else { return }
+        if url.host == "scan", !onboardingCompleted {
+            pendingOnboardingScanURL = url
+            defaults.set(url, forKey: "brickvalue_pending_notification_scan")
+            return
+        }
         handle(url: url)
         notificationNavigationRevision += 1
+    }
+
+    func consumeNotificationScanIntent() -> ScanIntent? {
+        defer { notificationScanIntent = nil }
+        return notificationScanIntent
+    }
+
+    func completeNotificationOnboarding() {
+        guard let url = pendingOnboardingScanURL else { return }
+        pendingOnboardingScanURL = nil
+        defaults.removeObject(forKey: "brickvalue_pending_notification_scan")
+        handleNotification(url: url)
     }
 
     func handle(url: URL) {
         if url.scheme == "brickval" {
             switch url.host {
             case "scan":
+                let mode = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "mode" })?.value
+                notificationScanIntent = mode == "bulk" ? .bulk : .single
                 selectedTab = .scan
                 scanPath = []
             case "collection":

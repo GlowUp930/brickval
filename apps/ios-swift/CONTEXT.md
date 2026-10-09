@@ -1,5 +1,15 @@
 # BrickVal Native iOS Context
 
+## First-week activation reminders — 2026-10-09
+
+Native source replaces the optional 7/21-day reminders with one consent-anchored
+1/3/7-day campaign and inline first-demo opt-in. Copy follows first-scan,
+recognition-failure and repeat-scan state; taps resume onboarding before Single
+or Bulk Scan. Version-2 migration preserves invitation/assignment/frequency history
+and requires fresh higher-frequency consent. Rollout remains disabled pending a
+new native release, physical-iPhone checks and live funnel reconciliation. See
+[implementation audit](../../docs/audits/2026-10-09-first-week-activation.md).
+
 ## TestFlight build 192 — 2026-09-26
 
 Version 1.13 (192), including the optional retention reminder sequence, is
@@ -671,4 +681,4 @@ Sentry BRICKVAL-M confirms the build-171 production freeze in `NSISO8601DateForm
 
 ## Optional retention reminders — 2026-09-26
 
-Source adds opted-in local seven/21-day reminders, a persistent holdout, cold-launch destinations, and analytics. Backend rollout remains off by default. Both dates are scheduled together by user-approved design. See `../../docs/audits/2026-09-26-notification-retention.md` for behavior, measurement, tests, and physical-device release gates.
+Historical version-1 source added seven/21-day reminders; the October 9 first-week campaign supersedes this sequence. Backend rollout remains off by default. Both dates are scheduled together by user-approved design. See `../../docs/audits/2026-09-26-notification-retention.md` for behavior, measurement, tests, and physical-device release gates.

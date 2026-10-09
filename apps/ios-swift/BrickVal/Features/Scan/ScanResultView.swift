@@ -133,7 +133,7 @@ struct ScanResultView: View {
             notifications.recordMeaningfulActivity("usable_scan", hasCollection: !collection.items.isEmpty, usableScan: true,
                 accessAllowed: monetization.accessCohort != .hardTrial || entitlements.isPro)
         }
-        .retentionReminderInvitation()
+        .safeAreaInset(edge: .bottom) { RetentionReminderInvitationView().padding(.horizontal, 16) }
     }
 
     private var productImage: some View {

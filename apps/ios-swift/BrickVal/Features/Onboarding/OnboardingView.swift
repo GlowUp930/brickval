@@ -11,6 +11,7 @@ enum OnboardingEntryPoint {
 }
 
 struct OnboardingView: View {
+    @Environment(NotificationCoordinator.self) private var notifications
     @Environment(PreferencesStore.self) private var preferences
     @Environment(MonetizationStore.self) private var monetization
     @Environment(\.appSDKCoordinator) private var coordinator
@@ -312,6 +313,7 @@ struct OnboardingView: View {
         preferences.isReplayingOnboarding = false
         preferences.shouldReturnToOnboardingAccount = false
         preferences.hasCompletedOnboarding = true
+        router.completeNotificationOnboarding()
         if !isReplay {
             monetization.enrollNewUserIfNeeded(seed: coordinator?.superwallSeed)
         }
@@ -457,6 +459,8 @@ private enum OnboardingSheet: String, Identifiable {
 }
 
 private struct OnboardingDemoScreen: View {
+    @Environment(NotificationCoordinator.self) private var notifications
+    @Environment(PreferencesStore.self) private var preferences
     let playsVideo: Bool
     let getStarted: () -> Void
     let signIn: () -> Void
@@ -467,6 +471,12 @@ private struct OnboardingDemoScreen: View {
                 content(availableHeight: proxy.size.height)
             }
             .scrollIndicators(.hidden)
+            .coordinateSpace(name: "onboarding.reminderViewport")
+        }
+        .onChange(of: playsVideo, initial: true) { _, active in
+            guard active else { return }
+            notifications.prepareRetentionEligibility(onboardingCompleted: preferences.hasCompletedOnboarding,
+                                                      isReplay: preferences.isReplayingOnboarding)
         }
     }
 
@@ -524,6 +534,9 @@ private struct OnboardingDemoScreen: View {
                 .accessibilityLabel("Already have an account? Sign in")
                 .accessibilityHint("Opens email, Apple, and Google sign-in options")
                 .accessibilityIdentifier("onboarding.signIn")
+            }
+            if playsVideo && !preferences.isReplayingOnboarding {
+                RetentionReminderInvitationView(onLightBackground: true, onboardingViewportHeight: availableHeight)
             }
         }
         .padding(.horizontal, BrickValStyle.Primitive.space24)

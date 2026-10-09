@@ -69716,6 +69716,1417 @@
           }
         }
       }
+    },
+    "Want a reminder to scan your minifigures?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Want a reminder to scan your minifigures?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Quieres un recordatorio para escanear tus minifiguras?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envie d’un rappel pour scanner vos figurines ?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Möchtest du eine Erinnerung zum Scannen deiner Minifiguren?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vuoi un promemoria per scansionare le tue minifigure?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quer um lembrete para escanear suas minifiguras?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wil je een herinnering om je minifiguren te scannen?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミニフィギュアのスキャンをリマインドしますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "미니피겨 스캔 알림을 받을까요?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "想收到扫描人仔的提醒吗？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "想收到掃描人偶的提醒嗎？"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هل تريد تذكيرًا بمسح مجسماتك الصغيرة؟"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "क्या आप अपनी मिनीफ़िगर स्कैन करने का रिमाइंडर चाहते हैं?"
+          }
+        }
+      }
+    },
+    "Up to three reminders in your first week. Some scanning features require Pro. Turn reminders off anytime in Settings.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Up to three reminders in your first week. Some scanning features require Pro. Turn reminders off anytime in Settings."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hasta tres recordatorios en tu primera semana. Algunas funciones de escaneo requieren Pro. Desactívalos cuando quieras en Ajustes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jusqu’à trois rappels pendant votre première semaine. Certaines fonctions de scan nécessitent Pro. Désactivez les rappels à tout moment dans Réglages."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bis zu drei Erinnerungen in deiner ersten Woche. Einige Scanfunktionen erfordern Pro. Du kannst Erinnerungen jederzeit in den Einstellungen ausschalten."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fino a tre promemoria nella prima settimana. Alcune funzioni di scansione richiedono Pro. Puoi disattivarli in qualsiasi momento nelle Impostazioni."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Até três lembretes na primeira semana. Algumas funções de escaneamento exigem Pro. Desative os lembretes quando quiser em Configurações."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maximaal drie herinneringen in je eerste week. Sommige scanfuncties vereisen Pro. Zet herinneringen op elk moment uit in Instellingen."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最初の1週間に最大3回お知らせします。一部のスキャン機能にはProが必要です。設定でいつでもオフにできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첫 주에 최대 3회 알려드립니다. 일부 스캔 기능은 Pro가 필요합니다. 설정에서 언제든 알림을 끌 수 있습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第一周最多提醒三次。部分扫描功能需要 Pro。你可以随时在设置中关闭提醒。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第一週最多提醒三次。部分掃描功能需要 Pro。你可以隨時在設定中關閉提醒。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حتى ثلاثة تذكيرات في أسبوعك الأول. بعض ميزات المسح تتطلب Pro. يمكنك إيقاف التذكيرات في أي وقت من الإعدادات."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पहले हफ़्ते में अधिकतम तीन रिमाइंडर। कुछ स्कैन सुविधाओं के लिए Pro ज़रूरी है। सेटिंग्स में कभी भी रिमाइंडर बंद करें।"
+          }
+        }
+      }
+    },
+    "First-week scan reminders": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First-week scan reminders"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recordatorios de escaneo de la primera semana"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rappels de scan de la première semaine"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanerinnerungen für die erste Woche"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Promemoria di scansione della prima settimana"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lembretes de escaneamento da primeira semana"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanherinneringen voor de eerste week"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最初の1週間のスキャンリマインダー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첫 주 스캔 알림"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第一周扫描提醒"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第一週掃描提醒"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تذكيرات المسح للأسبوع الأول"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पहले हफ़्ते के स्कैन रिमाइंडर"
+          }
+        }
+      }
+    },
+    "Meet your first minifigure": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meet your first minifigure"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conoce tu primera minifigura"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Découvrez votre première figurine"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entdecke deine erste Minifigur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scopri la tua prima minifigura"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conheça sua primeira minifigura"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ontdek je eerste minifiguur"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最初のミニフィギュアを見つけよう"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첫 미니피겨를 만나보세요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "认识你的第一个人仔"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "認識你的第一個人偶"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعرّف على أول مجسم صغير لك"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अपनी पहली मिनीफ़िगर को जानें"
+          }
+        }
+      }
+    },
+    "Place one minifigure in good light and scan it to identify it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place one minifigure in good light and scan it to identify it."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coloca una minifigura con buena luz y escanéala para identificarla."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Placez une figurine sous un bon éclairage et scannez-la pour l’identifier."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stelle eine Minifigur bei gutem Licht auf und scanne sie zur Identifizierung."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posiziona una minifigura con una buona luce e scansionala per identificarla."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coloque uma minifigura com boa iluminação e escaneie para identificá-la."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zet één minifiguur in goed licht en scan hem om hem te identificeren."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "明るい場所にミニフィギュアを1体置いて、スキャンして識別しましょう。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "밝은 곳에 미니피겨 하나를 놓고 스캔해 식별해 보세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把一个人仔放在光线充足的地方，扫描并识别它。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把一個人偶放在光線充足的地方，掃描並識別它。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ضع مجسمًا صغيرًا واحدًا في إضاءة جيدة وامسحه للتعرّف عليه."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "एक मिनीफ़िगर को अच्छी रोशनी में रखें और उसकी पहचान के लिए स्कैन करें।"
+          }
+        }
+      }
+    },
+    "What’s your next find?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What’s your next find?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Cuál será tu próximo hallazgo?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelle sera votre prochaine trouvaille ?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was ist dein nächster Fund?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quale sarà la tua prossima scoperta?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qual será sua próxima descoberta?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wat wordt je volgende vondst?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次は何が見つかる？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음에는 무엇을 발견할까요?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一个发现是什么？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一個發現是什麼？"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ما اكتشافك التالي؟"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपकी अगली खोज क्या होगी?"
+          }
+        }
+      }
+    },
+    "Scan another minifigure and see what you discover.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan another minifigure and see what you discover."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escanea otra minifigura y descubre qué encuentras."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scannez une autre figurine et voyez ce que vous découvrez."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanne eine weitere Minifigur und entdecke, was du findest."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scansiona un’altra minifigura e scopri cosa trovi."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escaneie outra minifigura e veja o que você descobre."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan nog een minifiguur en ontdek wat je vindt."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別のミニフィギュアをスキャンして、新しい発見を楽しみましょう。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 미니피겨를 스캔하고 새로운 발견을 해보세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "扫描另一个人仔，看看你会发现什么。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "掃描另一個人偶，看看你會發現什麼。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "امسح مجسمًا صغيرًا آخر وشاهد ما تكتشفه."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "एक और मिनीफ़िगर स्कैन करें और देखें कि क्या मिलता है।"
+          }
+        }
+      }
+    },
+    "Try one figure at a time": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try one figure at a time"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prueba con una figura a la vez"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essayez une figurine à la fois"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Probiere eine Figur nach der anderen"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova una figura alla volta"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tente uma figura por vez"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Probeer één figuur tegelijk"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1体ずつ試しましょう"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 번에 하나씩 해보세요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "试着一次扫描一个"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "試著一次掃描一個"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جرّب مجسمًا واحدًا في كل مرة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "एक बार में एक फ़िगर आज़माएँ"
+          }
+        }
+      }
+    },
+    "Separate one minifigure from the pile and try again in good light.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Separate one minifigure from the pile and try again in good light."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Separa una minifigura del montón y vuelve a intentarlo con buena luz."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Séparez une figurine du tas et réessayez sous un bon éclairage."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nimm eine Minifigur aus dem Stapel und versuche es bei gutem Licht erneut."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Separa una minifigura dal gruppo e riprova con una buona luce."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Separe uma minifigura do monte e tente novamente com boa iluminação."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haal één minifiguur uit de stapel en probeer het opnieuw in goed licht."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "山からミニフィギュアを1体取り出し、明るい場所でもう一度試しましょう。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더미에서 미니피겨 하나를 꺼내 밝은 곳에서 다시 시도해 보세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从堆中取出一个人仔，在光线充足的地方再试一次。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從堆中取出一個人偶，在光線充足的地方再試一次。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "افصل مجسمًا صغيرًا واحدًا عن الكومة وحاول مجددًا في إضاءة جيدة."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ढेर से एक मिनीफ़िगर अलग करें और अच्छी रोशनी में फिर कोशिश करें।"
+          }
+        }
+      }
+    },
+    "Start with just one figure": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start with just one figure"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empieza con una sola figura"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Commencez par une seule figurine"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beginne mit nur einer Figur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inizia con una sola figura"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comece com apenas uma figura"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Begin met één figuur"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まずは1体から"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하나부터 시작하세요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从一个人仔开始"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從一個人偶開始"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ابدأ بمجسم واحد فقط"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बस एक फ़िगर से शुरू करें"
+          }
+        }
+      }
+    },
+    "One minifigure, good light, one photo. Open BrickVal and try your first scan.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One minifigure, good light, one photo. Open BrickVal and try your first scan."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una minifigura, buena luz, una foto. Abre BrickVal y prueba tu primer escaneo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une figurine, un bon éclairage, une photo. Ouvrez BrickVal et essayez votre premier scan."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Minifigur, gutes Licht, ein Foto. Öffne BrickVal und probiere deinen ersten Scan."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una minifigura, una buona luce, una foto. Apri BrickVal e prova la tua prima scansione."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma minifigura, boa luz, uma foto. Abra o BrickVal e tente seu primeiro escaneamento."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eén minifiguur, goed licht, één foto. Open BrickVal en probeer je eerste scan."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミニフィギュア1体、明るい場所、写真1枚。BrickValを開いて初めてのスキャンを試しましょう。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "미니피겨 하나, 좋은 조명, 사진 한 장. BrickVal을 열고 첫 스캔을 시도해 보세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一个人仔、充足的光线、一张照片。打开 BrickVal，尝试第一次扫描。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一個人偶、充足的光線、一張照片。開啟 BrickVal，嘗試第一次掃描。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مجسم صغير واحد وإضاءة جيدة وصورة واحدة. افتح BrickVal وجرّب أول مسح لك."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "एक मिनीफ़िगर, अच्छी रोशनी, एक फ़ोटो। BrickVal खोलें और अपना पहला स्कैन आज़माएँ।"
+          }
+        }
+      }
+    },
+    "A few figures to identify?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A few figures to identify?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Varias figuras por identificar?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plusieurs figurines à identifier ?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehrere Figuren zu identifizieren?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diverse figure da identificare?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Várias figuras para identificar?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meerdere figuren om te identificeren?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "識別したいフィギュアが何体かありますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "식별할 피겨가 여러 개 있나요?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有几个人仔要识别？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有幾個人偶要識別？"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لديك عدة مجسمات للتعرّف عليها؟"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कई फ़िगर की पहचान करनी है?"
+          }
+        }
+      }
+    },
+    "Try Bulk Scan to identify several minifigures in one photo. Pro may be required.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try Bulk Scan to identify several minifigures in one photo. Pro may be required."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prueba el escaneo múltiple para identificar varias minifiguras en una foto. Puede requerir Pro."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Essayez le scan multiple pour identifier plusieurs figurines sur une photo. Pro peut être nécessaire."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Probiere den Mehrfachscan, um mehrere Minifiguren auf einem Foto zu identifizieren. Pro kann erforderlich sein."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova la scansione multipla per identificare più minifigure in una foto. Potrebbe servire Pro."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Experimente o escaneamento múltiplo para identificar várias minifiguras em uma foto. Pode exigir Pro."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Probeer meervoudig scannen om meerdere minifiguren op één foto te identificeren. Pro kan nodig zijn."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一括スキャンで1枚の写真から複数のミニフィギュアを識別しましょう。Proが必要な場合があります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일괄 스캔으로 사진 한 장에서 여러 미니피겨를 식별해 보세요. Pro가 필요할 수 있습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "试试批量扫描，用一张照片识别多个人仔。可能需要 Pro。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "試試批次掃描，用一張照片識別多個人偶。可能需要 Pro。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جرّب المسح المتعدد للتعرّف على عدة مجسمات صغيرة في صورة واحدة. قد يتطلب ذلك Pro."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "एक फ़ोटो में कई मिनीफ़िगर की पहचान के लिए बल्क स्कैन आज़माएँ। Pro की ज़रूरत हो सकती है।"
+          }
+        }
+      }
+    },
+    "Have a minifigure nearby?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Have a minifigure nearby?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Tienes una minifigura cerca?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une figurine à portée de main ?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hast du eine Minifigur in der Nähe?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai una minifigura a portata di mano?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tem uma minifigura por perto?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heb je een minifiguur bij de hand?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "近くにミニフィギュアはありますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가까이에 미니피겨가 있나요?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手边有人仔吗？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手邊有人偶嗎？"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هل يوجد مجسم صغير بالقرب منك؟"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "क्या पास में कोई मिनीफ़िगर है?"
+          }
+        }
+      }
+    },
+    "Open BrickVal and try scanning it when you have a moment.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open BrickVal and try scanning it when you have a moment."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre BrickVal e intenta escanearla cuando tengas un momento."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrez BrickVal et essayez de la scanner quand vous avez un moment."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffne BrickVal und scanne sie, wenn du einen Moment Zeit hast."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri BrickVal e prova a scansionarla quando hai un momento."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abra o BrickVal e tente escaneá-la quando tiver um momento."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open BrickVal en probeer hem te scannen wanneer je even tijd hebt."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "時間があるときにBrickValを開いてスキャンしてみましょう。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시간이 날 때 BrickVal을 열고 스캔해 보세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有空时打开 BrickVal，试着扫描它。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有空時開啟 BrickVal，試著掃描它。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "افتح BrickVal وجرّب مسحه عندما يتوفر لديك وقت."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "जब समय मिले तो BrickVal खोलें और उसे स्कैन करके देखें।"
+          }
+        }
+      }
+    },
+    "One more find this week?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One more find this week?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Un hallazgo más esta semana?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une trouvaille de plus cette semaine ?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch ein Fund diese Woche?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un’altra scoperta questa settimana?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mais uma descoberta nesta semana?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nog een vondst deze week?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今週もう1体見つけませんか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이번 주에 하나 더 발견해 볼까요?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这周再发现一个？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這週再發現一個？"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اكتشاف آخر هذا الأسبوع؟"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इस हफ़्ते एक और खोज?"
+          }
+        }
+      }
+    },
+    "Pick another minifigure and scan it with BrickVal.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick another minifigure and scan it with BrickVal."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige otra minifigura y escanéala con BrickVal."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez une autre figurine et scannez-la avec BrickVal."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle eine weitere Minifigur und scanne sie mit BrickVal."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli un’altra minifigura e scansionala con BrickVal."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha outra minifigura e escaneie com o BrickVal."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kies nog een minifiguur en scan hem met BrickVal."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別のミニフィギュアを選んでBrickValでスキャンしましょう。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 미니피겨를 골라 BrickVal로 스캔해 보세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "挑选另一个人仔，用 BrickVal 扫描它。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "挑選另一個人偶，用 BrickVal 掃描它。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اختر مجسمًا صغيرًا آخر وامسحه باستخدام BrickVal."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "एक और मिनीफ़िगर चुनें और BrickVal से स्कैन करें।"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -1,41 +1,80 @@
-# Cohort Notification Sequence
+# First-week activation and scan reminders
 
-Updated: 2026-09-26. Supersedes the 2026-08-14 prohibition on optional inactivity reminders.
+Updated: 9 October 2026. Supersedes the 26 September 7/21-day inactivity sequence.
+Implementation version 2; production rollout must remain disabled until release gates pass.
 
-## Decision
+## Consent and eligibility
 
-Use a low-volume, explicitly opted-in notification system:
+Assign eligible installations persistently and equally to sequence or holdout
+before inviting. First eligibility is the visible first onboarding demo; returning
+users can also qualify after a usable result. Exclude onboarding replay and known
+active subscribers. Holdout has no campaign invitation or campaign reminders.
+Requested scan-reset, trial and billing notifications remain independent.
 
-- Soft-cohort users can request one local free-scan reset reminder. Hard-cohort non-purchasers receive no reset permission prompt.
-- Trial users with a future renewal can request one local reminder 48 hours before the scheduled renewal. Copy states the actual renewal date, without asserting renewal is inevitable.
-- Subscribers can opt into billing-action alerts.
-- After a usable result, eligible installations are assigned equally to sequence or holdout. Assignment is persistent and precedes the consent invitation. Holdout receives no retention invitation or sequence; existing requested and billing reminders remain available.
-- Sequence installations receive one consent invitation per installation. Default is off. The invitation explains the frequency before requesting system permission. Settings provides a separate control, including an off switch when rollout is disabled.
+Show a small inline invitation after the demo, below Get Started/sign-in controls.
+Do not block Get Started or display an automatic system permission prompt.
+Invitation: “Want a reminder to scan your minifigures?” Explanation: “Up to three
+reminders in your first week. Some scanning features require Pro. Turn reminders
+off anytime in Settings.” Actions: Enable reminders / Not now. Record display
+once per installation; Settings allows a later explicit choice. Ask iOS permission
+only after Enable reminders. Existing denied/authorized statuses are never prompted
+again automatically.
 
-## Retention sequence
+## One campaign
 
-Meaningful activity is a usable single/bulk result, a collection save, or opening a collection item. Failed scans and locked previews do not qualify. Hard-cohort users must have Pro access when recording a usable result. Bulk invitations wait until results are ready for interaction.
+Anchor dates to first consent, never to activity: day 1, day 3, day 7, each at
+6 PM device-local time no earlier than 24, 72, 168 elapsed hours. Evening consent
+or daylight-saving boundaries can move delivery to the next local evening;
+“day 7” is the last planned step, not a promise of exactly 168-hour delivery.
+Reserve all three locally so a closed app needs no background wakeup.
 
-Schedule at 6 PM device-local time after seven inactive calendar days, never earlier than the anniversary of the last meaningful activity. Copy directs users with saved items to Collection and others to Scan. Reserve a second generic Scan reminder after 21 inactive days. Both are scheduled locally because iOS does not reliably wake the app to schedule the second while it stays closed. The user approved this change from the original single-next-request plan.
+| Step | No usable scan | Usable scan completed |
+| --- | --- | --- |
+| 1 | Meet your first minifigure — Place one minifigure in good light and scan it to identify it. | What’s your next find? — Scan another minifigure and see what you discover. |
+| 2 | Start with just one figure — One minifigure, good light, one photo. Open BrickVal and try your first scan. | A few figures to identify? — Try Bulk Scan to identify several minifigures in one photo. Pro may be required. |
+| 3 | Have a minifigure nearby? — Open BrickVal and try scanning it when you have a moment. | One more find this week? — Pick another minifigure and scan it with BrickVal. |
 
-Cancel and recalculate on meaningful activity, collection presence changes, subscription updates, foreground entry, language changes, and significant clock/time-zone changes. At most two reminders per episode, one per seven elapsed days, and two per rolling 30 days. A reserved date that has elapsed consumes the frequency budget conservatively; it is not reported as delivery. Conflict within 24 hours of a requested scan/trial reminder skips retention. Step two requires step one to have been reserved or elapsed.
+Latest recognition failure changes step 1 to “Try one figure at a time — Separate
+one minifigure from the pile and try again in good light.” Network, camera and
+permission failures do not select that copy. Refresh pending copy while the app
+runs. A new attempt clears the failure flag; a usable result selects repeat copy.
+Locked previews are not usable results.
 
-## Implementation and boundaries
+Skip steps within 24 hours after a scan attempt or collection action, within
+24 hours of a requested reset/trial reminder, within 48 hours of another campaign
+reservation, or beyond three campaign reservations per rolling 30 days. Skipped
+steps are permanently consumed, not shifted or reinstated. Elapsed reservations
+consume the budget conservatively, without claiming delivery. No monthly restart.
+Purchase/trial activation, opt-out and account change end the campaign permanently.
+Remote policy/permission disable removes pending requests; it does not restart dates.
 
-Use the existing native coordinator and notification center, with durable local state and two stable retention identifiers. Serialize scheduling writes to prevent stale requests from surviving rapid activity changes. Anonymous users need no server scheduler or collection upload. Consent, assignment, and installation invitation history survive account changes; activity and pending reminders do not. Frequency history survives changes to prevent extra notifications. Collection contents remain local.
+## Routing, migration and compatibility
 
-Cold-launch notification taps are queued until the router is ready. Destinations are `brickval://scan`, `brickval://collection`, and `brickval://subscription`; legacy `brickval://settings` remains supported. Scan and Collection links clear their old navigation stacks. Opening Scan respects current entitlement and existing gates without opening a paywall from the notification itself.
+All campaign links target Scan with version, step, copy variant and mode context.
+Only repeat-scan step 2 selects Bulk; other steps select Single. Queue Scan taps
+behind unfinished onboarding, persist that pending route, and apply after completion.
+Reset old result navigation, pause automatic capture on entry and preserve all
+entitlement gates. A notification never opens a paywall or starts a scan itself.
 
-The backend policy adds `notifications.retention`, default false, controlled by `BRICKVALUE_RETENTION_NOTIFICATIONS_ENABLED`. Older policy payloads decode to false. No server notification migration or subscription-price change is needed.
+State uses `brickvalue_retention_state_v2`; analytics experiment version is 2.
+Version-2 eligibility has its own timestamp so legacy eligibility cannot backdate
+the new measurement windows.
+Migrate legacy assignment, eligibility, invitation history and elapsed frequency
+budget; remove old pending requests and revoke old consent. Previously shown
+invitations do not repeat: those users can explicitly consent to the new frequency
+in Settings. Anonymous-to-identified account changes also end an already-started
+campaign, by design. Account activity/copy never transfers to a different account.
 
-Local limitations are explicit: external subscription cancellations and policy changes cannot retract local notifications while the app remains closed. Local state is installation-specific, not a cross-device frequency cap. Device timezone changes are reconciled when the app runs. Trial copy remains renewal-neutral to avoid claiming a cancelled trial will renew.
+Reuse the coordinator, iOS local scheduler and
+`BRICKVALUE_RETENTION_NOTIFICATIONS_ENABLED` (default false). No new APNs service,
+pricing change, free allowance, or backend schema migration. The app reconciles
+external subscription, timezone and policy changes when next run; it cannot retract
+local reminders instantly while closed. Frequency is per installation, not cross-device.
 
-## Privacy and experience
+## Measurement and release
 
-No badges, collection names, images, amounts, price-change claims, discounts, or promotional offers. Permission denial never blocks the app. Do not infer a delivery receipt from a scheduled date or APNs acceptance. Retention does not depend on a paid status claim that might become stale.
-
-## Measurement and rollout
-
-See [implementation and measurement report](../../../../docs/audits/2026-09-26-notification-retention.md). Keep rollout disabled until a new build and physical-device checks pass. Review weekly using mature windows and preserve holdout while evidence is insufficient.
-
-Sources: [Apple notification permission](https://developer.apple.com/documentation/usernotifications/asking_permission_to_use_notifications), [Apple notifications design](https://developer.apple.com/design/human-interface-guidelines/notifications), [App Review 4.5.4](https://developer.apple.com/app-store/review/guidelines/#push-notifications).
+See [implementation audit](../../../../docs/audits/2026-10-09-first-week-activation.md).
+Do not merge version-1 and version-2 experiment cohorts. Notification schedules are
+not delivery receipts; purchases require verified provider evidence. Never-launched
+installations cannot be reached through this app's notifications. Public acquisition
+copy is in `docs/marketing/2026-10-09-first-scan-messages.md`.

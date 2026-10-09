@@ -76,6 +76,9 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
     @ObservationIgnored private var pendingResponseURL: URL?
     @ObservationIgnored private var schedulingTask: Task<Void, Never>?
     @ObservationIgnored private var lastNotificationTap: Date?
+    @ObservationIgnored private var eligibleContext = false
+    @ObservationIgnored private var onboardingCompleted = false
+    @ObservationIgnored private var schedulingRevision = 0
     @ObservationIgnored private let assignRetention: () -> RetentionNotificationState.Assignment
     @ObservationIgnored private let center: BrickValNotificationCenterClient
     @ObservationIgnored private let defaults: UserDefaults
@@ -98,8 +101,7 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
         assignRetention: @escaping () -> RetentionNotificationState.Assignment = { Bool.random() ? .sequence : .holdout }
     ) {
         self.assignRetention = assignRetention
-        retentionState = defaults.data(forKey: "brickvalue_retention_state_v1")
-            .flatMap { try? JSONDecoder().decode(RetentionNotificationState.self, from: $0) } ?? RetentionNotificationState()
+        retentionState = RetentionNotificationState.load(defaults: defaults, now: now())
         self.center = center
         self.defaults = defaults
         self.now = now
@@ -123,6 +125,10 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
         trialReminderEnabled = defaults.bool(forKey: Keys.trialReminder)
         accountAlertsEnabled = defaults.bool(forKey: Keys.accountAlerts)
         super.init()
+        if defaults.data(forKey: RetentionNotificationState.storageKey) == nil {
+            center.removePendingNotifications(withIdentifiers: RetentionNotificationPlanner.identifiers)
+        }
+        persistRetention()
         UNUserNotificationCenter.current().delegate = self
     }
 
@@ -161,7 +167,7 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
                 subscriptionState = nil
             }
             retentionState.pending = []
-            retentionState.episodeSteps = []
+            if retentionState.consentAt != nil { retentionState.campaignCancelled = true }
             retentionState.lastActivity = nil
             retentionState.hasSuccessfulScan = false
             retentionState.hasCollection = false
@@ -194,6 +200,7 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
     func updatePolicy(_ policy: MonetizationPolicy.Notifications) {
         self.policy = policy
         if !policy.enabled || !policy.retention { showsRetentionInvitation = false }
+        if eligibleContext { prepareRetentionEligibility(onboardingCompleted: onboardingCompleted) }
         Task { await reconcileRetention() }
         if !policy.enabled || !policy.scanReset {
             cancel(category: .scanReset)
@@ -253,7 +260,13 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
 
     func updateSubscription(_ state: SubscriptionReminderState) async {
         subscriptionState = state
-        if state.isActive { cancel(category: .scanReset) }
+        if state.isActive {
+            cancel(category: .scanReset)
+            retentionState.campaignCancelled = true
+            showsRetentionInvitation = false
+            persistRetention()
+            await reconcileRetention()
+        }
         await updateTrialReminder(
             expirationDate: state.isActive && state.isTrial ? state.expirationDate : nil,
             willRenew: state.willRenew
@@ -307,9 +320,10 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
         track("notification_cancelled", ["category": category.rawValue])
         switch category {
         case .retention:
-            center.removePendingNotifications(withIdentifiers: ["brickvalue.notification.retention.1", "brickvalue.notification.retention.2"])
+            center.removePendingNotifications(withIdentifiers: RetentionNotificationPlanner.identifiers)
             retentionState.reconcileElapsed(now: now())
             retentionState.consent = false
+            if retentionState.consentAt != nil { retentionState.campaignCancelled = true }
             retentionState.pending = []
             showsRetentionInvitation = false
             persistRetention()
@@ -338,7 +352,8 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
 
     private func requestPermission() async -> Bool {
         do {
-            let granted = try await center.requestAuthorization()
+            let status = await center.authorizationStatus()
+            let granted = status == .notDetermined ? try await center.requestAuthorization() : status.canSchedule
             await refreshAuthorizationStatus()
             guard granted else {
                 lastError = BrickValLocalization.localized("Notifications are off. You can enable them in Settings.")
@@ -386,34 +401,75 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         let identifier = notification.request.identifier
-        await MainActor.run { [weak self] in
-            self?.track("notification_foreground_presented", ["notification_id": identifier])
+        return await MainActor.run { [weak self] in
+            self?.foregroundPresentationOptions(identifier: identifier) ?? []
         }
+    }
+
+    func foregroundPresentationOptions(identifier: String) -> UNNotificationPresentationOptions {
+        if RetentionNotificationPlanner.identifiers.contains(identifier),
+           !retentionAvailable || !retentionState.consent ||
+            (retentionState.lastActivity.map { now().timeIntervalSince($0) < 86_400 } ?? false) {
+            track("notification_skipped", ["notification_id": identifier, "reason": "foreground_suppression"])
+            return []
+        }
+        track("notification_foreground_presented", ["notification_id": identifier])
         return [.banner, .sound]
     }
 
+    var retentionRemindersEnabled: Bool {
+        retentionState.consent && retentionState.campaignCancelled != true &&
+            ![1, 2, 3].allSatisfy { retentionState.episodeSteps.contains($0) }
+    }
+
     var retentionAvailable: Bool {
-        policy.enabled && policy.retention && retentionState.assignment == .sequence && retentionState.hasSuccessfulScan
+        policy.enabled && policy.retention && retentionState.assignment == .sequence &&
+            subscriptionState?.isActive != true && retentionState.campaignCancelled != true &&
+            !(retentionState.consentAt != nil && [1, 2, 3].allSatisfy { retentionState.episodeSteps.contains($0) })
+    }
+
+    func prepareRetentionEligibility(onboardingCompleted: Bool, isReplay: Bool = false) {
+        guard !isReplay else { return }
+        eligibleContext = true
+        self.onboardingCompleted = onboardingCompleted
+        guard policy.enabled, policy.retention, subscriptionState?.isActive != true else { return }
+        if retentionState.assignment == nil {
+            retentionState.assignment = assignRetention()
+            retentionState.eligibleAt = now()
+        }
+        if retentionState.campaignEligibleAt == nil {
+            retentionState.campaignEligibleAt = now()
+            persistRetention()
+            track("notification_experiment_eligible")
+        }
+        showsRetentionInvitation = retentionAvailable && !retentionState.invitationSeen
+    }
+
+    func updateOnboardingStatus(_ completed: Bool) { onboardingCompleted = completed }
+
+    func recordScanAttempt() {
+        retentionState.lastActivity = now()
+        retentionState.recognitionFailed = false
+        persistRetention()
+        track("notification_scan_activity")
+        Task { await reconcileRetention() }
+    }
+
+    func recordRecognitionFailure() {
+        retentionState.recognitionFailed = true
+        persistRetention()
+        Task { await reconcileRetention() }
     }
 
     func recordMeaningfulActivity(_ kind: String, hasCollection: Bool, usableScan: Bool = false, accessAllowed: Bool = true) {
         guard accessAllowed else { return }
         retentionState.reconcileElapsed(now: now())
-        for pending in retentionState.pending {
-            track("notification_cancelled", ["notification_id": pending.identifier, "category": "retention", "reason": "activity"])
-        }
         retentionState.lastActivity = now()
         retentionState.hasCollection = hasCollection
-        retentionState.episodeSteps = []
-        retentionState.pending = []
         if usableScan {
             retentionState.hasSuccessfulScan = true
-            if policy.enabled && policy.retention && retentionState.assignment == nil {
-                retentionState.assignment = assignRetention()
-                retentionState.eligibleAt = now()
-                track("notification_experiment_eligible")
-            }
-            showsRetentionInvitation = retentionAvailable && !retentionState.invitationSeen
+            retentionState.recognitionFailed = false
+            prepareRetentionEligibility(onboardingCompleted: onboardingCompleted)
         }
         persistRetention()
         track("notification_meaningful_activity", ["activity": kind,
@@ -422,7 +478,7 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
     }
 
     func markRetentionInvitationSeen() {
-        guard showsRetentionInvitation else { return }
+        guard showsRetentionInvitation, !retentionState.invitationSeen else { return }
         retentionState.invitationSeen = true
         persistRetention()
         track("notification_consent_shown")
@@ -436,6 +492,7 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
     }
 
     func requestRetentionReminders() async -> Bool {
+        prepareRetentionEligibility(onboardingCompleted: onboardingCompleted)
         guard retentionAvailable else { return false }
         showsRetentionInvitation = false
         retentionState.invitationSeen = true
@@ -444,7 +501,9 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
             track("notification_consent_denied")
             return false
         }
+        guard retentionAvailable else { return false }
         retentionState.consent = true
+        if retentionState.consentAt == nil { retentionState.consentAt = now() }
         persistRetention()
         track("notification_consent_enabled")
         await reconcileRetention()
@@ -460,16 +519,19 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
 
     /// Serialize notification-center writes: rapid activity cannot leave a stale request behind.
     func reconcileRetention() async {
+        schedulingRevision += 1
+        let revision = schedulingRevision
         let previous = schedulingTask
         let task = Task { @MainActor in
             await previous?.value
-            await self.scheduleRetention()
+            guard revision == self.schedulingRevision else { return }
+            await self.scheduleRetention(revision: revision)
         }
         schedulingTask = task
         await task.value
     }
 
-    private func scheduleRetention() async {
+    private func scheduleRetention(revision: Int) async {
         retentionState.reconcileElapsed(now: now())
         let old = retentionState.pending
         var desired: [RetentionNotificationState.Reservation] = []
@@ -477,20 +539,30 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
             let utilities = ["brickvalue_scan_reset_date", "brickvalue_trial_reminder_date"]
                 .compactMap { defaults.object(forKey: $0) as? Date }
             desired = RetentionNotificationPlanner.reservations(state: retentionState, now: now(), timeZone: timeZone, utilityDates: utilities)
+            if retentionState.consent {
+                for milestone in RetentionNotificationPlanner.milestones(state: retentionState, timeZone: timeZone)
+                    where !desired.contains(where: { $0.step == milestone.step }) && !retentionState.episodeSteps.contains(milestone.step) {
+                    retentionState.episodeSteps.append(milestone.step)
+                    track("notification_skipped", ["step": milestone.step, "category": "retention"])
+                }
+            }
         }
-        center.removePendingNotifications(withIdentifiers: ["brickvalue.notification.retention.1", "brickvalue.notification.retention.2"])
+        center.removePendingNotifications(withIdentifiers: RetentionNotificationPlanner.identifiers)
         retentionState.pending = []
         for removed in old where !desired.contains(removed) {
             track("notification_cancelled", ["notification_id": removed.identifier, "category": "retention"])
         }
         if !desired.isEmpty { lastError = nil }
         for reservation in desired {
-            if reservation.step == 2 && !retentionState.episodeSteps.contains(1) && !retentionState.pending.contains(where: { $0.step == 1 }) { continue }
             do {
                 try await center.add(RetentionNotificationPlanner.request(reservation, locale: Locale(identifier: languageCode)))
+                guard revision == schedulingRevision else {
+                    center.removePendingNotifications(withIdentifiers: [reservation.identifier])
+                    return
+                }
                 retentionState.pending.append(reservation)
                 if !old.contains(reservation) {
-                    track("notification_scheduled", ["notification_id": reservation.identifier, "category": "retention", "step": reservation.step, "scheduled_at": reservation.date.timeIntervalSince1970])
+                    track("notification_scheduled", ["notification_id": reservation.identifier, "category": "retention", "step": reservation.step, "scheduled_at": reservation.date.timeIntervalSince1970, "copy_variant": reservation.copyVariant ?? "first_scan", "destination": reservation.step == 2 && reservation.copyVariant == "repeat_scan" ? "bulk" : "single"])
                 }
             } catch {
                 lastError = BrickValLocalization.localized("Notifications are unavailable right now.")
@@ -501,21 +573,31 @@ final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate 
     }
 
     private func persistRetention() {
-        if let data = try? JSONEncoder().encode(retentionState) { defaults.set(data, forKey: "brickvalue_retention_state_v1") }
+        if let data = try? JSONEncoder().encode(retentionState) { defaults.set(data, forKey: RetentionNotificationState.storageKey) }
     }
 
     private func track(_ event: String, _ properties: [String: Any] = [:]) {
         var properties = properties
         properties["retention_assignment"] = retentionState.assignment?.rawValue ?? "unassigned"
-        properties["retention_eligible_at"] = retentionState.eligibleAt?.timeIntervalSince1970
-        properties["retention_experiment_version"] = 1
+        properties["retention_eligible_at"] = retentionState.campaignEligibleAt?.timeIntervalSince1970
+        properties["retention_experiment_version"] = 2
+        properties["campaign_version"] = 2
+        properties["has_completed_onboarding"] = onboardingCompleted
         eventHandler?(event, properties)
     }
 
     func receiveResponse(url: URL, identifier: String) {
         guard url.scheme == "brickval", ["scan", "collection", "settings", "subscription"].contains(url.host ?? "") else { return }
         lastNotificationTap = now()
-        track("notification_tapped", ["notification_id": identifier])
+        var fields: [String: Any] = ["notification_id": identifier]
+        let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        for (key, property) in [("step", "step"), ("variant", "copy_variant"), ("mode", "destination")] {
+            if let value = query.first(where: { $0.name == key })?.value {
+                if key == "step", let step = Int(value) { fields[property] = step }
+                else { fields[property] = value }
+            }
+        }
+        track("notification_tapped", fields)
         if let responseHandler { responseHandler(url) } else { pendingResponseURL = url }
     }
 

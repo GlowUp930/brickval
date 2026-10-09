@@ -215,11 +215,11 @@ final class PostHogAnalytics {
             "analytics_install_id": installID,
         ]
 
-        if let data = defaults.data(forKey: "brickvalue_retention_state_v1"),
+        if let data = defaults.data(forKey: RetentionNotificationState.storageKey),
            let state = try? JSONDecoder().decode(RetentionNotificationState.self, from: data) {
             properties["retention_assignment"] = state.assignment?.rawValue ?? "unassigned"
-            properties["retention_eligible_at"] = state.eligibleAt?.timeIntervalSince1970
-            properties["retention_experiment_version"] = 1
+            properties["retention_eligible_at"] = state.campaignEligibleAt?.timeIntervalSince1970
+            properties["retention_experiment_version"] = 2
         }
         let distinctID = PostHogSDK.shared.getDistinctId()
         let anonymousID = PostHogSDK.shared.getAnonymousId()
