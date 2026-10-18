@@ -15,6 +15,7 @@ final class MonetizationStore {
     private(set) var appUpdateURL: URL?
     private(set) var referralStatus: ReferralStatus?
     private(set) var hasGrandfatheredBulkCredit: Bool
+    private(set) var shouldPresentExistingFreeUserExplainer = false
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let now: @Sendable () -> Date
@@ -51,13 +52,24 @@ final class MonetizationStore {
             hasGrandfatheredBulkCredit = defaults.bool(forKey: Keys.onboardingCompleted)
             defaults.set(hasGrandfatheredBulkCredit, forKey: Keys.bulkIntroGrandfathered)
         }
+        let completedOnboarding = defaults.bool(forKey: Keys.onboardingCompleted)
+        let hadSoftAccess = accessCohort == nil || accessCohort == .legacySoft || accessCohort == .experimentSoft
+        if resolvedPolicy.requiresSubscription && completedOnboarding && hadSoftAccess {
+            defaults.set(true, forKey: Keys.existingFreeExplainerEligible)
+        }
+        shouldPresentExistingFreeUserExplainer =
+            defaults.bool(forKey: Keys.existingFreeExplainerEligible) &&
+            !defaults.bool(forKey: Keys.existingFreeExplainerPresented)
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-showHardAccessDemo") {
             accessCohort = .hardTrial
         }
+        if ProcessInfo.processInfo.arguments.contains("-showExistingFreeAccessDemo") {
+            shouldPresentExistingFreeUserExplainer = true
+        }
 #endif
         protectExistingUserIfNeeded(
-            hasCompletedOnboarding: defaults.bool(forKey: Keys.onboardingCompleted)
+            hasCompletedOnboarding: completedOnboarding
         )
         if policy.requiresSubscription { setAccessCohort(.hardTrial) }
         applyGuestUsage()
@@ -121,6 +133,11 @@ final class MonetizationStore {
 
     func markHardAccessIntroPresented() {
         defaults.set(true, forKey: Keys.hardAccessIntroPresented)
+    }
+
+    func markExistingFreeUserExplainerPresented() {
+        shouldPresentExistingFreeUserExplainer = false
+        defaults.set(true, forKey: Keys.existingFreeExplainerPresented)
     }
 
     func markSoftAccessIntroPresented() {
@@ -331,6 +348,8 @@ final class MonetizationStore {
         static let experimentSeed = "brickvalue_monetization_experiment_seed"
         static let hardAccessIntroPresented = "brickvalue_hard_access_intro_presented"
         static let softAccessIntroPresented = "brickvalue_soft_access_intro_presented"
+        static let existingFreeExplainerEligible = "brickvalue_existing_free_explainer_eligible"
+        static let existingFreeExplainerPresented = "brickvalue_existing_free_explainer_presented"
         static let successfulSingleScanCount = "brickvalue_successful_single_scan_count"
         static let firstSuccessfulSingleScanAt = "brickvalue_first_successful_single_scan_at"
         static let bulkIntroGrandfathered = "brickvalue_bulk_intro_grandfathered"

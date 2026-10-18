@@ -23,6 +23,7 @@ struct HardAccessStatusView: View {
 
 struct HardScanAccessView: View {
     @Environment(MonetizationStore.self) private var monetization
+    @Environment(EntitlementStore.self) private var entitlements
     @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showAccount = false
@@ -35,17 +36,24 @@ struct HardScanAccessView: View {
 
             GeometryReader { proxy in
                 let isCompact = proxy.size.height < 820
+                let isShowingExistingFreeExplainer = shouldShowExistingFreeExplainer
+                let topPadding = isCompact ? BrickValStyle.Primitive.space8 : BrickValStyle.Primitive.space24
+                let bottomPadding = isShowingExistingFreeExplainer ? BrickValStyle.Primitive.space24 : 128.0
 
                 ScrollView {
-                    VStack(spacing: isCompact ? BrickValStyle.Primitive.space12 : BrickValStyle.Primitive.space24) {
-                        hero(isCompact: isCompact)
-                        benefits(isCompact: isCompact)
-                        actions(isCompact: isCompact)
+                    VStack(spacing: 0) {
+                        if isShowingExistingFreeExplainer {
+                            existingFreeExplainer(isCompact: isCompact)
+                        } else {
+                            hardAccessContent(isCompact: isCompact)
+                        }
                     }
                     .frame(maxWidth: 520)
+                    .frame(minHeight: max(0, proxy.size.height - topPadding - bottomPadding))
+                    .frame(maxWidth: .infinity)
                     .padding(.horizontal, BrickValStyle.Primitive.space24)
-                    .padding(.top, isCompact ? BrickValStyle.Primitive.space8 : BrickValStyle.Primitive.space24)
-                    .padding(.bottom, 128)
+                    .padding(.top, topPadding)
+                    .padding(.bottom, bottomPadding)
                     .opacity(contentVisible ? 1 : 0)
                     .offset(y: reduceMotion || contentVisible ? 0 : 16)
                 }
@@ -79,6 +87,117 @@ struct HardScanAccessView: View {
         }
         .task {
             reveal()
+        }
+    }
+
+    private var shouldShowExistingFreeExplainer: Bool {
+        monetization.shouldPresentExistingFreeUserExplainer && !entitlements.isPro
+    }
+
+    private func hardAccessContent(isCompact: Bool) -> some View {
+        VStack(spacing: isCompact ? BrickValStyle.Primitive.space12 : BrickValStyle.Primitive.space24) {
+            hero(isCompact: isCompact)
+            benefits(isCompact: isCompact)
+            actions(isCompact: isCompact)
+        }
+    }
+
+    private func existingFreeExplainer(isCompact: Bool) -> some View {
+        VStack(spacing: isCompact ? BrickValStyle.Primitive.space16 : BrickValStyle.Primitive.space24) {
+            Spacer(minLength: BrickValStyle.Primitive.space16)
+
+            Capsule()
+                .fill(Color(red: 0.72, green: 0.61, blue: 0.39))
+                .frame(width: 32, height: 3)
+                .accessibilityHidden(true)
+
+            Text("A new chapter for BrickValue")
+                .font(.system(.largeTitle, design: .rounded, weight: .semibold))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+
+            Text("We’re a small independent team. To keep building BrickValue, we’re moving to Pro access.")
+                .font(.body)
+                .lineSpacing(4)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white.opacity(0.72))
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Your collection is still saved on this device.")
+                .font(.title3.weight(.semibold))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Color(red: 0.76, green: 0.87, blue: 0.79))
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Subscribe to view your saved items and continue scanning.")
+                .font(.body)
+                .lineSpacing(4)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white.opacity(0.72))
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button(action: viewProOptions) {
+                Text("View Pro options")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(Color(red: 0.09, green: 0.12, blue: 0.10))
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .background(
+                        Color(red: 0.78, green: 0.88, blue: 0.81),
+                        in: Capsule()
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("hardAccess.existingFree.viewProOptions")
+
+            existingFreeLinks
+
+            Spacer(minLength: BrickValStyle.Primitive.space16)
+        }
+        .padding(.vertical, BrickValStyle.Primitive.space16)
+    }
+
+    private var existingFreeLinks: some View {
+        VStack(spacing: 0) {
+            Button("Restore purchases") {
+                Task { try? await coordinator?.restorePurchases() }
+            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .accessibilityIdentifier("hardAccess.existingFree.restore")
+
+            if monetization.offerCodesEnabled {
+                Button("Redeem offer code") {
+                    coordinator?.requestOfferCodeRedemption()
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .disabled(coordinator?.isOfferCodeRedemptionBusy == true)
+                .accessibilityIdentifier("hardAccess.existingFree.offerCode")
+
+                OfferCodeRedemptionStatusView(
+                    state: coordinator?.offerCodeRedemptionState ?? .idle,
+                    onCheckAccess: { Task { await coordinator?.checkOfferCodeAccess() } }
+                )
+                .foregroundStyle(.white.opacity(0.72))
+            }
+
+            if coordinator?.clerk?.user != nil {
+                Button("Manage Account") { showAccount = true }
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .accessibilityIdentifier("hardAccess.existingFree.manageAccount")
+            }
+        }
+        .font(.subheadline.weight(.medium))
+        .foregroundStyle(.white.opacity(0.76))
+        .buttonStyle(.plain)
+    }
+
+    private func viewProOptions() {
+        monetization.markExistingFreeUserExplainerPresented()
+        if coordinator?.clerk?.user == nil {
+            showAccount = true
+        } else {
+            presentPaywall(source: "existing_free_access_explainer")
         }
     }
 
@@ -234,4 +353,5 @@ struct HardScanAccessView: View {
 #Preview {
     NavigationStack { HardScanAccessView() }
         .environment(MonetizationStore(experimentRoll: { 0 }))
+        .environment(EntitlementStore())
 }

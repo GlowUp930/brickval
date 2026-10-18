@@ -66,6 +66,8 @@ struct SDKEnvironmentRootView: View {
             AppShellView()
         } else if ProcessInfo.processInfo.arguments.contains("-showDenseBulkCompletedDemo") {
             AppShellView()
+        } else if ProcessInfo.processInfo.arguments.contains("-showExistingFreeAccessDemo") {
+            HardScanAccessView()
         } else if ProcessInfo.processInfo.arguments.contains("-showHardAccessDemo") {
             HardScanAccessView()
         } else if ProcessInfo.processInfo.arguments.contains("-showCollectionHistoryDemo") {

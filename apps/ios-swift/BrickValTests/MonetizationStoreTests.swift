@@ -184,6 +184,47 @@ struct MonetizationStoreTests {
         #expect(!store.requiresProForApp(isPro: true))
     }
 
+    @Test(arguments: ["legacy_soft", "experiment_soft"])
+    func existingFreeSoftUserSeesTransitionExplainerOnce(cohort: String) {
+        let context = context()
+        context.defaults.set(true, forKey: "has_completed_onboarding")
+        context.defaults.set(cohort, forKey: "brickvalue_monetization_access_cohort")
+
+        let store = MonetizationStore(defaults: context.defaults, initialPolicy: .phaseOne)
+
+        #expect(store.accessCohort == .hardTrial)
+        #expect(store.shouldPresentExistingFreeUserExplainer)
+
+        store.markExistingFreeUserExplainerPresented()
+
+        #expect(store.shouldPresentExistingFreeUserExplainer == false)
+
+        let relaunchedStore = MonetizationStore(defaults: context.defaults, initialPolicy: .phaseOne)
+        #expect(relaunchedStore.shouldPresentExistingFreeUserExplainer == false)
+    }
+
+    @Test func existingCompletedUserWithoutStoredCohortSeesTransitionExplainer() {
+        let context = context()
+        context.defaults.set(true, forKey: "has_completed_onboarding")
+
+        let store = MonetizationStore(defaults: context.defaults, initialPolicy: .phaseOne)
+
+        #expect(store.shouldPresentExistingFreeUserExplainer)
+        #expect(store.accessCohort == .hardTrial)
+    }
+
+    @Test func newAndPreviouslyHardGatedUsersSkipTransitionExplainer() {
+        let newUserContext = context()
+        let newUserStore = MonetizationStore(defaults: newUserContext.defaults, initialPolicy: .phaseOne)
+        #expect(newUserStore.shouldPresentExistingFreeUserExplainer == false)
+
+        let hardUserContext = context()
+        hardUserContext.defaults.set(true, forKey: "has_completed_onboarding")
+        hardUserContext.defaults.set("hard_trial", forKey: "brickvalue_monetization_access_cohort")
+        let hardUserStore = MonetizationStore(defaults: hardUserContext.defaults, initialPolicy: .phaseOne)
+        #expect(hardUserStore.shouldPresentExistingFreeUserExplainer == false)
+    }
+
     @Test func newUserIsAssignedToHardTrialCohortWithinRollout() {
         let context = context()
         let store = MonetizationStore(

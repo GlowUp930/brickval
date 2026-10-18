@@ -58,6 +58,13 @@ struct AppRootView: View {
         .task {
             await prepare()
         }
+        .task(id: "\(entitlements.isPro)-\(entitlements.isLoading)") {
+            guard entitlements.isPro,
+                  !entitlements.isLoading,
+                  monetization.shouldPresentExistingFreeUserExplainer
+            else { return }
+            monetization.markExistingFreeUserExplainerPresented()
+        }
         .task(id: isReady) {
             guard isReady, isPurchaseFailureRootFixture else { return }
             try? await Task.sleep(for: .milliseconds(900))

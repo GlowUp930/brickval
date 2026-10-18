@@ -1,5 +1,16 @@
 # Scan Result Card Visual QA
 
+## Existing free user transition — 2026-10-18
+
+The selected quiet dark screen explains the change to Pro, confirms saved
+collection items remain on the device, and offers Pro options. Restore,
+eligible offer codes and signed-in account management remain reachable. The
+small-iPhone screenshot was visually inspected; the content scrolls on compact
+screens and uses Dynamic Type text styles. The feature and release evidence are
+in the [transition audit](../../docs/audits/2026-10-18-existing-free-transition.md).
+Version 1.14 (194) was accepted by App Store Connect and is processing for
+TestFlight; internal group assignment is pending.
+
 ## Subscription-only access gate — 2026-10-18
 
 The hard gate removes the referral exit and keeps sign-in, purchases, restore,

@@ -1,5 +1,18 @@
 # BrickVal Native iOS Context
 
+## Existing free user transition — 2026-10-18
+
+Native build 1.14 (194) adds a one-time explanation before the hard gate for
+returning users whose stored cohort was `legacy_soft`, `experiment_soft`, or
+not yet assigned after completing onboarding. It says their collection remains
+saved on this device and Pro restores access to saved items and scanning. New
+users, previous hard-gate users, and verified Pro users skip it. The screen
+keeps restore, offer-code and signed-in account actions. It does not touch
+collection storage or promise cloud sync. See the
+[transition audit](../../docs/audits/2026-10-18-existing-free-transition.md).
+Apple closed version 1.13 to new uploads. Version 1.14 (194) was accepted for
+TestFlight processing; internal group assignment is pending Apple's processing.
+
 ## Subscription-only access — 2026-10-18
 
 Superwall Production now routes `onboarding_hard_access` and `brickval_upgrade`
