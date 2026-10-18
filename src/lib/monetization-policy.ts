@@ -47,38 +47,31 @@ function optionalPositiveInteger(name: string): number | null {
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 
-function percentage(name: string, fallback: number): number {
-  const value = Number.parseInt(process.env[name] ?? "", 10);
-  return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : fallback;
-}
-
 export function getMonetizationPolicy(): MonetizationPolicy {
   return {
-    version: 6,
+    version: 7,
     accessExperiment: {
-      enabled: booleanValue("BRICKVALUE_HARD_PAYWALL_EXPERIMENT_ENABLED", false),
-      hardPaywallPercent: percentage("BRICKVALUE_HARD_PAYWALL_PERCENT", 50),
+      enabled: true,
+      hardPaywallPercent: 100,
       trialDays: positiveInteger("BRICKVALUE_PRO_TRIAL_DAYS", 7),
     },
     gates: {
-      singleDaily: booleanValue("BRICKVALUE_SINGLE_SCAN_GATE_ENABLED", true),
-      bulkRepeat: booleanValue("BRICKVALUE_BULK_GATE_ENABLED", true),
+      singleDaily: true,
+      bulkRepeat: true,
       collectionCapacity: booleanValue("BRICKVALUE_COLLECTION_GATE_ENABLED", true),
       marketHistory: booleanValue("BRICKVALUE_MARKET_HISTORY_GATE_ENABLED", false),
       appearance: true,
       offerCodes: booleanValue("BRICKVALUE_OFFER_CODES_ENABLED", true),
     },
     limits: {
-      singleScansPerDay: positiveInteger("BRICKVALUE_FREE_SINGLE_SCANS_PER_DAY", 3),
-      introductoryBulkScans: positiveInteger("BRICKVALUE_FREE_BULK_SCANS", 1),
-      collectionUniqueItems: positiveInteger("BRICKVALUE_FREE_COLLECTION_ITEMS", 10),
+      singleScansPerDay: 0,
+      introductoryBulkScans: 0,
+      collectionUniqueItems: 0,
     },
-    // New soft users see a local blurred preview after their introductory credit is exhausted.
-    // Keep the environment override as a rollback switch for the rollout.
-    lockedBulkPreview: booleanValue("BRICKVALUE_LOCKED_BULK_PREVIEW_ENABLED", true),
+    lockedBulkPreview: false,
     notifications: {
       enabled: booleanValue("BRICKVALUE_NOTIFICATIONS_ENABLED", true),
-      scanReset: booleanValue("BRICKVALUE_SCAN_RESET_NOTIFICATIONS_ENABLED", true),
+      scanReset: false,
       trialEnding: booleanValue("BRICKVALUE_TRIAL_REMINDER_NOTIFICATIONS_ENABLED", true),
       accountAction: booleanValue("BRICKVALUE_ACCOUNT_ALERTS_ENABLED", true),
       retention: booleanValue("BRICKVALUE_RETENTION_NOTIFICATIONS_ENABLED", false),

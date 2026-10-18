@@ -127,6 +127,7 @@ export async function grandfatherBulkIntroductoryCredit(
   userId: string,
   installationID: string,
 ): Promise<boolean> {
+  if (getMonetizationPolicy().version >= 7) return false;
   const installationHash = createHash("sha256").update(installationID).digest("hex");
   const { data, error } = await supabase.rpc("claim_bulk_intro_grandfathering", {
     p_user_id: userId,
@@ -189,6 +190,10 @@ export async function checkFeatureAccess(
   now = new Date()
 ): Promise<UsageGateResult> {
   const status = await getMonetizationStatus(userId, now);
+  if (status.policy.version >= 7) {
+    const resolved = await reconcileDeniedProStatus(userId, status);
+    return { allowed: resolved.usage.isPro, usage: resolved.usage };
+  }
   const enabled = feature === "single_scan"
     ? status.policy.gates.singleDaily
     : status.policy.gates.bulkRepeat;
@@ -209,6 +214,7 @@ export async function consumeFeatureUsage(
   now = new Date()
 ): Promise<UsageGateResult> {
   const policy = getMonetizationPolicy();
+  if (policy.version >= 7) return checkFeatureAccess(userId, feature, now);
   const enabled = feature === "single_scan"
     ? policy.gates.singleDaily
     : policy.gates.bulkRepeat;
@@ -262,6 +268,9 @@ export async function consumeFeatureUsage(
 export async function authorizeBulkScan(
   userId: string, sessionToken: string, expiresAt: number,
 ): Promise<UsageGateResult> {
+  // Recheck entitlement even for an existing session; referral and saved free
+  // authorizations cannot bypass the subscription-only policy.
+  if (getMonetizationPolicy().version >= 7) return checkFeatureAccess(userId, "bulk_scan");
   const sessionHash = createHash("sha256").update(sessionToken).digest("hex");
   const { data: decision, error: decisionError } = await supabase.from("bulk_scan_authorizations")
     .select("allowed,user_id,expires_at").eq("session_hash", sessionHash).maybeSingle();

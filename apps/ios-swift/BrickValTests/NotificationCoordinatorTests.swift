@@ -16,6 +16,8 @@ struct NotificationCoordinatorTests {
             timeZone: TimeZone(secondsFromGMT: 0)!
         )
 
+        coordinator.updatePolicy(.init(enabled: true, scanReset: true, trialEnding: true, accountAction: true))
+
         #expect(center.authorizationRequests == 0)
         #expect(coordinator.scanResetReminderEnabled == false)
 
@@ -27,6 +29,17 @@ struct NotificationCoordinatorTests {
         #expect(center.authorizationRequests == 1)
         #expect(center.requests.count == 1)
         #expect(coordinator.scanResetReminderEnabled)
+    }
+
+    @Test("subscription-only defaults never promise a free scan reset")
+    func subscriptionOnlyDisablesScanReset() async {
+        let center = TestNotificationCenter()
+        let defaults = UserDefaults(suiteName: "NotificationCoordinatorTests.\(UUID().uuidString)")!
+        let coordinator = NotificationCoordinator(center: center, defaults: defaults)
+        let scheduled = await coordinator.requestScanResetReminder(resetDate: Date(timeIntervalSinceNow: 86_400))
+        #expect(!scheduled)
+        #expect(center.authorizationRequests == 0)
+        #expect(center.requests.isEmpty)
     }
 
     @Test("a disabled remote notification flag blocks scheduling without prompting")

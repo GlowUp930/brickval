@@ -98,10 +98,10 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
     }
 
     static let phaseOne = MonetizationPolicy(
-        version: 6,
+        version: 7,
         accessExperiment: AccessExperiment(
-            enabled: false,
-            hardPaywallPercent: 50,
+            enabled: true,
+            hardPaywallPercent: 100,
             trialDays: 7
         ),
         gates: Gates(
@@ -113,18 +113,20 @@ struct MonetizationPolicy: Codable, Equatable, Sendable {
             offerCodes: true
         ),
         limits: Limits(
-            singleScansPerDay: 3,
-            introductoryBulkScans: 1,
-            collectionUniqueItems: 10
+            singleScansPerDay: 0,
+            introductoryBulkScans: 0,
+            collectionUniqueItems: 0
         ),
-        lockedBulkPreview: true,
+        lockedBulkPreview: false,
         notifications: Notifications(
             enabled: true,
-            scanReset: true,
+            scanReset: false,
             trialEnding: true,
             accountAction: true
         )
     )
+
+    var requiresSubscription: Bool { version >= 7 }
 
     var effectiveAccessExperiment: AccessExperiment {
         accessExperiment ?? AccessExperiment(

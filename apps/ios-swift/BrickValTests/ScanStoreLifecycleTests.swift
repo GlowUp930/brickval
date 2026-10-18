@@ -299,7 +299,7 @@ struct ScanStoreLifecycleTests {
     }
 
     @Test @MainActor
-    func serverBulkLimitDuringProgressivePresentationFallsBackToLockedPreview() async throws {
+    func serverBulkLimitDuringProgressivePresentationNeverOpensFreePreview() async throws {
         let suite = "ScanStoreLifecycleTests.serverLimitPreview.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -339,7 +339,7 @@ struct ScanStoreLifecycleTests {
             api: api,
             bulkPhotoDetector: StubBulkPhotoDetector(regions: regions)
         )
-        store.configureMonetization(monetization, isPro: false)
+        store.configureMonetization(monetization, isPro: true)
         store.intent = .bulk
 
         await store.importBulkPhoto(try recoveryImageData())
@@ -348,9 +348,9 @@ struct ScanStoreLifecycleTests {
 
         await store.processBulkPresentation(presentation)
 
-        #expect(presentation.accessMode == .lockedPreview)
-        #expect(presentation.terminalError == nil)
-        #expect(store.proLimitFeature == nil)
+        #expect(presentation.accessMode == .real)
+        #expect(presentation.terminalError != nil)
+        #expect(store.proLimitFeature == .bulkScan)
         #expect(presentation.regions.count == regions.count)
     }
 
@@ -695,7 +695,7 @@ struct ScanStoreLifecycleTests {
 
 final class ScanStorePhotoImportXCTests: XCTestCase {
     @MainActor
-    func testExhaustedFreeBulkPhotoImportShowsLockedPreviewWithoutBackendCalls() async {
+    func testFreeBulkPhotoImportRequiresProWithoutBackendCalls() async {
         let suiteName = "ScanStorePhotoImportXCTests.bulkGate.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {
             XCTFail("Could not create isolated defaults")
@@ -741,16 +741,15 @@ final class ScanStorePhotoImportXCTests: XCTestCase {
 
         await store.importBulkPhoto(Data("fixture".utf8))
 
-        XCTAssertNil(store.proLimitFeature)
-        XCTAssertEqual(store.phase, .review)
-        XCTAssertEqual(store.presentedBulkResults?.accessMode, .lockedPreview)
-        XCTAssertEqual(store.presentedBulkResults?.regions.count, regions.count)
+        XCTAssertEqual(store.proLimitFeature, .bulkScan)
+        XCTAssertNotEqual(store.phase, .review)
+        XCTAssertNil(store.presentedBulkResults)
         let backendCallCount = await backendCalls.value()
         XCTAssertEqual(backendCallCount, 0)
     }
 
     @MainActor
-    func testServerBulkLimitConvertsFrozenPhotoToLockedPreview() async {
+    func testSavedFreeAllowanceCannotStartBulkPhotoImport() async {
         let suiteName = "ScanStorePhotoImportXCTests.serverLimit.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
@@ -793,11 +792,10 @@ final class ScanStorePhotoImportXCTests: XCTestCase {
 
         await store.importBulkPhoto(imageData)
 
-        XCTAssertNil(store.proLimitFeature)
-        XCTAssertEqual(store.phase, .review)
-        XCTAssertEqual(store.presentedBulkResults?.accessMode, .lockedPreview)
-        XCTAssertEqual(store.presentedBulkResults?.regions.count, 1)
-        XCTAssertEqual(store.frozenImageData, imageData)
+        XCTAssertEqual(store.proLimitFeature, .bulkScan)
+        XCTAssertNotEqual(store.phase, .review)
+        XCTAssertNil(store.presentedBulkResults)
+        XCTAssertNil(store.frozenImageData)
     }
 
 }

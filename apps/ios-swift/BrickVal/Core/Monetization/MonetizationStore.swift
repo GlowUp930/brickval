@@ -59,6 +59,7 @@ final class MonetizationStore {
         protectExistingUserIfNeeded(
             hasCompletedOnboarding: defaults.bool(forKey: Keys.onboardingCompleted)
         )
+        if policy.requiresSubscription { setAccessCohort(.hardTrial) }
         applyGuestUsage()
     }
 
@@ -101,6 +102,7 @@ final class MonetizationStore {
             return !isPro
         }
 #endif
+        if policy.requiresSubscription { return !isPro }
         let hasReferralCredits = (referralStatus?.bulkCreditsRemaining ?? 0) > 0
         return policy.effectiveAccessExperiment.enabled && accessCohort == .hardTrial && !isPro && !hasReferralCredits
     }
@@ -128,19 +130,24 @@ final class MonetizationStore {
     func refresh(using api: BrickValAPIClient, signedIn: Bool) async {
         isSignedIn = signedIn
         do {
-            if signedIn && hasGrandfatheredBulkCredit && usage.bulkScan.remaining > 0 {
+            if !policy.requiresSubscription && signedIn && hasGrandfatheredBulkCredit && usage.bulkScan.remaining > 0 {
                 _ = try? await api.syncLegacyBulkCredit(InstallationIdentity.current())
             }
             let status = try await api.monetizationStatus()
             let currentPolicy = Self.currentPolicy(from: status.policy)
             policy = currentPolicy
+            if currentPolicy.requiresSubscription { setAccessCohort(.hardTrial) }
             minimumSupportedBuild = currentPolicy.minimumAppBuild
             appUpdateURL = currentPolicy.appUpdateURL
             save(currentPolicy, forKey: Keys.policy)
             if signedIn {
                 usage = status.usage
                 save(status.usage, forKey: Keys.serverUsage)
-                referralStatus = try? await api.referralStatus()
+                if policy.requiresSubscription {
+                    referralStatus = nil
+                } else {
+                    referralStatus = try? await api.referralStatus()
+                }
             } else {
                 applyGuestUsage()
                 referralStatus = nil
@@ -196,8 +203,8 @@ final class MonetizationStore {
     }
 
     func canUseBulk(isPro: Bool) -> Bool {
-        !policy.gates.bulkRepeat || isPro || usage.bulkScan.remaining > 0 ||
-            (referralStatus?.bulkCreditsRemaining ?? 0) > 0 || shouldUseLockedBulkPreview(isPro: isPro)
+        !requiresProForApp(isPro: isPro) && (!policy.gates.bulkRepeat || isPro || usage.bulkScan.remaining > 0 ||
+            (referralStatus?.bulkCreditsRemaining ?? 0) > 0 || shouldUseLockedBulkPreview(isPro: isPro))
     }
 
     func shouldUseLockedBulkPreview(isPro: Bool, serverLimit: Bool = false) -> Bool {
@@ -210,7 +217,7 @@ final class MonetizationStore {
     }
 
     func canUseSingle(isPro: Bool) -> Bool {
-        !policy.gates.singleDaily || isPro || usage.singleScan.remaining > 0
+        !requiresProForApp(isPro: isPro) && (!policy.gates.singleDaily || isPro || usage.singleScan.remaining > 0)
     }
 
     func isHistoryLocked(_ horizon: PortfolioHorizon, isPro: Bool) -> Bool {
@@ -219,7 +226,7 @@ final class MonetizationStore {
 
     func scanReminder(isPro: Bool) -> String? {
         if isPro { return BrickValLocalization.localized("Unlimited scans") }
-        guard policy.gates.singleDaily else { return nil }
+        guard !policy.requiresSubscription, policy.gates.singleDaily else { return nil }
         let remaining = usage.singleScan.remaining
         if remaining == 0 { return BrickValLocalization.localized("No free scans left today") }
         return BrickValLocalization.localized("\(remaining) free scan left today")

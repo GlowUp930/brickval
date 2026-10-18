@@ -76,23 +76,30 @@ try {
   process.env.BRICKVALUE_RECOVERY_SECRET='audit-only';
   process.env.NODE_ENV='test'; delete process.env.VERCEL;
   globalThis.bvAudit.userId=null;
-  let budget=true, unavailable=false;
-  globalThis.bvAudit.db={async rpc(){return unavailable ? {error:'outage'} : {data:budget};},from(){return {async upsert(){return {error:null};},select(){const q={eq(){return q;},gt(){return q;},async maybeSingle(){return {data:null};}};return q;}};}};
+  let budget=true, unavailable=false, paid=false;
+  globalThis.bvAudit.db={async rpc(){return unavailable ? {error:'outage'} : {data:budget};},from(table){return {async upsert(){return {error:null};},select(){const q={eq(){return q;},gt(){return q;},in(){return Promise.resolve({data:[]});},async maybeSingle(){return {data:table==='users' ? {is_pro:paid} : null};}};return q;}};}};
   const guest=await scanAccess.scanRequestAccess(request({}));
-  check(guest.userId.startsWith('guest:'),true);
+  check(guest.status,402);
+  check((await guest.json()).error,'paywall');
+  check((await scanAccess.scanRequestAccess(request({}), 'history')).status,402);
+  globalThis.bvAudit.userId='audit-user';
+  paid=true;
+  check((await scanAccess.scanRequestAccess(request({}))).userId,'audit-user');
   budget=false; check((await scanAccess.scanRequestAccess(request({}))).status,429);
   unavailable=true; check((await scanAccess.scanRequestAccess(request({}))).status,503);
+  globalThis.bvAudit.userId=null;
   const expired=request({});expired.headers.set('authorization','Bearer expired');
   check((await scanAccess.scanRequestAccess(expired)).status,401);
 
   // Reading collection history has its own request budget and never touches scan-credit RPCs.
-  budget=true; unavailable=false;
+  budget=true; unavailable=false; globalThis.bvAudit.userId='audit-user';
   const historyCalls=[];
   globalThis.bvAudit.db.rpc=async (name, args)=>{historyCalls.push({name,args});return {data:true};};
-  check((await scanAccess.scanRequestAccess(request({}), 'history')).userId.startsWith('guest:'),true);
+  check((await scanAccess.scanRequestAccess(request({}), 'history')).userId,'audit-user');
   check(historyCalls.length,1);
   check(historyCalls[0].name,'consume_service_rate_limit');
   check(historyCalls[0].args.p_key.startsWith('history-requests:'),true);
+  globalThis.bvAudit.userId=null;
   check((await scanAccess.scanRequestAccess(expired, 'history')).status,401);
 
   let historyFetches=0;
@@ -128,8 +135,29 @@ try {
   globalThis.bvAudit.decisions=0;globalThis.bvAudit.db={async rpc(){return {data:true};}};
   function crop(){const f=new FormData();f.set('image',new Blob(['test'],{type:'image/jpeg'}),'crop.jpg');f.set('regionId','r1');f.set('sessionToken','signed-fixture');return new Request('http://localhost/identify-region',{method:'POST',body:f});}
   check((await region.POST(crop())).status,402);check((await region.POST(crop())).status,402);check(globalThis.bvAudit.decisions,2);
-  const gate=await load('src/lib/scan-gate.ts');
-  globalThis.bvAudit.db={from(){return {async upsert(){throw new Error('simulated outage');}};}};
+  const gate=await load('src/lib/scan-gate.ts', {
+    './revenuecat-entitlement':`export async function fetchRevenueCatProEntitlement(){return globalThis.bvAudit.paid;}`,
+  });
+  let forbiddenCalls=0;
+  globalThis.bvAudit.paid=false;
+  globalThis.bvAudit.db={
+    from(table){
+      if(table!=='users' && table!=='user_feature_usage') {forbiddenCalls++; throw new Error('Free credit or session bypass');}
+      const query={select(){return query;},eq(){return query;},
+        async maybeSingle(){return {data:{is_pro:false,bulk_intro_grandfathered:true}};},
+        async in(){return {data:[{feature:'bulk_scan',period_key:'lifetime',uses:0}]};}};
+      return query;
+    },
+    async rpc(name){if(name!=='apply_subscription_entitlement'){forbiddenCalls++;throw new Error('Unexpected credit consumption');}return {data:true};},
+  };
+  check((await gate.checkFeatureAccess('audit-user','single_scan')).allowed,false);
+  check((await gate.consumeFeatureUsage('audit-user','bulk_scan')).allowed,false);
+  check((await gate.authorizeBulkScan('audit-user','old-free-session',9999999999)).allowed,false);
+  check(forbiddenCalls,0);
+  globalThis.bvAudit.paid=true;
+  check((await gate.checkFeatureAccess('audit-user','single_scan')).allowed,true);
+  check((await gate.authorizeBulkScan('audit-user','paid-session',9999999999)).allowed,true);
+  globalThis.bvAudit.db={from(){return {select(){throw new Error('simulated outage');}};}};
   await assert.rejects(gate.consumeFeatureUsage('audit-user','bulk_scan'));checks++;
 
   const cache=await load('src/lib/cache.ts');let warnings=0;const warn=console.warn;

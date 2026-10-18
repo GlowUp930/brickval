@@ -29,11 +29,13 @@ struct PreparedHistoryTests {
         // Several mutations while background work is active must only publish the latest state.
         try await store.setQuantity(4, for: joker, isPro: true)
         try await store.remove(rocket)
+        store.prepareHistoryIfNeeded(force: true, now: CollectionHistoryDemo.referenceDate)
         await store.waitForPreparedHistory()
         #expect(store.preparedHistory.items[rocket.id] == nil)
         #expect(store.preparedHistory.portfolios[.all]?[.month]?.points.last?.value == CollectionHistoryDemo.joker[0].priceUSD * 4)
         let restarted = CollectionStore(repository: repository)
         await restarted.load()
+        restarted.prepareHistoryIfNeeded(force: true, now: CollectionHistoryDemo.referenceDate)
         await restarted.waitForPreparedHistory()
         #expect(restarted.preparedHistory.portfolios[.all]?[.month]?.points.map(\.value) == store.preparedHistory.portfolios[.all]?[.month]?.points.map(\.value))
         #expect(restarted.preparedHistory.snapshots[joker.id]?[.all]?[.month]?.timesSold == store.preparedHistory.snapshots[joker.id]?[.all]?[.month]?.timesSold)

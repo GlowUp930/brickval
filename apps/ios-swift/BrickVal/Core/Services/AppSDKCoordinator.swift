@@ -159,6 +159,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
         params: [String: Any]? = nil,
         manualDismissal: (@MainActor () -> Void)? = nil
     ) -> Bool {
+        let placement: ProPlacement = .onboardingHardAccess
         analytics.capture(
             PostHogEvent.upgradeRequested,
             properties: ["placement": placement.rawValue]
@@ -169,21 +170,12 @@ final class AppSDKCoordinator: SuperwallDelegate {
         }
         showsSubscriptionFallback = false
         paywallPresentationError = nil
-        if placement == .subscriptionUpgrade {
-            register(
-                placement: placement,
-                params: params,
-                feature: nil,
-                manualDismissal: manualDismissal
-            )
-        } else {
-            resolveAndRegister(
-                placement: placement,
-                params: params,
-                feature: nil,
-                manualDismissal: manualDismissal
-            )
-        }
+        register(
+            placement: placement,
+            params: params,
+            feature: nil,
+            manualDismissal: manualDismissal
+        )
         return true
     }
 

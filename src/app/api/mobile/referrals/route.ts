@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { supabase } from "@/lib/supabase";
+import { getMonetizationPolicy } from "@/lib/monetization-policy";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -28,6 +29,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  if (getMonetizationPolicy().version >= 7) return NextResponse.json({
+    error: "referrals_disabled", message: "Referral scan rewards are no longer available.",
+  }, { status: 410 });
   const userId = await authenticatedUserID();
   if (!userId) return unauthorizedResponse();
 

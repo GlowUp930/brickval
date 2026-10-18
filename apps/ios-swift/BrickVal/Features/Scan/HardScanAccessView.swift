@@ -1,3 +1,4 @@
+import ClerkKit
 import SwiftUI
 
 struct HardAccessStatusView: View {
@@ -24,8 +25,8 @@ struct HardScanAccessView: View {
     @Environment(MonetizationStore.self) private var monetization
     @Environment(\.appSDKCoordinator) private var coordinator
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var showAccount = false
     @State private var contentVisible = false
-    @State private var showReferral = false
 
     var body: some View {
         ZStack {
@@ -63,10 +64,11 @@ struct HardScanAccessView: View {
                 }
             }
         }
-        .sheet(isPresented: $showReferral) {
-            NavigationStack {
-                ReferralView()
-            }
+        .sheet(isPresented: $showAccount) {
+            NavigationStack { AccountView() }
+        }
+        .onChange(of: coordinator?.clerk?.user?.id) { _, userID in
+            if userID != nil { showAccount = false }
         }
         .alert("Upgrade unavailable", isPresented: paywallErrorBinding) {
             Button("OK", role: .cancel) {
@@ -122,31 +124,24 @@ struct HardScanAccessView: View {
             benefit("Unlimited collection items", icon: "shippingbox", isCompact: isCompact)
         }
         .padding(.horizontal, BrickValStyle.Primitive.space16)
-        .background(BrickValStyle.Semantic.surfaceMuted, in: RoundedRectangle(cornerRadius: 8))
+        .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
     }
 
     private func actions(isCompact: Bool) -> some View {
         VStack(spacing: isCompact ? BrickValStyle.Primitive.space8 : BrickValStyle.Primitive.space12) {
             Button {
-                presentPaywall(source: "scanner_gate")
+                if coordinator?.clerk?.user == nil {
+                    showAccount = true
+                } else {
+                    presentPaywall(source: "scanner_gate")
+                }
             } label: {
-                Text("Subscribe")
+                Text(coordinator?.clerk?.user == nil ? "Sign in to upgrade" : "Subscribe")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity, minHeight: isCompact ? 50 : 56)
                     .background(BrickValStyle.Semantic.builderYellow, in: Capsule())
             }
-
-            Button {
-                showReferral = true
-            } label: {
-                Label("Invite 3 friends", systemImage: "person.2")
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, minHeight: isCompact ? 44 : 48)
-            }
-            .buttonStyle(.bordered)
-            .tint(.white)
 
             if monetization.offerCodesEnabled {
                 Button {
@@ -165,6 +160,13 @@ struct HardScanAccessView: View {
                         Task { await coordinator?.checkOfferCodeAccess() }
                     }
                 )
+            }
+
+            if coordinator?.clerk?.user != nil {
+                Button("Manage Account") { showAccount = true }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(minHeight: 44)
             }
 
             Button("Restore purchases") {

@@ -1,5 +1,21 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Subscription-only access — 2026-10-18
+
+Superwall Production now routes `onboarding_hard_access` and `brickval_upgrade`
+to `hardpaywall` for 100% of unsubscribed users, without the seed split or holdout.
+The old soft campaign is paused and has no placements. Production policy 6 now
+enrolls new users at 100% hard access and disables locked bulk previews, verified
+at the public endpoint after redeployment. Previously enrolled soft users still
+need the replacement native release. Native/backend policy 7
+requires Pro for all users, including existing soft cohorts; referral and introductory
+credits no longer unlock access. Free previews, referral promotion and scan-reset
+reminders are disabled. Trials, restores, offer codes and account management remain.
+Source verification and release status are tracked in the
+[rollout audit](docs/audits/2026-10-18-hard-paywall.md). A replacement native release
+is required to change installed app access; dashboard routing alone is insufficient.
+This section supersedes historical soft-access guidance below.
+
 ## First-week activation reminders — 2026-10-09
 
 Native source replaces the optional 7/21-day reminders with one consent-anchored
@@ -454,7 +470,7 @@ NEXT_PUBLIC_APP_URL
 # Native iOS rollout
 BRICKVALUE_MINIMUM_IOS_BUILD       ← optional forced-update gate; set only after the replacement build is live
 BRICKVALUE_IOS_UPDATE_URL          ← optional App Store/TestFlight update URL
-BRICKVALUE_LOCKED_BULK_PREVIEW_ENABLED ← optional locked soft-paywall preview rollback switch; defaults on for app-accessible non-Pro users with no usable introductory or referral bulk credit in policy v6
+BRICKVALUE_LOCKED_BULK_PREVIEW_ENABLED ← legacy setting; ignored by subscription-only policy v7
 
 # Legacy (not active in current flow)
 RAPIDAPI_KEY

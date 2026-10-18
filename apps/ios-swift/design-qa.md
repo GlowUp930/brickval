@@ -1,5 +1,15 @@
 # Scan Result Card Visual QA
 
+## Subscription-only access gate — 2026-10-18
+
+The hard gate removes the referral exit and keeps sign-in, purchases, restore,
+offer codes and account management. The small-iPhone UI check confirms that no
+free/referral exit or app tabs are available. The benefits panel now uses an explicit
+dark fill to keep white text readable independently of stored appearance preferences.
+See the [rollout audit](../../docs/audits/2026-10-18-hard-paywall.md) for verification
+and the separate live-routing/native-release boundaries.
+
+
 ## First-week reminder invitation — 2026-10-09
 
 The first onboarding demo includes optional inline reminder consent below the

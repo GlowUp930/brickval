@@ -2,6 +2,8 @@ import { createHash, createHmac } from "node:crypto";
 import { isIP } from "node:net";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { getMonetizationPolicy } from "./monetization-policy";
+import { getMonetizationStatus, reconcileDeniedProStatus } from "./scan-gate";
 import { supabase } from "./supabase";
 
 /** One server boundary for every provider-backed scan path, including legacy clients. */
@@ -31,6 +33,13 @@ export async function scanRequestAccess(request: Request, purpose: "scan" | "his
     const { data: account, error: accountError } = await supabase.from("users")
       .select("is_pro").eq("id", userId!).maybeSingle();
     if (accountError) throw accountError;
+    if (getMonetizationPolicy().version >= 7 && !account?.is_pro) {
+      const status = await reconcileDeniedProStatus(userId!, await getMonetizationStatus(userId!));
+      if (!status.usage.isPro) return NextResponse.json({
+        error: "paywall", message: "Subscribe to BrickValue Pro to continue.",
+        feature: purpose === "history" ? "market_history" : "single_scan", usage: status.usage,
+      }, { status: 402 });
+    }
     const limited = !account?.is_pro;
     const region = /\/(identify-region|recover)$/.test(new URL(request.url).pathname);
     const { data, error } = await supabase.rpc("consume_service_rate_limit", {

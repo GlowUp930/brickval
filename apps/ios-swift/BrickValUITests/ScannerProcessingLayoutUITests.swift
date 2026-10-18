@@ -562,24 +562,22 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["The device or user is not allowed to make the purchase."].exists)
     }
 
-    func testLockedBulkPreviewRevealsPlaceholdersAndRoutesToReferrals() {
+    func testHardAccessHasNoFreeOrReferralExit() {
         let app = XCUIApplication()
-        app.launchArguments = ["-showLockedBulkPreviewDemo", "-brickval_language_override", "en"]
+        app.launchArguments = ["-showHardAccessDemo", "-brickval_language_override", "en"]
         app.launch()
 
-        XCTAssertTrue(app.otherElements["bulkPreview.locked"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.buttons["bulkPreview.upgrade"].waitForExistence(timeout: 8))
-        XCTAssertTrue(app.buttons["bulkPreview.refer"].exists)
-        let firstPlaceholder = app.descendants(matching: .any)
-            .matching(identifier: "bulkPreview.placeholderCard.demo-existing")
-            .firstMatch
-        XCTAssertTrue(firstPlaceholder.waitForExistence(timeout: 3))
-        XCTAssertGreaterThanOrEqual(
-            app.descendants(matching: .any).matching(identifier: "bulkPreview.placeholderCard.demo-existing").count,
-            1
-        )
-
-        app.buttons["bulkPreview.refer"].tap()
-        XCTAssertTrue(app.navigationBars["Invite friends"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Scan with BrickValue Pro"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Sign in to upgrade"].exists || app.buttons["Subscribe"].exists)
+        XCTAssertFalse(app.buttons["Invite 3 friends"].exists)
+        XCTAssertFalse(app.buttons["bulkPreview.refer"].exists)
+        XCTAssertFalse(app.tabBars.firstMatch.exists)
+        app.swipeUp()
+        XCTAssertTrue(app.buttons["Restore purchases"].exists)
+        XCTAssertTrue(app.buttons["Redeem offer code"].exists)
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "Subscription-only access gate"
+        attachment.lifetime = .keepAlways
+        add(attachment)
     }
 }

@@ -236,7 +236,7 @@ struct OnboardingView: View {
     }
 
     private func continueFromAccount() {
-        guard !preferences.isReplayingOnboarding else {
+        guard !monetization.policy.requiresSubscription, !preferences.isReplayingOnboarding else {
             finishOnboarding()
             return
         }
@@ -329,7 +329,7 @@ struct OnboardingView: View {
                 "onboarding_session_id": onboardingSessionID,
             ]
         )
-        if !isReplay, coordinator?.clerk?.user != nil {
+        if !monetization.policy.requiresSubscription, !isReplay, coordinator?.clerk?.user != nil {
             preferences.referralCompletionUserID = coordinator?.clerk?.user?.id
             preferences.referralOnboardingCompletionPending = true
             Task { await completeReferralOnboardingIfPossible() }

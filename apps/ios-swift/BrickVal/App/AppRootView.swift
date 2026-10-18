@@ -34,7 +34,8 @@ struct AppRootView: View {
                                 !preferences.isReplayingOnboarding {
                         if monetization.accessCohort == .hardTrial && entitlements.isLoading && !entitlements.isPro {
                             HardAccessStatusView()
-                        } else if monetization.requiresProForApp(isPro: entitlements.isPro) {
+                        } else if monetization.requiresProForApp(isPro: entitlements.isPro) ||
+                                    (monetization.policy.requiresSubscription && coordinator?.clerk != nil && coordinator?.clerk?.user == nil) {
                             HardScanAccessView()
                         } else {
                             AppShellView()
@@ -64,7 +65,7 @@ struct AppRootView: View {
             coordinator?.purchaseRestrictionGuide = PurchaseRestrictionGuideContext(placement: nil)
         }
         .task(id: "\(scenePhase)-\(coordinator?.clerk?.user?.id ?? "signed-out")-\(preferences.referralOnboardingCompletionPending)") {
-            guard scenePhase == .active,
+            guard !monetization.policy.requiresSubscription, scenePhase == .active,
                   preferences.referralOnboardingCompletionPending,
                   coordinator?.clerk?.user != nil
             else { return }
