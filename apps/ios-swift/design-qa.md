@@ -8,8 +8,8 @@ eligible offer codes and signed-in account management remain reachable. The
 small-iPhone screenshot was visually inspected; the content scrolls on compact
 screens and uses Dynamic Type text styles. The feature and release evidence are
 in the [transition audit](../../docs/audits/2026-10-18-existing-free-transition.md).
-Version 1.14 (194) was accepted by App Store Connect and is processing for
-TestFlight; internal group assignment is pending.
+Version 1.14 (194) is available to the internal TestFlight groups Team (Expo)
+and v1.
 
 ## Subscription-only access gate — 2026-10-18
 

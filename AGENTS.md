@@ -7,8 +7,8 @@ soft access before subscription-only access. Their collection remains saved on
 this device; Pro unlocks viewing saved items and scanning. New users, users who
 already had a hard gate, and verified Pro users skip the explanation. It does
 not modify collection data or imply cloud sync. Apple closed version 1.13 to new
-uploads. Version 1.14 (194) was accepted for TestFlight processing; internal
-group assignment is pending Apple's processing. See the
+uploads. Version 1.14 (194) is available to the internal TestFlight groups
+Team (Expo) and v1. See the
 [transition audit](docs/audits/2026-10-18-existing-free-transition.md).
 
 ## Subscription-only access — 2026-10-18

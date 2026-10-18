@@ -30,5 +30,7 @@ Verification passed:
 
 Apple rejected build 193 because version 1.13 is closed for new submissions.
 The replacement archive, version 1.14 (194), passed strict signature checks
-and was accepted by App Store Connect on 2026-10-18. Apple is processing it
-for TestFlight; internal group assignment is pending processing completion.
+and was accepted and processed by App Store Connect on 2026-10-18. Its status is
+Ready to Submit, and it is available to the existing internal groups Team
+(Expo) and v1, with one tester in each group. The TestFlight group assignment
+was verified on the build details page.

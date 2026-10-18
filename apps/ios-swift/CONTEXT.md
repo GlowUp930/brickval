@@ -10,8 +10,8 @@ users, previous hard-gate users, and verified Pro users skip it. The screen
 keeps restore, offer-code and signed-in account actions. It does not touch
 collection storage or promise cloud sync. See the
 [transition audit](../../docs/audits/2026-10-18-existing-free-transition.md).
-Apple closed version 1.13 to new uploads. Version 1.14 (194) was accepted for
-TestFlight processing; internal group assignment is pending Apple's processing.
+Apple closed version 1.13 to new uploads. Version 1.14 (194) is available to
+the internal TestFlight groups Team (Expo) and v1.
 
 ## Subscription-only access — 2026-10-18
 
