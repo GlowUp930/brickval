@@ -202,6 +202,7 @@
 		CC2AE860738E18E8DD2B114D /* AppSDKCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06D75EF1138BB59ECAFAF414 /* AppSDKCoordinator.swift */; };
 		CC972C6B6B681A66ACD02CAC /* BulkShareCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2709B02949B308441BEDBABB /* BulkShareCard.swift */; };
 		CC990AE74A1BECC5AB724822 /* MinifigureDetecting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E425BFAF3639759CF05EF19 /* MinifigureDetecting.swift */; };
+		CD289B83B3AF52DA5CE00176 /* AppHangDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADAEC457388C025AAD8934FC /* AppHangDiagnostics.swift */; };
 		CE62ABE582802A94A3FD72F0 /* ReferralTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B93A61FE27D0131685368F7 /* ReferralTests.swift */; };
 		CF041116257A1F4F98DBA803 /* MarketRegion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 355FA93D3DBDE45C6B344158 /* MarketRegion.swift */; };
 		CF99662BD385ECA5ED8D7906 /* SDKEnvironmentRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF5986CE67C8CCD199CAB39 /* SDKEnvironmentRootView.swift */; };
@@ -424,6 +425,7 @@
 		AABA3411EE2FABDD83007F6D /* SettingsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTabView.swift; sourceTree = "<group>"; };
 		AB30155E95AA9993EEF762A0 /* ThemePreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemePreference.swift; sourceTree = "<group>"; };
 		AD4021F21C580E46CEC12F4C /* ScanResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanResultView.swift; sourceTree = "<group>"; };
+		ADAEC457388C025AAD8934FC /* AppHangDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppHangDiagnostics.swift; sourceTree = "<group>"; };
 		ADC090332877E64CE45DE5C9 /* LookupPricing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LookupPricing.swift; sourceTree = "<group>"; };
 		AED931FC399B0F4FDAF3724D /* VisionBoundingBoxMapperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionBoundingBoxMapperTests.swift; sourceTree = "<group>"; };
 		AEF808A2F8B5376293A8C45C /* BrickValLocalization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrickValLocalization.swift; sourceTree = "<group>"; };
@@ -541,6 +543,7 @@
 			isa = PBXGroup;
 			children = (
 				CA6B819FC9566D4FCF1BFBD1 /* AppErrorReporter.swift */,
+				ADAEC457388C025AAD8934FC /* AppHangDiagnostics.swift */,
 				06D75EF1138BB59ECAFAF414 /* AppSDKCoordinator.swift */,
 				7E35B79843A4B14E2B919817 /* AppSDKEnvironment.swift */,
 				69F48A6CDA6A54A537566818 /* CurrencyStore.swift */,
@@ -1211,6 +1214,7 @@
 				3A436287F71C839D44040D72 /* AccountView.swift in Sources */,
 				71A399A9CCB925A28A117723 /* AppDestinationModifier.swift in Sources */,
 				1E5AE9514AE6CB2BD3AD97DF /* AppErrorReporter.swift in Sources */,
+				CD289B83B3AF52DA5CE00176 /* AppHangDiagnostics.swift in Sources */,
 				A83DB08553914F7CA49A0B44 /* AppLinks.swift in Sources */,
 				1D6F2FB1E43C2578F9D633C9 /* AppRootView.swift in Sources */,
 				9E6CCB46F1DFB8A42C38D1DB /* AppRoute.swift in Sources */,
@@ -1409,13 +1413,13 @@
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = 73ED6DE8405E3B97619850CEC7576E70B00A275A;
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 194;
+				CURRENT_PROJECT_VERSION = 195;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.14;
+				MARKETING_VERSION = 1.15;
 				PRODUCT_BUNDLE_IDENTIFIER = com.brickval.app;
 				PRODUCT_NAME = BrickVal;
 				PROVISIONING_PROFILE_SPECIFIER = "BrickVal App Store 1.11 Build 189";
@@ -1538,13 +1542,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 194;
+				CURRENT_PROJECT_VERSION = 195;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.14;
+				MARKETING_VERSION = 1.15;
 				PRODUCT_BUNDLE_IDENTIFIER = com.brickval.app;
 				PRODUCT_NAME = BrickVal;
 				SDKROOT = iphoneos;

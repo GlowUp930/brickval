@@ -17,6 +17,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
     let clerk: Clerk?
     let apiClient: BrickValAPIClient
     let analytics: PostHogAnalytics
+    @ObservationIgnored let hangDiagnostics = AppHangDiagnostics()
     private(set) var purchasesConfigured = false
     private(set) var superwallConfigured = false
     private(set) var showsSubscriptionFallback = false
@@ -97,6 +98,7 @@ final class AppSDKCoordinator: SuperwallDelegate {
         }
 #endif
 
+        hangDiagnostics.record(.launch, .started)
         guard purchaseServicesEnabled else { return }
 
         let revenueCatKey = Self.configurationValue("RevenueCatAPIKey")

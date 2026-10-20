@@ -8,6 +8,8 @@ struct AccountView: View {
         accountContent
             .background(BrickValStyle.Semantic.canvas.ignoresSafeArea())
             .navigationTitle("Manage Account")
+            .onAppear { coordinator?.hangDiagnostics.record(.account, .appeared) }
+            .onDisappear { coordinator?.hangDiagnostics.record(.account, .disappeared) }
     }
 
     @ViewBuilder

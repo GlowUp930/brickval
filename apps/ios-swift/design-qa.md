@@ -1,5 +1,15 @@
 # Scan Result Card Visual QA
 
+## Launch/sign-in diagnostics — 2026-10-20
+
+Build 1.15 (195) adds temporary, fixed-name Sentry lifecycle breadcrumbs and
+startup/account-presentation timings. The small-iPhone sign-in smoke check
+opens the real subscription-gate account sheet and confirms input enables
+Continue without submitting it. Existing hard-access and immediate Get Started
+checks pass, alongside the diagnostic unit checks and all 13 locales. These
+checks verify instrumentation integration, not the iOS 17 production hang.
+See the [investigation audit](../../docs/audits/2026-10-20-fatal-launch-hang.md).
+
 ## Existing free user transition — 2026-10-18
 
 The selected quiet dark screen explains the change to Pro, confirms saved

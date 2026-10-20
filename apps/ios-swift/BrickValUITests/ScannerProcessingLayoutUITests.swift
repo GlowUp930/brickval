@@ -2,6 +2,30 @@ import XCTest
 
 @MainActor
 final class ScannerProcessingLayoutUITests: XCTestCase {
+    // Smoke coverage for the diagnostic lifecycle hooks, not a reproduction
+    // of the iOS 17 production hang recorded in BRICKVAL-12.
+    func testHardAccessSignInRemainsResponsive() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-showHardAccessDemo", "-brickval_language_override", "en"]
+        app.launch()
+
+        let signIn = app.buttons["Sign in to upgrade"]
+        guard signIn.waitForExistence(timeout: 10) else {
+            XCTFail("Expected signed-out subscription gate")
+            return
+        }
+        signIn.tap()
+        let identifier = app.descendants(matching: .any)
+            .matching(identifier: "clerk.auth.start.identifier").firstMatch
+        guard identifier.waitForExistence(timeout: 15) else {
+            XCTFail("Expected Clerk sign-in form")
+            return
+        }
+        identifier.tap()
+        app.typeText("diagnostic@example.invalid")
+        XCTAssertTrue(app.buttons["clerk.auth.start.continue"].isEnabled)
+    }
+
     func testPhotoGuideShowsSeamlessExamplesAndCanDismiss() {
         let app = XCUIApplication()
         app.launchArguments = ["-showScannerPhotoGuideDemo", "-brickval_language_override", "en"]

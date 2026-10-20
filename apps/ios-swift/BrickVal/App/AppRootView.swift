@@ -133,6 +133,7 @@ struct AppRootView: View {
             return
         }
         didCaptureAppReady = true
+        coordinator?.hangDiagnostics.record(.launch, .ready)
         coordinator?.analytics.capture(
             PostHogEvent.appReady,
             properties: [

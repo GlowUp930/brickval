@@ -7,7 +7,15 @@ one physical iPhone 11 running iOS 17.6.1, release 1.14 (194). Authentication
 icon downloads precede both events, but no feature-level app frame identifies
 the cause. The local build-194 dSYM matches Sentry's missing UUID and resolves
 the sole app frame to `main`. Only iOS 26.5 is available in the local simulator;
-reproduction and a verified fix remain pending. See the
+reproduction and a verified fix remain pending. Approved source diagnostics
+for 1.15 (195) record fixed screen names and monotonic startup/presentation
+timings in Release Sentry breadcrumbs. Diagnostic state is excluded from
+Observation; entered text, account identifiers and photos are excluded.
+Six focused unit checks, three UI checks and all 13 locales pass. Signed
+archive `/tmp/BrickVal195-hang-diagnostics.xcarchive` and exported IPA
+`/tmp/BrickVal195-export/BrickVal.ipa` pass strict signature verification and
+share dSYM UUID `DBA9D482-2AB5-3287-B062-F15FDA367018`. Build 195 has not been
+uploaded to TestFlight. These diagnostics require a newly installed build. See the
 [investigation audit](../../docs/audits/2026-10-20-fatal-launch-hang.md).
 
 ## Existing free user transition — 2026-10-18

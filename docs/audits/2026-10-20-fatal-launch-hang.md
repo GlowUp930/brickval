@@ -4,8 +4,11 @@ Last verified: 2026-10-20 (Australia/Melbourne).
 
 ## Status
 
-Investigation is incomplete. The production hang is confirmed, but its cause
-has not been reproduced locally. No app fix or release is established.
+The user approved temporary production diagnostics on 2026-10-20. Native
+source now records fixed screen names and startup/presentation timings for
+the next build, 1.15 (195). The production hang has not been reproduced
+locally; this instrumentation is not a verified fix. Build verification and
+distribution status are recorded below.
 
 ## Production evidence
 
@@ -91,15 +94,81 @@ the original test source restored exactly. There is no production regression
 test because no command has reproduced the reported iOS 17 hang. No app
 source, SDK version, or live configuration was changed.
 
+## Approved diagnostics
+
+`AppHangDiagnostics` records Sentry breadcrumbs under
+`brickval.ui_diagnostic`. Its input API accepts enums for screen, phase, and
+source screen. The payload contains only `diagnostic_version`, `screen`,
+`phase`, `elapsed_since_launch_ms`, and, when a request is matched,
+`presentation_ms` and `source_screen`.
+
+Startup begins at SDK coordinator creation, with breadcrumbs emitted after
+Sentry initialization and after the app completes local loading/migration.
+Account buttons in the subscription gate and Profile log the request before
+changing SwiftUI presentation state. Onboarding authentication requests do
+the same. Account/authentication and onboarding/access-gate lifecycle hooks
+mark appearance and disappearance. Timings use system uptime, so wall-clock
+or timezone changes do not affect the measurements. Appearance is a SwiftUI
+lifecycle milestone, not proof that every pixel has rendered.
+
+Account and embedded authentication consume separate timers from the same
+tap. Dismissal clears unfinished timers, and reopening replaces the prior
+request. Signed-in Account does not start an authentication timer. Diagnostic
+state is excluded from Observation and does not schedule polling, introduce
+extra view state, or initiate new network requests. Breadcrumb emission is
+disabled in DEBUG; unit tests use an injected clock and sink.
+
+The diagnostics accept no arbitrary text/properties, user or installation
+identifiers, entered email, photos, collection data, or raw SDK errors. They
+reuse the existing Release Sentry configuration and hang detection. They are
+temporary: remove them once a captured reproduction identifies the cause and
+a verified fix has shipped.
+
+The original diagnosing-bugs reproduction/hypothesis/fix phases remain
+blocked because no test reproduces BRICKVAL-12. This change follows the
+skill's explicitly approved instrumentation fallback; diagnostic tests do
+not claim to reproduce or remediate the production hang.
+
+## Diagnostic verification
+
+- Six Sentry configuration/diagnostic tests pass on the Small iPhone
+  simulator, including request-to-appearance timing, separate Account/auth
+  timers, dismissal cleanup, replacement requests, signed-in Account, and
+  the existing failed-request host restriction. The final run is saved at
+  `/tmp/BrickVal195-diagnostics-final.xcresult`.
+- The new real-gate sign-in smoke test passes: the sheet opens and accepts
+  synthetic input without submitting it. The existing hard-access and
+  immediate onboarding Get Started checks also pass in
+  `/tmp/BrickVal195-diagnostics.xcresult`.
+- Localization passes for 868 app strings and four Info.plist strings in all
+  13 languages (`/tmp/BrickVal195-localization.log`).
+- These are focused checks on iOS 26.5. Physical iOS 17 verification, newly
+  captured Sentry breadcrumbs, and confirmation of a hang fix remain open.
+
+## Prepared release
+
+- Signed Release archive:
+  `/tmp/BrickVal195-hang-diagnostics.xcarchive`.
+- Exported App Store package:
+  `/tmp/BrickVal195-export/BrickVal.ipa`.
+- Version 1.15, build 195. Archive and local export succeeded. Strict deep
+  code-signature checks pass for both the archive and exported package.
+- App binary and dSYM share arm64 UUID
+  `DBA9D482-2AB5-3287-B062-F15FDA367018`.
+- The Release binary contains the diagnostic breadcrumb category and timing
+  payload keys. Sentry, Clerk, RevenueCat and Superwall configuration values
+  were checked for presence without printing them.
+- This package has not been uploaded to TestFlight or submitted to App
+  Review. Existing installations do not emit the new breadcrumbs.
+- Sentry symbol ingestion is unverified: upload credentials are unavailable.
+  Keep the matching archive/dSYM available for upload with the release.
+
 ## Required next evidence
 
 Obtain an accessible iPhone running iOS 17 with the failing build and exact
 steps, or a captured main-thread performance trace while the failure occurs.
-If reproduction remains unavailable, a separately authorized diagnostic build
-can record a fixed set of screen/presentation names before requesting account
-presentation and after the authentication view appears, plus elapsed startup
-and presentation times. It should reuse Sentry's existing hang capture and
-exclude entered text, account identifiers, photos, and arbitrary properties.
-This is proposed instrumentation, not an implemented fix or an approved
-production release. Do not infer a fix from passing tests on a newer OS, replace
+Alternatively, install the diagnostic build and inspect the fixed screen and
+presentation milestones in a newly captured hang. TestFlight upload and App
+Store submission still require an explicit user request under the native
+release workflow. Do not infer a fix from passing tests on a newer OS, replace
 authentication speculatively, or close the Sentry issue without verification.

@@ -126,6 +126,8 @@ struct OnboardingView: View {
                 properties: stepAnalyticsProperties(for: step)
             )
         }
+        .onAppear { coordinator?.hangDiagnostics.record(.onboarding, .appeared) }
+        .onDisappear { coordinator?.hangDiagnostics.record(.onboarding, .disappeared) }
         .sheet(item: $presentedSheet) { sheet in
             switch sheet {
             case .auth:
@@ -184,6 +186,7 @@ struct OnboardingView: View {
             alertMessage = BrickValLocalization.localized("Sign-in is unavailable in this build. You can continue and sign in later from Profile.")
             return
         }
+        coordinator?.hangDiagnostics.request(.authentication, from: .onboarding)
         presentedSheet = .auth
     }
 
@@ -283,6 +286,7 @@ struct OnboardingView: View {
                     )
                     continueFromAccount()
                 } else {
+                    coordinator?.hangDiagnostics.request(.authentication, from: .onboarding)
                     presentedSheet = .auth
                 }
             } catch {

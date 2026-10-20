@@ -3,6 +3,7 @@ import SwiftUI
 
 struct BrickValueAuthView: View {
     @Environment(\.brickValAccent) private var accent
+    @Environment(\.appSDKCoordinator) private var coordinator
 
     let isDismissible: Bool
 
@@ -17,6 +18,8 @@ struct BrickValueAuthView: View {
                     .accessibilityLabel("BrickValue")
             }
             .environment(\.clerkTheme, authTheme)
+            .onAppear { coordinator?.hangDiagnostics.record(.authentication, .appeared) }
+            .onDisappear { coordinator?.hangDiagnostics.record(.authentication, .disappeared) }
     }
 
     private var authTheme: ClerkTheme {

@@ -21,6 +21,13 @@ struct SettingsView: View {
     @State private var secretLogoTapCount = 0
     @State private var lastSecretLogoTap = Date.distantPast
 
+    private func presentAccount() {
+        coordinator?.hangDiagnostics.request(
+            .account, from: .profile, includesAuthentication: coordinator?.clerk?.user == nil
+        )
+        presentedSheet = .account
+    }
+
     private var selectedAvatar: CollectorAvatar {
         guard coordinator?.clerk?.user != nil else { return .classic }
         return CollectorAvatar.selected(from: preferences.avatarName)
@@ -31,7 +38,7 @@ struct SettingsView: View {
         ScrollView {
             VStack(spacing: BrickValStyle.Primitive.space20) {
                 Button {
-                    presentedSheet = .account
+                    presentAccount()
                 } label: {
                     profileHero
                 }
@@ -199,7 +206,7 @@ struct SettingsView: View {
     private var profileActions: some View {
         VStack(spacing: BrickValStyle.Primitive.space12) {
             Button {
-                presentedSheet = .account
+                presentAccount()
             } label: {
                 profileDynamicRow(
                     icon: "person.crop.circle",

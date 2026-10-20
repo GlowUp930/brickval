@@ -6,7 +6,12 @@ Sentry BRICKVAL-12 records two fatal SwiftUI update hangs on one physical
 iPhone 11 running iOS 17.6.1 in release 1.14 (194). Sign-in icon downloads
 precede both events, but the logs do not identify the responsible app view.
 The matching local dSYM resolves the sole app frame to `main`; it does not
-establish a cause. Reproduction and a verified fix remain pending. See the
+establish a cause. Approved diagnostics in source for 1.15 (195) add fixed
+screen names and monotonic startup/presentation timings to Release Sentry
+breadcrumbs, with no account/input/photo data. Reproduction and a verified
+fix remain pending. Signed archive and exported IPA are prepared; signature,
+focused native/UI and 13-language checks pass. Build 195 has not been uploaded
+to TestFlight; a new installed build is required to collect this evidence. See the
 [investigation audit](docs/audits/2026-10-20-fatal-launch-hang.md).
 
 ## Existing free user transition — 2026-10-18

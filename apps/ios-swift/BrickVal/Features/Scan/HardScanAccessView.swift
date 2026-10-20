@@ -85,6 +85,8 @@ struct HardScanAccessView: View {
         } message: {
             Text(coordinator?.paywallPresentationError ?? BrickValLocalization.localized("Something went wrong. Please try again in a moment."))
         }
+        .onAppear { coordinator?.hangDiagnostics.record(.accessGate, .appeared) }
+        .onDisappear { coordinator?.hangDiagnostics.record(.accessGate, .disappeared) }
         .task {
             reveal()
         }
@@ -182,7 +184,7 @@ struct HardScanAccessView: View {
             }
 
             if coordinator?.clerk?.user != nil {
-                Button("Manage Account") { showAccount = true }
+                Button("Manage Account") { presentAccount() }
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .accessibilityIdentifier("hardAccess.existingFree.manageAccount")
             }
@@ -192,10 +194,17 @@ struct HardScanAccessView: View {
         .buttonStyle(.plain)
     }
 
+    private func presentAccount() {
+        coordinator?.hangDiagnostics.request(
+            .account, from: .accessGate, includesAuthentication: coordinator?.clerk?.user == nil
+        )
+        showAccount = true
+    }
+
     private func viewProOptions() {
         monetization.markExistingFreeUserExplainerPresented()
         if coordinator?.clerk?.user == nil {
-            showAccount = true
+            presentAccount()
         } else {
             presentPaywall(source: "existing_free_access_explainer")
         }
@@ -250,7 +259,7 @@ struct HardScanAccessView: View {
         VStack(spacing: isCompact ? BrickValStyle.Primitive.space8 : BrickValStyle.Primitive.space12) {
             Button {
                 if coordinator?.clerk?.user == nil {
-                    showAccount = true
+                    presentAccount()
                 } else {
                     presentPaywall(source: "scanner_gate")
                 }
@@ -282,7 +291,7 @@ struct HardScanAccessView: View {
             }
 
             if coordinator?.clerk?.user != nil {
-                Button("Manage Account") { showAccount = true }
+                Button("Manage Account") { presentAccount() }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
                     .frame(minHeight: 44)
