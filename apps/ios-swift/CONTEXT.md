@@ -1,5 +1,15 @@
 # BrickVal Native iOS Context
 
+## Fatal launch hang investigation — 2026-10-20
+
+Sentry BRICKVAL-12 records two fatal SwiftUI/AttributeGraph update hangs on
+one physical iPhone 11 running iOS 17.6.1, release 1.14 (194). Authentication
+icon downloads precede both events, but no feature-level app frame identifies
+the cause. The local build-194 dSYM matches Sentry's missing UUID and resolves
+the sole app frame to `main`. Only iOS 26.5 is available in the local simulator;
+reproduction and a verified fix remain pending. See the
+[investigation audit](../../docs/audits/2026-10-20-fatal-launch-hang.md).
+
 ## Existing free user transition — 2026-10-18
 
 Native build 1.14 (194) adds a one-time explanation before the hard gate for

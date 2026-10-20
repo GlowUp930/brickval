@@ -1,5 +1,14 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Fatal launch hang investigation — 2026-10-20
+
+Sentry BRICKVAL-12 records two fatal SwiftUI update hangs on one physical
+iPhone 11 running iOS 17.6.1 in release 1.14 (194). Sign-in icon downloads
+precede both events, but the logs do not identify the responsible app view.
+The matching local dSYM resolves the sole app frame to `main`; it does not
+establish a cause. Reproduction and a verified fix remain pending. See the
+[investigation audit](docs/audits/2026-10-20-fatal-launch-hang.md).
+
 ## Existing free user transition — 2026-10-18
 
 Native build 1.14 (194) adds a one-time explanation for returning users who had
