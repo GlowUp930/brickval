@@ -1,6 +1,6 @@
 # BRICKVAL-12 fatal launch hang investigation
 
-Last verified: 2026-10-20 (Australia/Melbourne).
+Last verified: 2026-11-23 (Australia/Melbourne).
 
 ## Status
 
@@ -158,8 +158,10 @@ not claim to reproduce or remediate the production hang.
 - The Release binary contains the diagnostic breadcrumb category and timing
   payload keys. Sentry, Clerk, RevenueCat and Superwall configuration values
   were checked for presence without printing them.
-- This package has not been uploaded to TestFlight or submitted to App
-  Review. Existing installations do not emit the new breadcrumbs.
+- App Store Connect shows [1.15 (195)](https://appstoreconnect.apple.com/apps/6771715475/testflight/ios/0b0aa423-1a73-413e-9028-3fff19b86b72)
+  was uploaded October 20, validated, and assigned to internal groups Team
+  (Expo) and v1. It predates the November onboarding fixes. App Store 1.14
+  remains live, so those installations do not emit the new breadcrumbs.
 - Sentry symbol ingestion is unverified: upload credentials are unavailable.
   Keep the matching archive/dSYM available for upload with the release.
 

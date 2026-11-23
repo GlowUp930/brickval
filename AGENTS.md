@@ -36,7 +36,8 @@ ninth-generation iPad simulator with iPadOS 26.5. The test reached the
 Clerk identifier field and enabled Continue after typing. Apple's runtime
 catalog did not offer iOS 17.0.3, so this test does not reproduce the reported
 environment. The 1.15 source already records launch, gate and authentication
-breadcrumbs, but 1.14 remains live. Reproduction on iPadOS 17 or a fresh
+breadcrumbs. Build 195 is available in internal TestFlight, and 1.14 remains
+the public release. Reproduction on iPadOS 17 or a fresh
 hang with those breadcrumbs is needed before changing the sign-in flow
 or closing the issue.
 
@@ -49,9 +50,10 @@ The matching local dSYM resolves the sole app frame to `main`; it does not
 establish a cause. Approved diagnostics in source for 1.15 (195) add fixed
 screen names and monotonic startup/presentation timings to Release Sentry
 breadcrumbs, with no account/input/photo data. Reproduction and a verified
-fix remain pending. Signed archive and exported IPA are prepared; signature,
-focused native/UI and 13-language checks pass. Build 195 has not been uploaded
-to TestFlight; a new installed build is required to collect this evidence. See the
+fix remain pending. Signature, focused native/UI and 13-language checks pass.
+[Build 195](https://appstoreconnect.apple.com/apps/6771715475/testflight/ios/0b0aa423-1a73-413e-9028-3fff19b86b72)
+was uploaded October 20 and is available to Team (Expo) and v1. It predates
+the November onboarding fixes. See the
 [investigation audit](docs/audits/2026-10-20-fatal-launch-hang.md).
 
 ## Existing free user transition — 2026-10-18

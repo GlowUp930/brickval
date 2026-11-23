@@ -36,7 +36,8 @@ ninth-generation iPad simulator with iPadOS 26.5. The test reached the
 Clerk identifier field and enabled Continue after typing. Apple's runtime
 catalog did not offer iOS 17.0.3, so this test does not reproduce the reported
 environment. The 1.15 source already records launch, gate and authentication
-breadcrumbs, but 1.14 remains live. Reproduction on iPadOS 17 or a fresh
+breadcrumbs. Build 195 is available in internal TestFlight, and 1.14 remains
+the public release. Reproduction on iPadOS 17 or a fresh
 hang with those breadcrumbs is needed before changing the sign-in flow
 or closing the issue.
 
@@ -54,8 +55,9 @@ Observation; entered text, account identifiers and photos are excluded.
 Six focused unit checks, three UI checks and all 13 locales pass. Signed
 archive `/tmp/BrickVal195-hang-diagnostics.xcarchive` and exported IPA
 `/tmp/BrickVal195-export/BrickVal.ipa` pass strict signature verification and
-share dSYM UUID `DBA9D482-2AB5-3287-B062-F15FDA367018`. Build 195 has not been
-uploaded to TestFlight. These diagnostics require a newly installed build. See the
+share dSYM UUID `DBA9D482-2AB5-3287-B062-F15FDA367018`. [Build 195](https://appstoreconnect.apple.com/apps/6771715475/testflight/ios/0b0aa423-1a73-413e-9028-3fff19b86b72)
+was uploaded October 20 and is available to Team (Expo) and v1. It predates
+the November onboarding fixes. See the
 [investigation audit](../../docs/audits/2026-10-20-fatal-launch-hang.md).
 
 ## Existing free user transition — 2026-10-18
