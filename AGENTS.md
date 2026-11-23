@@ -11,6 +11,15 @@ open onboarding again for affected installs. Completing onboarding still returns
 unsubscribed users to the hard gate. The source fix requires a new App Store
 release. The affected device's stored flag has not been independently inspected.
 
+A fresh iPhone 17 Pro simulator running iOS 26.5 verified the 1.15 (195)
+source build on November 23. The UI test followed Get Started, the five intro
+screens, goal selection, and Skip for now to the Pro gate. It confirmed no app
+tabs were available and that the gate returned on relaunch. The skip button now
+uses the full row as its tap target. Both legacy migration cases passed.
+Production Superwall showed the active hard-access campaign and recent
+hard-paywall activity. App Store 1.14 remains live, and a clean physical-device
+run of that binary is outstanding.
+
 ## Fatal launch hang investigation — 2026-10-20
 
 Sentry BRICKVAL-12 records two fatal SwiftUI update hangs on one physical

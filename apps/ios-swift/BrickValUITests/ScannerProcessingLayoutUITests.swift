@@ -96,7 +96,6 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
     func testFirstLaunchShowsOnboardingBeforeHardAccess() {
         let app = XCUIApplication()
         app.launchArguments = [
-            "-has_completed_onboarding", "NO",
             "-brickval_review_requested", "YES",
             "-brickval_language_override", "en",
         ]
@@ -108,14 +107,28 @@ final class ScannerProcessingLayoutUITests: XCTestCase {
         getStarted.tap()
 
         let next = app.buttons["onboarding.detailContinue"]
-        for _ in 0..<5 {
+        for step in 0..<5 {
+            if step == 2 {
+                let goal = app.buttons["onboarding.goal.catalog"]
+                XCTAssertTrue(goal.waitForExistence(timeout: 4))
+                goal.tap()
+            }
             XCTAssertTrue(next.waitForExistence(timeout: 4))
+            XCTAssertTrue(next.isEnabled)
             next.tap()
         }
         let skip = app.buttons["onboarding.account.skip"]
         XCTAssertTrue(skip.waitForExistence(timeout: 4))
         skip.tap()
-        XCTAssertTrue(app.buttons["Sign in to upgrade"].waitForExistence(timeout: 15))
+
+        let upgrade = app.buttons["Sign in to upgrade"]
+        XCTAssertTrue(upgrade.waitForExistence(timeout: 15))
+        XCTAssertFalse(app.tabBars.firstMatch.exists)
+
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(upgrade.waitForExistence(timeout: 15))
+        XCTAssertFalse(getStarted.exists)
     }
 
     func testOnboardingGetStartedRespondsWithoutStartupDelay() {

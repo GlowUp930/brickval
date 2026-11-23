@@ -921,12 +921,12 @@ private struct OnboardingAccountScreen: View {
                             .foregroundStyle(.black)
                             .underline()
                     }
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .font(.subheadline)
-                .frame(minHeight: 44)
                 .accessibilityLabel("Skip sign-in for now")
-                .accessibilityHint("Opens BrickValue without an account")
                 .accessibilityIdentifier("onboarding.account.skip")
             }
 
