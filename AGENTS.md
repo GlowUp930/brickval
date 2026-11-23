@@ -20,6 +20,26 @@ Production Superwall showed the active hard-access campaign and recent
 hard-paywall activity. App Store 1.14 remains live, and a clean physical-device
 run of that binary is outstanding.
 
+## iPad authentication-adjacent hang — 2026-11-23
+
+[Sentry BRICKVAL-18](https://areyouok-4x.sentry.io/issues/7861215570/) records
+three foreground hangs on one ninth-generation iPad running iPadOS 17.0.3,
+App Store 1.14 (194). Apple and Google icon requests succeeded about two to
+three seconds before each event. The sampled main thread is in SwiftUI and
+AttributeGraph, and the only app frame matches BRICKVAL-12's entry-point
+offset, previously resolved to `main` with the matching dSYM. Sign-in
+presentation is a lead. Neither the responsible view nor the underlying
+trigger is established.
+
+The current source passed the hard-gate sign-in smoke test on a
+ninth-generation iPad simulator with iPadOS 26.5. The test reached the
+Clerk identifier field and enabled Continue after typing. Apple's runtime
+catalog did not offer iOS 17.0.3, so this test does not reproduce the reported
+environment. The 1.15 source already records launch, gate and authentication
+breadcrumbs, but 1.14 remains live. Reproduction on iPadOS 17 or a fresh
+hang with those breadcrumbs is needed before changing the sign-in flow
+or closing the issue.
+
 ## Fatal launch hang investigation — 2026-10-20
 
 Sentry BRICKVAL-12 records two fatal SwiftUI update hangs on one physical
