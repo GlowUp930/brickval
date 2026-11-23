@@ -81,7 +81,7 @@ final class PreferencesStore {
     }
 
     func applyLegacy(_ values: LegacyPreferenceValues) {
-        if let value = values.hasCompletedOnboarding { hasCompletedOnboarding = value }
+        if values.hasCompletedOnboarding == true { hasCompletedOnboarding = true }
         if let value = values.primaryGoal { primaryGoal = value }
         if let value = values.smartAutoScanEnabled { smartAutoScanEnabled = value }
         if let value = values.scanImprovementConsent { scanImprovementConsent = value }

@@ -1,5 +1,16 @@
 # BrickVal — LEGO Scan & Value App (Native MVP)
 
+## Onboarding after reinstall — 2026-11-23
+
+Native launch previously accepted the old Expo Keychain onboarding flag without
+checking whether the Expo install still existed. Since Keychain can survive an
+uninstall, a reinstall could open directly on the Pro gate. Migration now checks
+Expo's original local launch marker before accepting the flag, preserving
+onboarding completion for in-place upgrades. The native gate offers a way to
+open onboarding again for affected installs. Completing onboarding still returns
+unsubscribed users to the hard gate. The source fix requires a new App Store
+release. The affected device's stored flag has not been independently inspected.
+
 ## Fatal launch hang investigation — 2026-10-20
 
 Sentry BRICKVAL-12 records two fatal SwiftUI update hangs on one physical

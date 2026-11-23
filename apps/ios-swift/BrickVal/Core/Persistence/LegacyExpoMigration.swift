@@ -2,15 +2,23 @@ import Foundation
 
 actor LegacyExpoMigration {
     private let readLegacyValue: @Sendable (String) -> String?
+    private let hasLegacyInstallCanary: @Sendable () -> Bool
     private let defaults: UserDefaults
     private let decoder = JSONDecoder()
     private let migrationVersion = 1
 
     init(
         readLegacyValue: @escaping @Sendable (String) -> String? = { LegacyKeychainReader().string(for: $0) },
+        hasLegacyInstallCanary: @escaping @Sendable () -> Bool = {
+            guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                return false
+            }
+            return FileManager.default.fileExists(atPath: documents.appendingPathComponent("launch-canary").path)
+        },
         defaults: UserDefaults = .standard
     ) {
         self.readLegacyValue = readLegacyValue
+        self.hasLegacyInstallCanary = hasLegacyInstallCanary
         self.defaults = defaults
     }
 
@@ -26,8 +34,10 @@ actor LegacyExpoMigration {
             itemCount = items.count
         }
 
+        // Expo used this file to distinguish an upgrade from a reinstall.
+        // The Keychain flag alone can survive deletion of the app.
         let values = LegacyPreferenceValues(
-            hasCompletedOnboarding: bool("has_completed_onboarding", trueValue: "true"),
+            hasCompletedOnboarding: hasLegacyInstallCanary() && bool("has_completed_onboarding", trueValue: "true") == true ? true : nil,
             primaryGoal: readLegacyValue("primary_goal").flatMap(PrimaryGoal.init(rawValue:)),
             smartAutoScanEnabled: bool("brickval_smart_auto_scan", trueValue: "1"),
             scanImprovementConsent: bool("brickval_scan_improvement_consent", trueValue: "1"),

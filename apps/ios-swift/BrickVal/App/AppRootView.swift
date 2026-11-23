@@ -36,7 +36,10 @@ struct AppRootView: View {
                             HardAccessStatusView()
                         } else if monetization.requiresProForApp(isPro: entitlements.isPro) ||
                                     (monetization.policy.requiresSubscription && coordinator?.clerk != nil && coordinator?.clerk?.user == nil) {
-                            HardScanAccessView()
+                            HardScanAccessView(onShowOnboarding: {
+                                preferences.shouldReturnToOnboardingAccount = false
+                                preferences.isReplayingOnboarding = true
+                            })
                         } else {
                             AppShellView()
                         }

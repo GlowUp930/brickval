@@ -28,6 +28,7 @@ struct HardScanAccessView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showAccount = false
     @State private var contentVisible = false
+    var onShowOnboarding: (() -> Void)? = nil
 
     var body: some View {
         ZStack {
@@ -303,6 +304,14 @@ struct HardScanAccessView: View {
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(.white)
             .frame(minHeight: 44)
+
+            if let onShowOnboarding {
+                Button("Get Started", action: onShowOnboarding)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.72))
+                    .frame(minHeight: 44)
+                    .accessibilityIdentifier("hardAccess.showOnboarding")
+            }
 
             if !isCompact {
                 Text("The App Store paywall shows the full renewal price and any trial terms before you confirm.")

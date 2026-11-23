@@ -4,7 +4,8 @@ import Testing
 
 @MainActor
 struct LegacyExpoMigrationTests {
-    @Test func migratesCollectionAndPreferencesOnce() async throws {
+    @Test(arguments: [false, true])
+    func trustsLegacyOnboardingOnlyForAnInPlaceUpgrade(hasCanary: Bool) async throws {
         let suite = "LegacyExpoMigrationTests-\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defaults.removePersistentDomain(forName: suite)
@@ -22,12 +23,12 @@ struct LegacyExpoMigrationTests {
         )
         let collection = CollectionStore(repository: repository)
         let preferences = PreferencesStore(defaults: defaults)
-        let migration = LegacyExpoMigration(readLegacyValue: { values[$0] }, defaults: defaults)
+        let migration = LegacyExpoMigration(readLegacyValue: { values[$0] }, hasLegacyInstallCanary: { hasCanary }, defaults: defaults)
 
         let result = try await migration.run(collectionStore: collection, preferences: preferences)
         #expect(result == .migrated(itemCount: 1))
         #expect(collection.items.first?.setNumber == "75379")
-        #expect(preferences.hasCompletedOnboarding)
+        #expect(preferences.hasCompletedOnboarding == hasCanary)
         #expect(preferences.theme == .light)
         #expect(preferences.accent == .blue)
         #expect(preferences.guestScansUsed == 3)
