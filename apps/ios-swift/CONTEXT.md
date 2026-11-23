@@ -1,5 +1,16 @@
 # BrickVal Native iOS Context
 
+## TestFlight build 196 — 2026-11-23
+
+Apple processed [1.15 (196)](https://appstoreconnect.apple.com/apps/6771715475/testflight/ios/f08f0d11-1f95-4c15-86c4-d21e16161060).
+TestFlight lists both existing internal groups, Team (Expo) and v1.
+This build includes the reinstall onboarding fix, the larger Skip tap target,
+and the existing hang diagnostics. The signed archive passed strict signature
+verification and matched dSYM UUID `28616159-F0EA-34AA-9146-900F117E3822`.
+Localization passed for all 13 languages. Physical-device onboarding and
+iPadOS 17 hang verification remain pending. This build was not submitted for
+App Review.
+
 ## Onboarding after reinstall — 2026-11-23
 
 Native launch previously accepted the old Expo Keychain onboarding flag without

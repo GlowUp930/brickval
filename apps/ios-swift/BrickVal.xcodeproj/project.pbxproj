@@ -1413,7 +1413,7 @@
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = 73ED6DE8405E3B97619850CEC7576E70B00A275A;
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 195;
+				CURRENT_PROJECT_VERSION = 196;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1542,7 +1542,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = BrickVal/Resources/BrickVal.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 195;
+				CURRENT_PROJECT_VERSION = 196;
 				INFOPLIST_FILE = BrickVal/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
